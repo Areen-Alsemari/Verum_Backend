@@ -1,0 +1,10 @@
+vendor/*
+!vendor/MANIFEST.sha256
+local/
+__pycache__/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.DS_Store
