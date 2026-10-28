@@ -1,0 +1,374 @@
+{
+  "dataset_tier": "analytic_verification",
+  "episode_id": "EP-ANALYTIC-01",
+  "model": "constant_rho_kinematic_tank_receipt",
+  "states": [
+    {
+      "t_sim_s": 0.0,
+      "level_m": 9.0,
+      "tank_liquid_mass_kg": 4757438.005320474,
+      "cum_received_kg": 0.0
+    },
+    {
+      "t_sim_s": 1.0,
+      "level_m": 9.000235785100877,
+      "tank_liquid_mass_kg": 4757563.005320474,
+      "cum_received_kg": 125.0
+    },
+    {
+      "t_sim_s": 2.0,
+      "level_m": 9.000471570201753,
+      "tank_liquid_mass_kg": 4757688.005320473,
+      "cum_received_kg": 250.0
+    },
+    {
+      "t_sim_s": 3.0,
+      "level_m": 9.00070735530263,
+      "tank_liquid_mass_kg": 4757813.005320474,
+      "cum_received_kg": 375.0
+    },
+    {
+      "t_sim_s": 4.0,
+      "level_m": 9.000943140403509,
+      "tank_liquid_mass_kg": 4757938.005320474,
+      "cum_received_kg": 500.0
+    },
+    {
+      "t_sim_s": 5.0,
+      "level_m": 9.001178925504384,
+      "tank_liquid_mass_kg": 4758063.005320473,
+      "cum_received_kg": 625.0
+    },
+    {
+      "t_sim_s": 6.0,
+      "level_m": 9.001414710605262,
+      "tank_liquid_mass_kg": 4758188.005320474,
+      "cum_received_kg": 750.0
+    },
+    {
+      "t_sim_s": 7.0,
+      "level_m": 9.001650495706137,
+      "tank_liquid_mass_kg": 4758313.005320474,
+      "cum_received_kg": 875.0
+    },
+    {
+      "t_sim_s": 8.0,
+      "level_m": 9.001886280807016,
+      "tank_liquid_mass_kg": 4758438.005320473,
+      "cum_received_kg": 1000.0
+    },
+    {
+      "t_sim_s": 9.0,
+      "level_m": 9.002122065907892,
+      "tank_liquid_mass_kg": 4758563.005320474,
+      "cum_received_kg": 1125.0
+    },
+    {
+      "t_sim_s": 10.0,
+      "level_m": 9.00235785100877,
+      "tank_liquid_mass_kg": 4758688.005320474,
+      "cum_received_kg": 1250.0
+    },
+    {
+      "t_sim_s": 11.0,
+      "level_m": 9.002593636109644,
+      "tank_liquid_mass_kg": 4758813.005320473,
+      "cum_received_kg": 1375.0
+    },
+    {
+      "t_sim_s": 12.0,
+      "level_m": 9.002829421210523,
+      "tank_liquid_mass_kg": 4758938.005320474,
+      "cum_received_kg": 1500.0
+    },
+    {
+      "t_sim_s": 13.0,
+      "level_m": 9.0030652063114,
+      "tank_liquid_mass_kg": 4759063.005320474,
+      "cum_received_kg": 1625.0
+    },
+    {
+      "t_sim_s": 14.0,
+      "level_m": 9.003300991412276,
+      "tank_liquid_mass_kg": 4759188.005320473,
+      "cum_received_kg": 1750.0
+    },
+    {
+      "t_sim_s": 15.0,
+      "level_m": 9.003536776513153,
+      "tank_liquid_mass_kg": 4759313.005320474,
+      "cum_received_kg": 1875.0
+    },
+    {
+      "t_sim_s": 16.0,
+      "level_m": 9.00377256161403,
+      "tank_liquid_mass_kg": 4759438.005320474,
+      "cum_received_kg": 2000.0
+    },
+    {
+      "t_sim_s": 17.0,
+      "level_m": 9.004008346714906,
+      "tank_liquid_mass_kg": 4759563.005320473,
+      "cum_received_kg": 2125.0
+    },
+    {
+      "t_sim_s": 18.0,
+      "level_m": 9.004244131815783,
+      "tank_liquid_mass_kg": 4759688.005320474,
+      "cum_received_kg": 2250.0
+    },
+    {
+      "t_sim_s": 19.0,
+      "level_m": 9.00447991691666,
+      "tank_liquid_mass_kg": 4759813.005320474,
+      "cum_received_kg": 2375.0
+    },
+    {
+      "t_sim_s": 20.0,
+      "level_m": 9.004715702017537,
+      "tank_liquid_mass_kg": 4759938.005320473,
+      "cum_received_kg": 2500.0
+    },
+    {
+      "t_sim_s": 21.0,
+      "level_m": 9.004951487118413,
+      "tank_liquid_mass_kg": 4760063.005320474,
+      "cum_received_kg": 2625.0
+    },
+    {
+      "t_sim_s": 22.0,
+      "level_m": 9.005187272219292,
+      "tank_liquid_mass_kg": 4760188.005320474,
+      "cum_received_kg": 2750.0
+    },
+    {
+      "t_sim_s": 23.0,
+      "level_m": 9.005423057320167,
+      "tank_liquid_mass_kg": 4760313.005320473,
+      "cum_received_kg": 2875.0
+    },
+    {
+      "t_sim_s": 24.0,
+      "level_m": 9.005658842421045,
+      "tank_liquid_mass_kg": 4760438.005320474,
+      "cum_received_kg": 3000.0
+    },
+    {
+      "t_sim_s": 25.0,
+      "level_m": 9.005894627521922,
+      "tank_liquid_mass_kg": 4760563.005320474,
+      "cum_received_kg": 3125.0
+    },
+    {
+      "t_sim_s": 26.0,
+      "level_m": 9.006130412622797,
+      "tank_liquid_mass_kg": 4760688.005320473,
+      "cum_received_kg": 3250.0
+    },
+    {
+      "t_sim_s": 27.0,
+      "level_m": 9.006366197723676,
+      "tank_liquid_mass_kg": 4760813.005320474,
+      "cum_received_kg": 3375.0
+    },
+    {
+      "t_sim_s": 28.0,
+      "level_m": 9.006601982824552,
+      "tank_liquid_mass_kg": 4760938.005320474,
+      "cum_received_kg": 3500.0
+    },
+    {
+      "t_sim_s": 29.0,
+      "level_m": 9.006837767925429,
+      "tank_liquid_mass_kg": 4761063.005320473,
+      "cum_received_kg": 3625.0
+    },
+    {
+      "t_sim_s": 30.0,
+      "level_m": 9.007073553026306,
+      "tank_liquid_mass_kg": 4761188.005320474,
+      "cum_received_kg": 3750.0
+    },
+    {
+      "t_sim_s": 31.0,
+      "level_m": 9.007309338127184,
+      "tank_liquid_mass_kg": 4761313.005320474,
+      "cum_received_kg": 3875.0
+    },
+    {
+      "t_sim_s": 32.0,
+      "level_m": 9.00754512322806,
+      "tank_liquid_mass_kg": 4761438.005320473,
+      "cum_received_kg": 4000.0
+    },
+    {
+      "t_sim_s": 33.0,
+      "level_m": 9.007780908328936,
+      "tank_liquid_mass_kg": 4761563.005320474,
+      "cum_received_kg": 4125.0
+    },
+    {
+      "t_sim_s": 34.0,
+      "level_m": 9.008016693429814,
+      "tank_liquid_mass_kg": 4761688.005320474,
+      "cum_received_kg": 4250.0
+    },
+    {
+      "t_sim_s": 35.0,
+      "level_m": 9.00825247853069,
+      "tank_liquid_mass_kg": 4761813.005320473,
+      "cum_received_kg": 4375.0
+    },
+    {
+      "t_sim_s": 36.0,
+      "level_m": 9.008488263631568,
+      "tank_liquid_mass_kg": 4761938.005320474,
+      "cum_received_kg": 4500.0
+    },
+    {
+      "t_sim_s": 37.0,
+      "level_m": 9.008724048732445,
+      "tank_liquid_mass_kg": 4762063.005320474,
+      "cum_received_kg": 4625.0
+    },
+    {
+      "t_sim_s": 38.0,
+      "level_m": 9.008959833833321,
+      "tank_liquid_mass_kg": 4762188.005320473,
+      "cum_received_kg": 4750.0
+    },
+    {
+      "t_sim_s": 39.0,
+      "level_m": 9.009195618934198,
+      "tank_liquid_mass_kg": 4762313.005320474,
+      "cum_received_kg": 4875.0
+    },
+    {
+      "t_sim_s": 40.0,
+      "level_m": 9.009431404035075,
+      "tank_liquid_mass_kg": 4762438.005320474,
+      "cum_received_kg": 5000.0
+    },
+    {
+      "t_sim_s": 41.0,
+      "level_m": 9.009667189135952,
+      "tank_liquid_mass_kg": 4762563.005320473,
+      "cum_received_kg": 5125.0
+    },
+    {
+      "t_sim_s": 42.0,
+      "level_m": 9.009902974236828,
+      "tank_liquid_mass_kg": 4762688.005320474,
+      "cum_received_kg": 5250.0
+    },
+    {
+      "t_sim_s": 43.0,
+      "level_m": 9.010138759337707,
+      "tank_liquid_mass_kg": 4762813.005320474,
+      "cum_received_kg": 5375.0
+    },
+    {
+      "t_sim_s": 44.0,
+      "level_m": 9.010374544438582,
+      "tank_liquid_mass_kg": 4762938.005320473,
+      "cum_received_kg": 5500.0
+    },
+    {
+      "t_sim_s": 45.0,
+      "level_m": 9.010610329539459,
+      "tank_liquid_mass_kg": 4763063.005320474,
+      "cum_received_kg": 5625.0
+    },
+    {
+      "t_sim_s": 46.0,
+      "level_m": 9.010846114640337,
+      "tank_liquid_mass_kg": 4763188.005320474,
+      "cum_received_kg": 5750.0
+    },
+    {
+      "t_sim_s": 47.0,
+      "level_m": 9.011081899741212,
+      "tank_liquid_mass_kg": 4763313.005320473,
+      "cum_received_kg": 5875.0
+    },
+    {
+      "t_sim_s": 48.0,
+      "level_m": 9.01131768484209,
+      "tank_liquid_mass_kg": 4763438.005320474,
+      "cum_received_kg": 6000.0
+    },
+    {
+      "t_sim_s": 49.0,
+      "level_m": 9.011553469942967,
+      "tank_liquid_mass_kg": 4763563.005320474,
+      "cum_received_kg": 6125.0
+    },
+    {
+      "t_sim_s": 50.0,
+      "level_m": 9.011789255043844,
+      "tank_liquid_mass_kg": 4763688.005320473,
+      "cum_received_kg": 6250.0
+    },
+    {
+      "t_sim_s": 51.0,
+      "level_m": 9.01202504014472,
+      "tank_liquid_mass_kg": 4763813.005320474,
+      "cum_received_kg": 6375.0
+    },
+    {
+      "t_sim_s": 52.0,
+      "level_m": 9.012260825245598,
+      "tank_liquid_mass_kg": 4763938.005320474,
+      "cum_received_kg": 6500.0
+    },
+    {
+      "t_sim_s": 53.0,
+      "level_m": 9.012496610346474,
+      "tank_liquid_mass_kg": 4764063.005320473,
+      "cum_received_kg": 6625.0
+    },
+    {
+      "t_sim_s": 54.0,
+      "level_m": 9.012732395447351,
+      "tank_liquid_mass_kg": 4764188.005320474,
+      "cum_received_kg": 6750.0
+    },
+    {
+      "t_sim_s": 55.0,
+      "level_m": 9.01296818054823,
+      "tank_liquid_mass_kg": 4764313.005320474,
+      "cum_received_kg": 6875.0
+    },
+    {
+      "t_sim_s": 56.0,
+      "level_m": 9.013203965649105,
+      "tank_liquid_mass_kg": 4764438.005320473,
+      "cum_received_kg": 7000.0
+    },
+    {
+      "t_sim_s": 57.0,
+      "level_m": 9.013439750749983,
+      "tank_liquid_mass_kg": 4764563.005320474,
+      "cum_received_kg": 7125.0
+    },
+    {
+      "t_sim_s": 58.0,
+      "level_m": 9.01367553585086,
+      "tank_liquid_mass_kg": 4764688.005320474,
+      "cum_received_kg": 7250.0
+    },
+    {
+      "t_sim_s": 59.0,
+      "level_m": 9.013911320951737,
+      "tank_liquid_mass_kg": 4764813.005320473,
+      "cum_received_kg": 7375.0
+    },
+    {
+      "t_sim_s": 60.0,
+      "level_m": 9.014147106052611,
+      "tank_liquid_mass_kg": 4764938.005320474,
+      "cum_received_kg": 7500.0
+    }
+  ],
+  "seed": 20261028
+}

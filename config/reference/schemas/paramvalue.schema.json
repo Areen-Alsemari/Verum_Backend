@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:paramvalue:0.4.0",
+  "title": "ParamValue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "value",
+    "unit",
+    "status",
+    "evidence_tag"
+  ],
+  "properties": {
+    "value": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "resolved",
+        "provisional",
+        "unresolved"
+      ]
+    },
+    "evidence_tag": {
+      "enum": [
+        "REF",
+        "CALC",
+        "DESIGN",
+        "SIM",
+        "OPEN"
+      ]
+    },
+    "provenance_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "uncertainty": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "unresolved_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "title": "resolved_or_provisional",
+      "required": [
+        "status",
+        "value",
+        "provenance_id"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "resolved",
+            "provisional"
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "provenance_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_tag": {
+          "enum": [
+            "REF",
+            "CALC",
+            "DESIGN",
+            "SIM"
+          ]
+        }
+      }
+    },
+    {
+      "title": "unresolved",
+      "required": [
+        "status",
+        "value",
+        "evidence_tag"
+      ],
+      "properties": {
+        "status": {
+          "const": "unresolved"
+        },
+        "value": {
+          "type": "null"
+        },
+        "evidence_tag": {
+          "const": "OPEN"
+        }
+      }
+    }
+  ]
+}

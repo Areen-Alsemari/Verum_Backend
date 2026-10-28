@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:observation:0.5.0",
+  "title": "Observation (agent-visible, one row per scheduled sample)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "tag_id",
+    "t_sim_s",
+    "t_available_s",
+    "timestamp_utc",
+    "value",
+    "unit",
+    "quality_flag",
+    "availability_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "observations"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tag_id": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}-[A-Z0-9]+$"
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "t_available_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "value": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quality_flag": {
+      "enum": [
+        "good",
+        "suspect",
+        "bad"
+      ]
+    },
+    "availability_status": {
+      "enum": [
+        "measured",
+        "missing_sample"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "availability_status": {
+            "const": "missing_sample"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "availability_status": {
+            "const": "measured"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  ]
+}

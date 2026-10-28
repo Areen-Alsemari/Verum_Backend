@@ -1,0 +1,42 @@
+{
+  "schema_version": "VERUM-AUDITED-1",
+  "production_generation_enabled": false,
+  "allowed_now": [
+    "analytic_verification",
+    "restricted_benchmark_no_physical_fault_training"
+  ],
+  "prohibited_until_full_solver_validation": [
+    "labeled_full_terminal_fault_dataset",
+    "pump_trip_diagnostics_from_unvalidated_transients",
+    "cavitation_diagnosis",
+    "damaged_roof_emissions_as_instantaneous_sensor_data",
+    "real_world_safety_or_roi_claims"
+  ],
+  "required_gates": [
+    "graph_and_asset_refs",
+    "fluid_and_phase_validity",
+    "steady_state_feasibility",
+    "pump_operating_range_and_NPSH3_margin",
+    "MOC_network_convergence_and_ledger",
+    "dynamic_valves_check_pumps",
+    "sensor_chain_and_unit_mapping",
+    "no_future_data_or_truth_leakage",
+    "human_inspection_feasibility",
+    "independent_physical_reference_or_explicit_sim_limitation"
+  ],
+  "fixed_receipt_target_m3h": 600,
+  "fixed_distribution_boundary_gauge_Pa": 200000,
+  "no_baseline_control_valve": "CV-201",
+  "no_baseline_continuous_VOC": true,
+  "current_observation_profile": {
+    "declared_tags": 36,
+    "withheld_until_qualified": [
+      "YS-201A",
+      "YS-201B",
+      "IT-201A",
+      "IT-201B",
+      "VT-201A",
+      "VT-201B"
+    ]
+  }
+}

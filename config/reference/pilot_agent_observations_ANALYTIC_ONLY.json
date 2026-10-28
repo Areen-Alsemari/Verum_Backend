@@ -1,0 +1,747 @@
+{
+  "dataset_tier": "analytic_verification",
+  "episode_id": "EP-ANALYTIC-01",
+  "scope": "prescribed flow and tank level arithmetic only; not a pressure transient or real field data",
+  "observations": [
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 0.0,
+      "t_available_s": 0.1,
+      "value": 600.0216929170508,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 0.0,
+      "t_available_s": 0.2,
+      "value": 9.000126187512635,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 1.0,
+      "t_available_s": 1.1,
+      "value": 600.1747991661952,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 2.0,
+      "t_available_s": 2.1,
+      "value": 599.7502220170086,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 3.0,
+      "t_available_s": 3.1,
+      "value": 600.052003080284,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 4.0,
+      "t_available_s": 4.1,
+      "value": 599.9809138475877,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 5.0,
+      "t_available_s": 5.1,
+      "value": 600.0262266483579,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 5.0,
+      "t_available_s": 5.2,
+      "value": 9.00146797733751,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 6.0,
+      "t_available_s": 6.1,
+      "value": 600.021983799366,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 7.0,
+      "t_available_s": 7.1,
+      "value": 599.9215799650035,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 8.0,
+      "t_available_s": 8.1,
+      "value": 600.2121820123896,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 9.0,
+      "t_available_s": 9.1,
+      "value": 600.1444811840768,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 10.0,
+      "t_available_s": 10.1,
+      "value": 599.7626970447596,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 10.0,
+      "t_available_s": 10.2,
+      "value": 9.00221009575692,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 11.0,
+      "t_available_s": 11.1,
+      "value": 599.8363341343256,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 12.0,
+      "t_available_s": 12.1,
+      "value": 600.3056262770651,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 13.0,
+      "t_available_s": 13.1,
+      "value": 599.6338852587949,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 14.0,
+      "t_available_s": 14.1,
+      "value": 600.348960242227,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 15.0,
+      "t_available_s": 15.1,
+      "value": 599.9764012244844,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 15.0,
+      "t_available_s": 15.2,
+      "value": 9.003705493334135,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 16.0,
+      "t_available_s": 16.1,
+      "value": 600.2898262802739,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 17.0,
+      "t_available_s": 17.1,
+      "value": 600.1620419334059,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 18.0,
+      "t_available_s": 18.1,
+      "value": 600.1556198014812,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 19.0,
+      "t_available_s": 19.1,
+      "value": 600.2549157650253,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 20.0,
+      "t_available_s": 20.1,
+      "value": 599.6517582985846,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 20.0,
+      "t_available_s": 20.2,
+      "value": 9.004635535721556,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 21.0,
+      "t_available_s": 21.1,
+      "value": 600.1320874829077,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 22.0,
+      "t_available_s": 22.1,
+      "value": 599.9949539063563,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 23.0,
+      "t_available_s": 23.1,
+      "value": 600.1368433061526,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 24.0,
+      "t_available_s": 24.1,
+      "value": 599.9792561140168,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 25.0,
+      "t_available_s": 25.1,
+      "value": 600.1613353248605,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 25.0,
+      "t_available_s": 25.2,
+      "value": 9.005873812367497,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 26.0,
+      "t_available_s": 26.1,
+      "value": 600.007284103242,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 27.0,
+      "t_available_s": 27.1,
+      "value": 600.0049376805327,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 28.0,
+      "t_available_s": 28.1,
+      "value": 599.7038814252832,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 29.0,
+      "t_available_s": 29.1,
+      "value": 600.210950137884,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 30.0,
+      "t_available_s": 30.1,
+      "value": 599.8074619072611,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 30.0,
+      "t_available_s": 30.2,
+      "value": 9.006922051443565,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 31.0,
+      "t_available_s": 31.1,
+      "value": 600.1436308676205,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 32.0,
+      "t_available_s": 32.1,
+      "value": 599.7967058029224,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 33.0,
+      "t_available_s": 33.1,
+      "value": 600.1511042808254,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 34.0,
+      "t_available_s": 34.1,
+      "value": 599.9752436137436,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 35.0,
+      "t_available_s": 35.1,
+      "value": 600.0748276739655,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 35.0,
+      "t_available_s": 35.2,
+      "value": 9.008644736613949,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 36.0,
+      "t_available_s": 36.1,
+      "value": 599.9302704496165,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 37.0,
+      "t_available_s": 37.1,
+      "value": 599.99495437296,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 38.0,
+      "t_available_s": 38.1,
+      "value": 599.7972815548992,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 39.0,
+      "t_available_s": 39.1,
+      "value": 600.0089973973818,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 40.0,
+      "t_available_s": 40.1,
+      "value": 600.1724617441962,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 40.0,
+      "t_available_s": 40.2,
+      "value": 9.009283003356696,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 41.0,
+      "t_available_s": 41.1,
+      "value": 599.9785588662038,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 42.0,
+      "t_available_s": 42.1,
+      "value": 599.7059114973557,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 43.0,
+      "t_available_s": 43.1,
+      "value": 599.9352009634272,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 44.0,
+      "t_available_s": 44.1,
+      "value": 600.2475809301694,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 45.0,
+      "t_available_s": 45.1,
+      "value": 599.9885622173863,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 45.0,
+      "t_available_s": 45.2,
+      "value": 9.01067800422919,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 46.0,
+      "t_available_s": 46.1,
+      "value": 599.5724202793692,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 47.0,
+      "t_available_s": 47.1,
+      "value": 600.0808490705944,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 48.0,
+      "t_available_s": 48.1,
+      "value": 599.9737872183658,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 49.0,
+      "t_available_s": 49.1,
+      "value": 600.4629646268675,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 50.0,
+      "t_available_s": 50.1,
+      "value": 599.8936581905416,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 50.0,
+      "t_available_s": 50.2,
+      "value": 9.011700794547805,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 51.0,
+      "t_available_s": 51.1,
+      "value": 600.3023363684314,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 52.0,
+      "t_available_s": 52.1,
+      "value": 599.634472582845,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 53.0,
+      "t_available_s": 53.1,
+      "value": 600.0677888844706,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 54.0,
+      "t_available_s": 54.1,
+      "value": 600.291651498053,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 55.0,
+      "t_available_s": 55.1,
+      "value": 599.783843395113,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 55.0,
+      "t_available_s": 55.2,
+      "value": 9.013610995000393,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 56.0,
+      "t_available_s": 56.1,
+      "value": 599.9216715304302,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 57.0,
+      "t_available_s": 57.1,
+      "value": 600.1841988329496,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 58.0,
+      "t_available_s": 58.1,
+      "value": 600.3268560691515,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 59.0,
+      "t_available_s": 59.1,
+      "value": 599.6952378295738,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "FT-001",
+      "t_sim_s": 60.0,
+      "t_available_s": 60.1,
+      "value": 600.0512195295347,
+      "unit": "m3/h",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    },
+    {
+      "episode_id": "EP-ANALYTIC-01",
+      "tag_id": "LT-101",
+      "t_sim_s": 60.0,
+      "t_available_s": 60.2,
+      "value": 9.013938327421629,
+      "unit": "m",
+      "quality_flag": "good",
+      "availability_status": "measured"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "file": "canonical_sensor_contract.json",
+  "entries": [
+    {
+      "path": "/sensors/YS-201A/measured_variable_ref",
+      "old": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "speed_rpm"
+      },
+      "new": null,
+      "reason": "The reference names a field of a different physical quantity (torque for vibration, shaft power for current, speed for the shaft-speed switch) and no device model exists. A null reference makes any mapping impossible until a model is specified."
+    },
+    {
+      "path": "/sensors/YS-201A/status",
+      "old": "withheld_missing_device_model",
+      "new": "withheld",
+      "reason": "Shorter status value for tags that are declared but not emitted."
+    },
+    {
+      "path": "/sensors/VT-201A/measured_variable_ref",
+      "old": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "torque_Nm"
+      },
+      "new": null,
+      "reason": "The reference names a field of a different physical quantity (torque for vibration, shaft power for current, speed for the shaft-speed switch) and no device model exists. A null reference makes any mapping impossible until a model is specified."
+    },
+    {
+      "path": "/sensors/VT-201A/status",
+      "old": "withheld_missing_device_model",
+      "new": "withheld",
+      "reason": "Shorter status value for tags that are declared but not emitted."
+    },
+    {
+      "path": "/sensors/IT-201A/measured_variable_ref",
+      "old": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "shaft_power_W"
+      },
+      "new": null,
+      "reason": "The reference names a field of a different physical quantity (torque for vibration, shaft power for current, speed for the shaft-speed switch) and no device model exists. A null reference makes any mapping impossible until a model is specified."
+    },
+    {
+      "path": "/sensors/IT-201A/status",
+      "old": "withheld_missing_device_model",
+      "new": "withheld",
+      "reason": "Shorter status value for tags that are declared but not emitted."
+    },
+    {
+      "path": "/sensors/YS-201B/measured_variable_ref",
+      "old": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "speed_rpm"
+      },
+      "new": null,
+      "reason": "The reference names a field of a different physical quantity (torque for vibration, shaft power for current, speed for the shaft-speed switch) and no device model exists. A null reference makes any mapping impossible until a model is specified."
+    },
+    {
+      "path": "/sensors/YS-201B/status",
+      "old": "withheld_missing_device_model",
+      "new": "withheld",
+      "reason": "Shorter status value for tags that are declared but not emitted."
+    },
+    {
+      "path": "/sensors/VT-201B/measured_variable_ref",
+      "old": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "torque_Nm"
+      },
+      "new": null,
+      "reason": "The reference names a field of a different physical quantity (torque for vibration, shaft power for current, speed for the shaft-speed switch) and no device model exists. A null reference makes any mapping impossible until a model is specified."
+    },
+    {
+      "path": "/sensors/VT-201B/status",
+      "old": "withheld_missing_device_model",
+      "new": "withheld",
+      "reason": "Shorter status value for tags that are declared but not emitted."
+    },
+    {
+      "path": "/sensors/IT-201B/measured_variable_ref",
+      "old": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "shaft_power_W"
+      },
+      "new": null,
+      "reason": "The reference names a field of a different physical quantity (torque for vibration, shaft power for current, speed for the shaft-speed switch) and no device model exists. A null reference makes any mapping impossible until a model is specified."
+    },
+    {
+      "path": "/sensors/IT-201B/status",
+      "old": "withheld_missing_device_model",
+      "new": "withheld",
+      "reason": "Shorter status value for tags that are declared but not emitted."
+    }
+  ]
+}

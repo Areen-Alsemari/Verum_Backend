@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:inspection_result:0.5.0",
+  "title": "Inspection result (agent-visible only after workflow_status = performed)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "result_id",
+    "request_id",
+    "action_id",
+    "workflow_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "inspection_results"
+    },
+    "result_id": {
+      "type": "string",
+      "pattern": "^RES-INSP-[0-9]{5}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-INSP-[0-9]{5}$"
+    },
+    "action_id": {
+      "enum": [
+        "ACT-INSP-01",
+        "ACT-INSP-02",
+        "ACT-INSP-03",
+        "ACT-INSP-04",
+        "ACT-INSP-05",
+        "ACT-INSP-06",
+        "ACT-INSP-07"
+      ]
+    },
+    "workflow_status": {
+      "enum": [
+        "not_requested",
+        "requested",
+        "approved",
+        "performed",
+        "cancelled"
+      ]
+    },
+    "evidence_status": {
+      "enum": [
+        "valid",
+        "missing",
+        "contradictory",
+        "low_confidence"
+      ]
+    },
+    "performed_at_t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "technician_id": {
+      "type": "string"
+    },
+    "tool_serial": {
+      "type": "string"
+    },
+    "calibration_valid_until": {
+      "type": "string",
+      "format": "date"
+    },
+    "findings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_category",
+        "primary_metric",
+        "secondary_observations"
+      ],
+      "properties": {
+        "outcome_category": {
+          "enum": [
+            "NORMAL_INTACT",
+            "MINOR_DEGRADATION",
+            "CRITICAL_DEFECT",
+            "TEST_INCONCLUSIVE"
+          ]
+        },
+        "primary_metric": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "value",
+            "unit",
+            "uncertainty_k2"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "uncertainty_k2": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "secondary_observations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "validation_status": {
+      "enum": [
+        "PASSED_QA",
+        "FLAGGED_INCONSISTENT",
+        "RETEST_REQUIRED"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "workflow_status": {
+            "const": "performed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evidence_status",
+          "performed_at_t_sim_s",
+          "technician_id",
+          "findings",
+          "validation_status"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "evidence_status"
+              ]
+            },
+            {
+              "required": [
+                "findings"
+              ]
+            },
+            {
+              "required": [
+                "performed_at_t_sim_s"
+              ]
+            },
+            {
+              "required": [
+                "technician_id"
+              ]
+            },
+            {
+              "required": [
+                "validation_status"
+              ]
+            },
+            {
+              "required": [
+                "tool_serial"
+              ]
+            },
+            {
+              "required": [
+                "calibration_valid_until"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

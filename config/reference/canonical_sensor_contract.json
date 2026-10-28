@@ -1,0 +1,382 @@
+{
+  "version": "VERUM_SENSOR_CONTRACT_AUDITED_1.0",
+  "description": "36 specified tags, 30 eligible for model-driven emission; physical sensor installation alone does not authorize invented data",
+  "sensors": {
+    "FT-001": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E001",
+        "field": "flow_m3s"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "m3s to m3/h, preserve signed flow"
+    },
+    "PT-001": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E002",
+        "field": "p_from_pa_abs"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "upstream receipt-meter tap on E002 before XV-R000; convert Pa_abs to bar_gauge; do not map to downstream RECEIPT_HEADER"
+    },
+    "TT-001": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E001",
+        "field": "fluid_temperature_K"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "K to Celsius"
+    },
+    "XV-R000": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R000",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "XV-R101": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R101",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "XV-R102": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R102",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "XV-R103": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R103",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "LT-101": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-101",
+        "field": "level_m"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately"
+    },
+    "TT-101": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-101",
+        "field": "temperature_K"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "K to Celsius"
+    },
+    "LSHH-101": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "protection_state",
+        "element_id": "LSHH-101",
+        "field": "trip_latched"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "independent high-high detector and protection chain, not mirrored ordinary LT measurement"
+    },
+    "LT-102": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-102",
+        "field": "level_m"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately"
+    },
+    "TT-102": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-102",
+        "field": "temperature_K"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "K to Celsius"
+    },
+    "LSHH-102": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "protection_state",
+        "element_id": "LSHH-102",
+        "field": "trip_latched"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "independent high-high detector and protection chain, not mirrored ordinary LT measurement"
+    },
+    "LT-103": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-103",
+        "field": "level_m"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately"
+    },
+    "TT-103": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-103",
+        "field": "temperature_K"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "K to Celsius"
+    },
+    "LSHH-103": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "protection_state",
+        "element_id": "LSHH-103",
+        "field": "trip_latched"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "independent high-high detector and protection chain, not mirrored ordinary LT measurement"
+    },
+    "XV-S101": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-S101",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "XV-S102": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-S102",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "XV-S103": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-S103",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "PT-201": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "node_state",
+        "element_id": "PUMP_SUCTION_TEE",
+        "field": "pressure_pa_abs"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "Pa_abs to bar_gauge using local reference atmospheric pressure"
+    },
+    "XV-PAI": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PAI",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "P-101A": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "run_state"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "RUN contact only; map pump run_state to actual contact with separate device failure/delay; starting/coasting is not automatically RUN"
+    },
+    "YS-201A": {
+      "status": "withheld_missing_device_model",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "speed_rpm"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "No generated observations before a documented, verified device model; never cast torque, shaft power, or speed ratio to the instrument unit"
+    },
+    "PT-202A": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E-PA2",
+        "field": "p_from_pa_abs"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "pump-side pressure at first pipe segment before passive check valve; Pa_abs to bar_gauge; this is an explicit tap relocation from the M4 E-P*3 table, requires shared physical tag update"
+    },
+    "VT-201A": {
+      "status": "withheld_missing_device_model",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "torque_Nm"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "No generated observations before a documented, verified device model; never cast torque, shaft power, or speed ratio to the instrument unit"
+    },
+    "IT-201A": {
+      "status": "withheld_missing_device_model",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "shaft_power_W"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "No generated observations before a documented, verified device model; never cast torque, shaft power, or speed ratio to the instrument unit"
+    },
+    "XV-PAO": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PAO",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "XV-PBI": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PBI",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "P-101B": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "run_state"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "RUN contact only; map pump run_state to actual contact with separate device failure/delay; starting/coasting is not automatically RUN"
+    },
+    "YS-201B": {
+      "status": "withheld_missing_device_model",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "speed_rpm"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "No generated observations before a documented, verified device model; never cast torque, shaft power, or speed ratio to the instrument unit"
+    },
+    "PT-202B": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E-PB2",
+        "field": "p_from_pa_abs"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "pump-side pressure at first pipe segment before passive check valve; Pa_abs to bar_gauge; this is an explicit tap relocation from the M4 E-P*3 table, requires shared physical tag update"
+    },
+    "VT-201B": {
+      "status": "withheld_missing_device_model",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "torque_Nm"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "No generated observations before a documented, verified device model; never cast torque, shaft power, or speed ratio to the instrument unit"
+    },
+    "IT-201B": {
+      "status": "withheld_missing_device_model",
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "shaft_power_W"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "No generated observations before a documented, verified device model; never cast torque, shaft power, or speed ratio to the instrument unit"
+    },
+    "XV-PBO": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PBO",
+        "field": "open_contact"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "dedicated physical OPEN limit switch contact; closed contact separately modeled; do not equate command or numerical fractional opening to confirmed position"
+    },
+    "FT-201": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E-D1",
+        "field": "flow_m3s"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "m3s to m3/h, preserve signed flow"
+    },
+    "PT-203": {
+      "status": "emit",
+      "measured_variable_ref": {
+        "record_type": "node_state",
+        "element_id": "DISTRIBUTION_BOUNDARY",
+        "field": "pressure_pa_abs"
+      },
+      "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
+      "adapter": "Pa_abs to bar_gauge; fixed pressure = 2 barg in reference cases; no fault-dependent pressure drops here under Dirichlet boundary"
+    }
+  },
+  "nonbaseline_excluded": [
+    "CV-201",
+    "ZT-201",
+    "PT-101",
+    "PT-102",
+    "PT-103",
+    "AT-101",
+    "AT-102",
+    "AT-103",
+    "ZSC-PA",
+    "ZSC-PB"
+  ],
+  "rules": [
+    "only emit tags with status emit",
+    "no hidden-state direct access to agents",
+    "convert quantities and units before noise and quantization",
+    "discrete contacts require explicit measurement and fault chains",
+    "sample availability accounts for transport, processing, lag, comms; never future truth"
+  ]
+}

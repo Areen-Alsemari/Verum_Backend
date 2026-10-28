@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:observation_audit:0.5.0",
+  "title": "Observation audit row (hidden, evaluator-only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "tag_id",
+    "t_sim_s",
+    "t_source_s",
+    "max_truth_time_used_s",
+    "hidden"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "observation_audit"
+    },
+    "episode_id": {
+      "type": "string"
+    },
+    "tag_id": {
+      "type": "string"
+    },
+    "t_sim_s": {
+      "type": "number"
+    },
+    "t_source_s": {
+      "type": "number"
+    },
+    "max_truth_time_used_s": {
+      "type": "number"
+    },
+    "hidden": {
+      "const": true
+    }
+  }
+}

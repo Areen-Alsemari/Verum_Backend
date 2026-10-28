@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:inspection_request:0.5.0",
+  "title": "Inspection request (human approval required before any field action)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "request_id",
+    "t_requested_sim_s",
+    "action_id",
+    "target_asset",
+    "justification",
+    "human_approval"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "inspection_requests"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^REQ-INSP-[0-9]{5}$"
+    },
+    "t_requested_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "action_id": {
+      "enum": [
+        "ACT-INSP-01",
+        "ACT-INSP-02",
+        "ACT-INSP-03",
+        "ACT-INSP-04",
+        "ACT-INSP-05",
+        "ACT-INSP-06",
+        "ACT-INSP-07"
+      ]
+    },
+    "target_asset": {
+      "type": "string",
+      "minLength": 1
+    },
+    "justification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "competing_hypotheses",
+        "agent_reported_information_gain_bits",
+        "estimated_cost_usd"
+      ],
+      "properties": {
+        "competing_hypotheses": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "agent_reported_information_gain_bits": {
+          "type": "number",
+          "minimum": 0
+        },
+        "estimated_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "human_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PENDING",
+            "APPROVED",
+            "REJECTED"
+          ]
+        },
+        "approver_id": {
+          "type": "string"
+        },
+        "work_permit_number": {
+          "type": "string"
+        },
+        "rejection_reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

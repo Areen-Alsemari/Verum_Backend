@@ -1,0 +1,134 @@
+{
+  "test_suite": "VERUM_PRE_DATASET_PREFLIGHT_V1",
+  "executed_checks": 11,
+  "passed": 11,
+  "failed": 0,
+  "production_dataset_authorized": false,
+  "production_blockers": [
+    "connected transient solver not implemented/verified",
+    "pump NPSH3 and margin model missing",
+    "dynamic check-valve/actuator/pump-trip models not verified",
+    "sensor models for motor current/vibration not qualified",
+    "emissions and degraded-seal quantitative models not independently validated",
+    "full-network conservation and train/test leakage gates not run"
+  ],
+  "tests": [
+    {
+      "test": "60_second_kinematic_receipt_analytic_pilot",
+      "status": "PASS",
+      "detail": {
+        "episode_duration_s": 60.0,
+        "observation_rows": 74,
+        "hidden_truth_states": 61,
+        "mass_gain_kg": 7500.0,
+        "release_tier": "analytic_verification ONLY"
+      }
+    },
+    {
+      "test": "single_pipe_MOC_instant_closure",
+      "status": "PASS",
+      "detail": {
+        "grids": [
+          51,
+          101,
+          201
+        ],
+        "jouwkowsky_pressure_rise_bar": 21.08686937306227,
+        "limits": "ideal frictionless single-pipe valve closure, not complete hydraulic solver"
+      }
+    },
+    {
+      "test": "signed_three_inlet_receipt_not_clipped",
+      "status": "PASS",
+      "detail": {
+        "open_branch_flow_m3h": [
+          -48.629444772687044,
+          296.10443986037455,
+          352.52500491222884
+        ],
+        "source_pressure_barg": 0.72365440891231,
+        "interpretation": "diagnostic counterexample only; this three-inlet lineup is prohibited for routine use"
+      }
+    },
+    {
+      "test": "json_schema_paramvalue_positive_and_negative",
+      "status": "PASS",
+      "detail": {
+        "tested_cases": 5,
+        "schema_id": "urn:verum:paramvalue:0.4.0"
+      }
+    },
+    {
+      "test": "fault_catalog_and_generic_vapor_reference",
+      "status": "PASS",
+      "detail": {
+        "shared_fault_type_count": 8,
+        "epa_generic_25c_pv_Pa": 49199.222719773126,
+        "scope": "generic reference curve not a Saudi PG95 assay or approved NPSH3"
+      }
+    },
+    {
+      "test": "physical_graph_28_edges_and_paths",
+      "status": "PASS",
+      "detail": {
+        "edge_count": 28,
+        "route_count": 11,
+        "total_edge_length_m": 985.0
+      }
+    },
+    {
+      "test": "instrument_refs_and_quantity_types",
+      "status": "PASS",
+      "detail": {
+        "installed_tags": 36,
+        "emission_ready_tag_count": 30,
+        "declared_but_withheld_tags": [
+          "YS-201A",
+          "VT-201A",
+          "IT-201A",
+          "YS-201B",
+          "VT-201B",
+          "IT-201B"
+        ]
+      }
+    },
+    {
+      "test": "tank_inventory_and_60_second_mass_balance",
+      "status": "PASS",
+      "detail": {
+        "volume_at_9_m_m3": 6343.250673760631,
+        "volume_gain_60s_at_600_m3h_m3": 10.0,
+        "mass_gain_kg": 7500.0,
+        "level_after_m": 9.014147106052611
+      }
+    },
+    {
+      "test": "synthetic_pump_domain_and_PT201_static_pressure",
+      "status": "PASS",
+      "detail": {
+        "tk101_Q300_K0_curve_valid": false,
+        "tk102_Q300_K0_curve_valid": true,
+        "PT201_static_barg_TK103_min": -0.15719786485235984,
+        "shaft_power_kW": 34.323274999999995
+      }
+    },
+    {
+      "test": "phase_validity_and_outward_leak",
+      "status": "PASS",
+      "detail": {
+        "NPSHa_TK103_lowlevel_45C_m": -0.8297968549749967,
+        "leak_flow_m3s_100kPa_1e-5m2": 0.00010124557603503805,
+        "negative_dp": "rejected"
+      }
+    },
+    {
+      "test": "reduced_ledger_and_event_time_causality",
+      "status": "PASS",
+      "detail": {
+        "reduced_mass_balance_residual_m3": 1.6479873021779667e-16,
+        "event_at_s": 1.15,
+        "availability_s": 1800.1
+      }
+    }
+  ]
+}

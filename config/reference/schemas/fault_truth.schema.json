@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:fault_truth:0.5.0",
+  "title": "Fault truth (hidden, evaluator-only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "fault_type",
+    "fault_instance_id",
+    "causal_parent_fault_instance_id",
+    "asset_id",
+    "onset_t_sim_s",
+    "mechanism",
+    "mechanism_status",
+    "severity_trajectory",
+    "physical_parameter_modified",
+    "hidden"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "fault_truth"
+    },
+    "episode_id": {
+      "type": "string"
+    },
+    "fault_type": {
+      "enum": [
+        "RIM_SEAL_DETERIORATION",
+        "FITTING_DAMAGE",
+        "ROOF_LANDING_ABNORMAL",
+        "PIPE_LEAK",
+        "VALVE_RESTRICTION",
+        "PUMP_HEAD_DEGRADATION",
+        "SENSOR_DRIFT",
+        "VALVE_MISROUTING"
+      ]
+    },
+    "fault_instance_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "causal_parent_fault_instance_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "location": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "onset_t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "mechanism": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mechanism_status": {
+      "enum": [
+        "resolved",
+        "provisional",
+        "unresolved"
+      ]
+    },
+    "severity_trajectory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "time_basis",
+        "knots",
+        "interpolation",
+        "outside_support"
+      ],
+      "properties": {
+        "type": {
+          "const": "piecewise_linear"
+        },
+        "time_basis": {
+          "const": "seconds_since_onset"
+        },
+        "knots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            ]
+          }
+        },
+        "interpolation": {
+          "const": "linear"
+        },
+        "outside_support": {
+          "const": "hold_last"
+        }
+      }
+    },
+    "physical_parameter_modified": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "unit",
+        "baseline_value",
+        "fault_value_at_severity_one",
+        "mapping"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "baseline_value": {
+          "$ref": "urn:verum:paramvalue:0.4.0"
+        },
+        "fault_value_at_severity_one": {
+          "$ref": "urn:verum:paramvalue:0.4.0"
+        },
+        "mapping": {
+          "type": "string"
+        }
+      }
+    },
+    "conserved_quantity_effects": {
+      "type": "array"
+    },
+    "hidden": {
+      "const": true
+    }
+  }
+}

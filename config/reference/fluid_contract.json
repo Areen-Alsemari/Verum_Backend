@@ -1,0 +1,23 @@
+{
+  "schema_version": "VERUM-AUDITED-1",
+  "fluid_id": "SA_PG95_REPRESENTATIVE_V1",
+  "grade_identity": "Saudi PG95 unleaded gasoline (Saudi Aramco confirms PG95 is sold)",
+  "model_status": "provisional_simulation",
+  "property_version": "VERUM-PG95-SIM-1.0",
+  "T_reference_K": 298.15,
+  "rho_kg_m3": 750.0,
+  "mu_Pa_s": 0.0005,
+  "bulk_modulus_Pa": 1000000000.0,
+  "property_origin": "Selected synthetic constants, not a specific Saudi fuel assay",
+  "validity": "constant-property reference at 25C only; temperature sweeps isolate vapor-pressure sensitivity, not a coupled seasonal assay",
+  "vapor_reference": {
+    "id": "EPA_GENERIC_MOTOR_GASOLINE_RVP10",
+    "scope": "generic sensitivity only, never certified Saudi PG95",
+    "A": 11.724,
+    "B_degR": 5237.3,
+    "vapor_molecular_weight_kg_kmol": 66,
+    "true_vapor_pressure_equation_Pa": "6894.757293*exp(A-B/(1.8*T_K))",
+    "source": "US EPA June 2026 AP-42 Table 7.1-2",
+    "source_url": "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf"
+  }
+}
