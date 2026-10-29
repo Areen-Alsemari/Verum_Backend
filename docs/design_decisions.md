@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 4 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 5 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -44,10 +44,15 @@ version superseded; records are not edited in place.
 | D15 | Fitting profiles | SIM | 1.0 |
 | D16 | Alarm hysteresis | SIM | 1.0 |
 | D17 | Time step and integration scheme | DESIGN | 1.0 |
-| D18 | Quasi-steady validity | DESIGN | 1.0 |
+| D18 | Quasi-steady validity | DESIGN (superseded by D22) | 1.0 |
 | D19 | Valve motion and loss coefficient | SIM | 1.0 |
 | D20 | Truth log format | DESIGN | 1.0 |
 | D21 | Temperature held constant per episode | SIM | 1.0 |
+| D22 | Rigid-column inertia | DESIGN | 1.0 |
+| D23 | Healthy variability | SIM | 1.0 |
+| D24 | Atmosphere stratum per episode | SIM | 1.0 |
+| D25 | Validity windows | DESIGN | 1.0 |
+| D26 | Protection thresholds located inside the step | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -500,7 +505,7 @@ version superseded; records are not edited in place.
 
 ## D18 - Quasi-steady validity
 
-- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN  **Superseded by:** D22 (the factor and the rigid-column time constant are replaced by the wave-round-trip criterion; this record is kept as history)
 - **Decision.** The rigid-column time constant along the active path is
   tau = (sum L_i / A_i) Q0 / (g dH0), where the sum runs over the path edges, Q0
   is the flow before the event and dH0 is the total head loss along the path at
@@ -573,6 +578,104 @@ version superseded; records are not edited in place.
   and ambient conditions. The engine represents none of it, so the temperature
   channels carry no dynamics and the screen cannot react to a warming product.
 
+## D22 - Rigid-column inertia
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN  **Supersedes:** D18
+- **Decision.** For each single-path receipt or delivery flow the path flow Q is a
+  state with
+      dQ/dt = (H_drive - H_loss(Q)) / I,     I = sum L_i / (g A_i)
+  along the active path. The edge head difference includes the inertial term
+  (L_i / (g A_i)) dQ/dt, so the tap pressures show surge.
+  - **Receipt.** H_drive = min(H_demand, H_cap), with H_demand the head the flow
+    controller asks for and H_cap the head available at the 10 barg cap (head-based,
+    D3) above the tank level. The controller asks for
+    H_demand = H_loss(Q) + I (Q_set - Q) / tau_c with tau_c = 2 s, so that, uncapped,
+    dQ/dt = (Q_set - Q) / tau_c exactly (first order, time constant tau_c). Equivalently
+    dQ/dt = min[(Q_set - Q) / tau_c, (H_cap - H_loss(Q)) / I]. Under the cap, or when a
+    valve closes, the flow decays by inertia.
+  - **Delivery.** H_drive = pump head(Q) minus the static difference to the reservoir, the
+    friction and fitting losses, and the boundary-law term (D2, D23).
+  - **Closed paths.** When a valve reaches the closed threshold the path flow is set to
+    zero. The momentum removed that way is a sudden stop that the model cannot resolve and
+    is reported in a validity window.
+  - **Branched lineups** (for example `RECEIVE_101_102`) have no single path. They are
+    flagged `rigid_column_unavailable`; the receipt flow state then follows the first-order
+    response and the split comes from the steady solve (explicit first-order integration).
+  - **Validity.** An event is valid only if its duration is at least 10 round trips of a
+    pressure wave over the path, duration >= 10 (2 L_path / a), with the screening wave
+    speeds of the audited package (1089.2, 1082.8 and 1078.2 m/s for DN200, DN250 and
+    DN300) combined by travel time. Otherwise it is flagged (D25). Flow that falls from 90
+    to 10 percent of its value within less than that time is flagged as well.
+- **Reason.** D18 judged events against a rigid-column time constant but did not model
+  inertia, so the flagged events had no inertial behaviour at all. The rigid-column model
+  represents the inertia of the liquid column; the wave criterion states where the
+  rigid-column assumption itself fails.
+- **Correction to the task text.** The demand head is evaluated with the present flow,
+  H_loss(Q), not with H_loss(Q_set). With H_loss(Q_set) the uncapped response would not be
+  exactly first order, because the loss difference would add to the flow change. The present
+  form gives the first-order response that D3 specifies.
+- **Sensitivity required.** Vary the validity factor (5, 10 and 20) and report which windows
+  change status (*proposed*); step size of the substeps (*proposed*: halve the substep).
+- **Notes.** Peak surge pressure of a fast closure is a wave effect and is not resolved.
+
+## D23 - Healthy variability
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** A downstream factor f_d(t) multiplies the boundary-law coefficient c of D2.
+  log f_d follows an Ornstein-Uhlenbeck process with standard deviation 0.05 and
+  correlation time 1800 s, and f_d is clipped to [0.8, 1.25]. The process is drawn on the
+  named seeded stream `demand` on the 1 s grid, with the exact transition
+  X(k+1) = phi X(k) + sigma sqrt(1 - phi^2) xi, phi = exp(-1 s / 1800 s); between grid
+  points f_d is interpolated linearly in log. The value is written to the hidden truth
+  (`boundary_state`). Receipt set-points are chosen per scenario from
+  {300, 400, 500, 600} m3/h, subject to the headroom screen; zero means receipt stopped.
+- **Reason.** A downstream demand that never changes is not a healthy plant. The factor
+  moves the delivery duty point by a few percent without adding an asset.
+- **Sensitivity required.** Vary sigma (0.03 and 0.08) and the correlation time (900 and
+  3600 s). *Proposed.*
+- **Notes.** Only the scenarios that name the demand process use it; the others keep
+  f_d = 1.
+
+## D24 - Atmosphere stratum per episode
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** Each episode has an atmosphere stratum: `sea_level` (101325 Pa, baseline)
+  or `elevated` (94300 Pa, a labelled robustness subset). The pumping-minimum files are
+  per stratum, computed at the worst-case f_d = 0.8, for both fitting profiles and the
+  NPSH3 sweep of D7. The episode record carries the stratum. SG0 still checks the phase and
+  NPSH screen at every step with the solved flow.
+- **Reason.** The smallest f_d gives the largest flow and therefore the largest NPSH3 and
+  the smallest margin, so the level that passes at f_d = 0.8 passes at every f_d in the
+  clipped range.
+- **Sensitivity required.** The elevated stratum is itself the sensitivity; its elevation
+  (about 600 m) is from memory and is to be confirmed by the team.
+- **Notes.** The earlier files computed at f_d = 1 are kept as history.
+
+## D25 - Validity windows
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Validity windows are hidden records with a start, an end, a reason and the
+  ratio duration / (2 L_path / a). They replace the single per-row ratio of the solver
+  diagnostics, they are listed in the episode record, and they are never reachable from
+  `verum.api`.
+- **Reason.** A window states which interval of an episode the rigid-column model does not
+  represent, so that a consumer can exclude it, and keeps the reason with it.
+- **Sensitivity required.** As D22.
+- **Notes.** Kinds: valve stroke, receipt set-point change, flow collapse, branched lineup.
+
+## D26 - Protection thresholds located inside the step
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** A crossing of a protection threshold (high alarm, alarm clearing, high-high)
+  inside a step is located by root-finding on the cubic Hermite interpolation of the tank
+  volume, and the step is truncated to end on the crossing time. The protection update at
+  that time sees the level at the threshold.
+- **Reason.** Detection on the 1 s grid quantises the trip time and lets the level pass the
+  threshold; the trip should be seen when the level reaches it.
+- **Sensitivity required.** Not applicable; the accuracy is that of the interpolation
+  (below 1 ms in the shipped scenarios).
+- **Notes.** The crossing time is recorded in the event.
+
 ## Episode profile
 
 Episodes use the `reference_fittings` profile (D15). The `pipe_only` profile exists to
@@ -588,5 +691,5 @@ implemented, but they are proposals and need confirmation by the team.
 | P1 | Lineup transitions other than the two documented chains: all-closed states reach each other; an active mode is entered from, and left to, a hold state only; the receipt hold serves modes that open `XV-R000`; the changeover hold serves modes with a running pump and keeps the source tank. | `verum.lineups.transitions` |
 | P2 | A high-high isolation request closes both `XV-R000` and the inlet valve of the tripped tank; the confirmation timeout is the larger of the two valve timeouts. | `verum.protection.config` |
 | P3 | A latched trip is reset only by an authorised event from operations or protection, with the independent signal valid and below the trip level minus the hysteresis of D16. | `verum.protection.machine` |
-| P4 | The factor 10 of D18 and the event-duration definitions (stroke time; four controller time constants). | `verum.sim.validity` |
+| P4 | The factor 10 of D22 and the event-duration definitions (stroke time; four controller time constants). | `verum.sim.validity` |
 | P5 | The operations controller closes `XV-R000` and the tank inlet valve in response to a protection request (reactive command with a configured delay). | `verum.ops` |
