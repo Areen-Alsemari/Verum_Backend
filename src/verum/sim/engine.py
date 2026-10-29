@@ -42,12 +42,14 @@ Source: ``docs/design_decisions.md`` D3, D6, D17 to D26;
 from __future__ import annotations
 
 import copy
+import dataclasses
 import heapq
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+import numpy as np
 from scipy.optimize import brentq
 
 from verum.graph import Lineup
@@ -76,6 +78,9 @@ from verum.protection import (
     load_protection_config,
 )
 from verum.rng import RandomStreams
+from verum.sensors import chain as sensor_chain
+from verum.sensors.specs import TagSpec, load_sensor_config
+from verum.sim import deadleg
 from verum.sim import dynamics as dyn
 from verum.sim import rows as rw
 from verum.sim import validity as vd
@@ -123,6 +128,20 @@ class Rejected(Exception):
         }
 
 
+@dataclass(frozen=True)
+class LevelChain:
+    """The level transmitter of a tank as the alarm sees it (decision D40): the specification
+    and the draws of the observation chain, which uses the same streams."""
+
+    spec: TagSpec
+    sigma: float
+    steps: int
+    p_drop: float
+    times: np.ndarray
+    noise: np.ndarray
+    drop: np.ndarray
+
+
 @dataclass
 class Track:
     """Flow of a column since a closing stroke began (for the collapse window)."""
@@ -158,7 +177,8 @@ class EngineState:
     window_counter: int = 0
     events_evaluated: int = 0
     tracks: dict[str, Track] = field(default_factory=dict)
-    landing: dict[str, float] = field(default_factory=dict)
+    lt_y: dict[str, float] = field(default_factory=dict)
+    lt_visible: dict[str, float | None] = field(default_factory=dict)
     crossings: list[dict[str, Any]] = field(default_factory=list)
     prot_index: dict[str, int] = field(default_factory=dict)
     step_index: int = 0
@@ -170,6 +190,9 @@ class EngineState:
     mode: str = "inactive"
     qdot_receipt: float = 0.0
     qdot_delivery: float = 0.0
+    edge_heads: dict[str, float] = field(default_factory=dict)
+    edge_heads_t: float = 0.0
+    dead_edges: frozenset[str] = frozenset()
     detector_due: dict[str, float] = field(default_factory=dict)
     detector_on: list[str] = field(default_factory=list)
 
@@ -272,8 +295,25 @@ class Engine:
             t: float(streams.stream(f"detector/{t}").normal(0.0, config["detector_offset_sigma_m"]))
             for t in model.topology.tank_ids
         }
+        sensors = load_sensor_config(model.directory)
+        self._lt = {t: self._level_chain(sensors, streams, t) for t in model.topology.tank_ids}
         self._law_c = load_boundary_law_coefficient(scenario.fitting_profile, model.directory).value
         self.state = state if state is not None else self._initial_state()
+
+    def _level_chain(self, sensors: Any, streams: RandomStreams, tank: str) -> LevelChain:
+        spec = sensors.tags[f"LT-{tank[3:]}"]
+        assert spec.interval_s
+        phase = sensor_chain.sample_phase(spec.tag, spec.interval_s)
+        times = np.arange(0.0, self.scenario.duration_s - phase + 1e-9, spec.interval_s) + phase
+        return LevelChain(
+            spec,
+            sensors.sigma("level"),
+            int(sensors["adc_steps"]),
+            sensors["dropout_probability"],
+            times,
+            streams.stream(f"sensor/{spec.tag}/noise").standard_normal(len(times)),
+            streams.stream(f"sensor/{spec.tag}/dropout").random(len(times)),
+        )
 
     def _protection_config(self, tank: str) -> ProtectionConfig:
         return load_protection_config(self.model.topology, tank, self.model.directory)
@@ -305,6 +345,11 @@ class Engine:
         )
         for command in ops.timed_commands:
             self._push(state, command.t_s, RANK_COMMAND, "command", command)
+        for tank, lt in self._lt.items():
+            state.lt_y[tank] = self.geometry.level_m(volumes[tank], self.rho)
+            state.lt_visible[tank] = None
+            for k, t in enumerate(lt.times):
+                self._push(state, float(t), RANK_DETECTOR, "lt_sample", (tank, k))
         return state
 
     @staticmethod
@@ -359,10 +404,41 @@ class Engine:
             ) from exc
         except (ConvergenceError, HydraulicsError) as exc:
             raise Rejected("SG2", t, "steady_solve", str(exc), None, None) from exc
+        result = self._with_dead_legs(result, volumes, t, open_valves)
         st.warm = dict(result.node_heads_m)
         st.iterations = max(st.iterations, result.iterations)
         st.residual_kg_s = max(st.residual_kg_s, result.max_mass_residual_kg_s)
         return result
+
+    def _with_dead_legs(
+        self, result: SteadyResult, volumes: dict[str, float], t: float, open_valves: set[str]
+    ) -> SteadyResult:
+        """Decision D39: pressures for the segments the steady solve left undetermined."""
+        st, m = self.state, self.model
+        h_res = m.node_z[BOUNDARY_NODE] + m.config["reservoir_pressure_pa_gauge"] / (m.rho * m.g)
+        heads, dead = deadleg.edge_heads(
+            m, open_valves, result, self._levels(volumes), h_res, st.edge_heads,
+            st.dead_edges, t - st.edge_heads_t, self.cfg["dead_leg_time_constant_s"],
+        )  # fmt: skip
+        rho_g = m.rho * m.g
+        ends = dict(result.edge_end_pressures_pa_gauge)
+        for e in m.topology.edges:
+            if e.edge_id not in ends:
+                h = heads[e.edge_id]
+                ends[e.edge_id] = (rho_g * (h - e.z_from_m), rho_g * (h - e.z_to_m))
+        taps, tap_heads = dict(result.tap_pressures_pa_gauge), dict(result.tap_heads_m)
+        for node, ref in m.config.tap_reference_edges.items():
+            if node not in taps:
+                taps[node] = rho_g * (heads[ref] - m.node_z[node])
+                tap_heads[node] = heads[ref]
+        return dataclasses.replace(
+            result,
+            edge_end_pressures_pa_gauge=ends,
+            tap_pressures_pa_gauge=taps,
+            tap_heads_m=tap_heads,
+            edge_heads_m=heads,
+            dead_edges=dead,
+        )
 
     def _tap_offsets(self, t: float, receipt_m3h: float, qdot: float) -> dict[str, float]:
         """Head of the PT-001 tap relative to its node (decision D36), for a single receipt path."""
@@ -405,6 +481,8 @@ class Engine:
         st = self.state
         st.started = True
         st.current = self._solve(st.volumes, 0.0, st.receipt_flow_m3h)
+        st.edge_heads, st.edge_heads_t = dict(st.current.edge_heads_m), 0.0
+        st.dead_edges = st.current.dead_edges
         st.delivery_flow_m3h = st.current.pump.flow_m3h if st.current.pump is not None else 0.0
         self._check_pumping_minimum_at(0.0, st.current)
         self._process_time(0.0)
@@ -623,6 +701,7 @@ class Engine:
         st.ledger_terms += 3
         st.ledger_abs_kg += self.rho * (abs(step.recv_m3) + abs(step.deliv_m3) + abs(net))
         self._track_collapse(step)
+        self._advance_level_chain(step)
         st.volumes = step.volumes
         st.receipt_flow_m3h, st.delivery_flow_m3h = step.q_r_m3h, step.q_d_m3h
         st.qdot_receipt, st.qdot_delivery = step.qdot_r, step.qdot_d
@@ -632,13 +711,36 @@ class Engine:
         st.iterations, st.residual_kg_s = step.iterations, step.residual
         self._check_crossing(step.t0, step.t1 - step.t0, st.current, step.new)  # type: ignore[arg-type]
         st.current = step.new
+        st.edge_heads, st.edge_heads_t = dict(step.new.edge_heads_m), step.t1
+        st.dead_edges = step.new.dead_edges
         self._finish_inactive(self._plan(step.t1, step.t1), step.t1)
         self._write_interior(step, base_received, base_delivered)
-        st.landing = {}
         if landing is not None and abs(landing[0] - step.t1) <= 1e-6:
             self._record_landing(landing)
         self._check_ledger(step.t1)
         self._process_time(step.t1)
+
+    def _advance_level_chain(self, step: Stepped) -> None:
+        """Exact first-order lag of each level transmitter over a step of linear input."""
+        st, h = self.state, step.t1 - step.t0
+        for tank, lt in self._lt.items():
+            x0 = self.geometry.level_m(st.volumes[tank], self.rho)
+            x1 = self.geometry.level_m(step.volumes[tank], self.rho)
+            tau = lt.spec.lag_s
+            a, s = math.exp(-h / tau), (x1 - x0) / h
+            st.lt_y[tank] = a * st.lt_y[tank] + (1.0 - a) * (x0 - s * tau) + s * h
+
+    def _level_sample(self, tank: str, k: int, t: float) -> None:
+        """Sample the transmitter; a kept sample reaches the protection after the comms delay."""
+        lt, st = self._lt[tank], self.state
+        if lt.drop[k] < lt.p_drop:
+            return
+        assert lt.spec.range_lo is not None and lt.spec.range_hi is not None
+        value = st.lt_y[tank] + float(lt.noise[k]) * lt.sigma
+        value, _ = sensor_chain.quantise_clip(
+            value, lt.spec.range_lo, lt.spec.range_hi, lt.steps, lt.sigma
+        )
+        self._push(st, t + lt.spec.comms_delay_s, RANK_DETECTOR, "lt_visible", (tank, value))
 
     def _dense_needed(self, t0: float, t1: float) -> bool:
         """Decision D34: 0.1 s rows while a valve moves or inside a validity window."""
@@ -671,6 +773,11 @@ class Engine:
                 ins.q_d * 3600.0 if plan.delivery is not None else None,
                 offsets, apply_cap=False, qdot_receipt=ins.qdot_r,
             )  # fmt: skip
+            # The heads of determined edges are the latest known: an edge that is isolated at
+            # the end of the step keeps the value from the last row before it (decision D39).
+            for edge, head in result.edge_heads_m.items():
+                if edge not in result.dead_edges:
+                    self.state.edge_heads[edge] = head
             snap = self._snapshot(
                 t, result, ins.volumes, (base_received + ins.c_r, base_delivered + ins.c_d)
             )
@@ -688,23 +795,14 @@ class Engine:
                 {"t_sim_s": t, "tank": tank, "threshold": name, "level_m": thr}
             )
             return
-        # A falling crossing must leave the level strictly below the threshold (the alarm
-        # clears below it); a rising one lands on it. The located time is exact to the
-        # root-finding tolerance, so this removes only the last rounding step.
-        self.state.landing[tank] = math.nextafter(thr, -math.inf) if name == "alarm_clear" else thr
-        self.state.crossings.append({"t_sim_s": t, "tank": tank, "threshold": name, "level_m": thr})
 
     # --- D26: protection thresholds located inside the step ----------
     def _candidates(self, tank: str) -> list[tuple[str, float, int]]:
         cfg, state = self._pconfig[tank], self.state.protections[tank].state.value
         out: list[tuple[str, float, int]] = []
-        if state == "NORMAL":
-            out.append(("high_alarm", cfg.high_alarm_m, 1))
         if state in ("NORMAL", "HIGH_ALARM") and tank not in self.state.detector_due:
             # The detector sees level plus its offset: it asserts at this true level.
             out.append(("high_high", cfg.high_high_m - self.detector_offset[tank], 1))
-        if state == "HIGH_ALARM":
-            out.append(("alarm_clear", cfg.alarm_clear_m, -1))
         return out
 
     def _level_at(self, step: Stepped, tank: str, t: float) -> float:
@@ -1156,6 +1254,10 @@ class Engine:
             _, _, _, kind, payload = heapq.heappop(st.queue)
             if kind == "detector":
                 st.detector_on.append(payload)
+            elif kind == "lt_sample":
+                self._level_sample(payload[0], payload[1], t)
+            elif kind == "lt_visible":
+                st.lt_visible[payload[0]] = payload[1]
             elif kind == "command":
                 self._execute(payload, t)
             elif kind == "valve_end":
@@ -1186,13 +1288,13 @@ class Engine:
         r = st.current
         levels = self._levels(st.volumes)
         for tank, machine in st.protections.items():
-            level = self._signal_level(tank, levels[tank])
+            level = levels[tank]  # the detector sees the physical level; the alarm sees the LT
             valves = self._isolation_valves[tank]
             closed = {v: st.valves[v].is_physically_closed(t) for v in valves}
             machine.update(
                 Signals(
                     t_s=t,
-                    process_level_m=level,
+                    process_level_m=st.lt_visible.get(tank),
                     independent_level_m=self._detector_signal(tank, level),
                     closed_confirmed=closed,
                     receipt_flow_m3h=r.receipt_flow_m3h,
@@ -1211,13 +1313,6 @@ class Engine:
             st.detector_on.remove(tank)
             st.detector_due.pop(tank, None)
         return min(seen, math.nextafter(trip, -math.inf))
-
-    def _signal_level(self, tank: str, level: float) -> float:
-        """The level the machine sees: a located crossing lands exactly on its threshold."""
-        landed = self.state.landing.get(tank)
-        if landed is None or abs(level - landed) > self.cfg["crossing_landing_tolerance_m"]:
-            return level
-        return landed
 
     def _consume_protection_events(self, tank: str, machine: TankProtection, t: float) -> None:
         st = self.state

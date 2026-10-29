@@ -156,6 +156,13 @@
       "status": "provisional",
       "evidence_tag": "SIM",
       "provenance_id": "VERUM-DD-D33"
+    },
+    "dead_leg_time_constant_s": {
+      "value": 60.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D39-v1.0"
     }
   }
 }

@@ -12,9 +12,8 @@ Key assumptions:
       audit is not served; LK-09 dropout rate equal across scenarios; LK-10 quality
       flags carry no scenario pattern; LK-11 the LSHH observation equals the detector output
       after the delay; LK-12 the episode id is opaque.
-    * Random dropout is the same for every episode; rows that are null because the hydraulic
-      solve never determined the quantity (idle branches) are structural and are excluded
-      from the dropout rate.
+    * Random dropout is the same for every episode, and every null row is a dropout: decision
+      D39 gives idle segments a pressure, so there are no structural nulls.
 
 Source: ``docs/design_decisions.md`` D27 to D33; ``revised/05_simulation_validation_dataset.md``
 sections 7.2 and 9.
@@ -45,7 +44,7 @@ COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-ele
 OBS_KEYS = set(load_schema("observation")["properties"])
 CAPPED_CLOSURES = {"S0u-D", "S0u-E"}
 EVENT_TAGS = {t for t, s in CFG.tags.items() if s.kind == "event"}
-ALWAYS_DETERMINED = [t for t in CFG.tags if t.startswith(("LT-", "TT-", "FT-001"))]
+CONTINUOUS = [t for t, spec in CFG.tags.items() if spec.kind == "continuous"]
 
 
 def _load(directory: Path, name: str) -> list[dict[str, Any]]:
@@ -159,14 +158,23 @@ def test_lk11_the_lshh_observation_is_the_detector_output_after_the_comms_delay(
         assert [r["value"] for r in obs["S0u-E"] if r["tag_id"] == other] == [0.0]
 
 
-def test_pt001_clips_at_ten_bar_with_quality_suspect_in_the_esd_episode(
+def test_pt001_clips_at_ten_bar_then_relaxes_toward_the_hydrostatic_value(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    late = [r for r in obs["S0u-E"] if r["tag_id"] == "PT-001" and r["t_sim_s"] > 2979.0]
-    ok = [r for r in late if r["value"] is not None]
-    assert ok and all(r["value"] == 10.0 and r["quality_flag"] == "suspect" for r in ok)
-    early = [r for r in obs["S0u-E"] if r["tag_id"] == "PT-001" and r["t_sim_s"] < 2900.0]
+    """The head at the start of E002 reaches 13.5 barg at the closure (2978.99 s), above the 10
+    barg range: clipped with quality suspect. The isolated segment then relaxes to the tank head
+    with 60 s (decision D39): it is below 10 barg after 60 ln(13.46/10) = 18 s, and at the end
+    of the hour it reads the hydrostatic value of TK-101 (13.0 m: (13.0 - 1.0 m) x 0.0735 = 0.88
+    barg, less the tank-side losses)."""
+    rows = [r for r in obs["S0u-E"] if r["tag_id"] == "PT-001" and r["value"] is not None]
+    clipped = [r for r in rows if 2978.5 < r["t_sim_s"] < 2990.0]
+    assert clipped and all(r["value"] == 10.0 and r["quality_flag"] == "suspect" for r in clipped)
+    early = [r for r in rows if r["t_sim_s"] < 2900.0]
     assert all(r["quality_flag"] != "suspect" for r in early)
+    final = [r["value"] for r in rows if r["t_sim_s"] > 3500.0]
+    assert all(r["quality_flag"] == "good" for r in rows if r["t_sim_s"] > 3000.0)
+    assert 0.5 < sum(final) / len(final) < 1.2
+    assert [r["value"] for r in rows if 3000.0 < r["t_sim_s"] < 3010.0][0] < 10.0
 
 
 def test_ft201_varies_with_the_falling_tank_level(obs: dict[str, list[dict[str, Any]]]) -> None:
@@ -226,17 +234,24 @@ def test_gauge_readings_agree_between_the_strata_while_the_absolute_truth_differ
     assert docs["S0-A"] - docs["S0-A-elev"] == 7025.0
 
 
-def test_lk09_dropout_rate_is_the_same_in_every_episode(
+def test_lk09_null_rate_is_the_binomial_dropout_rate_for_every_tag_in_every_episode(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
+    """Decision D39 leaves no structural null: every null row is a random dropout. For each
+    continuous tag and episode the count is within five binomial deviations of 0.05 percent,
+    and the pooled rate over all tags and episodes is within five deviations too."""
     n_total = missing = 0
     for sid in COMPLETED:
-        rows = [r for r in obs[sid] if r["tag_id"] in ALWAYS_DETERMINED]
-        lost = sum(r["availability_status"] == "missing_sample" for r in rows)
-        mean = len(rows) * 0.0005
-        assert lost < mean + 5.0 * math.sqrt(mean) + 2.0, (sid, lost, len(rows))
-        n_total, missing = n_total + len(rows), missing + lost
-    assert missing > 0 and abs(missing - n_total * 0.0005) < 5.0 * math.sqrt(n_total * 0.0005)
+        for tag in CONTINUOUS:
+            rows = [r for r in obs[sid] if r["tag_id"] == tag]
+            lost = sum(r["availability_status"] == "missing_sample" for r in rows)
+            mean = len(rows) * 0.0005
+            assert lost < mean + 5.0 * math.sqrt(mean) + 2.0, (sid, tag, lost, len(rows))
+            assert all(
+                (r["value"] is None) == (r["availability_status"] == "missing_sample") for r in rows
+            )
+            n_total, missing = n_total + len(rows), missing + lost
+    assert abs(missing - n_total * 0.0005) < 5.0 * math.sqrt(n_total * 0.0005)
 
 
 def test_lk10_quality_flags_carry_no_scenario_pattern(

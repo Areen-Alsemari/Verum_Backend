@@ -80,6 +80,8 @@ class SteadyResult:
     k_multiplier: float = 1.0
     boundary_law_coefficient_m: float = 0.0
     tap_heads_m: Mapping[str, float] = field(default_factory=dict)
+    edge_heads_m: Mapping[str, float] = field(default_factory=dict)
+    dead_edges: frozenset[str] = frozenset()
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
@@ -90,6 +92,7 @@ class SteadyResult:
             "tap_pressures_pa_gauge",
             "tank_net_inflow_m3s",
             "tap_heads_m",
+            "edge_heads_m",
             "node_mass_residual_kg_s",
             "gates",
         ):

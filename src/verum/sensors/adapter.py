@@ -9,16 +9,13 @@ Key assumptions:
       hands plain arrays to ``chain``.
     * Unit conversion happens first: m3/s to m3/h, absolute pressure to gauge with the
       atmosphere of the episode stratum (decision D27), K to C.
-    * A pressure that the solve could not determine (a closed path) is held at the last
-      determined value; a leading gap takes the first determined value.
+    * Every truth quantity is determined (decision D39 gives idle segments a pressure); an
+      undetermined value is an error, never a null row or a held value.
     * Event tags (valve contacts, pump indicators, LSHH) are rows at t = 0 and at each
       change. A valve open contact follows decision D31 (assert at alpha 0.98, release below
       0.97, delay equal to the lag of the table). An LSHH row is the detector output of the
       engine (which already includes the detector delay of decision D33), seen after the
       comms delay.
-    * A quantity that the hydraulic solve never determined in the episode (for example the
-      pressure of an idle branch) gives rows with a null value, availability
-      ``missing_sample`` and quality ``bad``: nothing is invented in its place.
     * The six withheld tags have no specification and therefore produce no row.
     * Every continuous tag has its own random streams (noise, dropout) named after the tag.
 
@@ -87,21 +84,13 @@ def _nodes(
     series: list[tuple[float, str | None, dict[str, Any]]], field: str, patm: float
 ) -> chain.Nodes:
     ts, xs, jumps = [], [], []
-    last: float | None = None
     for t, side, payload in series:
         x = _convert(field, payload[field], patm)
         if x is None:
-            x = last  # undetermined (closed path): hold the last determined value
-        if x is None:
-            continue
-        last = x
+            raise ValueError(f"truth quantity {field} is undetermined at t = {t} s")
         ts.append(t)
         xs.append(x)
         jumps.append(side == "post_event")
-    first = next((x for x in xs), 0.0)
-    for i, x in enumerate(xs):
-        if x is None:
-            xs[i] = first
     return chain.Nodes(np.array(ts), np.array(xs), np.array(jumps))
 
 
@@ -130,8 +119,7 @@ def _continuous(
     episode: str, duration: float,
 ) -> ObservationResult:  # fmt: skip
     assert spec.interval_s and spec.range_lo is not None and spec.range_hi is not None
-    undetermined = len(nodes.t) == 0
-    y = np.zeros(0) if undetermined else chain.lag_response(nodes, spec.lag_s)
+    y = chain.lag_response(nodes, spec.lag_s)
     phase = chain.sample_phase(spec.tag, spec.interval_s)
     times = np.arange(0.0, duration - phase + 1e-9, spec.interval_s) + phase
     noise = streams.stream(f"sensor/{spec.tag}/noise").standard_normal(len(times))
@@ -141,7 +129,7 @@ def _continuous(
     for k, t in enumerate(times):
         t = float(t)
         avail = t + spec.comms_delay_s
-        if undetermined or drop[k] < p_drop:
+        if drop[k] < p_drop:
             obs.append(
                 _row(cfg, episode, spec.tag, t, avail, None, spec.unit, "bad", "missing_sample")
             )
