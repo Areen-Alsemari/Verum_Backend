@@ -86,9 +86,12 @@ hidden `boundary_state` dataset. Receipt set-points are chosen from 0, 300, 400,
 600 m3/h.
 
 Each episode has an atmosphere stratum, `coastal` (101325 Pa) or `inland` (94300 Pa,
-an estimate for a site near 600 m, elevation from memory and to be confirmed). The
-pumping-minimum tables are stored per stratum, for both fitting profiles and the NPSH3
-sweep, computed at the worst-case `f_d = 0.8` (the largest flow and the smallest margin).
+an estimate for a site near 600 m, elevation from memory and to be confirmed), and a
+volatility class, `RVP_9_0` (baseline), `RVP_9_5` or `RVP10` (stress), decisions D11, D24
+and D46. The pumping-minimum tables are stored per (stratum, volatility class) pair, for both
+fitting profiles, the four temperatures and the NPSH3 sweep, computed at the worst-case
+`f_d = 0.8` (the largest flow and the smallest margin), decision D51. The derived classes are
+used only if the verification gate against the tabulated true vapor pressures passes.
 
 ## Step scheme and event ordering
 
@@ -159,7 +162,8 @@ The gates run at every step and not only at the start.
   profile and NPSH3 coefficient is read from configuration. A level below it, at the start
   or later, rejects the episode; the crossing time inside a step is found by Hermite
   interpolation of the volume. The table is the one of the episode's stratum, computed at
-  `f_d = 0.8`. A combination that never passes is rejected at the start. The
+  `f_d = 0.8`; the table of the episode's stratum and volatility class. A combination that never
+  passes is rejected at the start. The
   phase and NPSH screen must be `OK` at every step while the pump runs. A solved pump flow
   outside its curve rejects the episode.
 - **SG1.** The mass ledger must close within its tolerance after every step.
@@ -199,12 +203,16 @@ rows after the checkpoint for equality as floating-point numbers on the same pla
   the S0u-E closure) is an unresolved sudden stop. Under the cap the source head is the
   cap by construction, so the model cannot report a pressure above it.
 - Pipes are incompressible and full; line pack and compressibility are not represented.
-- There is no pump start or trip and no check-valve closure dynamics.
+- There is no pump start or trip and no check-valve closure dynamics. The standalone
+  transient engine of `docs/transient_engine.md` has both, but is not called by this engine.
 - Temperature is constant in an episode (decision D21).
 - Protection acts on true signals; instrument lags, noise and failures are absent.
 - A branched lineup falls back to the quasi-steady scheme and is flagged.
-- The pumping-minimum tables and the strata are provisional selections; the inland
-  stratum rests on an elevation from memory.
+- The pumping-minimum tables, the strata and the derived volatility classes are provisional
+  selections; the inland stratum rests on an elevation from memory.
+- The rigid-column model omits the inertial head of the downstream column when the flow at the
+  source is prescribed (receipt set-point change) and under-predicts the peak head of a valve
+  closure unless the stroke lasts about thirty wave round trips; see `docs/transient_engine.md`.
 - Tests of the lumped path against the steady solver share formulas with the
   implementation and are not independent validation of the hydraulics.
 - Nothing in this document has been validated against measured data.

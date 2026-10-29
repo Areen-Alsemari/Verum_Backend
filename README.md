@@ -46,7 +46,10 @@ healthy episodes, the sensor chain and a read-only gateway. They contain:
 - tests for the above and a record of design decisions in
   `docs/design_decisions.md`.
 
-Wave dynamics, faults and agents are not implemented. The release policy
+A standalone transient engine (`verum.transient`, a first-order method of characteristics
+on the 28 edges; see `docs/transient_engine.md`) is a library with its own verification ladder.
+It is not called by the episode engine and changes no dataset tier. Faults and agents are not
+implemented. The release policy
 in `config/dataset_release_policy.json` keeps `production_generation_enabled`
 false, and the gate refuses the `production_candidate` tier while it is false.
 
@@ -63,7 +66,7 @@ not selected are represented as unresolved and raise an error when read.
 | `vendor/` | Audited input package, read-only, with hash manifest |
 | `config/` | Machine-readable contracts used by the loaders |
 | `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api` |
+| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api`, `transient` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
 

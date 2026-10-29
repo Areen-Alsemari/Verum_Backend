@@ -5,7 +5,7 @@ A field that cannot be filled from the present work is marked **unresolved**.
 
 | Field | Value |
 | --- | --- |
-| schema version of the card | 0.5.0 |
+| schema version of the card | 0.6.0 |
 | name | VERUM synthetic gasoline-terminal dataset |
 | release identifier | unresolved (no release has been made) |
 | dataset tier | `analytic_verification` for episodes without a flagged validity window; `restricted_benchmark` for episodes with one (decision D37). `production_candidate` is refused while `production_generation_enabled` is false |
@@ -55,12 +55,14 @@ pending sensitivity studies (D38).
 
 ## Validation
 
-Analytic and code-verification tests are in `tests/`. **Self-consistency checks are not
+Analytic and code-verification tests are in `tests/`; the verification ladder of the transient engine is described in `docs/transient_engine.md`. **Self-consistency checks are not
 independent validation.** No independent validation exists: **none**.
 
 ## Known limitations
 
-- No wave dynamics; peak surge pressure and sub-second events are not resolved.
+- No wave dynamics in the episodes; peak surge pressure and sub-second events are not resolved.
+  A standalone transient engine exists (`docs/transient_engine.md`); it is not integrated, it does
+  not change any tier (D47) and it has no cavitation model.
 - Faults, damaged-seal and fitting multipliers, and inspection outcomes do not exist yet.
 - Dead-leg pressures relax with a selected time constant; trapped-liquid thermal and
   compressibility effects are not modelled (D39).
@@ -68,6 +70,18 @@ independent validation.** No independent validation exists: **none**.
 - The alarm uses the level-transmitter chain; the high-high trip uses a detector with a selected
   offset and delay (D33, D40).
 - The inland stratum rests on an elevation recalled from memory and to be confirmed.
+- The derived volatility classes (`RVP_9_0`, `RVP_9_5`) rest on the AP-42 correlation and a
+  verification gate that could be run only on the tabulated points available (decision D46); the
+  Saudi domestic RVP limit is not established.
+- The pump curve is synthetic; no practising engineer reviewed the design, which was checked
+  against general engineering rules of thumb only (D48).
+- The receipt branch velocity of 5.2 m/s and the suction branch velocity of 2.6 m/s exceed
+  common design guidance (an unsourced recollection); inlet-jet and static-charge effects are
+  not modelled (D48).
+- The meter loss coefficient K = 1 is probably low (D48; the sweep of D50 is in the Phase 5
+  study).
+- There are no pump strainers, vapor handling, vent or vapor-recovery hardware, and no pump
+  start, trip or changeover (D48).
 - The inspection catalog is empty: no catalog exists in the audited package.
 - Pressure convention (velocity head): static pressure is `rho g (H - z) - rho v^2 / 2` at the
   end of an edge, as described in `docs/steady_hydraulics.md`.

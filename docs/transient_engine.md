@@ -1,0 +1,201 @@
+# Transient engine
+
+This document describes `verum.transient`, a first-order method-of-characteristics (MOC) engine
+for the 28 edges of the terminal. It is a standalone library: it does not touch `verum.sim`, the
+truth store or the gateway, nothing calls it, and it changes no dataset tier (decision D47). It
+is self-built. It is verified against closed forms, against the rigid-column engine in the
+limit in which the two should agree, and against two other codes on water cases; that is
+verification, not validation. No measured data were available (see the section on checks).
+The decisions behind it are D43 to D47 in `docs/design_decisions.md`.
+
+## Equations
+
+Along an edge, with piezometric head `H` and flow `Q` (m3/s, positive in the edge direction),
+
+    C+ :  H_P = C_p - B Q_P,    C_p = H_A + B Q_A - R_A Q_A |Q_A|
+    C- :  H_P = C_m + B Q_P,    C_m = H_B - B Q_B + R_B Q_B |Q_B|
+
+with `B = a / (g A)` and `R = (f dx / D + K dx / L) / (2 g A^2)`. The friction term is evaluated
+at the old point (first order). `f` is the Darcy factor of the steady package (decision D14: 64/Re
+below Re 2300, Haaland above 4000, a linear blend between); a test compares the two
+implementations. `K` is the local loss coefficient of the edge under the fitting profile, spread
+evenly over the reaches. Elevation enters through piezometric heads, so no slope term appears.
+
+Interior points use the two characteristics directly. At an end point of an edge the engine
+works with the flow `Qn` that leaves the pipe into the node, `H = C_e - B_e Qn` for an end
+reached by C+ and `H = C_e + B_e Qn` for an end reached by C-, and the total head
+`D_e = C_e + v^2 / 2g` with the velocity of the old point (a lagged velocity-head correction).
+
+**Junctions** conserve mass and equal total head: the node head is
+`(sum g_e D_e - demand) / sum g_e` with `g_e = 1 / B_e`, and `Qn = g_e (D_e - H_node)`. This is
+the ideal junction of the textbook; minor losses at tees are carried by the edge `K` values.
+
+**Series elements** (valve, pump, check valve) sit between two pipe ends and satisfy
+
+    B_s Q + K2 Q |Q| = W + S,    B_s = B_1 + B_2,  W = D_1 - D_2,
+
+with `S` the shutoff head of a running pump. The positive root is computed in the rationalised
+form `2 |rhs| / (B_s + sqrt(B_s^2 + 4 K2 |rhs|))`, which stays exact when `K2` tends to zero (the
+textbook form returned zero flow for `K2` of order 1e-16; found by the grid refinement study).
+
+## Grid and wave-speed adjustment
+
+One common time step `dt = 0.923 ms` (half of the 1.836 ms that a 2 m edge at 1089.2 m/s needs, so
+that every edge has at least two reaches, and small enough to keep the adjustment below 0.53
+percent). Each edge is divided into `N = round(L / (a dt))` reaches and
+its wave speed is adjusted to `a' = L / (N dt)`, so that the Courant number is one on every edge.
+The largest adjustment is 0.53 percent. The screening speeds are 1089.2, 1082.8 and 1078.2 m/s
+for DN200, DN250 and DN300 (restraint factor psi = 1, a screening value and not a certified pipe
+property). Another psi or bulk modulus scales them with the thin-wall relation
+`a = sqrt((K / rho) / (1 + (K / K0) psi c))`, `c` fixed by the screening speed at `K0 = 1e9` Pa.
+The grid has 1011 points.
+
+## Boundaries (decision D44)
+
+- Tanks and the distribution reservoir are constant-head boundaries; the reservoir follows the
+  boundary law `H_res + c f_d (Q / 300 m3/h)^2`.
+- The receipt source is flow-controlled: each step the commanded flow moves from the actual flow
+  towards the set-point with time constant 2 s, and a head cap equal to 10 barg at
+  `PIPELINE_RECEIPT_BOUNDARY` limits it.
+- A valve is a series element with the extra loss `(K(alpha) - K_open) / (2 g A^2)` of the steady
+  package's law, on the area of the edge that leaves it; alpha moves linearly with the stroke time
+  (decisions D4 and D19) and the valve is closed (zero flow) at alpha of 0.001 or less.
+- The pump is a quasi-steady curve between its inlet and outlet nodes with no inertia (D6):
+  `H = H0 - k (Q / Qref)^2` while running. A stopped pump is a resistance without shutoff head
+  (a modelling choice: the curve with `H0 = 0`, so it passes flow in either direction).
+- A check valve passes forward flow. A reverse flow that persists for the delay (0.05, 0.3 or
+  1 s, default 0.3 s, a selection) closes it; it reopens when the flow turns forward. The
+  reverse volume that passes before the closing step is accounted.
+- Initial state: the steady solution of `verum.hydraulics` for the lineup, levels and receipt
+  flow, with dead legs filled consistently (segments of closed edges at the head of their open
+  neighbour). Held for 5 s the maximum drift is below 1e-11 m for the reference lineups.
+
+## No cavitation model (decision D45)
+
+A step in which any point has an absolute pressure at or below the vapor pressure of the episode
+(stratum and volatility class) opens a `phase_invalid` window. Nothing from the interval is
+usable. Pressures are never clipped. After the first such window the numbers describe a
+liquid that cannot exist.
+
+## Mass ledger
+
+`inflow - outflow - leak - storage` with the elastic storage of the pipes
+`sum A dx g / a^2 (H - H_0)`. The residual does not accumulate; it stays within two steps of the
+largest end flow (test R7).
+
+## Verification ladder
+
+Every test states whether its expected value is independent of the code.
+
+| rung | content | expected value | result |
+| --- | --- | --- | --- |
+| R1 | Joukowsky: reservoir, pipe, instantaneous valve closure, frictionless; rise `a' v0 / g`, arrival times L/a and 2L/a | closed form, independent | passes to 1e-6 m |
+| R2 | square wave of period 4L/a, sign and size of the reflections | closed form, independent | passes |
+| R3 | prescribed linear flow reduction: triangle wave between 0 and Michaud's `2 L v0 / (g Tc)` with period 4L/a | closed form, independent | passes |
+| R4 | steady Darcy-Weisbach profile held; oscillation decay against `exp(-f v0 t / 2D)` | closed form, independent | passes (15 percent on the decay ratio) |
+| R5 | three grids (200, 400, 800 reaches), friction plus finite closure | Richardson | observed order 0.99 for the head and 0.84 for the flow (required 0.8); Richardson error of the finest grid 1.4 Pa and 0.0004 m3/h (budget 50 Pa, 0.02 m3/h) |
+| R6 | tee, equal and unequal pipes: junction head and flows of the Riemann problem, mass at every step | closed form, independent | passes (velocity-head tolerance) |
+| R7 | mass ledger through a closure and with a leak sink | bound from the scheme | passes |
+| R8 | slow limit: 600 s receipt closure and 600 s pump-outlet closure against the rigid-column engine | tolerance derived in the test, slow marker | passes; flows within 0.07 percent, pressures within 0.03 bar |
+| R9 | steady equivalence at every edge end for four reference lineups | shares the boundary definitions with the steady package | passes to 1e-6 m and 1e-9 m3/s |
+| R10 | check valve: reverse flow blocked after the delay, reverse volume against the probed flow, delay sweep | independent integral | passes |
+| R11 | determinism; checkpoint restart bit identical | equality | passes |
+
+Further tests: the Darcy factor equals the steady package's over the Reynolds range; the valve law
+scale `(K - K_open) / (2 g A^2)` (found wrong by a factor A during R8 and corrected); the series
+root near zero; the windowed run equals the continuous run on T1; the package imports neither the
+truth store, the gateway nor the rigid-column engine.
+
+Two deviations from the plan. The Allievi chain was not coded: for a prescribed linear flow
+reduction Michaud's value is exact (R3), and for a real valve law the comparison with the
+rigid-column engine (R8 and T2) carries more information than a second approximate formula. And
+R8's second case is a closure of the pump outlet valve, because the shipped model has no delivery
+set-point (the delivery flow follows the pump curve and the downstream law).
+
+Defects found by the ladder and corrected: a friction switch that left smooth-pipe friction on; the
+valve loss using `1 / (2 g A)` instead of `1 / (2 g A^2)`; the cancellation in the series root; the
+reverse volume counting the flow of the step that closes the check valve.
+
+## Checks against other codes (local, not part of the test suite)
+
+- **TSNet 0.3.1** (water, reservoir, 500 m of pipe, valve, a = 1000 m/s, v0 = 1.112 m/s, closure in one
+  step of 0.05 s): the head rise is 113.46 m in TSNet and 113.38 m in the engine (Joukowsky
+  113.38 m); the collapse when the reflection returns is at 1.25 s in both (the engine 1.2525 s);
+  the plateau of TSNet tilts by 1.3 m over 1 s because it has steady friction and the engine case
+  has none, which is 0.8 percent of the rise. TSNet needed numpy 1.26.4 and WNTR 1.3.2, and it
+  fails on a pipe connected to a reservoir at one end and an operating valve at the other (an index
+  missing in its boundary branch), so the case has a short pipe upstream of the valve pipe.
+- **EPANET through WNTR 1.3.2**: steady heads and flows for five reference lineups. EPANET neglects
+  the velocity head, so the steady solution is compared as an energy head. Largest head difference
+  0.02 to 0.06 m (tolerance 3 percent of the head change plus 0.02 m; Swamee-Jain against Haaland
+  differ by about 1 percent), flow differences 0.2 percent in the two delivery cases.
+- **Published experiments.** Jensen et al. 2018 (Fluids 3(3) 64) and Kodura 2016 could not be
+  used: the full texts were not retrievable (HTTP 403 from the publisher and the university
+  repository; only the abstract of Kodura was reached, with no numbers). No experimental number is
+  quoted, none was digitised, and the engine has not been compared with any experiment.
+
+## Comparison with the rigid-column engine (T1 to T4)
+
+Full tables are in the Phase 5 report. Summary for the ESD isolation (XV-R000 over 10 s, XV-R101 over
+30 s, 600 m3/h, cap 10 barg, ratio of stroke to wave round trip 27.7):
+
+- The PT-001 tap reaches 14.4 barg at the end of the stroke in the transient engine against 12.3
+  barg in the last dense row of the rigid column (the tabulated rigid value 13.46 barg is at the
+  instant alpha = 0.001). Up to 0.1 s before the end the two agree within 3 percent.
+- Strokes: ratio 5.5 (2 s) +8.5 percent, 10 (3.6 s) +39, 20 (7.2 s) -8.3, 27.7 (10 s) +2.5, 55
+  (20 s) +0.4, 83 (30 s) -1.3, rigid minus transient on the pre-closure peak. None of the D22
+  factors 5, 10, 20 keeps the peak within 5 percent; a factor near 30 would. The last 0.1 s of
+  any stroke, where the head rises sharply, is not represented by the rigid column at any ratio
+  (7.5 to 15 percent low at ratios 28 to 83).
+- Slow limit (R8, 600 s strokes): the transient engine reproduces the steady package at the
+  opening of each instant to 0.0001 bar; the rigid column agrees with it apart from the filling
+  of the tank, which the transient engine (constant-head tanks) does not represent (1.74 Pa/s
+  at 600 m3/h).
+- A pump-branch valve stroke of 30 and 10 s: agreement before the rigid engine rejects the run.
+- A receipt set-point step 600 to 300 m3/h: the flow agrees; the pressure at the start of E002
+  dips to -0.40 barg in the transient engine and not at all in the rigid column, which prescribes
+  the flow and omits the inertial head of the downstream column (about 1 bar).
+- A pump stop opens a `phase_invalid` window 0.37 s after the stop for every check-valve delay.
+
+## Throughput and windowed use
+
+One simulated minute of the full network (1011 points, 65005 steps) takes 14.7 s of wall clock on
+one core, 4400 steps per second, deterministic float64 and single-threaded (an Apple silicon
+laptop, numpy). A 60 s event window therefore costs about 15 s, a 600 s run 2.5 minutes and one
+simulated hour about 15 minutes. The profile of the step loop: 71 percent in the Darcy factor
+(logarithms of the Haaland formula), the rest is array overhead. The one-hour projection is
+acceptable for windowed use, so Numba was not used and no speed-up is claimed.
+
+**Proposed rule (not implemented).** The engine would run inside an episode only for a window in
+which the rigid-column engine already flags a validity window of kind `valve_stroke`,
+`receipt_setpoint`, `flow_collapse` or `path_closed`, or for any event whose ratio of duration to
+wave round trip is below 30 (the finding above; the factor 10 of D22 is a proposal). The window
+starts about 2 s before the first command, from the steady state of the rigid-column engine at
+that instant (levels, lineup, receipt flow and valve openings), and ends when the heads at all
+points have settled to 0.05 bar or at the end of the first `phase_invalid` window, whichever is
+earlier; nothing after a `phase_invalid` window is usable. The transient result would be written
+as a separate hidden dataset with the window identifier, and would not feed back into the
+rigid-column state. A test shows that a window started 2 s before the command reproduces the
+continuous run started 20 s earlier to 1e-6 m (0.007 Pa) up to the first `phase_invalid` window.
+Integration requires a later decision that also revises D37 and D47.
+
+## Limitations
+
+First order in space and time (observed order about 1); no unsteady friction; no cavitation or
+column separation; no pump inertia, start or trip curve; ideal junctions; wave speeds are screening
+values with a restraint factor, not pipe data; the pump curve and the check-valve delay are
+selections. The sensitivity of the main results to these selections is in the study of D42.
+
+## Use
+
+    from verum.transient import TransientEngine, TransientSpec
+    from verum.transient.driver import Probe, ValveEvent
+
+    spec = TransientSpec(lineup=lineup, tank_levels_m=levels, receipt_flow_m3h=600.0,
+                         receipt_setpoint_m3h=600.0,
+                         valve_events=(ValveEvent("XV-R000", 10.0, 0.0, 10.0),))
+    engine = TransientEngine(model, spec)
+    series = engine.run(40.0, [Probe("pt001", "E002", 0.0)])
+    engine.phase.windows   # intervals that are not usable (decision D45)
+
+`get_state` and `set_state` checkpoint and restore a run bit for bit.
