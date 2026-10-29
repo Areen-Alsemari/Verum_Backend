@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 5 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 6 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -53,6 +53,11 @@ version superseded; records are not edited in place.
 | D24 | Atmosphere stratum per episode | SIM | 1.0 |
 | D25 | Validity windows | DESIGN | 1.0 |
 | D26 | Protection thresholds located inside the step | DESIGN | 1.0 |
+| D34 | Truth grid density | DESIGN | 1.0 |
+| D35 | NPSH3 coefficient and feasible sampling band | SIM | 1.0 |
+| D36 | Cap as a pressure limit at the source tap; anchor of the head | DESIGN | 1.0 |
+| D37 | Tier of episodes with flagged windows | DESIGN | 1.0 |
+| D38 | Pending sensitivity studies | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -675,6 +680,73 @@ version superseded; records are not edited in place.
 - **Sensitivity required.** Not applicable; the accuracy is that of the interpolation
   (below 1 ms in the shipped scenarios).
 - **Notes.** The crossing time is recorded in the event.
+
+## D34 - Truth grid density
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Hidden truth rows are written every 0.1 s inside a validity window and
+  while a valve is moving (from the start of its stroke to its end), and every 1 s
+  elsewhere. Rows inside a step come from the dense solution of the integrator, not from
+  a new step: the step scheme and the event times are unchanged.
+- **Reason.** A flow collapse of 0.2 s is invisible on a 1 s grid. The sensor chain of
+  Phase 4 interpolates truth within a segment, and a 1 s interpolation across a collapse
+  would be wrong by hundreds of m3/h.
+- **Sensitivity required.** None; the density is an output choice (*proposed*: compare the
+  integral of the flow over a collapse from 0.1 s rows with the ledger).
+- **Notes.** Rows on the dense grid are interpolated states, not solver steps.
+
+## D35 - NPSH3 coefficient and feasible sampling band
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The NPSH3 coefficient is 4 m in production episodes; 2.5 m and 6 m are
+  sensitivities only. When episodes are generated in a later phase, the temperature and
+  the initial level are sampled independently within the band of the atmosphere stratum in
+  which the stored pumping-minimum table gives a passing level (the feasible band).
+- **Reason.** One coefficient keeps the pumping-minimum table single-valued per stratum;
+  independent sampling inside the feasible band avoids a correlation between temperature
+  and level that would let an agent read the situation from one of them.
+- **Sensitivity required.** The two other coefficients (D7 sweep).
+- **Notes.** The sampler is not implemented in this phase; the decision constrains it.
+
+## D36 - Cap as a pressure limit at the source tap; anchor of the head
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN  **Refines:** D22
+- **Decision.** The 10 barg cap is a pressure limit at `PIPELINE_RECEIPT_BOUNDARY`, the
+  tap of PT-001, which lies at the start of `E001`. The column from the tap to the tank
+  and the part upstream of the tap are accounted separately: the head at a tap is anchored
+  at the end where the drive acts. For the receipt path with source head `H_s` at the
+  drive end: the head at PT-001 is `H_s - loss(E001, E002) - Lambda_up dQ/dt` with
+  `Lambda_up = sum L/(g A)` over `E001` and `E002` only, and the head at every node
+  downstream is the tank head plus the loss and inertial terms of the edges between the
+  node and the tank, so that the source side and the tank side agree at every instant.
+- **Reason.** The inertial term belongs to the liquid between the drive and the tap that is
+  being measured, not to the whole column. With the whole column the head at the tap
+  equals the supply side minus nothing, and it is anchored at the wrong end.
+- **Sensitivity required.** None.
+- **Notes.** The drive acts at the supply boundary beyond the meter (the pipeline). The
+  rigid-column equation of D22 is unchanged.
+
+## D37 - Tier of episodes with flagged windows
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** An episode whose record lists a flagged validity window has the dataset
+  tier `restricted_benchmark`; an episode without one keeps `analytic_verification`. This
+  holds until the transient (method of characteristics) engine reproduces such windows.
+  `production_candidate` stays refused by the release gate while generation is disabled.
+- **Reason.** A window states that the physics inside it is not represented; such data
+  must not enter an unrestricted tier.
+- **Sensitivity required.** None.
+- **Notes.** The tier is written to the episode record only; it is not agent-visible.
+
+## D38 - Pending sensitivity studies
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The following studies are proposed and scheduled before Phase 7: the
+  wave-criterion factor of D22 at 5, 10 and 20; the standard deviation of log f_d of D23
+  at 0.05, 0.1 and 0.2; the correlation time of D23 (900, 1800, 3600 s).
+- **Reason.** They were required by D22 and D23 and were not run in Phase 3b.
+- **Sensitivity required.** The studies themselves.
+- **Notes.** Each is *proposed*.
 
 ## Episode profile
 
