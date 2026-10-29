@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 10 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 11 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -37,7 +37,7 @@ version superseded; records are not edited in place.
 | D8 | Numerical tolerances | DESIGN | 1.0 |
 | D9 | Motor, current and vibration channels not emitted | DESIGN | 1.0 |
 | D10 | Validity condition for leaks | SIM | 1.0 |
-| D11 | Bulk-liquid temperature stratum | SIM | 1.0 |
+| D11 | Bulk-liquid temperature stratum | SIM | 3.0 (supersedes 1.0) |
 | D12 | Isolation confirmation timeout | SIM | 1.0 |
 | D13 | Residual-flow threshold for failed isolation | SIM | 1.0 |
 | D14 | Friction law | SIM | 1.0 |
@@ -50,7 +50,7 @@ version superseded; records are not edited in place.
 | D21 | Temperature held constant per episode | SIM | 1.0 |
 | D22 | Rigid-column inertia | DESIGN | 1.0 |
 | D23 | Healthy variability | SIM | 1.0 |
-| D24 | Atmosphere stratum per episode | SIM | 1.0 |
+| D24 | Atmosphere stratum per episode | SIM | 2.0 (supersedes 1.0) |
 | D25 | Validity windows | DESIGN | 1.0 |
 | D26 | Protection thresholds located inside the step | DESIGN | 1.0 |
 | D34 | Truth grid density | DESIGN | 1.0 |
@@ -69,6 +69,16 @@ version superseded; records are not edited in place.
 | D40 | Alarm on the level-transmitter chain | DESIGN | 1.0 |
 | D41 | Campaign episode seeds | DESIGN | 1.0 |
 | D42 | The sensitivity sweeps as one study | DESIGN | 1.0 |
+| D43 | First-order method of characteristics | DESIGN | 1.0 |
+| D44 | Boundaries of the transient engine | DESIGN | 1.0 |
+| D45 | No cavitation model | DESIGN | 1.0 |
+| D46 | Volatility classes | SIM | 3.0 |
+| D47 | The transient engine does not change tiers | DESIGN | 1.0 |
+| D48 | Dataset-card limitations | DESIGN | 1.0 |
+| D49 | Minimum stable flow window deferred | DESIGN | 1.0 |
+| D50 | Further sensitivity sweeps | DESIGN | 1.0 |
+| D51 | Grid of the pumping-minimum tables | DESIGN | 1.0 |
+| D52 | Production baseline NPSH3 coefficient | SIM | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -398,6 +408,14 @@ version superseded; records are not edited in place.
 
 ## D11 - Bulk-liquid temperature stratum
 
+- **Version:** 3.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** Production bulk-liquid temperatures are 25, 35 and 40 C. 45 C is a labelled stress subset (air-temperature stress). The temperature enters the phase and NPSH screening only; hydraulic properties stay the 25 C constants.
+- **Reason.** Riyadh July average high is about 43 C and the daily mean about 36.6 C. The bulk tank temperature is unsourced and is taken to follow the daily mean, which is a judgement; 40 C leaves a margin above the mean and 45 C stresses the screen.
+- **Sensitivity required.** Report the screening outcome at each temperature (done per volatility class in the pumping-minimum study).
+- **Notes.** Version 1.0 had 25, 35 and 45 C and is kept below. Version 2 was a draft outside this log.
+
+## D11 - Bulk-liquid temperature stratum (superseded)
+
 - **Version:** 1.0 (2026-10-29)  **Status:** SIM
 - **Decision.** Bulk-liquid temperature takes the values 25, 35 and 45 C. It
   enters the phase and NPSH screening only. Hydraulic properties remain the
@@ -653,6 +671,14 @@ version superseded; records are not edited in place.
   f_d = 1.
 
 ## D24 - Atmosphere stratum per episode
+
+- **Version:** 2.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** The strata are renamed: `coastal` (101325 Pa) and `inland` (94300 Pa). The episode record carries the stratum. Pumping-minimum files are per (atmosphere, volatility) pair, computed at f_d = 0.8 (D51). The two strata have equal weight; no single site is claimed.
+- **Reason.** The inland value is the standard-atmosphere estimate for the Riyadh area, elevation about 600 to 625 m (about 94.0 kPa), with observed airport field pressures of about 95.3 kPa on two days; the difference is 0.18 m of NPSHa.
+- **Sensitivity required.** The inland stratum is itself the sensitivity.
+- **Notes.** Version 1.0 called the strata `sea_level` and `elevated`; every file, schema and test is renamed.
+
+## D24 - Atmosphere stratum per episode (superseded)
 
 - **Version:** 1.0 (2026-10-29)  **Status:** SIM
 - **Decision.** Each episode has an atmosphere stratum: `sea_level` (101325 Pa, baseline)
@@ -915,6 +941,86 @@ version superseded; records are not edited in place.
 - **Reason.** One study with one report is easier to review than five partial ones, and the three sweeps act on different tags.
 - **Sensitivity required.** The study itself.
 - **Notes.** The preview does not replace the study; it was run to say which diagnostic features depend on the constant.
+
+## D43 - First-order method of characteristics
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The transient engine (`verum.transient`) is a first-order method of characteristics on the 28 edges, with the compatibility equations C+ and C- and a friction term evaluated at the old point (`f L/(2 D A) Q|Q|`). Each edge is divided into reaches of the common time step dt = 0.923 ms, the largest that gives every edge at least one reach (the shortest edge is 2 m at 1089.2 m/s, 1.836 ms); the wave speed of each edge is adjusted to `a' = L/(N dt)` with `N = round(L/(a dt))`, the maximum adjustment being 0.53 percent. Junctions conserve mass with equal head at all pipes. Wave speeds are the screening values of the audited package (1089.2, 1082.8, 1078.2 m/s for DN200, DN250, DN300) with the restraint factor psi = 1, a screening value and not a certified pipe property.
+- **Reason.** First order with a fixed grid is the simplest scheme that is exact for the frictionless case with Courant number one and has a known error order for the friction term; the adjustment is the standard way to keep every edge on the grid.
+- **Sensitivity required.** Wave-speed restraint psi 0.8 and 1.0 and bulk modulus 0.8e9, 1.0e9 and 1.2e9 Pa in the extended study (D42).
+- **Notes.** The time step and the adjustment are from section 4.2 of the simulation document (the minimum reach 1.836 ms and the adjusted speeds). The engine is self-built: it is verified against closed forms and other codes, which is verification and not validation.
+
+## D44 - Boundaries of the transient engine
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Tanks and the distribution reservoir are constant-head boundaries. The receipt source is flow-controlled with the first-order response of time constant 2 s (D3) and a head cap equal to 10 barg at `PIPELINE_RECEIPT_BOUNDARY`; the pump is a quasi-steady curve between its inlet and outlet nodes with no inertia (D6); valves follow D4 and D19 with the stroke times of the configuration; a check valve closes after a finite delay (0.05, 0.3 or 1 s, default 0.3 s) and the reverse volume that passes before it closes is accounted; a closed valve is a zero-flow end.
+- **Reason.** These are the boundary conditions of the rigid-column engine, so the two engines can be compared on equal terms.
+- **Sensitivity required.** Check-valve delay 0.05, 0.3 and 1 s (D42).
+- **Notes.** The default check-valve delay is a selection, not a manufacturer value.
+
+## D45 - No cavitation model
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The engine has no cavitation or column-separation model. Any node at or below the vapor pressure of the episode (its stratum and volatility class) is flagged; the interval becomes a hidden `phase_invalid` window and nothing from it is usable. Pressures are never clipped.
+- **Reason.** A first-order engine without a vapor model gives meaningless numbers below the vapor pressure; clipping would hide that.
+- **Sensitivity required.** None.
+- **Notes.** Column-separation experiments are usable only for the segments that do not reach vapor pressure.
+
+## D46 - Volatility classes
+
+- **Version:** 3.0 (2026-10-29)  **Status:** SIM
+- **Decision.** Three volatility classes. `EPA_GENERIC_MOTOR_GASOLINE_RVP10` (RVP 10 psi) is resolved and is the stress class (the audited constants A = 11.724, B = 5237.3 degR). `RVP_9_0` (baseline) and `RVP_9_5` (upper bracket) are derived, provisional, evidence SIM, with the AP-42 gasoline correlation: A = 15.64 - 1.854 S^0.5 - (0.8742 - 0.3280 S^0.5) ln(RVP) and B = 8742 - 1042 S^0.5 - (1049 - 179.4 S^0.5) ln(RVP), S = 3, RVP in psi, B in degrees Rankine, P_v (psia) = exp(A - B/T_R). Verification gate, run before any derived class is used: the formula must reproduce A = 11.724 and B = 5237.3 for RVP 10 within 0.1 percent and must agree within 2 percent with the tabulated true vapor pressures of Table 7.1-2 of the EPA AP-42 chapter 7.1 for the tabulated classes (RVP 7, 7.8, 8.3, 10, 11.5, 13, 13.5, 15) at the tabulated temperatures. A derived class that fails the gate, or whose gate cannot be run, is an `UnresolvedParameter` and raises when selected; the formula is never adjusted to pass.
+- **Reason.** Gulf 95 RON export specifications and neighbouring specifications cap RVP at 9 to 9.5 psi. A Saudi domestic summer limit is not established. The derived classes bracket that range.
+- **Sensitivity required.** The three classes are themselves the sweep (D51).
+- **Notes.** Versions 1 and 2 were drafts outside this log. Expected values to check: RVP 9 about 44 kPa at 25 C and 82 kPa at 45 C.
+
+## D47 - The transient engine does not change tiers
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** MOC results do not change any dataset tier. The flagged validity windows of D22 and D25 stay flagged, and the tier rule of D37 is unchanged, until a later decision integrates the engine and compares its output with the episodes.
+- **Reason.** The engine is a standalone library in this phase; nothing of it is in `verum.sim`.
+- **Sensitivity required.** None.
+- **Notes.** The integration rule is proposed in the Phase 5 report (windowed use).
+
+## D48 - Dataset-card limitations
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The dataset card lists, as limitations: the pump curve is synthetic; no practising engineer reviewed the design, which was checked against general engineering rules of thumb only; the receipt branch velocity of 5.2 m/s and the suction branch velocity of 2.6 m/s exceed common design guidance (an unsourced recollection) and inlet-jet and static-charge effects are not modelled; the meter loss coefficient K = 1 is probably low; there are no pump strainers, vapor handling, vent or vapor-recovery hardware; there is no pump start, trip or changeover; the Saudi domestic RVP limit is not established.
+- **Reason.** A reader of the dataset must be able to see where the design departs from practice.
+- **Sensitivity required.** None.
+- **Notes.** Written into `docs/dataset_card.md`.
+
+## D49 - Minimum stable flow window deferred
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Deferred to Phase 7: a hidden validity window `pump_below_minimum_stable_flow` when the pump flow falls below 30 percent of rated (90 m3/h). The 30 percent figure is an unsourced rule of thumb.
+- **Reason.** The window needs the pump model of a later phase and a decision about its tier effect.
+- **Sensitivity required.** Sweep 20, 30 and 40 percent when implemented.
+- **Notes.** Not implemented in Phase 5.
+
+## D50 - Further sensitivity sweeps
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Added to the study of D42: the fitting loss multiplier 0.5, 1, 2, 3; the meter loss K 0.5, 1, 2, 4; the pump curve steepness k = 8, 12, 16 m (shutoff ratio 1.19, 1.29, 1.38) with the duty point held at 300 m3/h and 42 m by recalibrating the boundary coefficient; the NPSH3 coefficient 2.5, 4, 6 m.
+- **Reason.** The design values are unreviewed (D48); the study shows which results depend on them.
+- **Sensitivity required.** The study itself.
+- **Notes.** Run in Phase 5 as one report.
+
+## D51 - Grid of the pumping-minimum tables
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The pumping-minimum tables are computed on the grid atmosphere {coastal, inland} x volatility {RVP_9_0, RVP_9_5, RVP10} x temperature {25, 35, 40, 45 C} x fitting profile {pipe_only, reference_fittings} x tank x NPSH3 {2.5, 4, 6 m}, at f_d = 0.8. One file per (atmosphere, volatility) pair. A cell in which no level of 1.8 to 12 m passes is stored as an unresolved record.
+- **Reason.** The worst-case factor 0.8 gives the largest flow and the smallest NPSH margin (D24).
+- **Sensitivity required.** None.
+- **Notes.** Regenerated by `local/tools/` scripts.
+
+## D52 - Production baseline NPSH3 coefficient
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The production baseline NPSH3 coefficient is 4 m; 2.5 m and 6 m are sensitivities.
+- **Reason.** One coefficient keeps the production tables single-valued (D35).
+- **Sensitivity required.** 2.5 and 6 m (D50).
+- **Notes.** Restates D35 for the production baseline.
 
 ## Episode profile
 
