@@ -40,6 +40,8 @@ class Nodes:
 def lag_response(nodes: Nodes, tau: float, y0: float | None = None) -> np.ndarray:
     """Lag output at every node; ``tau`` of zero returns the input."""
     n = len(nodes.t)
+    if tau <= 0.0:
+        return nodes.x.copy()
     y = np.empty(n)
     y[0] = nodes.x[0] if y0 is None else y0
     for i in range(1, n):
