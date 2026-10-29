@@ -89,6 +89,13 @@
         },
         "reference_edge": {
           "type": "string"
+        },
+        "anchor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Where a tap value is anchored when it differs from the node head (decision D36 version 2): end_of_E002_lambda_E001_E002 is the head at the end of E002 with the inertance of E001 and E002; the observed PT-001 is the start of E002 (edge row E002, p_from)."
         }
       }
     },

@@ -27,6 +27,9 @@ from verum.hydraulics.valves import loss_coefficient
 
 SCHEMA_VERSION = "0.6.0"
 SIGNAL_SOURCE = "independent_detector"
+# Decision D36 version 2: the tap value of the supply node is the head at the end of E002; the
+# observed PT-001 is the start of E002 (edge row of E002, p_from).
+ANCHORS = {"PIPELINE_RECEIPT_BOUNDARY": "end_of_E002_lambda_E001_E002"}
 CHECK_VALVES = ("CV-PA", "CV-PB")
 VALVES = (
     "XV-R000", "XV-R101", "XV-R102", "XV-R103", "XV-S101", "XV-S102", "XV-S103",
@@ -112,6 +115,7 @@ def hydraulic_rows(
             "hydraulic_head_m": r.tap_heads_m.get(node, r.node_heads_m.get(node)),
             "pressure_basis": "Pa_abs",
             "reference_edge": ref,
+            "anchor": ANCHORS.get(node),
         }
         rows.append(_state_row(episode, snap, side, "node_state", node, payload))
     for tank in model.topology.tank_ids:
