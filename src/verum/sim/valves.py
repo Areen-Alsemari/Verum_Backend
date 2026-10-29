@@ -38,7 +38,8 @@ class Valve:
         return self.position0 + step if self.target > self.position0 else self.position0 - step
 
     def is_physically_closed(self, t: float) -> bool:
-        return self.alpha(t) <= self.closed_alpha
+        # The tolerance absorbs the last bit of the linear motion at the threshold time.
+        return self.alpha(t) <= self.closed_alpha + 1e-12
 
     def is_moving(self, t: float) -> bool:
         return self.alpha(t) != self.target

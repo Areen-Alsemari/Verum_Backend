@@ -237,8 +237,8 @@ class Engine:
     def _solve(self, volumes: dict[str, float], t: float, receipt_m3h: float) -> SteadyResult:
         st = self.state
         alphas = {v: valve.alpha(t) for v, valve in st.valves.items()}
-        open_valves = {v for v, a in alphas.items() if a > self.closed_alpha}
-        partial = {v: a for v, a in alphas.items() if self.closed_alpha < a < 1.0}
+        open_valves = {v for v, valve in st.valves.items() if not valve.is_physically_closed(t)}
+        partial = {v: a for v, a in alphas.items() if v in open_valves and a < 1.0}
         inputs = SteadyInputs(
             lineup=Lineup(frozenset(open_valves), st.running),
             tank_levels_m=self._levels(volumes),
@@ -331,7 +331,7 @@ class Engine:
         if not st.running or result.pump is None:
             return None
         for tank in self.model.topology.tank_ids:
-            if st.valves[f"XV-S{tank[3:]}"].alpha(t) > self.closed_alpha:
+            if not st.valves[f"XV-S{tank[3:]}"].is_physically_closed(t):
                 return tank
         return None
 
@@ -726,7 +726,7 @@ class Engine:
             (
                 k
                 for k in topo.tank_ids
-                if st.valves[f"XV-R{k[3:]}"].alpha(t) > self.closed_alpha
+                if not st.valves[f"XV-R{k[3:]}"].is_physically_closed(t)
                 or st.valves[f"XV-R{k[3:]}"].commanded_open
             ),
             None,

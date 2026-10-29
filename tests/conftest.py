@@ -16,6 +16,7 @@ from typing import Any
 
 import pytest
 
+from _series import Series, load_series
 from verum.contracts import (
     ReleasePolicy,
     SensorContract,
@@ -26,6 +27,7 @@ from verum.contracts import (
 )
 from verum.contracts.paths import config_dir, repo_root
 from verum.hydraulics import HydraulicModel
+from verum.sim.episode import EpisodeResult, run_episode
 
 Raw = dict[str, Any]
 
@@ -78,3 +80,21 @@ def policy() -> ReleasePolicy:
 @pytest.fixture(scope="session")
 def model() -> HydraulicModel:
     return HydraulicModel.load()
+
+
+SCENARIOS = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "REJ-1", "REJ-2"]
+
+
+@pytest.fixture(scope="session")
+def episodes(
+    model: HydraulicModel, tmp_path_factory: pytest.TempPathFactory
+) -> dict[str, EpisodeResult]:
+    """Every scenario run once into a temporary directory (shared by the engine tests)."""
+    out = tmp_path_factory.mktemp("episodes")
+    return {sid: run_episode(sid, out, model) for sid in SCENARIOS}
+
+
+@pytest.fixture(scope="session")
+def series(episodes: dict[str, EpisodeResult]) -> dict[str, Series]:
+    """Compact, schema-validated series of the five completed scenarios."""
+    return {sid: load_series(episodes[sid].directory) for sid in SCENARIOS[:5]}
