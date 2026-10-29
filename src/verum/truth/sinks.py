@@ -54,6 +54,8 @@ class DirectorySink:
         directory.mkdir(parents=True, exist_ok=True)
         self._files: dict[str, Any] = {}
         self._raw: dict[str, Any] = {}
+        for dataset in DATASETS:  # every dataset file exists, even if it stays empty
+            self._open(dataset)
 
     def _open(self, dataset: str) -> Any:
         if dataset not in self._files:
