@@ -14,8 +14,9 @@ published here.
 
 ## Scope of the current phase
 
-Phases 0 to 2 cover infrastructure, topology, tanks, lineups, the inventory
-ledger, the protection logic and steady-state hydraulics. They contain:
+Phases 0 to 3 cover infrastructure, topology, tanks, lineups, the inventory
+ledger, the protection logic, steady-state hydraulics, the quasi-steady engine and
+healthy episodes. They contain:
 
 - the audited input package, vendored unmodified under `vendor/verum_audited/`
   with SHA-256 hashes in `vendor/MANIFEST.sha256`;
@@ -35,11 +36,15 @@ ledger, the protection logic and steady-state hydraulics. They contain:
   phase and NPSH gate (`verum.hydraulics`; see `docs/steady_hydraulics.md`);
 - the independent protection state machine, as pure logic
   (`verum.protection`);
+- the quasi-steady dynamic engine, the operations controller and the hidden truth
+  store (`verum.sim`, `verum.ops`, `verum.truth`; see `docs/quasi_steady_engine.md`),
+  with named random streams and configuration provenance (`verum.rng`,
+  `verum.provenance`);
 - a fail-closed dataset release gate (`verum.gates`);
 - tests for the above and a record of design decisions in
   `docs/design_decisions.md`.
 
-Transient hydraulics, faults and sensors are not implemented; ledgers and
+Wave dynamics, faults and sensors are not implemented; ledgers and
 protection are driven by prescribed or injected signals. The release policy
 in `config/dataset_release_policy.json` keeps `production_generation_enabled`
 false, and the gate refuses the `production_candidate` tier while it is false.
@@ -57,7 +62,7 @@ not selected are represented as unresolved and raise an error when read.
 | `vendor/` | Audited input package, read-only, with hash manifest |
 | `config/` | Machine-readable contracts used by the loaders |
 | `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `api` |
+| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `rng`, `provenance`, `api` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
 
