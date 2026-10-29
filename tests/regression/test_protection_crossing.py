@@ -83,6 +83,7 @@ def test_the_episode_record_lists_the_located_crossings(
     assert episodes["S0u-E"].outcome.crossings == listed
 
 
+@pytest.mark.slow
 def test_a_falling_crossing_clears_the_alarm_on_the_located_time(model: HydraulicModel) -> None:
     """Delivery from 12.6 m: the alarm clears when the level falls through 12.5 m minus the
     hysteresis; the located time agrees with the interpolation of the written levels."""

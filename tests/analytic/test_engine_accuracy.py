@@ -13,7 +13,7 @@ Derivations (hand arithmetic):
       1.0e-5 m at dt = 1 s; the implicit integration of Phase 3b removes it.
     * Accuracy target (decision D17): level error <= 0.025 mm = 2.5e-5 m.
     * REJ-2. From 8.1 m to the stored minimum 7.9161 m (sea level, f_d = 0.8) the level falls
-      0.1839 m, i.e. 130.0 m3; at about 312 m3/h (0.0868 m3/s) that takes about 1498 s.
+      0.1839 m, i.e. 130.0 m3; at about 308 m3/h (0.0856 m3/s) that takes about 1519 s.
 Independence: the S0-B reference is a closed-form expression (independent). The S0-A,
 S0-C and REJ-2 references integrate the same steady flow function (the production
 hydraulic model) with an adaptive RK45 scheme, so they are independent in the time
@@ -303,8 +303,11 @@ def test_rej2_crossing_time_matches_an_independent_integration(
         events=crossing,
     )
     t_ref = float(sol.t_events[0][0])
-    # Hand estimate: (8.1 - 7.9161) m x 706.858 m2 = 130.0 m3 at about 0.0868 m3/s is 1498 s.
-    assert 1490.0 < t_ref < 1505.0
+    # Hand estimate: (8.1 - 7.9161) m x 706.858 m2 = 130.0 m3. The TK-101 duty flow is
+    # 312.5 m3/h at 9 m (audited duty point) and falls 4.5 m3/h per metre of level (slope of
+    # the pump/system intersection, 1.24e-3 m3/s per m), so it is about 308 m3/h = 0.0856 m3/s
+    # over this fall: 130.0 / 0.0856 = 1519 s.
+    assert 1510.0 < t_ref < 1530.0
     # The crossing time error follows from the level error target: 2.5e-5 m / (1.2e-4 m/s) = 0.2 s.
     assert rejection["t_sim_s"] == pytest.approx(t_ref, abs=0.2)
     assert rejection["gate"] == "SG0"

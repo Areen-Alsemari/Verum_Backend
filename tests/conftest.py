@@ -83,7 +83,7 @@ def model() -> HydraulicModel:
 
 
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
-SCENARIOS = [*COMPLETED, "REJ-1", "REJ-2"]
+SCENARIOS = [*COMPLETED, "REJ-1", "REJ-2", "REJ-3"]
 
 
 @pytest.fixture(scope="session")
@@ -99,3 +99,16 @@ def episodes(
 def series(episodes: dict[str, EpisodeResult]) -> dict[str, Series]:
     """Compact, schema-validated series of the completed scenarios."""
     return {sid: load_series(episodes[sid].directory) for sid in COMPLETED}
+
+
+SLOW_FIXTURES = {"episodes", "series", "halving"}
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Group the suite: ``slow`` for tests that use the shared episode runs or are marked
+    slow by hand (an engine run of more than a few seconds); every other test is ``fast``.
+    Both groups run in the full run; nothing is deselected."""
+    for item in items:
+        fixtures = set(getattr(item, "fixturenames", ()))
+        slow = item.get_closest_marker("slow") is not None or bool(fixtures & SLOW_FIXTURES)
+        item.add_marker(pytest.mark.slow if slow else pytest.mark.fast)

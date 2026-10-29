@@ -33,6 +33,10 @@ packages = ["src/verum"]
 testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = "-ra --strict-markers"
+markers = [
+    "fast: no long engine run (added automatically to every test that is not slow)",
+    "slow: depends on the shared episode runs or runs the engine for more than a few seconds",
+]
 
 [tool.mypy]
 python_version = "3.11"

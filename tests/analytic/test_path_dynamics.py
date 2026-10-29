@@ -136,6 +136,7 @@ def test_the_uncapped_receipt_response_keeps_the_controller_time_constant(
     assert flows[3600.0] * 3600 == pytest.approx(300.0, rel=1e-9)
 
 
+@pytest.mark.slow
 def test_the_slow_limit_matches_the_phase_3_quasi_steady_flow(model: HydraulicModel) -> None:
     """A 600 s ramp of the set-point: the flow follows the Phase 3 first-order response.
 
@@ -220,11 +221,13 @@ def test_pt001_surge_head_is_the_inertance_times_the_flow_rate(
     for t in (1.0, 2.0, 4.0):
         qdot = (600.0 / 3600.0) / 2.0 * math.exp(-t / 2.0)
         quasi = _quasi_steady_head(model, level[t], flow[t] * 3600.0, None, "RECEIVE_101")
-        assert head[t] is not None
-        assert head[t] - quasi == pytest.approx(INERTANCE * qdot, rel=1e-4), t
+        source_head = head[t]
+        assert source_head is not None  # the source tap has a head while the path is open
+        assert source_head - quasi == pytest.approx(INERTANCE * qdot, rel=1e-4), t
     assert INERTANCE * (600.0 / 3600.0) / 2.0 * math.exp(-0.5) == pytest.approx(17.9, abs=0.05)
 
 
+@pytest.mark.slow
 def test_pt001_is_at_the_cap_and_the_surge_is_i_times_the_decay_rate_under_the_cap(
     model: HydraulicModel,
 ) -> None:

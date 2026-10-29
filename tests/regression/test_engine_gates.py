@@ -123,6 +123,7 @@ def test_sg0_pumping_minimum_boundary_at_the_stored_level(model: HydraulicModel)
     )
 
 
+@pytest.mark.slow
 def test_rejection_stops_the_run_at_the_failing_step(model: HydraulicModel) -> None:
     outcome = _engine(model, load_scenario("REJ-2")).run()
     assert outcome.rejection is not None

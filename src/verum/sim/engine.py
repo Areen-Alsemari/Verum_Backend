@@ -948,6 +948,9 @@ class Engine:
         assert st.current is not None
         if st.processed_t == t:
             return
+        # A path that has just closed stops its flow here, so that the window of the collapse
+        # exists when this instant is logged and not only from the next step.
+        self._finish_inactive(self._plan(t, t), t)
         pre = self._snapshot(t)
         before = st.event_index
         self._run_queue(t, {RANK_COMMAND})

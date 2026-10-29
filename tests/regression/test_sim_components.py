@@ -200,7 +200,19 @@ def test_an_unknown_schedule_command_is_refused(table: LineupTable) -> None:
 
 @pytest.mark.parametrize(
     "sid",
-    ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev", "REJ-1", "REJ-2"],
+    [
+        "S0-A",
+        "S0-B",
+        "S0-C",
+        "S0u-D",
+        "S0u-E",
+        "S0-F",
+        "S0-G",
+        "S0-A-elev",
+        "REJ-1",
+        "REJ-2",
+        "REJ-3",
+    ],
 )
 def test_scenario_files_are_valid(sid: str) -> None:
     sc = load_scenario(sid)

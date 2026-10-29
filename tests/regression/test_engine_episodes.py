@@ -459,7 +459,7 @@ def test_rej2_is_rejected_when_the_level_crosses_the_pumping_minimum(
         and record["parameter"]
         == "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
     )
-    assert 1480.0 < record["t_sim_s"] < 1520.0  # (8.1 - 7.9161) m x 706.858 m2 / 0.0868 m3/s
+    assert 1510.0 < record["t_sim_s"] < 1530.0  # 130.0 m3 / 0.0856 m3/s (308 m3/h at about 8 m)
     assert (
         record["value"]
         == pytest.approx(7.9161, abs=1e-4)
@@ -467,7 +467,7 @@ def test_rej2_is_rejected_when_the_level_crosses_the_pumping_minimum(
     )
 
 
-@pytest.mark.parametrize("sid", ["REJ-1", "REJ-2"])
+@pytest.mark.parametrize("sid", ["REJ-1", "REJ-2", "REJ-3"])
 def test_rejected_episodes_keep_only_their_records(
     episodes: dict[str, EpisodeResult], sid: str
 ) -> None:
@@ -486,6 +486,7 @@ def test_rejected_episodes_keep_only_their_records(
 # --- determinism and restart ----------
 
 
+@pytest.mark.slow
 def test_regeneration_gives_identical_files(
     model: HydraulicModel, episodes: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
@@ -528,8 +529,21 @@ def _engine(model: HydraulicModel, sid: str, sink: ListSink, state: Any = None) 
     )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    ("sid", "checkpoint"), [("S0u-D", 605.0), ("S0u-E", 2975.0), ("S0-C", 100.0)]
+    ("sid", "checkpoint"),
+    [
+        ("S0u-D", 605.0),
+        ("S0u-E", 2975.0),
+        ("S0-C", 100.0),
+        # Inside rigid-column transients: the receipt ramp of S0-B (2 s time constant), the
+        # set-point step of S0-G, the instant before the capped collapse of the ESD closure
+        # (the next step is the stiff one), and S0-F with its demand process running.
+        ("S0-B", 1.0),
+        ("S0-G", 1201.0),
+        ("S0u-E", 2978.0),
+        ("S0-F", 200.0),
+    ],
 )
 def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
     model: HydraulicModel, sid: str, checkpoint: float
@@ -551,6 +565,22 @@ def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
     )
     assert [w.window_id for w in outcome_a.windows] == [w.window_id for w in outcome_b.windows]
     assert outcome_a.crossings == outcome_b.crossings
+
+
+def test_rej3_is_rejected_at_the_start_and_names_the_stored_minimum(
+    episodes: dict[str, EpisodeResult],
+) -> None:
+    """Independent: 7.3 m is below the stored minimum 7.9161 m (45 C, reference fittings,
+    NPSH3 4 m, sea level, f_d = 0.8), so the run stops at t = 0 before any step."""
+    result = episodes["REJ-3"]
+    record = json.loads((result.directory / "simulation_rejected.json").read_text())
+    validate("simulation_rejected", record)
+    assert (record["gate"], record["t_sim_s"]) == ("SG0", 0.0)
+    assert record["parameter"] == (
+        "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
+    )
+    assert record["value"] == 7.3 and record["limit"] == pytest.approx(7.9161, abs=1e-4)
+    assert result.outcome.steps == 0
 
 
 def test_the_checkpoint_is_independent_of_later_progress(model: HydraulicModel) -> None:

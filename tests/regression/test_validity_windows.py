@@ -150,3 +150,32 @@ def test_a_branched_lineup_is_flagged_as_unavailable(model: HydraulicModel) -> N
     assert models[10.0] == "quasi" and models[80.0] == "inactive"
     rows = sink.rows["validity_windows"]
     assert [r["window_id"] for r in rows] == [w.window_id]
+
+
+# Events judged against the wave criterion, counted by hand from the scenario files: a valve
+# stroke on an active path and a change of the receipt set-point each count once.
+#   S0-A, S0-F, S0-A-elev: none (steady delivery).
+#   S0-B: the set-point 0 -> 600 at 0 s (1).  S0-G: the step 600 -> 300 at 1200 s (1).
+#   S0-C: the set-point at 0 s (1).
+#   S0u-D: set-point 600 -> 0 and the hold lineup at 600 s: XV-R000, XV-R101 strokes (3);
+#          RECEIVE_102 and the set-point 0 -> 600 at 1200 s: XV-R000, XV-R102 strokes (3).
+#   S0u-E: the two closures XV-R000, XV-R101 ordered by the protection request (2).
+EVENTS = {
+    "S0-A": 0, "S0-F": 0, "S0-A-elev": 0, "S0-B": 1, "S0-G": 1, "S0-C": 1, "S0u-D": 6, "S0u-E": 2,
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("sid", sorted(EVENTS))
+def test_the_number_of_events_judged_and_the_number_flagged(
+    series: dict[str, Series], sid: str
+) -> None:
+    """Valid = judged minus flagged: every judged event is valid except the S0u-E collapse.
+
+    Hand ratios: 8 s set-point change 22.2 round trips, 10 s stroke 27.7, 30 s stroke 83.1
+    (receipt); the collapse of S0u-E lasts 0.19 s, 0.51 round trips (a flow event, not a
+    stroke event: the 10 s stroke itself is valid).
+    """
+    episode = series[sid].episode
+    assert episode["events_evaluated"] == EVENTS[sid]
+    flagged = len(episode["validity_windows"])
+    assert flagged == (1 if sid == "S0u-E" else 0)

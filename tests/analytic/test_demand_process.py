@@ -20,7 +20,6 @@ Source: ``docs/design_decisions.md`` D23.
 from __future__ import annotations
 
 import math
-from typing import Any
 
 import numpy as np
 import pytest
@@ -117,15 +116,40 @@ def test_other_scenarios_keep_the_factor_at_one(series: dict[str, Series]) -> No
         assert all(r["demand_process"] is False for r in series[sid].boundary)
 
 
-def test_s0f_delivery_flow_follows_the_factor_inversely(series: dict[str, Series]) -> None:
-    """A larger f_d is a larger resistance and a smaller flow (hand: sign of the derivative)."""
+def test_s0f_delivery_flow_responds_to_the_factor_with_the_hand_slope(
+    series: dict[str, Series],
+) -> None:
+    """The flow depends on f_d and on the falling tank level; separate them by least squares.
+
+    Hand derivation: at the duty point the head balance is pump(Q) = static + loss(Q) +
+    c f_d (Q/300)^2, so dQ/df = -c (Q/300)^2 / S with S the slope of loss + law - pump with
+    respect to Q (central difference of the reference module, TK-102 reference fittings).
+    The level coefficient is +1/S per metre. A plain correlation with f_d alone is only about
+    -0.8 because the level falls 0.44 m in the hour, a trend of the same size as the
+    factor's effect (2 m3/h); the regression on both removes it.
+    Independent: the slope uses the separate reference implementation of the friction law.
+    """
+    import _reference_hydraulics as ref
+
     s = series["S0-F"]
     flow = {t: q for t, side, _st, q, _ph, _m in s.pump["P-101A"] if side is None}
+    level = {t: lv for t, side, lv, _v, _f in s.tank["TK-102"] if side is None}
     factor = {r["t_sim_s"]: r["downstream_factor"] for r in s.boundary if r["side"] is None}
     times = [t for t in sorted(flow) if t >= 60.0]
-    x = np.array([factor[t] for t in times])
     y = np.array([flow[t] for t in times])
-    corr = float(np.corrcoef(x, y)[0, 1])
-    assert corr < -0.9, corr
-    shift: Any = (y.max() - y.min()) * 3600.0
-    assert 0.5 < shift < 20.0  # m3/h: a few percent of the duty flow
+    design = np.column_stack(
+        [np.ones(len(times)), [factor[t] for t in times], [level[t] for t in times]]
+    )
+    coef = np.linalg.lstsq(design, y, rcond=None)[0]
+    c, segments = 10.060889, ref.tank2_reference_fittings_segments()
+    q = float(y.mean())
+    h = 1e-6
+
+    def net(x: float) -> float:
+        return ref.path_loss(x, segments) + c * (x * 3600 / 300) ** 2 - ref.pump_head(x)
+
+    slope = (net(q + h) - net(q - h)) / (2 * h)
+    assert coef[1] == pytest.approx(-c * (q * 3600 / 300) ** 2 / slope, rel=0.05)
+    assert coef[2] == pytest.approx(1.0 / slope, rel=0.05)
+    assert float(np.corrcoef(design[:, 1], y - coef[2] * design[:, 2])[0, 1]) < -0.99
+    assert 0.5 < (y.max() - y.min()) * 3600.0 < 20.0  # m3/h: a few percent of the duty flow
