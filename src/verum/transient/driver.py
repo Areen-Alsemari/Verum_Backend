@@ -462,7 +462,8 @@ class TransientEngine:
     # --- valve helpers ----------
     def _valve_edge_area_inv(self, node: str) -> float:
         e_out = self.edges[self.end_edge[self.series[self.series_index[node]][2]]]
-        return 1.0 / (2.0 * self.g * math.pi * e_out.inner_diameter_m**2 / 4.0) if e_out else 0.0
+        area = math.pi * e_out.inner_diameter_m**2 / 4.0
+        return 1.0 / (2.0 * self.g * area**2)
 
     def _set_valve(self, node: str, k: int | None = None) -> None:
         k = self.series_index[node] if k is None else k

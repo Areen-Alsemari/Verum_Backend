@@ -31,9 +31,9 @@ def series_flow(
 ) -> np.ndarray:
     """Flow through each series element (vectorised); closed elements carry none."""
     rhs = w + shutoff
-    safe = np.where(k2 > 0.0, k2, 1.0)
-    quad = np.sign(rhs) * (-bs + np.sqrt(bs**2 + 4.0 * safe * np.abs(rhs))) / (2.0 * safe)
-    q = np.where(k2 > 0.0, quad, rhs / bs)
+    # the rationalised root 2 |rhs| / (bs + sqrt(bs^2 + 4 k2 |rhs|)) stays exact as k2 -> 0;
+    # the textbook form loses every digit there and returned zero flow for k2 ~ 1e-16
+    q = np.sign(rhs) * 2.0 * np.abs(rhs) / (bs + np.sqrt(bs**2 + 4.0 * k2 * np.abs(rhs)))
     return np.where(closed, 0.0, q)
 
 
@@ -52,9 +52,11 @@ class CheckValve:
         if self.open:
             if free_flow < 0.0:
                 self.reverse_time_s += dt
-                self.reverse_volume_m3 += -free_flow * dt
                 if self.reverse_time_s >= self.delay_s:
+                    # the step that closes the valve passes nothing, so it adds no reverse volume
                     self.open, self.closed_at_s = False, t
+                else:
+                    self.reverse_volume_m3 += -free_flow * dt
             else:
                 self.reverse_time_s = 0.0
         elif free_flow > 0.0:
