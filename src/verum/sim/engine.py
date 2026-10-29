@@ -96,6 +96,7 @@ EVENT_TYPE = {
     "ISOLATION_REQUESTED": "protection_request",
 }  # fmt: skip
 COLLAPSE_SAMPLES = 64
+DENSE_PER_S = 10
 MIN_STEP_S = 1e-9
 
 
@@ -185,6 +186,19 @@ class Plan:
         return self.receipt_branched or self.delivery_branched
 
 
+@dataclass(frozen=True)
+class Inside:
+    """State at a time inside a step, from the dense solution of the integrator."""
+
+    volumes: dict[str, float]
+    q_r: float
+    q_d: float
+    qdot_r: float
+    qdot_d: float
+    c_r: float
+    c_d: float
+
+
 @dataclass
 class Stepped:
     """Result of one integration over [t0, t1]; nothing is committed until accepted."""
@@ -204,6 +218,7 @@ class Stepped:
     flow_at: Callable[[float], tuple[float, float]] | None
     iterations: int
     residual: float
+    inside: Callable[[float], Inside] | None = None
 
 
 @dataclass(frozen=True)
@@ -503,10 +518,10 @@ class Engine:
         q_r0 = st.receipt_flow_m3h / 3600.0 if plan.receipt is not None else 0.0
         q_d0 = st.delivery_flow_m3h / 3600.0 if plan.delivery is not None else 0.0
         y0 = (q_r0, q_d0, 0.0, 0.0)
+        rhs = dyn.make_rhs(plan.receipt, plan.delivery, st.valves)
         if plan.receipt is None and plan.delivery is None:
             y1, qdot_r, qdot_d, dense = y0, 0.0, 0.0, None
         else:
-            rhs = dyn.make_rhs(plan.receipt, plan.delivery, st.valves)
             adv = dyn.advance(
                 rhs, t0, t1, y0, self.cfg["integrator_rtol"], self.cfg["integrator_atol_m3s"]
             )
@@ -549,9 +564,19 @@ class Engine:
             y = dense(t)
             return float(y[0]), float(y[1])
 
+        def inside(t: float) -> Inside:
+            if dense is None:
+                return Inside(dict(base), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            y = dense(t)
+            rates = rhs(t, y)
+            return Inside(
+                {k: volume_at(k, t) for k in base},
+                float(y[0]), float(y[1]), rates[0], rates[1], float(y[2]), float(y[3]),
+            )  # fmt: skip
+
         return Stepped(
             t0, t1, plan, volumes, y1[0] * 3600.0, y1[1] * 3600.0, qdot_r, qdot_d,
-            y1[2], y1[3], new, volume_at, flow_at, 0, 0.0,
+            y1[2], y1[3], new, volume_at, flow_at, 0, 0.0, inside,
         )  # fmt: skip
 
     def _quasi(self, t0: float, t1: float, plan: Plan) -> Stepped:
@@ -585,6 +610,7 @@ class Engine:
     def _commit(self, step: Stepped, landing: tuple[float, str, str, float] | None) -> None:
         st = self.state
         net = sum(step.volumes.values()) - sum(st.volumes.values())
+        base_received, base_delivered = st.cum_received_m3, st.cum_delivered_m3
         st.cum_received_m3 += step.recv_m3
         st.cum_delivered_m3 += step.deliv_m3
         st.ledger_terms += 3
@@ -599,11 +625,49 @@ class Engine:
         st.iterations, st.residual_kg_s = step.iterations, step.residual
         self._check_crossing(step.t0, step.t1 - step.t0, st.current, step.new)  # type: ignore[arg-type]
         st.current = step.new
+        self._finish_inactive(self._plan(step.t1, step.t1), step.t1)
+        self._write_interior(step, base_received, base_delivered)
         st.landing = {}
         if landing is not None and abs(landing[0] - step.t1) <= 1e-6:
             self._record_landing(landing)
         self._check_ledger(step.t1)
         self._process_time(step.t1)
+
+    def _dense_needed(self, t0: float, t1: float) -> bool:
+        """Decision D34: 0.1 s rows while a valve moves or inside a validity window."""
+        st, tm = self.state, 0.5 * (t0 + t1)
+        if any(v.is_moving(tm) for v in st.valves.values()):
+            return True
+        return any(w.t_start_s <= tm and (w.t_end_s is None or tm <= w.t_end_s) for w in st.windows)
+
+    def _write_interior(self, step: Stepped, base_received: float, base_delivered: float) -> None:
+        if step.inside is None or getattr(self.sink, "discards", False):
+            return
+        if not self._dense_needed(step.t0, step.t1):
+            return
+        plan = step.plan
+        first = math.floor(step.t0 * DENSE_PER_S + 1e-9) + 1
+        k = first
+        while k / DENSE_PER_S < step.t1 - 1e-9:
+            t = k / DENSE_PER_S
+            k += 1
+            if t <= step.t0 + 1e-9 or abs(t - round(t)) < 1e-9:
+                continue
+            ins = step.inside(t)
+            offsets: dict[str, float] = {}
+            if plan.receipt is not None:
+                offsets.update(plan.receipt.path.offsets(ins.qdot_r))
+            if plan.delivery is not None:
+                offsets.update(plan.delivery.path.offsets(ins.qdot_d))
+            result = self._solve(
+                ins.volumes, t, ins.q_r * 3600.0,
+                ins.q_d * 3600.0 if plan.delivery is not None else None,
+                offsets, apply_cap=False, qdot_receipt=ins.qdot_r,
+            )  # fmt: skip
+            snap = self._snapshot(
+                t, result, ins.volumes, (base_received + ins.c_r, base_delivered + ins.c_d)
+            )
+            self._write_snapshot(snap, None)
 
     def _record_landing(self, landing: tuple[float, str, str, float]) -> None:
         t, tank, name, thr = landing
@@ -884,12 +948,17 @@ class Engine:
             minimum,
         )
 
-    def _ledger(self, t: float) -> dict[str, Any]:
+    def _ledger(
+        self,
+        t: float,
+        volumes: dict[str, float] | None = None,
+        cumulative: tuple[float, float] | None = None,
+    ) -> dict[str, Any]:
         st, rho = self.state, self.rho
-        total = sum(st.volumes.values())
-        residual = rho * (
-            st.cum_received_m3 - st.cum_delivered_m3 - (total - st.initial_volume_total)
-        )
+        volumes = st.volumes if volumes is None else volumes
+        received, delivered = cumulative or (st.cum_received_m3, st.cum_delivered_m3)
+        total = sum(volumes.values())
+        residual = rho * (received - delivered - (total - st.initial_volume_total))
         roundoff = (
             max(st.ledger_terms - 1, 0)
             * UNIT_ROUNDOFF
@@ -897,10 +966,10 @@ class Engine:
         )
         tolerance = self.model.config["mass_conservation_tolerance_kg_s"] * t + roundoff
         return {
-            "received_kg": rho * st.cum_received_m3,
-            "delivered_kg": rho * st.cum_delivered_m3,
+            "received_kg": rho * received,
+            "delivered_kg": rho * delivered,
             "liquid_total_kg": rho * total,
-            "tank_kg": {k: rho * v for k, v in st.volumes.items()},
+            "tank_kg": {k: rho * v for k, v in volumes.items()},
             "residual_kg": residual,
             "tolerance_kg": tolerance,
             "closed": abs(residual) <= tolerance,
@@ -1006,10 +1075,17 @@ class Engine:
             "atmosphere_pa_abs": self.model.patm,
         }
 
-    def _snapshot(self, t: float) -> rw.Snapshot:
+    def _snapshot(
+        self,
+        t: float,
+        result: SteadyResult | None = None,
+        volumes: dict[str, float] | None = None,
+        cumulative: tuple[float, float] | None = None,
+    ) -> rw.Snapshot:
         st = self.state
         assert st.current is not None
-        levels = self._levels(st.volumes)
+        volumes = st.volumes if volumes is None else volumes
+        levels = self._levels(volumes)
         valves = {
             v: rw.ValveView(valve.alpha(t), valve.commanded_open, valve.is_physically_closed(t))
             for v, valve in st.valves.items()
@@ -1022,8 +1098,8 @@ class Engine:
         )
         return rw.Snapshot(
             t=t,
-            result=st.current,
-            volumes=dict(st.volumes),
+            result=result if result is not None else st.current,
+            volumes=dict(volumes),
             levels=levels,
             roof={k: self.geometry.roof_state(lv, self.rho) for k, lv in levels.items()},
             valves=valves,
@@ -1031,7 +1107,7 @@ class Engine:
             running=st.running,
             iterations=st.iterations,
             max_residual_kg_s=st.residual_kg_s,
-            ledger=self._ledger(t),
+            ledger=self._ledger(t, volumes, cumulative),
             window_ids=active,
             mode=st.mode,
             boundary=self._boundary(t),
