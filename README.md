@@ -14,8 +14,8 @@ published here.
 
 ## Scope of the current phase
 
-Phases 0 and 1 cover infrastructure, topology, tanks, lineups, the inventory
-ledger and the protection logic. They contain:
+Phases 0 to 2 cover infrastructure, topology, tanks, lineups, the inventory
+ledger, the protection logic and steady-state hydraulics. They contain:
 
 - the audited input package, vendored unmodified under `vendor/verum_audited/`
   with SHA-256 hashes in `vendor/MANIFEST.sha256`;
@@ -31,13 +31,15 @@ ledger and the protection logic. They contain:
 - the sixteen operating lineups and their transition rules
   (`verum.lineups`);
 - inventory ledgers driven by prescribed flows (`verum.ledger`);
+- steady-state network hydraulics: friction, pump, boundaries, fitting profiles,
+  phase and NPSH gate (`verum.hydraulics`; see `docs/steady_hydraulics.md`);
 - the independent protection state machine, as pure logic
   (`verum.protection`);
 - a fail-closed dataset release gate (`verum.gates`);
 - tests for the above and a record of design decisions in
   `docs/design_decisions.md`.
 
-No hydraulic, vapor, fault or sensor physics is implemented; ledgers and
+Transient hydraulics, faults and sensors are not implemented; ledgers and
 protection are driven by prescribed or injected signals. The release policy
 in `config/dataset_release_policy.json` keeps `production_generation_enabled`
 false, and the gate refuses the `production_candidate` tier while it is false.
@@ -55,7 +57,7 @@ not selected are represented as unresolved and raise an error when read.
 | `vendor/` | Audited input package, read-only, with hash manifest |
 | `config/` | Machine-readable contracts used by the loaders |
 | `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `api` |
+| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `api` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
 

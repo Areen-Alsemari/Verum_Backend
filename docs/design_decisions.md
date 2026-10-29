@@ -80,8 +80,12 @@ version superseded; records are not edited in place.
   node and the reservoir, `PT-203` = 2 barg + rho g dH_d). In addition, the
   coefficient c is solved separately for each fitting profile (D15) so that
   TK-102 at 7 m runs at 300 m3/h with 42 m of pump head. Each value is stored in
-  `config/delivery_boundary.json` with its provenance. For the `pipe_only`
-  profile the solved coefficient is 11.96 m to two decimals.
+  `config/delivery_boundary.json` with its provenance. The solved values are
+  c = 11.963444 m for `pipe_only` (11.96 m to two decimals) and
+  c = 10.060889 m for `reference_fittings`. With these values the two profiles
+  give practically the same operating flows (they differ in pressure
+  distribution and NPSH), because a lumped K and the boundary law are both
+  quadratic in the flow.
 - **Reason.** The coefficient of 11.96 m was derived for straight pipe without
   fittings. With fittings the system needs less added resistance to give the
   same duty point, so one value cannot serve both profiles.
@@ -289,8 +293,9 @@ version superseded; records are not edited in place.
 - **Sensitivity required.** Specified: NPSH3 coefficient 2.5, 4 and 6 m;
   temperature stratum 25, 35 and 45 C (D11). Report the derived pumping-minimum
   level for every combination. No new sweep is proposed.
-- **Notes.** The pumping-minimum level is an output of the hydraulic phase and
-  is not computed in Phase 1. The version 1.0 check at 300 m3/h (TK-103,
+- **Notes.** The pumping-minimum level is an output of the hydraulic phase. The
+  Phase 2 study stores it in `config/pumping_minimum_levels.json` for each tank,
+  temperature stratum, fitting profile and NPSH3 coefficient. The version 1.0 check at 300 m3/h (TK-103,
   1.8 m, 25 C: 4.83 m available against 5.2 m required) indicates that the
   pumping minimum of TK-103 exceeds 1.8 m.
 
