@@ -1,7 +1,7 @@
 {
   "scenario_id": "S0u-D",
   "description": "Receipt switch RECEIVE_101 -> SWITCH_RECEIPT_HOLD -> RECEIVE_102 with valve strokes.",
-  "seed": 20261029,
+  "seed": 20261004,
   "duration_s": 3600,
   "temperature_c": 25.0,
   "fitting_profile": "reference_fittings",

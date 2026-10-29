@@ -1,7 +1,7 @@
 {
   "scenario_id": "REJ-2",
   "description": "Delivery from TK-101 starting at 8.1 m and 45 C: the level crosses the stored pumping minimum (stratum sea_level, f_d = 0.8 table).",
-  "seed": 20261029,
+  "seed": 20261012,
   "duration_s": 3600,
   "temperature_c": 45.0,
   "fitting_profile": "reference_fittings",

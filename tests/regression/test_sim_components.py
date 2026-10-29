@@ -41,6 +41,12 @@ from verum.sim.scenario import load_scenario, parse_scenario
 from verum.sim.validity import is_valid, ratio, round_trip_s, wave_speeds
 from verum.sim.valves import make_valve
 
+FIXED_SEEDS = {
+    "S0-A": 20261001, "S0-B": 20261002, "S0-C": 20261003, "S0u-D": 20261004,
+    "S0u-E": 20261005, "S0-F": 20261101, "S0-G": 20261007, "S0-A-elev": 20261008,
+    "REJ-1": 20261011, "REJ-2": 20261012, "REJ-3": 20261013,
+}  # fmt: skip
+
 # --- valve law ----------
 
 
@@ -217,7 +223,7 @@ def test_an_unknown_schedule_command_is_refused(table: LineupTable) -> None:
 def test_scenario_files_are_valid(sid: str) -> None:
     sc = load_scenario(sid)
     assert sc.fitting_profile == "reference_fittings"
-    assert sc.seed == (20261101 if sid == "S0-F" else 20261029)
+    assert sc.seed == FIXED_SEEDS[sid]  # decision D41: fixed and distinct (see test_seeds)
     assert sc.duration_s == 3600.0 and sc.scenario_id == sid
     assert sc.atmosphere_stratum == ("elevated" if sid == "S0-A-elev" else "sea_level")
     assert sc.demand_process is (sid == "S0-F")

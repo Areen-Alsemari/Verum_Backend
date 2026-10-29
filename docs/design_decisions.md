@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 8 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 9 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -67,6 +67,8 @@ version superseded; records are not edited in place.
 | D33 | Independent high-high detector inside the engine | DESIGN | 1.0 |
 | D39 | Dead-leg pressure | SIM | 1.0 |
 | D40 | Alarm on the level-transmitter chain | DESIGN | 1.0 |
+| D41 | Campaign episode seeds | DESIGN | 1.0 |
+| D42 | The sensitivity sweeps as one study | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -877,6 +879,22 @@ version superseded; records are not edited in place.
 - **Reason.** The ordinary alarm is a control-system alarm built on the level reading, not on the truth.
 - **Sensitivity required.** None beyond the sensor parameters.
 - **Notes.** Version 1.0 of D26 located the alarm threshold on the true level; for the alarm that is superseded by this decision, and the located crossing stays for the detector.
+
+## D41 - Campaign episode seeds
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The seed of episode `i` of a campaign is derived from the campaign seed and the index: `SeedSequence(entropy=campaign_seed, spawn_key=(i,))`, taking the first 64-bit word of its state. The helper refuses a campaign in which two indices give one seed. The named test scenarios keep fixed seeds, each different from the others, and are not part of any campaign: their episodes carry the tier `analytic_verification` (or `restricted_benchmark` when D37 restricts them) and are never released as campaign data.
+- **Reason.** Two episodes that share a seed share every random draw (noise, dropout, detector offset, demand), so their differences would not be independent evidence. In Phase 4 seven scenarios shared one seed and the pooled dropout count was a fluctuation of about three independent trials.
+- **Sensitivity required.** None.
+- **Notes.** The derivation is a pure function of the campaign seed and the index, so a campaign can be extended or an episode regenerated without regenerating the others.
+
+## D42 - The sensitivity sweeps as one study
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The sweeps listed in D38 and the one required by D39 are run together as a single study before Phase 7: the wave-criterion factor of D22 at 5, 10 and 20; the standard deviation of log f_d of D23 at 0.05, 0.1 and 0.2, with its correlation time at 900, 1800 and 3600 s; the dead-leg time constant of D39 at 10, 60 and 300 s. In Phase 4c only the D39 sweep is run, on S0u-E and S0u-D, as a preview of the dependence of the observed pressures on that constant.
+- **Reason.** One study with one report is easier to review than five partial ones, and the three sweeps act on different tags.
+- **Sensitivity required.** The study itself.
+- **Notes.** The preview does not replace the study; it was run to say which diagnostic features depend on the constant.
 
 ## Episode profile
 
