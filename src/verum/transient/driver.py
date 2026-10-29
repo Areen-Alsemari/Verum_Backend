@@ -66,6 +66,7 @@ class TransientSpec:
     temperature_c: float = 25.0
     atmosphere_stratum: str = "coastal"
     fitting_profile: str = "reference_fittings"
+    k_multiplier: float = 1.0  # sensitivity sweep of decision D50
     receipt_flow_m3h: float = 0.0
     receipt_setpoint_m3h: float = 0.0
     downstream_factor: float = 1.0
@@ -97,10 +98,10 @@ class NetworkDef:
     initial: Mapping[str, tuple[float, float, float]] | None = None
 
 
-def plant_network(model: HydraulicModel, profile: str) -> NetworkDef:
+def plant_network(model: HydraulicModel, profile: str, multiplier: float = 1.0) -> NetworkDef:
     return NetworkDef(
         tuple(model.topology.edges),
-        model.all_edge_k(profile),
+        model.all_edge_k(profile, multiplier),
         tuple(model.topology.pumps),
         dict(model.node_z),
     )
@@ -127,7 +128,7 @@ class TransientEngine:
     ) -> None:
         self.spec = spec
         self.net = network or plant_network(
-            model.for_stratum(spec.atmosphere_stratum), spec.fitting_profile
+            model.for_stratum(spec.atmosphere_stratum), spec.fitting_profile, spec.k_multiplier
         )
         self.model = model.for_stratum(spec.atmosphere_stratum)
         m = self.model
@@ -190,6 +191,7 @@ class TransientEngine:
             SteadyInputs(
                 lineup=sp.lineup, tank_levels_m=sp.tank_levels_m, scenario=sp.volatility_class,
                 temperature_c=sp.temperature_c, fitting_profile=sp.fitting_profile,
+                k_multiplier=sp.k_multiplier,
                 receipt=ReceiptBoundary(flow_m3h=sp.receipt_flow_m3h),
                 delivery=DeliveryBoundary(law_coefficient_m=self.law_c * sp.downstream_factor),
             )
