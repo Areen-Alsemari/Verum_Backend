@@ -67,13 +67,16 @@ def test_sg1_rejects_a_ledger_that_stops_closing(model: HydraulicModel) -> None:
     engine = _engine(model, dataclasses.replace(load_scenario("S0-A"), duration_s=100.0))
     engine.run(until=10.0)
     engine.state.cum_received_m3 += 5.0  # an injected 5 m3 of unaccounted receipt
+    # The ledger is checked at the end of the next step: the next grid point or, earlier, the
+    # next queued event (the level-transmitter samples of decision D40 are events).
+    expected_time = min(11.0, engine.state.queue[0][0])
     outcome = engine.run()
     assert outcome.rejection is not None
     assert (
         outcome.rejection["gate"] == "SG1"
         and outcome.rejection["parameter"] == "mass_ledger_residual"
     )
-    assert outcome.rejection["t_sim_s"] == 11.0
+    assert outcome.rejection["t_sim_s"] == expected_time and 10.0 < expected_time <= 11.0
     assert outcome.rejection["value"] == pytest.approx(3750.0, rel=1e-3)
 
 

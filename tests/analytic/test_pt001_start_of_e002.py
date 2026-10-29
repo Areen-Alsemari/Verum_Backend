@@ -135,8 +135,8 @@ def test_the_same_rate_of_change_holds_along_e001_and_e002_at_every_row(
         e002 = {(t, side): (a, b) for t, side, a, b in s.edge_p["E002"]}
         for key, (p1, _p1b) in e001.items():
             p2, p2b = e002[key]
-            if p1 is None or p2 is None or p2b is None:
-                continue
+            if p1 is None or p2 is None or p2b is None or q[key] == 0.0:
+                continue  # a closed path is a dead leg with one head, not a flowing column
             flow = q[key]
             qd1 = (
                 head(p1, flow) - head(p2, flow) - ref.loss(flow, ref.D300, 30.0, 0.0)

@@ -37,7 +37,8 @@ def test_the_s0ue_collapse_window_is_attached_to_the_samples_inside_it(
     expected = [r for r in rows if w["t_start_s"] <= r["t_sim_s"] <= w["t_end_s"]]
     assert [r["t_sim_s"] for r in inside] == [r["t_sim_s"] for r in expected]
     assert all(r["validity_window_ids"] == [w["window_id"]] for r in inside)
-    assert len(joined) == len(rows) and len(inside) >= 10  # 1 s tags and event tags are inside
+    # The window lasts 0.19 s: the seven 1 s tags put about 1.3 rows inside it.
+    assert len(joined) == len(rows) and len(inside) >= 1
     assert all(not r["validity_window_ids"] for r in joined if r["t_sim_s"] < w["t_start_s"] - 1e-9)
     assert all("validity_window_ids" not in r for r in rows)  # the input is not modified
 

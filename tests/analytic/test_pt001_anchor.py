@@ -85,8 +85,8 @@ def test_the_pt001_head_equals_the_head_at_the_end_of_e002_at_every_row(
         flow = {(t, side): q for t, side, q in s.edge["E002"]}
         for t, side, _from, p_to in s.edge_p["E002"]:
             h = pt[(t, side)]
-            if p_to is None or h is None:
-                continue
+            if p_to is None or h is None or flow[(t, side)] == 0.0:
+                continue  # a closed path is a dead leg with one head, not a flowing column
             end = head_from_pressure(p_to, 1.0, flow[(t, side)])
             assert h == pytest.approx(end, abs=1e-6), (sid, t, side)
             checked += 1

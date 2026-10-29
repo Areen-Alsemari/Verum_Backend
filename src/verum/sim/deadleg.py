@@ -10,7 +10,8 @@ Key assumptions:
       are not barriers (a closed valve, a check valve, a pump). A segment that touches a tank
       nozzle takes that tank's head, one that touches the distribution boundary takes the
       reservoir head, both without delay.
-    * An isolated segment holds the head it had at the last committed step and relaxes to the
+    * An isolated segment holds one head (the mean of its edges' last determined heads) and
+      relaxes to the
       head across its closed isolation valve (valves first, then check valves and pumps, in
       name order; a neighbour that is itself a dead leg contributes its own head) with
       ``H = H_target + (H_0 - H_target) exp(-dt / tau)``. A segment with no neighbour at all
@@ -183,6 +184,7 @@ def _relax(
     decay: float,
     was_dead: set[str],
 ) -> None:
+    known = [held[e.edge_id] for e in seg if e.edge_id in held]
+    h0 = sum(known) / len(known) if known else target  # one pressure for the whole segment
     for e in seg:
-        h0 = held.get(e.edge_id, target)
         heads[e.edge_id] = target + (h0 - target) * (decay if e.edge_id in was_dead else 1.0)
