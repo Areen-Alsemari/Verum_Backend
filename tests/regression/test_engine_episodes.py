@@ -27,7 +27,7 @@ from _truth_audit import audit, rewrite
 from verum.contracts import validate
 from verum.hydraulics import HydraulicModel
 from verum.lineups import load_lineup_table
-from verum.provenance import config_hash, episode_id
+from verum.provenance import config_hash, episode_id, git_state
 from verum.sim.config import load_sim_config
 from verum.sim.engine import Engine
 from verum.sim.episode import EpisodeResult, run_episode
@@ -519,7 +519,18 @@ def test_regeneration_gives_identical_files(
 ) -> None:
     again = run_episode("S0-A", tmp_path / "again", model)
     assert again.episode_id == episodes["S0-A"].episode_id
-    assert again.file_hashes == episodes["S0-A"].file_hashes
+    # Every file except provenance.json is a pure function of seed, scenario and configuration.
+    # provenance.json records the git commit and the dirty flag, so it follows the checkout:
+    # it must equal the state of the checkout at the time of the run, not the earlier run's.
+    deterministic = {k: v for k, v in again.file_hashes.items() if k != "provenance.json"}
+    assert deterministic == {
+        k: v for k, v in episodes["S0-A"].file_hashes.items() if k != "provenance.json"
+    }
+    commit, dirty = git_state()
+    assert json.loads((again.directory / "provenance.json").read_text()) == {
+        "git_commit": commit,
+        "git_dirty": dirty,
+    }
     scenario = dataclasses.replace(load_scenario("S0-A"), seed=1)
     other = run_episode("S0-A", tmp_path / "other", model, scenario)
     assert (

@@ -54,7 +54,13 @@ from verum.ledger.tank import UNIT_ROUNDOFF
 from verum.lineups import LineupTable
 from verum.ops import Command, OperationsController
 from verum.params import UnresolvedParameter
-from verum.protection import ProtectionEvent, Signals, TankProtection, load_protection_config
+from verum.protection import (
+    ProtectionConfig,
+    ProtectionEvent,
+    Signals,
+    TankProtection,
+    load_protection_config,
+)
 from verum.sim import rows as rw
 from verum.sim import validity
 from verum.sim.config import SimConfig
@@ -177,7 +183,13 @@ class Engine:
         self.closed_alpha = model.config["valve_closed_alpha"]
         self.temperature_k = scenario.temperature_c + 273.15
         self.geometry = load_tank_geometry(model.directory)
+        self._isolation_valves = {
+            t: self._protection_config(t).isolation_valves for t in model.topology.tank_ids
+        }
         self.state = state if state is not None else self._initial_state()
+
+    def _protection_config(self, tank: str) -> ProtectionConfig:
+        return load_protection_config(self.model.topology, tank, self.model.directory)
 
     # --- construction ----------
     def _initial_state(self) -> EngineState:
@@ -189,9 +201,7 @@ class Engine:
             v: make_valve(v, self.cfg.stroke_time_s(v), self.closed_alpha, v in mode.open_valves)
             for v in rw.VALVES
         }
-        protections = {
-            t: TankProtection(load_protection_config(m.topology, t, m.directory)) for t in tanks
-        }
+        protections = {t: TankProtection(self._protection_config(t)) for t in tanks}
         ops = OperationsController(self.table, sc.initial_mode, sc.schedule)
         state = EngineState(
             t=0.0,
@@ -578,7 +588,7 @@ class Engine:
         r = st.current
         for tank, machine in st.protections.items():
             level = self._levels(st.volumes)[tank]
-            valves = machine._config.isolation_valves  # noqa: SLF001 - evidence names only
+            valves = self._isolation_valves[tank]
             closed = {v: st.valves[v].is_physically_closed(t) for v in valves}
             machine.update(
                 Signals(
