@@ -14,9 +14,9 @@ published here.
 
 ## Scope of the current phase
 
-Phases 0 to 3b cover infrastructure, topology, tanks, lineups, the inventory
+Phases 0 to 4 cover infrastructure, topology, tanks, lineups, the inventory
 ledger, the protection logic, steady-state hydraulics, the path-dynamics engine and
-healthy episodes. They contain:
+healthy episodes, the sensor chain and a read-only gateway. They contain:
 
 - the audited input package, vendored unmodified under `vendor/verum_audited/`
   with SHA-256 hashes in `vendor/MANIFEST.sha256`;
@@ -40,12 +40,13 @@ healthy episodes. They contain:
   store (`verum.sim`, `verum.ops`, `verum.truth`; see `docs/path_dynamics_engine.md`),
   with named random streams and configuration provenance (`verum.rng`,
   `verum.provenance`);
+- the sensor chain from truth to observations (`verum.sensors`; see
+  `docs/observation_chain.md`) and the read-only gateway (`verum.api`);
 - a fail-closed dataset release gate (`verum.gates`);
 - tests for the above and a record of design decisions in
   `docs/design_decisions.md`.
 
-Wave dynamics, faults and sensors are not implemented; ledgers and
-protection are driven by prescribed or injected signals. The release policy
+Wave dynamics, faults and agents are not implemented. The release policy
 in `config/dataset_release_policy.json` keeps `production_generation_enabled`
 false, and the gate refuses the `production_candidate` tier while it is false.
 
@@ -62,7 +63,7 @@ not selected are represented as unresolved and raise an error when read.
 | `vendor/` | Audited input package, read-only, with hash manifest |
 | `config/` | Machine-readable contracts used by the loaders |
 | `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `rng`, `provenance`, `api` |
+| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
 

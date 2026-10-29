@@ -32,7 +32,7 @@ from typing import Any
 
 import jsonschema
 
-from verum.contracts import load_topology, validate
+from verum.contracts import load_topology, validate, validator
 
 ASSET_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -93,12 +93,16 @@ class Gateway:
         with gzip.open(episode_directory / OBSERVATION_FILE, "rt", encoding="utf-8") as handle:
             self._observations = [json.loads(line) for line in handle]
         self._observations.sort(key=lambda r: (r["t_available_s"], r["tag_id"]))
+        self._checked = 0  # rows before this index have been validated
+        self._valid = validator("observation").is_valid
 
     def query(self, as_of_s: float) -> dict[str, Any]:
         """Everything visible at ``as_of_s``; later observations are not returned."""
         visible = [r for r in self._observations if r["t_available_s"] <= as_of_s]
-        for row in visible:
-            validate("observation", row)
+        for row in self._observations[self._checked : len(visible)]:
+            if not self._valid(row):
+                validate("observation", row)  # raises with the violation
+        self._checked = max(self._checked, len(visible))
         assets = _assets()
         for asset in assets:
             jsonschema.validate(asset, ASSET_SCHEMA)

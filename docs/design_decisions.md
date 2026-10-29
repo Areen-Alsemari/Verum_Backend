@@ -58,7 +58,7 @@ version superseded; records are not edited in place.
 | D36 | Cap as a pressure limit at the source tap; anchor of the head | DESIGN | 1.0 |
 | D37 | Tier of episodes with flagged windows | DESIGN | 1.0 |
 | D38 | Pending sensitivity studies | DESIGN | 1.0 |
-| D27 | Observation units and the atmosphere stratum | DESIGN | 1.0 |
+| D27 | Observation units and the atmosphere stratum | DESIGN | 1.1 (supersedes 1.0) |
 | D28 | Noise standard deviations | SIM | 1.0 |
 | D29 | Quantisation and clipping | SIM | 1.1 (supersedes 1.0) |
 | D30 | Sample dropout | SIM | 1.0 |
@@ -756,6 +756,22 @@ version superseded; records are not edited in place.
 - **Notes.** Each is *proposed*.
 
 ## D27 - Observation units and the atmosphere stratum
+
+- **Version:** 1.1 (2026-10-29)  **Status:** DESIGN  **Supersedes:** 1.0
+- **Decision.** Observation values are in the engineering units of the sensor contract (m,
+  m3/h, barg, C, boolean). A gauge pressure is the true absolute pressure minus the atmosphere
+  of the episode stratum (D24). The truth pressure is gauge plus that atmosphere, so identical
+  hydraulics give identical gauge readings in both strata; the stratum matters to a reading
+  only through the hydraulics (the NPSH screen, the pumping minimum) or for a sensor referenced
+  to a fixed atmosphere, of which the contract has none among the 30 emitted tags.
+- **Reason.** Version 1.0 stated that the same state reads differently in the two strata for
+  all transmitters; the truth is defined in gauge terms, so that is only true of a
+  fixed-reference sensor.
+- **Sensitivity required.** The elevated stratum is itself the check.
+- **Notes.** Ranges and units are validated against the contract table copied to
+  `config/sensor_specs.json`. Version 1.0 is kept below.
+
+## D27 - Observation units and the atmosphere stratum (version 1.0, superseded)
 
 - **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
 - **Decision.** Observation values are in the engineering units of the sensor contract (m, m3/h, barg, C, boolean). A gauge pressure is the true absolute pressure minus the atmosphere of the episode stratum (D24), so the same state reads differently in the two strata only for sensors that measure absolute pressure and report gauge. All pressure transmitters of the contract are of that kind (the transmitter is referenced to the site atmosphere, the truth is absolute). Ranges and units are validated against the contract table.
