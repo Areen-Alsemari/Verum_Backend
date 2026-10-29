@@ -26,6 +26,9 @@ Key assumptions:
       apart by ``atmosphere_pa_abs``.
     * A solved pump flow outside the curve is rejected, never extrapolated.
       Phase and NPSH failures are reported in the result and nothing is clipped.
+    * A tap may read a head that differs from its node head (``tap_head_offsets_m``,
+      decision D36): the tap pressure and ``tap_heads_m`` carry the offset, the edge-end
+      pressures do not.
     * Dynamic use (decision D22): the engine may impose the delivery flow (the reservoir
       and the boundary law then play no part in the solve; the engine applies them in
       its flow equation), switch the receipt cap off (the engine applies it), and add
@@ -95,6 +98,7 @@ class SteadyInputs:
     imposed_delivery_flow_m3h: float | None = None
     head_offsets_m: Mapping[str, float] = field(default_factory=dict)
     apply_cap: bool = True
+    tap_head_offsets_m: Mapping[str, float] = field(default_factory=dict)
 
 
 class _PumpLaw(sv.FlowLaw):
@@ -315,6 +319,7 @@ class _Case:
     clipped: bool = False
     c_law: float = 0.0
     notes: list[str] = field(default_factory=list)
+    tap_heads: dict[str, float] = field(default_factory=dict)
 
     # --- orchestration ---------------------------------------------------------------
     def run(self, vapor_pa: float) -> SteadyResult:
@@ -498,11 +503,14 @@ class _Case:
                 self._end_pressure(hb, e.z_to_m, q, e.inner_diameter_m),
             )
         taps: dict[str, float] = {}
+        self.tap_heads: dict[str, float] = {}
         for node, ref in m.config.tap_reference_edges.items():
             if node in heads:
                 e = m._edges[ref]
+                head = heads[node] + self.inputs.tap_head_offsets_m.get(node, 0.0)
+                self.tap_heads[node] = head
                 taps[node] = self._end_pressure(
-                    heads[node], m.node_z[node], flows[ref], e.inner_diameter_m
+                    head, m.node_z[node], flows[ref], e.inner_diameter_m
                 )
         return ends, taps
 
@@ -621,5 +629,6 @@ class _Case:
             fitting_profile=self.inputs.fitting_profile,
             k_multiplier=self.inputs.k_multiplier,
             boundary_law_coefficient_m=self.c_law,
+            tap_heads_m=self.tap_heads,
             notes=tuple(self.notes),
         )

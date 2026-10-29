@@ -69,6 +69,19 @@ class LumpedPath:
     def wave_time_s(self, speeds: Mapping[int, float]) -> float:
         return sum(e.length_m / speeds[_dn(e.diameter_m)] for e in self.edges)
 
+    def tap_offset(self, flow_m3s: float, qdot_m3s2: float, n_upstream: int = 2) -> float:
+        """Head at a tap that lies after the first ``n_upstream`` edges of the column, minus
+        the head at the start of the column: ``-(loss + Lambda dQ/dt)`` over those edges
+        (decision D36). Valves are not on these edges for the receipt path."""
+        m, g = self.model, self.model.g
+        edges = self.edges[:n_upstream]
+        loss = sum(
+            head_loss(flow_m3s, e.diameter_m, e.length_m, e.k_base, m.rho, m.mu, m.roughness, m.g)
+            for e in edges
+        )
+        lam = sum(e.length_m / (g * math.pi * e.diameter_m**2 / 4) for e in edges)
+        return -(loss + lam * qdot_m3s2)
+
     def valves(self) -> tuple[str, ...]:
         return tuple(e.valve for e in self.edges if e.valve is not None)
 

@@ -53,6 +53,9 @@ class Series:
     pump: dict[str, list[tuple[float, str | None, str, float, str, float | None]]] = field(
         default_factory=lambda: defaultdict(list)
     )
+    edge_p: dict[str, list[tuple[float, str | None, float | None, float | None]]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
     head: dict[str, list[tuple[float, str | None, float | None]]] = field(
         default_factory=lambda: defaultdict(list)
     )
@@ -100,6 +103,7 @@ def _state_row(s: Series, row: dict[str, Any]) -> None:
         )
     elif kind == "edge_state":
         s.edge[el].append((t, side, p["flow_m3s"]))
+        s.edge_p[el].append((t, side, p["p_from_pa_abs"], p["p_to_pa_abs"]))
     elif kind == "node_state":
         s.node[el].append((t, side, p["pressure_pa_abs"]))
         s.head[el].append((t, side, p["hydraulic_head_m"]))

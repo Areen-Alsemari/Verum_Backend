@@ -109,7 +109,7 @@ def hydraulic_rows(
         gauge = r.tap_pressures_pa_gauge.get(node)
         payload = {
             "pressure_pa_abs": _abs(gauge, patm),
-            "hydraulic_head_m": r.node_heads_m.get(node),
+            "hydraulic_head_m": r.tap_heads_m.get(node, r.node_heads_m.get(node)),
             "pressure_basis": "Pa_abs",
             "reference_edge": ref,
         }

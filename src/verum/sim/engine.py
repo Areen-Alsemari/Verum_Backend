@@ -308,6 +308,7 @@ class Engine:
         delivery_m3h: float | None = None,
         offsets: dict[str, float] | None = None,
         apply_cap: bool = True,
+        qdot_receipt: float = 0.0,
     ) -> SteadyResult:
         st = self.state
         alphas = {v: valve.alpha(t) for v, valve in st.valves.items()}
@@ -326,6 +327,7 @@ class Engine:
             imposed_delivery_flow_m3h=delivery_m3h,
             head_offsets_m=offsets or {},
             apply_cap=apply_cap,
+            tap_head_offsets_m=self._tap_offsets(t, receipt_m3h, qdot_receipt),
         )
         try:
             result = self.model.solve(inputs)
@@ -339,6 +341,17 @@ class Engine:
         st.iterations = max(st.iterations, result.iterations)
         st.residual_kg_s = max(st.residual_kg_s, result.max_mass_residual_kg_s)
         return result
+
+    def _tap_offsets(self, t: float, receipt_m3h: float, qdot: float) -> dict[str, float]:
+        """Head of the PT-001 tap relative to its node (decision D36), for a single receipt path."""
+        st = self.state
+        if st.valves["XV-R000"].is_physically_closed(t):
+            return {}
+        tanks = self._open_tanks("R", t)
+        if len(tanks) != 1:
+            return {}
+        path = self._path("receipt", tanks[0], None, t)
+        return {SOURCE_NODE: path.tap_offset(receipt_m3h / 3600.0, qdot)}
 
     # --- run loop ----------
     def run(self, until: float | None = None) -> EpisodeOutcome:
@@ -515,6 +528,7 @@ class Engine:
             y1[1] * 3600.0 if plan.delivery is not None else None,
             offsets,
             apply_cap=False,
+            qdot_receipt=qdot_r,
         )
         base = dict(st.volumes)
 

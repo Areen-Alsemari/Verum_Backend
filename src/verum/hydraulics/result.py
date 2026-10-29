@@ -79,6 +79,7 @@ class SteadyResult:
     fitting_profile: str = ""
     k_multiplier: float = 1.0
     boundary_law_coefficient_m: float = 0.0
+    tap_heads_m: Mapping[str, float] = field(default_factory=dict)
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
@@ -88,6 +89,7 @@ class SteadyResult:
             "edge_end_pressures_pa_gauge",
             "tap_pressures_pa_gauge",
             "tank_net_inflow_m3s",
+            "tap_heads_m",
             "node_mass_residual_kg_s",
             "gates",
         ):
