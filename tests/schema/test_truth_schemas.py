@@ -2,7 +2,7 @@
 
 Inputs: ``schemas/hydraulic_state|solver_diagnostics|mass_ledger|events|episode|
 simulation_rejected.schema.json`` and hand-built rows. Outputs: pass/fail.
-Key assumptions: these schemas are proposals (version 0.6.0, ``x-status`` marker) for
+Key assumptions: these schemas are proposals (version 0.7.0, ``x-status`` marker) for
 review by the schema owner; every row carries ``hidden = true``; the structural checks
 here say nothing about physical plausibility.
 
@@ -19,7 +19,7 @@ import pytest
 from verum.contracts import PROPOSED_SCHEMA_NAMES, load_schema, validator
 
 Doc = dict[str, Any]
-BASE = {"schema_version": "0.6.0", "episode_id": "EP-0123456789AB", "hidden": True}
+BASE = {"schema_version": "0.7.0", "episode_id": "EP-0123456789AB", "hidden": True}
 
 PAYLOADS: dict[str, Doc] = {
     "node_state": {
@@ -68,7 +68,7 @@ PAYLOADS: dict[str, Doc] = {
         "state": "NORMAL",
         "trip_latched": False,
         "signal_source": "independent_detector",
-        "process_level_m": 9.0,
+        "true_level_m": 9.0,
         "independent_level_m": 9.0,
     },
 }
@@ -323,6 +323,15 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
         _edit(_state("tank_state"), "payload.roof_state", "sunk"),
     ),
     ("solver_diagnostics", "negative iterations", _edit(DIAG, "iterations", -1)),
+    (
+        "hydraulic_state",
+        "old process-level name",
+        _edit(
+            _edit(_state("protection_state"), "payload.true_level_m", _DROP),
+            "payload.process_level_m",
+            9.0,
+        ),
+    ),
     ("solver_diagnostics", "unknown flow model", _edit(DIAG, "flow_model", "steady")),
     ("solver_diagnostics", "window ids as text", _edit(DIAG, "active_validity_window_ids", "VW-1")),
     ("solver_diagnostics", "old ratio field", _edit(DIAG, "quasi_steady_ratio", 1.0)),
@@ -373,8 +382,8 @@ def test_each_schema_has_positive_and_negative_cases(schema: str) -> None:
 @pytest.mark.parametrize("schema", PROPOSED_SCHEMA_NAMES)
 def test_each_schema_is_a_marked_proposal(schema: str) -> None:
     doc = load_schema(schema)
-    assert doc["x-status"] == "backend-proposed" and doc["$id"] == f"urn:verum:{schema}:0.6.0"
-    assert doc["properties"]["schema_version"]["pattern"] == "^0\\.6\\.[0-9]+$"
+    assert doc["x-status"] == "backend-proposed" and doc["$id"] == f"urn:verum:{schema}:0.7.0"
+    assert doc["properties"]["schema_version"]["pattern"] == "^0\\.7\\.[0-9]+$"
 
 
 def test_every_record_type_has_a_payload_definition() -> None:

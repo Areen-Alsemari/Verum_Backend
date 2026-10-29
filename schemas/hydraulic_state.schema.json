@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:verum:hydraulic_state:0.6.0",
+  "$id": "urn:verum:hydraulic_state:0.7.0",
   "title": "hydraulic_state (hidden, evaluator-only)",
   "x-status": "backend-proposed",
   "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
@@ -20,7 +20,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.6\\.[0-9]+$"
+      "pattern": "^0\\.7\\.[0-9]+$"
     },
     "dataset": {
       "const": "hydraulic_state"
@@ -305,7 +305,7 @@
         "state",
         "trip_latched",
         "signal_source",
-        "process_level_m",
+        "true_level_m",
         "independent_level_m"
       ],
       "properties": {
@@ -326,11 +326,13 @@
         "signal_source": {
           "const": "independent_detector"
         },
-        "process_level_m": {
-          "type": "number"
+        "true_level_m": {
+          "type": "number",
+          "description": "The true tank level (hidden truth). The alarm sees the level-transmitter chain (decision D40) and the high-high trip the independent detector (D33); this field is neither."
         },
         "independent_level_m": {
-          "type": "number"
+          "type": "number",
+          "description": "The level the independent detector sees: the true level plus its fixed offset (decision D33). Hidden truth."
         }
       }
     }

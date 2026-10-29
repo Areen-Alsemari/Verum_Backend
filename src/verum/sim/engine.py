@@ -1216,7 +1216,10 @@ class Engine:
             v: rw.ValveView(valve.alpha(t), valve.commanded_open, valve.is_physically_closed(t))
             for v, valve in st.valves.items()
         }
-        prot = {k: (p.state.value, p.trip_latched, levels[k]) for k, p in st.protections.items()}
+        prot = {
+            k: (p.state.value, p.trip_latched, levels[k], levels[k] + self.detector_offset[k])
+            for k, p in st.protections.items()
+        }
         active = tuple(
             w.window_id
             for w in st.windows

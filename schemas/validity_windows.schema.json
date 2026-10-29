@@ -4,7 +4,7 @@
   "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
   "type": "object",
   "additionalProperties": false,
-  "$id": "urn:verum:validity_windows:0.6.0",
+  "$id": "urn:verum:validity_windows:0.7.0",
   "title": "validity_windows (hidden, evaluator-only)",
   "required": [
     "schema_version",
@@ -23,7 +23,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.6\\.[0-9]+$"
+      "pattern": "^0\\.7\\.[0-9]+$"
     },
     "episode_id": {
       "type": "string",

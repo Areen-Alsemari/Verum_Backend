@@ -6,7 +6,7 @@ Outputs: validators, and ``validate`` which raises ``ContractError`` on the
 first group of violations.
 Key assumptions:
     * The six audited schemas are ``SCHEMA_NAMES``; the eight hidden-dataset schemas
-      of the engine are ``PROPOSED_SCHEMA_NAMES`` (version 0.6.0, marked
+      of the engine are ``PROPOSED_SCHEMA_NAMES`` (version 0.7.0, marked
       ``x-status: backend-proposed`` for review by the schema owner).
     * ``fault_truth`` refers to ``urn:verum:paramvalue:0.4.0``; the registry
       built here resolves that reference locally, never over the network.

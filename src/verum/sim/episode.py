@@ -74,7 +74,7 @@ def episode_document(
 ) -> dict[str, Any]:
     levels = scenario.tank_levels_m
     return {
-        "schema_version": "0.6.0",
+        "schema_version": "0.7.0",
         "dataset": "episode",
         "episode_id": episode,
         "scenario_id": scenario.scenario_id,
@@ -130,7 +130,7 @@ def run_episode(
     if outcome.rejection:
         sink.discard_data()
         record = {
-            "schema_version": "0.6.0",
+            "schema_version": "0.7.0",
             "dataset": "simulation_rejected",
             "episode_id": episode,
             "scenario_id": scenario.scenario_id,

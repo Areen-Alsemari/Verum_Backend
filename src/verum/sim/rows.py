@@ -10,7 +10,7 @@ Key assumptions:
       two rows written at an event time.
     * Protection rows carry ``signal_source = "independent_detector"``: the high-high trip is
       decided on the detector signal of the engine (decision D33), not on the true level.
-    * Every row carries ``hidden = true`` and the schema version 0.6.0.
+    * Every row carries ``hidden = true`` and the schema version 0.7.0.
 
 Source: ``revised/05_simulation_validation_dataset.md`` section 7.4.8;
 ``schemas/hydraulic_state.schema.json`` and the other proposed schemas.
@@ -25,7 +25,7 @@ from typing import Any
 from verum.hydraulics import HydraulicModel, SteadyResult
 from verum.hydraulics.valves import loss_coefficient
 
-SCHEMA_VERSION = "0.6.0"
+SCHEMA_VERSION = "0.7.0"
 SIGNAL_SOURCE = "independent_detector"
 # Decision D36 version 2: the tap value of the supply node is the head at the end of E002; the
 # observed PT-001 is the start of E002 (edge row of E002, p_from).
@@ -53,7 +53,7 @@ class Snapshot:
     levels: dict[str, float]
     roof: dict[str, str]
     valves: dict[str, ValveView]
-    protection: dict[str, tuple[str, bool, float]]
+    protection: dict[str, tuple[str, bool, float, float]]
     running: frozenset[str]
     iterations: int
     max_residual_kg_s: float
@@ -129,13 +129,13 @@ def hydraulic_rows(
         rows.append(_state_row(episode, snap, side, "tank_state", tank, payload))
     rows += _valve_rows(model, episode, snap, side)
     rows += _pump_rows(model, episode, snap, side)
-    for tank, (state, latched, level) in snap.protection.items():
+    for tank, (state, latched, level, detector_level) in snap.protection.items():
         payload = {
             "state": state,
             "trip_latched": latched,
             "signal_source": SIGNAL_SOURCE,
-            "process_level_m": level,
-            "independent_level_m": level,
+            "true_level_m": level,
+            "independent_level_m": detector_level,
         }
         rows.append(_state_row(episode, snap, side, "protection_state", tank, payload))
     return rows

@@ -178,7 +178,7 @@ in any directory or file name) with six gzip JSON Lines datasets (`hydraulic_sta
 `episode.json` (which carries the stratum, the validity windows and the protection
 crossings), `provenance.json` (git commit) and a SHA-256 manifest. Rows are written on a
 1 s grid, and for every event as a pre-event and a post-event row. The datasets are
-described by eight backend-proposed schemas (`schemas/`, version 0.6.0) that await review
+described by eight backend-proposed schemas (`schemas/`, version 0.7.0) that await review
 by the schema owner. They are evaluator data and are never served.
 
 ## Checkpoint and restart

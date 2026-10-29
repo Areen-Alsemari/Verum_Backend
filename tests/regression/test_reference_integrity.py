@@ -101,7 +101,7 @@ def test_proposed_schemas_are_marked_and_versioned(root: Path, name: str) -> Non
 
     schema = json.loads((root / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8"))
     assert schema["x-status"] == "backend-proposed"
-    assert schema["$id"] == f"urn:verum:{name}:0.6.0"
+    assert schema["$id"] == f"urn:verum:{name}:0.7.0"
     assert schema["properties"]["hidden"] == {"const": True}
     assert "hidden" in schema["required"]
 
