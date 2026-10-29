@@ -32,6 +32,15 @@ class TruthSink(Protocol):
     def write(self, dataset: str, row: dict[str, Any]) -> None: ...
 
 
+class NullSink:
+    """Discards rows (accuracy studies that only need the final state)."""
+
+    discards = True
+
+    def write(self, dataset: str, row: dict[str, Any]) -> None:
+        return None
+
+
 class ListSink:
     """Collects rows in memory (tests and restart comparisons)."""
 

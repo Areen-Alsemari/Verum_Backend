@@ -500,6 +500,8 @@ class Engine:
             self._write_snapshot(post, None)
 
     def _write_snapshot(self, snap: rw.Snapshot, side: str | None) -> None:
+        if getattr(self.sink, "discards", False):
+            return
         for row in rw.hydraulic_rows(self.model, self.episode_id, snap, side, self.temperature_k):
             self.sink.write("hydraulic_state", row)
         self.sink.write("solver_diagnostics", rw.diagnostic_row(self.episode_id, snap, side))
