@@ -13,6 +13,8 @@ dependencies = [
     "referencing>=0.35",
     # Without this package jsonschema silently skips the date-time format check.
     "rfc3339-validator>=0.1.4",
+    "numpy>=2",
+    "scipy>=1.11",
 ]
 
 [dependency-groups]
@@ -23,24 +25,24 @@ dev = [
     "types-jsonschema",
     "hypothesis>=6.170.13",
 ]
-# Needed only to re-run the vendored reference scripts, not by the package.
-# numpy >= 2 because the audited schema reference tests call numpy.trapezoid.
-reference = [
-    "numpy>=2",
-    "scipy>=1.11",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/verum"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = "-ra --strict-markers"
 
 [tool.mypy]
 python_version = "3.11"
+mypy_path = "tests"
 strict = true
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

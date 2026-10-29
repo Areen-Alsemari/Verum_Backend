@@ -7,6 +7,7 @@ Source: ``revised/05_simulation_validation_dataset.md`` section 13.3
 
 from verum.graph.geometry import (
     RouteGeometry,
+    bend_arclengths,
     load_route_geometry,
     point_at,
     polyline_length,
@@ -26,6 +27,7 @@ __all__ = [
     "Lineup",
     "Network",
     "RouteGeometry",
+    "bend_arclengths",
     "load_route_geometry",
     "point_at",
     "polyline_length",

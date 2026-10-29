@@ -25,6 +25,7 @@ from verum.contracts import (
     load_topology,
 )
 from verum.contracts.paths import config_dir, repo_root
+from verum.hydraulics import HydraulicModel
 
 Raw = dict[str, Any]
 
@@ -72,3 +73,8 @@ def sensors(topology: Topology) -> SensorContract:
 @pytest.fixture(scope="session")
 def policy() -> ReleasePolicy:
     return load_policy()
+
+
+@pytest.fixture(scope="session")
+def model() -> HydraulicModel:
+    return HydraulicModel.load()

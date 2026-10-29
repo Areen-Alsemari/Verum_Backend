@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Loss-coefficient profiles (decision D15). Typical handbook values, unverified. Every entry is a ParamValue.",
+  "profiles": {
+    "pipe_only": {
+      "per_bend": {
+        "value": 0.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "tank_outlet": {
+        "value": 0.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "tank_inlet": {
+        "value": 0.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "open_isolation_valve": {
+        "value": 0.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "open_check_valve": {
+        "value": 0.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "meter": {
+        "value": 0.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      }
+    },
+    "reference_fittings": {
+      "per_bend": {
+        "value": 0.3,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "tank_outlet": {
+        "value": 0.5,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "tank_inlet": {
+        "value": 1.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "open_isolation_valve": {
+        "value": 0.1,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "open_check_valve": {
+        "value": 2.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      },
+      "meter": {
+        "value": 1.0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D15-v1.0"
+      }
+    }
+  }
+}

@@ -1,0 +1,522 @@
+"""Steady-state network solve for one lineup, set of tank levels and boundary case.
+
+Inputs: a ``SteadyInputs`` (lineup, tank levels, boundaries, fitting profile,
+property scenario and temperature, optional pump) and the loaded configuration.
+Outputs: an immutable ``SteadyResult``; or an exception for a rejected case.
+Key assumptions:
+    * Unknowns are node total heads. Tanks are constant-head nodes at their
+      free-surface level (tank bottom z = 0, atmospheric); a tank nozzle has the
+      tank head and the entrance or exit loss sits on the adjoining edge.
+    * Only edges that lie on a flow path between terminals (``Network.active_edges``)
+      are solved; a closed valve removes its edges, a stopped pump blocks, and
+      check valves are one-way. Receipt branches have no check valve, so their
+      flow can be negative and is never clipped.
+    * The pump node is split into an inlet and an outlet node with the pump
+      curve between them. If the head the pump must add reaches its shutoff
+      head, the delivery path carries no flow (dead-head) and the check valve
+      keeps it from reversing.
+    * Receipt: total flow imposed and source pressure solved; if the source
+      pressure (head-based, gauge) would exceed the cap, the cap is imposed and
+      the flow is solved and reported as clipped.
+    * Delivery: reservoir pressure beyond ``DISTRIBUTION_BOUNDARY`` plus the
+      boundary law ``dH_d = c (Q/300)^2``; with c = 0 the boundary node itself is
+      held at the reservoir head.
+    * Static pressure at an edge end or tap is ``rho g (H - z) - rho v^2 / 2``
+      with the velocity of the tap's reference edge. Gauge and absolute are kept
+      apart by ``atmosphere_pa_abs``.
+    * A solved pump flow outside the curve is rejected, never extrapolated.
+      Phase and NPSH failures are reported in the result and nothing is clipped.
+
+Source: ``revised/02_hydraulic_model.md`` sections 3 and 4 and 8 (gates G2 to
+G4); ``docs/design_decisions.md`` D2 (version 3.0), D3, D7, D11, D14, D15.
+"""
+
+from __future__ import annotations
+
+import math
+from collections import deque
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from verum.contracts import (
+    FluidContract,
+    Topology,
+    load_fluid_contract,
+    load_topology,
+)
+from verum.graph import Lineup, Network, RouteGeometry, load_route_geometry
+from verum.hydraulics import solver as sv
+from verum.hydraulics.boundaries import DeliveryBoundary, ReceiptBoundary
+from verum.hydraulics.config import (
+    HydraulicConfig,
+    load_boundary_law_coefficient,
+    load_fitting_profile,
+    load_hydraulic_config,
+)
+from verum.hydraulics.errors import ConvergenceError, HydraulicInputError, PumpOutsideCurve
+from verum.hydraulics.fittings import edge_loss_coefficients
+from verum.hydraulics.friction import head_loss
+from verum.hydraulics.properties import vapor_pressure_pa
+from verum.hydraulics.pump import FixedSpeedPump, PumpElement, hydraulic_power_w, shaft_power_w
+from verum.hydraulics.result import PhaseGate, PumpPoint, SteadyResult
+
+SOURCE = "PIPELINE_RECEIPT_BOUNDARY"
+BOUNDARY = "DISTRIBUTION_BOUNDARY"
+RESERVOIR = "RESERVOIR"
+LAW_EDGE = "DELIVERY_BOUNDARY_LAW"
+
+
+@dataclass(frozen=True)
+class SteadyInputs:
+    """One steady case."""
+
+    lineup: Lineup
+    tank_levels_m: Mapping[str, float]
+    scenario: str | None
+    temperature_c: float
+    fitting_profile: str = "pipe_only"
+    k_multiplier: float = 1.0
+    receipt: ReceiptBoundary = field(default_factory=ReceiptBoundary)
+    delivery: DeliveryBoundary = field(default_factory=DeliveryBoundary)
+    pump: PumpElement | None = None
+    npsh3_coefficient_m: float | None = None
+
+
+class _PumpLaw(sv.FlowLaw):
+    def __init__(self, pump: PumpElement) -> None:
+        self._pump = pump
+
+    def flow(self, delta: float) -> float:
+        return self._pump.flow_m3s(delta)
+
+    def slope(self, delta: float) -> float:
+        return self._pump.slope(delta)
+
+
+class _BoundaryLaw(sv.FlowLaw):
+    """``delta = c (Q / q_ref)^2`` with Q in m3/h; the flow keeps the sign of delta."""
+
+    def __init__(self, c_m: float, q_ref_m3h: float) -> None:
+        self._c, self._q_ref = c_m, q_ref_m3h / 3600.0
+
+    def flow(self, delta: float) -> float:
+        return math.copysign(self._q_ref * math.sqrt(abs(delta) / self._c), delta)
+
+    def slope(self, delta: float) -> float:
+        return self._q_ref / (2.0 * math.sqrt(self._c * max(abs(delta), 1e-6)))
+
+
+class HydraulicModel:
+    """Loaded configuration plus the solve method."""
+
+    def __init__(
+        self,
+        topology: Topology,
+        geometry: RouteGeometry,
+        fluid: FluidContract,
+        config: HydraulicConfig,
+        directory: Path | None = None,
+    ) -> None:
+        self.topology, self.geometry, self.fluid, self.config = topology, geometry, fluid, config
+        self.directory = directory
+        self.network = Network.from_topology(topology)
+        self.rho = fluid.properties["rho_kg_m3"].value
+        self.mu = fluid.properties["mu_Pa_s"].value
+        self.g = config["gravity_m_s2"]
+        self.roughness = config["pipe_roughness_m"]
+        self.patm = config["atmosphere_pa_abs"]
+        self.node_z = self._node_elevations()
+        self._edges = {e.edge_id: e for e in topology.edges}
+
+    @classmethod
+    def load(cls, directory: Path | None = None) -> HydraulicModel:
+        return cls(
+            load_topology(directory),
+            load_route_geometry(directory),
+            load_fluid_contract(directory),
+            load_hydraulic_config(directory),
+            directory,
+        )
+
+    def _node_elevations(self) -> dict[str, float]:
+        z: dict[str, float] = {}
+        for e in self.topology.edges:
+            for node, level in ((e.from_node, e.z_from_m), (e.to_node, e.z_to_m)):
+                if z.setdefault(node, level) != level:
+                    raise HydraulicInputError(f"node {node} has two elevations")
+        return z
+
+    def default_pump(self) -> FixedSpeedPump:
+        c = self.config
+        return FixedSpeedPump(
+            h0_m=c["pump_shutoff_head_m"],
+            k_m=c["pump_curve_coefficient_m"],
+            q_ref_m3h=c["pump_reference_flow_m3h"],
+            q_max_m3h=c["pump_max_flow_m3h"],
+            efficiency=c["pump_efficiency"],
+            speed_ratio=c["pump_speed_ratio"],
+        )
+
+    # --- case construction ------------------------------------------------------
+    def _end(self, node: str, role: str) -> str:
+        if node in self.topology.pumps:
+            return f"{node}:in" if role == "to" else f"{node}:out"
+        return node
+
+    def _pipe_edges(self, active: frozenset[str], inputs: SteadyInputs) -> list[sv.Edge]:
+        profile = load_fitting_profile(inputs.fitting_profile, inputs.k_multiplier, self.directory)
+        ks = edge_loss_coefficients(self.topology, self.geometry, profile, active)
+        edges: list[sv.Edge] = []
+        for eid in sorted(active, key=lambda x: self.topology.edge_ids.index(x)):
+            e = self._edges[eid]
+            law: sv.FlowLaw = sv.LossLaw(
+                self._loss_function(e.inner_diameter_m, e.length_m, ks[eid])
+            )
+            if e.from_node.startswith("CV-") or e.to_node.startswith("CV-"):
+                law = sv.OneWay(law)
+            edges.append(
+                sv.Edge(eid, self._end(e.from_node, "from"), self._end(e.to_node, "to"), law)
+            )
+        return edges
+
+    def _loss_function(self, diameter: float, length: float, k: float):  # type: ignore[no-untyped-def]
+        rho, mu, rough, g = self.rho, self.mu, self.roughness, self.g
+        return lambda q: head_loss(q, diameter, length, k, rho, mu, rough, g)
+
+    def _levels(self, nodes: set[str], levels: Mapping[str, float]) -> dict[str, float]:
+        fixed: dict[str, float] = {}
+        for node in nodes:
+            if node.endswith((":receipt_nozzle", ":outlet_nozzle")):
+                tank = node.split(":")[0]
+                if tank not in levels:
+                    raise HydraulicInputError(f"no level given for {tank}")
+                fixed[node] = float(levels[tank])
+        return fixed
+
+    # --- solve ---------------------------------------------------------------------
+    def solve(self, inputs: SteadyInputs) -> SteadyResult:
+        inputs.receipt.validate()
+        inputs.delivery.validate()
+        vp = vapor_pressure_pa(inputs.scenario, inputs.temperature_c, self.config, self.fluid)
+        assert inputs.scenario is not None
+        pump = inputs.pump or self.default_pump()
+        self.network.check_lineup(inputs.lineup)
+        active = self.network.active_edges(inputs.lineup)
+        case = _Case(self, inputs, active, pump)
+        return case.run(vp)
+
+
+@dataclass
+class _Case:
+    """State of one solve; keeps ``HydraulicModel.solve`` short."""
+
+    model: HydraulicModel
+    inputs: SteadyInputs
+    active: frozenset[str]
+    pump: PumpElement
+    edges: list[sv.Edge] = field(default_factory=list)
+    fixed: dict[str, float] = field(default_factory=dict)
+    inflow: dict[str, float] = field(default_factory=dict)
+    receipt_active: bool = False
+    delivery_active: bool = False
+    deadhead: bool = False
+    clipped: bool = False
+    c_law: float = 0.0
+    notes: list[str] = field(default_factory=list)
+
+    # --- orchestration ---------------------------------------------------------------
+    def run(self, vapor_pa: float) -> SteadyResult:
+        self.receipt_active = "E001" in self.active
+        self.delivery_active = "E-D2" in self.active
+        self._assemble()
+        sol = self._solve()
+        return self._result(sol, vapor_pa)
+
+    def _assemble(self) -> None:
+        m, inp = self.model, self.inputs
+        self.edges = m._pipe_edges(self.active, inp)
+        nodes = {n for e in self.edges for n in (e.a, e.b)}
+        self.fixed = m._levels(nodes, inp.tank_levels_m)
+        pumps_on = [p for p in m.topology.pumps if f"{p}:in" in nodes]
+        if self.delivery_active:
+            self._add_delivery(pumps_on)
+        if self.receipt_active:
+            self._add_receipt()
+
+    def _reservoir_head(self) -> float:
+        m, d = self.model, self.inputs.delivery
+        p = d.reservoir_pressure_pa_gauge
+        if p is None:
+            p = m.config["reservoir_pressure_pa_gauge"]
+        return m.node_z[BOUNDARY] + p / (m.rho * m.g)
+
+    def _add_delivery(self, pumps_on: list[str]) -> None:
+        m, inp = self.model, self.inputs
+        for p in pumps_on:
+            self.edges.append(sv.Edge(p, f"{p}:in", f"{p}:out", _PumpLaw(self.pump)))
+        c = inp.delivery.law_coefficient_m
+        if c is None:
+            c = load_boundary_law_coefficient(inp.fitting_profile, m.directory).value
+        self.c_law = c
+        h_res = self._reservoir_head()
+        if c > 0:
+            law = _BoundaryLaw(c, m.config["pump_reference_flow_m3h"])
+            self.edges.append(sv.Edge(LAW_EDGE, BOUNDARY, RESERVOIR, law))
+            self.fixed[RESERVOIR] = h_res
+        else:
+            self.fixed[BOUNDARY] = h_res
+        self._check_deadhead(h_res)
+
+    def _delivery_names(self) -> set[str]:
+        receipt = {e.edge_id for e in self.model.topology.edges if e.route_id.startswith("R-")}
+        return {e.name for e in self.edges if e.name not in receipt}
+
+    def _check_deadhead(self, h_res: float) -> None:
+        names = self._delivery_names()
+        outlets = [
+            self.fixed[n]
+            for e in self.edges
+            if e.name in names
+            for n in (e.a, e.b)
+            if n.endswith(":outlet_nozzle") and n in self.fixed
+        ]
+        if len(set(outlets)) == 1 and h_res - outlets[0] >= self.pump.shutoff_head_m:
+            self.deadhead = True
+            self.edges = [e for e in self.edges if e.name not in names]
+            self.fixed = {
+                k: v
+                for k, v in self.fixed.items()
+                if k not in (RESERVOIR, BOUNDARY) and ":outlet" not in k
+            }
+            self.notes.append("pump dead-headed: the head to add reaches the shutoff head")
+
+    def _add_receipt(self) -> None:
+        m, r = self.model, self.inputs.receipt
+        z_s = m.node_z[SOURCE]
+        if r.pressure_pa_gauge is not None:
+            self.fixed[SOURCE] = z_s + r.pressure_pa_gauge / (m.rho * m.g)
+        else:
+            flow = r.flow_m3h if r.flow_m3h is not None else m.config["receipt_flow_m3h"]
+            self.inflow[SOURCE] = flow / 3600.0
+
+    def _solve(self) -> sv.Solution:
+        m = self.model
+        tol, itmax = m.config["newton_flow_tolerance_m3s"], int(m.config["newton_max_iterations"])
+        if not self.edges:
+            return sv.Solution(dict(self.fixed), {}, {}, 0)
+        sol = sv.solve_heads(self.edges, self.fixed, self.inflow, tol, itmax)
+        if self.receipt_active and SOURCE in self.inflow:
+            cap = m.config["receipt_pressure_cap_pa_gauge"]
+            p_source = m.rho * m.g * (sol.heads[SOURCE] - m.node_z[SOURCE])
+            if p_source > cap:
+                self.clipped = True
+                del self.inflow[SOURCE]
+                self.fixed[SOURCE] = m.node_z[SOURCE] + cap / (m.rho * m.g)
+                self.notes.append("receipt flow clipped by the supply pressure cap")
+                sol = sv.solve_heads(self.edges, self.fixed, self.inflow, tol, itmax)
+        return sol
+
+    # --- results -----------------------------------------------------------------------
+    def _heads(self, sol: sv.Solution) -> dict[str, float]:
+        heads = dict(sol.heads)
+        heads.pop(RESERVOIR, None)
+        if self.deadhead:
+            self._deadhead_heads(heads)
+        self._static_heads(heads)
+        return heads
+
+    def _deadhead_heads(self, heads: dict[str, float]) -> None:
+        m = self.model
+        h_res = self._reservoir_head()
+        tank_head = next(
+            v for k, v in self._all_tank_heads().items() if k.endswith(":outlet_nozzle")
+        )
+        edges = [
+            m._edges[e] for e in self.active if m._edges[e].route_id.startswith(("S-", "P-", "D-"))
+        ]
+        suction = {e.edge_id for e in edges if not self._after_pump(e.edge_id)}
+        for e in edges:
+            value = tank_head if e.edge_id in suction else h_res
+            heads[m._end(e.from_node, "from")] = value
+            heads[m._end(e.to_node, "to")] = value
+
+    def _after_pump(self, edge_id: str) -> bool:
+        return edge_id in {"E-PA2", "E-PA3", "E-PA4", "E-PB2", "E-PB3", "E-PB4", "E-D1", "E-D2"}
+
+    def _all_tank_heads(self) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for tank in self.model.topology.tank_ids:
+            if tank in self.inputs.tank_levels_m:
+                level = float(self.inputs.tank_levels_m[tank])
+                out[f"{tank}:receipt_nozzle"] = level
+                out[f"{tank}:outlet_nozzle"] = level
+        return out
+
+    def _static_heads(self, heads: dict[str, float]) -> None:
+        """Give still fluid the head of the tank it is open to (no flow, no loss)."""
+        m = self.model
+        arcs = m.network.arcs(self.inputs.lineup)
+        pairs = {(a, b): eid for a, b, eid in arcs}
+        two_way = [(a, b) for (a, b) in pairs if (b, a) in pairs]
+        known = dict(heads)
+        for nozzle, level in self._all_tank_heads().items():
+            known.setdefault(nozzle, level)
+        queue = deque(known)
+        while queue:
+            node = queue.popleft()
+            for a, b in two_way:
+                if a == node and b not in known:
+                    known[b] = known[node]
+                    queue.append(b)
+        for node, value in known.items():
+            heads.setdefault(node, value)
+
+    def _flows(self, sol: sv.Solution) -> dict[str, float]:
+        return {eid: sol.flows.get(eid, 0.0) for eid in self.model.topology.edge_ids}
+
+    def _end_pressure(self, head: float, z: float, flow: float, diameter: float) -> float:
+        m = self.model
+        v = flow / (math.pi * diameter**2 / 4)
+        return m.rho * m.g * (head - z) - 0.5 * m.rho * v * v
+
+    def _pressures(
+        self, heads: Mapping[str, float], flows: Mapping[str, float]
+    ) -> tuple[dict[str, tuple[float, float]], dict[str, float]]:
+        m = self.model
+        ends: dict[str, tuple[float, float]] = {}
+        for e in m.topology.edges:
+            ha, hb = heads.get(m._end(e.from_node, "from")), heads.get(m._end(e.to_node, "to"))
+            if ha is None or hb is None:
+                continue
+            q = flows[e.edge_id]
+            ends[e.edge_id] = (
+                self._end_pressure(ha, e.z_from_m, q, e.inner_diameter_m),
+                self._end_pressure(hb, e.z_to_m, q, e.inner_diameter_m),
+            )
+        taps: dict[str, float] = {}
+        for node, ref in m.config.tap_reference_edges.items():
+            if node in heads:
+                e = m._edges[ref]
+                taps[node] = self._end_pressure(
+                    heads[node], m.node_z[node], flows[ref], e.inner_diameter_m
+                )
+        return ends, taps
+
+    def _pump_point(
+        self, heads: Mapping[str, float], flows: Mapping[str, float]
+    ) -> PumpPoint | None:
+        m = self.model
+        running = [
+            p
+            for p in m.topology.pumps
+            if f"{p}:in" in heads and p in self.inputs.lineup.running_pumps
+        ]
+        if not running or not self.delivery_active:
+            return None
+        name = running[0]
+        q = flows[self._pump_edge(name)]
+        q_m3h = q * 3600.0
+        if not self.pump.in_domain(q_m3h):
+            raise PumpOutsideCurve(
+                f"{name}: solved flow {q_m3h:.1f} m3/h is outside the pump curve "
+                f"(Q/s limit {m.config['pump_max_flow_m3h']:g} m3/h)"
+            )
+        rise = heads[f"{name}:out"] - heads[f"{name}:in"]
+        hydraulic = hydraulic_power_w(m.rho, m.g, q, rise)
+        status = "DEADHEAD" if self.deadhead else "OK"
+        return PumpPoint(
+            pump=name,
+            flow_m3h=q_m3h,
+            head_rise_m=rise,
+            speed_ratio=self.pump.speed_ratio,
+            reference_equivalent_flow_m3h=q_m3h / self.pump.speed_ratio,
+            hydraulic_power_w=hydraulic,
+            shaft_power_w=shaft_power_w(hydraulic, m.config["pump_efficiency"]),
+            status=status,
+        )
+
+    def _pump_edge(self, pump: str) -> str:
+        return {"P-101A": "E-PA2", "P-101B": "E-PB2"}[pump]
+
+    def _phase(
+        self,
+        vapor_pa: float,
+        heads: Mapping[str, float],
+        pump_point: PumpPoint | None,
+        ends: Mapping[str, tuple[float, float]],
+    ) -> PhaseGate:
+        m, inp = self.model, self.inputs
+        active_ends = [p for eid, pair in ends.items() if eid in self.active for p in pair]
+        min_abs = min(active_ends) + m.patm if active_ends else None
+        npsha = npsh3 = ratio = None
+        if pump_point is not None and pump_point.status == "OK":
+            z_pump = m.node_z[pump_point.pump]
+            npsha = (m.patm - vapor_pa) / (m.rho * m.g) + (heads[f"{pump_point.pump}:in"] - z_pump)
+            coeff = inp.npsh3_coefficient_m
+            if coeff is None:
+                coeff = m.config["npsh3_coefficient_m"]
+            npsh3 = coeff * (pump_point.flow_m3h / m.config["pump_reference_flow_m3h"]) ** 2
+            ratio = npsha / npsh3 if npsh3 > 0 else math.inf
+        status = "OK"
+        if (min_abs is not None and min_abs < vapor_pa) or (npsha is not None and npsha <= 0):
+            status = "SCREEN_FAILED"
+        elif ratio is not None and ratio < m.config["npsh_margin_ratio"]:
+            status = "NPSH_MARGIN_FAILED"
+        assert inp.scenario is not None
+        return PhaseGate(
+            status, inp.scenario, inp.temperature_c, vapor_pa, min_abs, npsha, npsh3, ratio
+        )
+
+    def _tank_flows(self, sol: sv.Solution) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for tank in self.model.topology.tank_ids:
+            net_out = 0.0
+            for e in self.edges:
+                if e.name not in sol.flows:
+                    continue
+                for node, sign in ((e.a, 1.0), (e.b, -1.0)):
+                    if node.startswith(f"{tank}:"):
+                        net_out += sign * sol.flows[e.name]
+            out[tank] = -net_out + 0.0
+        return out
+
+    def _result(self, sol: sv.Solution, vapor_pa: float) -> SteadyResult:
+        m = self.model
+        heads = self._heads(sol)
+        flows = self._flows(sol)
+        ends, taps = self._pressures(heads, flows)
+        pump_point = self._pump_point(heads, flows)
+        phase = self._phase(vapor_pa, heads, pump_point, ends)
+        residual = {n: r * m.rho for n, r in sol.residuals.items()}
+        tolerance = m.config["mass_conservation_tolerance_kg_s"]
+        if any(abs(v) > tolerance for v in residual.values()):
+            raise ConvergenceError("node mass residual exceeds the configured tolerance")
+        source_p = m.rho * m.g * (heads[SOURCE] - m.node_z[SOURCE]) if self.receipt_active else None
+        gates = {
+            "G2_boundary": "OK",
+            "G3_pump_domain": "NOT_APPLICABLE" if pump_point is None else pump_point.status,
+            "G4_phase": phase.status,
+            "G6_conservation": "OK",
+        }
+        return SteadyResult(
+            node_heads_m=heads,
+            edge_flows_m3s=flows,
+            edge_end_pressures_pa_gauge=ends,
+            tap_pressures_pa_gauge=taps,
+            tank_net_inflow_m3s=self._tank_flows(sol),
+            pump=pump_point,
+            phase=phase,
+            source_pressure_pa_gauge=source_p,
+            receipt_flow_m3h=flows["E001"] * 3600.0,
+            receipt_clipped=self.clipped,
+            node_mass_residual_kg_s=residual,
+            gates=gates,
+            active_edges=self.active,
+            atmosphere_pa_abs=m.patm,
+            iterations=sol.iterations,
+            fitting_profile=self.inputs.fitting_profile,
+            k_multiplier=self.inputs.k_multiplier,
+            boundary_law_coefficient_m=self.c_law,
+            notes=tuple(self.notes),
+        )

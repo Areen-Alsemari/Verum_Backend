@@ -83,6 +83,26 @@ def point_at(vertices: tuple[Point, ...], distance: float) -> Point:
     raise ValueError(f"distance {distance} exceeds the polyline length")
 
 
+def bend_arclengths(vertices: tuple[Point, ...]) -> list[float]:
+    """Arc lengths of the interior vertices at which the direction changes.
+
+    A collinear vertex is not a bend. The route's first and last vertices are
+    ends, not bends.
+    """
+    lengths = segment_lengths(vertices)
+    bends: list[float] = []
+    travelled = 0.0
+    for i in range(1, len(vertices) - 1):
+        travelled += lengths[i - 1]
+        before = [
+            (b - a) / lengths[i - 1] for a, b in zip(vertices[i - 1], vertices[i], strict=True)
+        ]
+        after = [(b - a) / lengths[i] for a, b in zip(vertices[i], vertices[i + 1], strict=True)]
+        if any(abs(p - q) > 1e-9 for p, q in zip(before, after, strict=True)):
+            bends.append(travelled)
+    return bends
+
+
 def _point(raw: list[float]) -> Point:
     if len(raw) != 3:
         raise ContractError("route geometry: a vertex needs three coordinates")
