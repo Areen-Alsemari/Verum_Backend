@@ -45,6 +45,10 @@ strict = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
+module = ["verum.transient.*"]
+warn_return_any = false  # numpy array expressions are typed Any by the stubs in use
+
+[[tool.mypy.overrides]]
 module = ["scipy", "scipy.*"]
 ignore_missing_imports = true
 

@@ -249,6 +249,19 @@ class HydraulicModel:
             self.topology, self.geometry, self._profiles[key], self._active[lineup], self._bends
         )
 
+    def all_edge_k(self, profile: str, multiplier: float = 1.0) -> dict[str, float]:
+        """Local loss coefficient of every edge (the transient engine may open any valve)."""
+        key = (profile, multiplier)
+        if key not in self._profiles:
+            self._profiles[key] = load_fitting_profile(*key, self.directory)
+        return edge_loss_coefficients(
+            self.topology,
+            self.geometry,
+            self._profiles[key],
+            frozenset(self.topology.edge_ids),
+            self._bends,
+        )
+
     def valve_extra_k(self, alpha: float) -> float:
         """Loss coefficient a valve at opening ``alpha`` adds to its full-open value."""
         c = self.config
