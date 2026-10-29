@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 3 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 4 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -43,6 +43,11 @@ version superseded; records are not edited in place.
 | D14 | Friction law | SIM | 1.0 |
 | D15 | Fitting profiles | SIM | 1.0 |
 | D16 | Alarm hysteresis | SIM | 1.0 |
+| D17 | Time step and integration scheme | DESIGN | 1.0 |
+| D18 | Quasi-steady validity | DESIGN | 1.0 |
+| D19 | Valve motion and loss coefficient | SIM | 1.0 |
+| D20 | Truth log format | DESIGN | 1.0 |
+| D21 | Temperature held constant per episode | SIM | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -473,6 +478,106 @@ version superseded; records are not edited in place.
   0.1 m). *Proposed.*
 - **Notes.** Applies to the protection configuration and tests of Phase 1.
 
+## D17 - Time step and integration scheme
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The engine advances in steps of 1 s. Tank volumes are integrated
+  with Heun's method (second-order Runge-Kutta), and the steady network is solved
+  at each stage. Events truncate the step so that a step ends exactly on every
+  event time. The accuracy target is a level error of at most 0.025 mm, derived
+  from the discretization tolerance of D8 (0.02 m3/h acting over one hour on a
+  tank area of 706.86 m2 is about 0.028 mm). A step-halving study demonstrates it.
+- **Reason.** The tank volumes change slowly and the network is treated as
+  quasi-steady (D18), so a low-order explicit scheme with an exact landing on event
+  times is sufficient. Heun's method is second order and needs two steady solves.
+- **Sensitivity required.** Step-halving at 2, 1, 0.5 and 0.25 s on the delivery
+  scenario S0-A, reporting error against a high-accuracy reference and the observed
+  order (specified by the task).
+- **Notes.** The receipt flow state follows an exponential response that is advanced
+  exactly between events; only the tank volumes use Heun's method. A level crossing
+  inside a step (for example a pumping-minimum crossing) is located by Hermite
+  interpolation of the volume, not by the step.
+
+## D18 - Quasi-steady validity
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The rigid-column time constant along the active path is
+  tau = (sum L_i / A_i) Q0 / (g dH0), where the sum runs over the path edges, Q0
+  is the flow before the event and dH0 is the total head loss along the path at
+  Q0. An event is quasi-steady-valid only if its duration is at least 10 tau (the
+  factor 10 is a proposal). The ratio duration / tau is recorded. An event that
+  fails is flagged `quasi_steady_invalid` in the solver diagnostics. In this
+  phase a failing event is flagged and not blocked.
+- **Reason.** A steady-state network ignores the inertia of the liquid column. If
+  a valve moves or a flow changes in a time comparable with tau, the flows during
+  the event are not those of a steady solution, and the diagnostic says so
+  instead of presenting them as valid.
+- **Event durations.** A valve stroke lasts its stroke time. A receipt setpoint
+  change lasts four time constants of the flow controller (4 tau_c, about 98 % of
+  the step). These two definitions are mine and need confirmation.
+- **Path.** For a receipt event the path is the common receipt main plus the
+  branch of the receiving tank. For a delivery event it is the suction branch, the
+  suction header, the pump branch and the distribution main. dH0 includes the
+  boundary-law drop for delivery; the pump head is not a loss.
+- **Sensitivity required.** Vary the factor (for example 5, 10 and 20) and report
+  which events change status. *Proposed.*
+- **Notes.** Fast closures (the 10 s emergency valve) are expected to fail the
+  test. They are reported, not suppressed. A transient (wave) model is needed to
+  represent them.
+
+## D19 - Valve motion and loss coefficient
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The opening alpha moves linearly in time over the stroke time of D4
+  (10 s for `XV-R000`, 30 s for the other motorized valves). The loss coefficient
+  is K(alpha) = K_open (Kv_max / Kv(alpha))^2, with Kv(alpha) the continuous
+  equal-percentage law of D4 (linear below alpha_c = 0.05) and K_open = 0.1 at the
+  local diameter. An edge is treated as closed when alpha <= 0.001.
+- **Reason.** D4 fixed the flow-coefficient law; D19 expresses it as a loss
+  coefficient so that the steady network can use it, and the closed threshold avoids
+  an unbounded K at alpha = 0.
+- **Sensitivity required.** Specified in D4: stroke times 2, 10 and 30 s and
+  full-open K from 0.05 to 0.2. The closed threshold is not swept (*proposed*: 0.001
+  and 0.01).
+- **Notes.** At alpha = 0.001 the coefficient is about 4e5, so the edge carries
+  almost no flow just before it is removed. The commanded state, the actual
+  position and the physical closure are recorded separately; physical closure means
+  alpha <= 0.001. Partial opening increases the loss coefficient on the edge that
+  starts at the valve; the profile's open-valve K is the K_open.
+
+## D20 - Truth log format
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** The hidden truth is written as JSON Lines, gzip-compressed, one
+  directory per episode. Rows are written on a 1 s grid and, for every event, as a
+  pre-event and a post-event row. A hash manifest (SHA-256 of every file) closes the
+  directory. Rejected episodes keep only the rejection record, the episode record and
+  the manifest.
+- **Reason.** Line-oriented, compressed files are simple to stream, to hash and to
+  read without extra dependencies. The pre- and post-event rows follow the
+  audited schema envelope (`side`).
+- **Sensitivity required.** Not applicable.
+- **Notes.** The gzip header carries no timestamp, so identical content gives
+  identical bytes. The files are evaluator data and are never served (see
+  CONTRIBUTING.md).
+
+## D21 - Temperature held constant per episode
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The bulk-liquid temperature of an episode is one of the D11 strata and
+  does not change during the episode. There is no thermal dynamics.
+- **Reason.** D11 uses temperature only for the phase and NPSH screen, with hydraulic
+  properties at 25 C constants. A constant stratum per episode keeps that scheme.
+- **Sensitivity required.** The three strata of D11.
+- **Limitation.** Real tank temperature changes with the product received, solar load
+  and ambient conditions. The engine represents none of it, so the temperature
+  channels carry no dynamics and the screen cannot react to a warming product.
+
+## Episode profile
+
+Episodes use the `reference_fittings` profile (D15). The `pipe_only` profile exists to
+reproduce the audited reference figures and is not used for episodes.
+
 ## Open proposals pending team confirmation
 
 These are Phase 1 choices that the audited documents do not state. They are
@@ -483,3 +588,5 @@ implemented, but they are proposals and need confirmation by the team.
 | P1 | Lineup transitions other than the two documented chains: all-closed states reach each other; an active mode is entered from, and left to, a hold state only; the receipt hold serves modes that open `XV-R000`; the changeover hold serves modes with a running pump and keeps the source tank. | `verum.lineups.transitions` |
 | P2 | A high-high isolation request closes both `XV-R000` and the inlet valve of the tripped tank; the confirmation timeout is the larger of the two valve timeouts. | `verum.protection.config` |
 | P3 | A latched trip is reset only by an authorised event from operations or protection, with the independent signal valid and below the trip level minus the hysteresis of D16. | `verum.protection.machine` |
+| P4 | The factor 10 of D18 and the event-duration definitions (stroke time; four controller time constants). | `verum.sim.validity` |
+| P5 | The operations controller closes `XV-R000` and the tank inlet valve in response to a protection request (reactive command with a configured delay). | `verum.ops` |
