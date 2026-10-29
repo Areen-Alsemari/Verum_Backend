@@ -14,8 +14,8 @@ published here.
 
 ## Scope of the current phase
 
-Phases 0 to 3 cover infrastructure, topology, tanks, lineups, the inventory
-ledger, the protection logic, steady-state hydraulics, the quasi-steady engine and
+Phases 0 to 3b cover infrastructure, topology, tanks, lineups, the inventory
+ledger, the protection logic, steady-state hydraulics, the path-dynamics engine and
 healthy episodes. They contain:
 
 - the audited input package, vendored unmodified under `vendor/verum_audited/`
@@ -36,8 +36,8 @@ healthy episodes. They contain:
   phase and NPSH gate (`verum.hydraulics`; see `docs/steady_hydraulics.md`);
 - the independent protection state machine, as pure logic
   (`verum.protection`);
-- the quasi-steady dynamic engine, the operations controller and the hidden truth
-  store (`verum.sim`, `verum.ops`, `verum.truth`; see `docs/quasi_steady_engine.md`),
+- the path-dynamics engine, the operations controller and the hidden truth
+  store (`verum.sim`, `verum.ops`, `verum.truth`; see `docs/path_dynamics_engine.md`),
   with named random streams and configuration provenance (`verum.rng`,
   `verum.provenance`);
 - a fail-closed dataset release gate (`verum.gates`);
