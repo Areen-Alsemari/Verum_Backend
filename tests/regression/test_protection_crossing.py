@@ -55,31 +55,46 @@ def _grid_levels(s: Series, tank: str) -> dict[float, float]:
 def test_rising_crossings_match_hand_time_and_independent_interpolation(
     series: dict[str, Series], kind: str, threshold: float
 ) -> None:
+    """The trip is decided on the detector: it asserts when the true level is the trip level
+    minus the detector offset and the trip follows 0.2 s later (decision D33)."""
     s = series["S0u-E"]
     event = next(e for e in s.events if e["payload"].get("kind") == kind)
+    if kind == "HIGH_HIGH_TRIP":
+        threshold -= event["payload"]["detector_offset_m"]
     hand = (threshold - 12.3) * AREA / RATE
-    t = event["t_sim_s"]
+    t = event["t_sim_s"] - (0.2 if kind == "HIGH_HIGH_TRIP" else 0.0)
     assert t == pytest.approx(hand, abs=1e-3)
     assert t != round(t)  # no 1 s quantisation
     assert t == pytest.approx(_interpolated(_grid_levels(s, "TK-101"), threshold, True), abs=1e-3)
-    level = next(r for r in s.tank["TK-101"] if r[0] == t and r[1] == "post_event")[2]
-    assert level == pytest.approx(threshold, abs=1e-6)
+    assert t != round(t)
+    if kind == "HIGH_ALARM":
+        level = next(r for r in s.tank["TK-101"] if r[0] == t and r[1] == "post_event")[2]
+        assert level == pytest.approx(threshold, abs=1e-6)
 
 
 def test_the_episode_record_lists_the_located_crossings(
     episodes: dict[str, EpisodeResult], series: dict[str, Series]
 ) -> None:
     listed = series["S0u-E"].episode["protection_crossings"]
-    assert [(c["tank"], c["threshold"], c["level_m"]) for c in listed] == [
-        ("TK-101", "high_alarm", 12.5),
-        ("TK-101", "high_high", 13.0),
+    trip_event = next(
+        e for e in series["S0u-E"].events if e["payload"].get("kind") == "HIGH_HIGH_TRIP"
+    )
+    offset = trip_event["payload"]["detector_offset_m"]
+    assert [(c["tank"], c["threshold"]) for c in listed] == [
+        ("TK-101", "high_alarm"),
+        ("TK-101", "high_high"),
     ]
+    assert listed[0]["level_m"] == 12.5
+    assert listed[1]["level_m"] == pytest.approx(13.0 - offset, abs=1e-9)
     events = {
         e["payload"]["kind"]: e["t_sim_s"]
         for e in series["S0u-E"].events
         if e["payload"].get("kind") in ("HIGH_ALARM", "HIGH_HIGH_TRIP")
     }
-    assert [c["t_sim_s"] for c in listed] == [events["HIGH_ALARM"], events["HIGH_HIGH_TRIP"]]
+    assert [c["t_sim_s"] for c in listed] == [
+        events["HIGH_ALARM"],
+        pytest.approx(events["HIGH_HIGH_TRIP"] - 0.2, abs=1e-9),
+    ]
     assert episodes["S0u-E"].outcome.crossings == listed
 
 

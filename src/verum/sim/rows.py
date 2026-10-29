@@ -8,8 +8,8 @@ Key assumptions:
       a pressure that the solve could not determine is ``null``, never zero.
     * ``side`` is ``null`` for a grid row and ``pre_event`` / ``post_event`` for the
       two rows written at an event time.
-    * Protection rows carry ``signal_source = "truth_placeholder"``: in this phase the
-      protection logic is fed the true level and the true flow.
+    * Protection rows carry ``signal_source = "independent_detector"``: the high-high trip is
+      decided on the detector signal of the engine (decision D33), not on the true level.
     * Every row carries ``hidden = true`` and the schema version 0.6.0.
 
 Source: ``revised/05_simulation_validation_dataset.md`` section 7.4.8;
@@ -26,7 +26,7 @@ from verum.hydraulics import HydraulicModel, SteadyResult
 from verum.hydraulics.valves import loss_coefficient
 
 SCHEMA_VERSION = "0.6.0"
-SIGNAL_SOURCE = "truth_placeholder"
+SIGNAL_SOURCE = "independent_detector"
 CHECK_VALVES = ("CV-PA", "CV-PB")
 VALVES = (
     "XV-R000", "XV-R101", "XV-R102", "XV-R103", "XV-S101", "XV-S102", "XV-S103",

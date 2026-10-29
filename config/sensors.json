@@ -58,20 +58,6 @@
       "status": "provisional",
       "evidence_tag": "SIM",
       "provenance_id": "VERUM-DD-D31"
-    },
-    "detector_offset_sigma_m": {
-      "value": 0.001,
-      "unit": "m",
-      "status": "provisional",
-      "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D33"
-    },
-    "detector_delay_s": {
-      "value": 0.2,
-      "unit": "s",
-      "status": "provisional",
-      "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D33"
     }
   },
   "episode_start_utc": "2026-01-01T00:00:00.000Z",

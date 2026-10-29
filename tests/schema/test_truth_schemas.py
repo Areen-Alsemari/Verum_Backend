@@ -67,7 +67,7 @@ PAYLOADS: dict[str, Doc] = {
     "protection_state": {
         "state": "NORMAL",
         "trip_latched": False,
-        "signal_source": "truth_placeholder",
+        "signal_source": "independent_detector",
         "process_level_m": 9.0,
         "independent_level_m": 9.0,
     },

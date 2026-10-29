@@ -30,8 +30,8 @@ Key assumptions:
       NPSH screen while a pump runs), SG1 (mass ledger), SG2 (solver or pump-domain
       failure) and SG3 (healthy envelope, if the scenario asks for it). A failure
       stops the run with a rejection record; nothing is clipped or truncated.
-    * Protection signals are the true level and the true flow, tagged
-      ``truth_placeholder``; no module outside the engine may consume that tag.
+    * Protection signals: the alarm uses the process level (the true level in this phase,
+      labelled as such); the high-high trip uses only the independent detector (D33).
     * A checkpoint is a deep copy of the state (the immutable last solve is shared); a
       restarted engine continues bit for bit.
 
@@ -88,7 +88,7 @@ from verum.tanks import load_tank_geometry
 from verum.truth import TruthSink
 
 SCENARIO_NAME = "EPA_GENERIC_RVP10_REFERENCE"
-RANK_COMMAND, RANK_VALVE = 0, 2
+RANK_COMMAND, RANK_DETECTOR, RANK_VALVE = 0, 1, 2
 SOURCE_NODE = "PIPELINE_RECEIPT_BOUNDARY"
 BOUNDARY_NODE = "DISTRIBUTION_BOUNDARY"
 EVENT_TYPE = {
@@ -170,6 +170,8 @@ class EngineState:
     mode: str = "inactive"
     qdot_receipt: float = 0.0
     qdot_delivery: float = 0.0
+    detector_due: dict[str, float] = field(default_factory=dict)
+    detector_on: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -265,6 +267,11 @@ class Engine:
         )
         self.speeds = vd.wave_speeds(config)
         self._paths: dict[tuple[Any, ...], LumpedPath] = {}
+        streams = RandomStreams(scenario.seed)
+        self.detector_offset = {
+            t: float(streams.stream(f"detector/{t}").normal(0.0, config["detector_offset_sigma_m"]))
+            for t in model.topology.tank_ids
+        }
         self._law_c = load_boundary_law_coefficient(scenario.fitting_profile, model.directory).value
         self.state = state if state is not None else self._initial_state()
 
@@ -671,6 +678,16 @@ class Engine:
 
     def _record_landing(self, landing: tuple[float, str, str, float]) -> None:
         t, tank, name, thr = landing
+        if name == "high_high":
+            # The detector asserts here and its output reaches the protection logic after
+            # its delay (decision D33); the trip is decided on that signal only.
+            due = t + self.cfg["detector_delay_s"]
+            self.state.detector_due[tank] = due
+            self._push(self.state, due, RANK_DETECTOR, "detector", tank)
+            self.state.crossings.append(
+                {"t_sim_s": t, "tank": tank, "threshold": name, "level_m": thr}
+            )
+            return
         # A falling crossing must leave the level strictly below the threshold (the alarm
         # clears below it); a rising one lands on it. The located time is exact to the
         # root-finding tolerance, so this removes only the last rounding step.
@@ -683,8 +700,9 @@ class Engine:
         out: list[tuple[str, float, int]] = []
         if state == "NORMAL":
             out.append(("high_alarm", cfg.high_alarm_m, 1))
-        if state in ("NORMAL", "HIGH_ALARM"):
-            out.append(("high_high", cfg.high_high_m, 1))
+        if state in ("NORMAL", "HIGH_ALARM") and tank not in self.state.detector_due:
+            # The detector sees level plus its offset: it asserts at this true level.
+            out.append(("high_high", cfg.high_high_m - self.detector_offset[tank], 1))
         if state == "HIGH_ALARM":
             out.append(("alarm_clear", cfg.alarm_clear_m, -1))
         return out
@@ -1036,7 +1054,7 @@ class Engine:
         self._finish_inactive(self._plan(t, t), t)
         pre = self._snapshot(t)
         before = st.event_index
-        self._run_queue(t, {RANK_COMMAND})
+        self._run_queue(t, {RANK_COMMAND, RANK_DETECTOR})
         self._protection_update(t)
         self._run_queue(t, {RANK_COMMAND, RANK_VALVE})
         post = self._snapshot(t)
@@ -1136,7 +1154,9 @@ class Engine:
         st = self.state
         while st.queue and st.queue[0][0] == t and st.queue[0][1] in ranks:
             _, _, _, kind, payload = heapq.heappop(st.queue)
-            if kind == "command":
+            if kind == "detector":
+                st.detector_on.append(payload)
+            elif kind == "command":
                 self._execute(payload, t)
             elif kind == "valve_end":
                 self._emit(
@@ -1173,12 +1193,24 @@ class Engine:
                 Signals(
                     t_s=t,
                     process_level_m=level,
-                    independent_level_m=level,
+                    independent_level_m=self._detector_signal(tank, level),
                     closed_confirmed=closed,
                     receipt_flow_m3h=r.receipt_flow_m3h,
                 )
             )
             self._consume_protection_events(tank, machine, t)
+
+    def _detector_signal(self, tank: str, level: float) -> float:
+        """Decision D33: level plus the fixed offset, asserted only after the detector delay."""
+        trip = self._pconfig[tank].high_high_m
+        seen = level + self.detector_offset[tank]
+        st = self.state
+        if tank in st.detector_on and seen >= trip:
+            return max(seen, trip)
+        if tank in st.detector_on:
+            st.detector_on.remove(tank)
+            st.detector_due.pop(tank, None)
+        return min(seen, math.nextafter(trip, -math.inf))
 
     def _signal_level(self, tank: str, level: float) -> float:
         """The level the machine sees: a located crossing lands exactly on its threshold."""
@@ -1197,7 +1229,7 @@ class Engine:
 
     def _log_protection(self, tank: str, event: ProtectionEvent) -> None:
         etype = EVENT_TYPE.get(event.kind, "protection_state_change")
-        payload = {
+        payload: dict[str, Any] = {
             "tank": tank,
             "kind": event.kind,
             "detail": event.detail,
@@ -1208,8 +1240,19 @@ class Engine:
             (c for c in self.state.crossings if c["tank"] == tank and c["t_sim_s"] == event.t_s),
             None,
         )
+        detector = next(
+            (
+                c
+                for c in self.state.crossings
+                if c["tank"] == tank and c["threshold"] == "high_high"
+            ),
+            None,
+        )
         if crossing is not None:
             payload["crossing_located_s"] = crossing["t_sim_s"]
+        if detector is not None and event.kind == "HIGH_HIGH_TRIP":
+            payload["detector_asserted_s"] = detector["t_sim_s"]
+            payload["detector_offset_m"] = self.detector_offset[tank]
         self._emit(event.t_s, etype, "autonomous_protection", tank, payload)
 
     # --- command execution ----------

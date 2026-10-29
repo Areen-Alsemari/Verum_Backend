@@ -211,7 +211,7 @@ def test_healthy_scenarios_stay_normal_and_inside_the_level_envelope(
 
 def test_protection_rows_carry_the_placeholder_tag(series: dict[str, Series]) -> None:
     tags = {r[4] for s in series.values() for rows in s.protection.values() for r in rows}
-    assert tags == {"truth_placeholder"}
+    assert tags == {"independent_detector"}
 
 
 # --- S0u-D ----------
@@ -333,8 +333,11 @@ def _first(rows: list[tuple[Any, ...]], pred: Any) -> tuple[Any, ...]:
     return next(r for r in _grid(rows) if pred(r))
 
 
-def test_s0ue_trip_is_located_on_the_true_level_at_13_m(series: dict[str, Series]) -> None:
-    """Independent: 0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s (D26).
+def test_s0ue_trip_follows_the_detector_offset_and_delay(series: dict[str, Series]) -> None:
+    """Independent: the true level reaches 13 m - offset at 2968.805057 s - offset/rate, where
+    0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s and rate = 2.358e-4 m/s (D26).
+    The detector (decision D33) sees level + offset, so it asserts when the true level is 13 m
+    minus its offset (the offset is in the event record), and the trip follows 0.2 s later.
 
     The receipt flow is 600 m3/h from the start (no ramp), the tank is on the floating branch
     (constant area) and no other flow touches TK-101, so the level reaches 13 m at this time.
@@ -342,14 +345,16 @@ def test_s0ue_trip_is_located_on_the_true_level_at_13_m(series: dict[str, Series
     """
     s = series["S0u-E"]
     trip = next(e for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
-    expected = 0.7 * AREA / (600.0 / 3600.0)
-    assert expected == pytest.approx(2968.805057, abs=1e-6)
-    assert trip["t_sim_s"] == pytest.approx(expected, abs=1e-3)  # error below 1 ms
+    offset = trip["payload"]["detector_offset_m"]
+    rate = (600.0 / 3600.0) / AREA
+    asserted = 0.7 * AREA / (600.0 / 3600.0) - offset / rate
+    assert 0.7 * AREA / (600.0 / 3600.0) == pytest.approx(2968.805057, abs=1e-6)
+    assert trip["payload"]["detector_asserted_s"] == pytest.approx(asserted, abs=1e-3)
+    assert trip["t_sim_s"] == pytest.approx(asserted + 0.2, abs=1e-3)  # error below 1 ms
     assert trip["t_sim_s"] != round(trip["t_sim_s"])  # not quantised to the grid
     level = _first(s.tank["TK-101"], lambda r: r[0] == trip["t_sim_s"])[2]
-    assert level == pytest.approx(13.0, abs=1e-6)
-    assert trip["payload"]["signal_source"] == "truth_placeholder"
-    assert trip["payload"]["crossing_located_s"] == trip["t_sim_s"]
+    assert level == pytest.approx(13.0 - offset + 0.2 * rate, abs=1e-6)
+    assert trip["payload"]["signal_source"] == "independent_detector"
 
 
 def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:

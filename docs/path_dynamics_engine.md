@@ -115,9 +115,13 @@ logic only requests isolation. Commands and valve orders can be created only ins
 
 ## Protection signals
 
-The protection machines receive the true tank level, the true closure of the valves and the
-true receipt flow. These rows carry `signal_source = "truth_placeholder"`. A test fails if
-any module outside `verum.sim` mentions that tag or imports its definition.
+The alarm uses the process level (the true level in this phase, labelled as such). The
+high-high trip is decided on an independent detector inside the engine (decision D33): the
+true level plus a fixed offset (standard deviation 1 mm, one draw per episode from the
+named stream `detector/<tank>`), located by root-finding, delivered to the protection logic
+after 0.2 s. A static test fails if any call hands anything but the detector function's
+output to the protection logic as the independent level. The LSHH observation is this same
+signal after the comms delay.
 
 ## Validity windows (decisions D22 and D25)
 
