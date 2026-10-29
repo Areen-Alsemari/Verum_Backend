@@ -56,6 +56,10 @@ never shown to an agent.
   test is investigated and the cause is recorded.
 - Tests of a reduced model are not independent validation of the full model and
   are not described as such.
+- A phase is closed only when the complete suite (both marker groups, `fast` and `slow`),
+  `ruff`, `mypy` and `local/checks` pass after the last edit of the phase. A run made before a
+  later edit, including an edit to a test, a document or a configuration file, does not close
+  the phase; a partial re-run of the affected tests is a check, not a closing run.
 - Tests live in `tests/analytic`, `tests/schema`, `tests/leakage` and
   `tests/regression`.
 
