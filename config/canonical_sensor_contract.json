@@ -333,7 +333,7 @@
         "field": "pressure_pa_abs"
       },
       "convention": "quantity mapping only, simulate instrument dynamics and uncertainty separately",
-      "adapter": "Pa_abs to bar_gauge; fixed pressure = 2 barg in reference cases; no fault-dependent pressure drops here under Dirichlet boundary"
+      "adapter": "Pa_abs to bar_gauge; static pressure at DISTRIBUTION_BOUNDARY, which varies with flow: the reservoir gauge pressure beyond the boundary plus the boundary-law head (decision D2 version 3.0); the pressure follows the hydraulic state and is not fixed"
     }
   },
   "nonbaseline_excluded": [

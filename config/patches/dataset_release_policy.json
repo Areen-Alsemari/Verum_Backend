@@ -1,0 +1,36 @@
+{
+  "file": "dataset_release_policy.json",
+  "entries": [
+    {
+      "path": "/fixed_distribution_boundary_gauge_Pa",
+      "old": 200000,
+      "new": {
+        "$remove": true
+      },
+      "reason": "The key names the distribution boundary node as a fixed-pressure boundary. The 200000 Pa value is the reservoir pressure beyond the node (D2 version 2.0); it is re-added under a name that says so."
+    },
+    {
+      "path": "/reservoir_gauge_pressure_Pa",
+      "old": {
+        "$absent": true
+      },
+      "new": 200000,
+      "reason": "Same value as the removed key, labelled as the gauge pressure of the reservoir beyond DISTRIBUTION_BOUNDARY."
+    },
+    {
+      "path": "/distribution_boundary_law",
+      "old": {
+        "$absent": true
+      },
+      "new": {
+        "form": "dH_d = c * (Q / 300)^2",
+        "Q_unit": "m3/h",
+        "dH_d_unit": "m",
+        "position": "boundary-law element between DISTRIBUTION_BOUNDARY and the reservoir; not an edge and not a node",
+        "c_source": "config/delivery_boundary.json",
+        "decision": "D2 version 3.0"
+      },
+      "reason": "Records the boundary law that replaces the pure fixed-pressure boundary. The coefficient c is not stored here; it is read from config/delivery_boundary.json, per fitting profile."
+    }
+  ]
+}

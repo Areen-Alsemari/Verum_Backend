@@ -25,7 +25,6 @@
     "independent_physical_reference_or_explicit_sim_limitation"
   ],
   "fixed_receipt_target_m3h": 600,
-  "fixed_distribution_boundary_gauge_Pa": 200000,
   "no_baseline_control_valve": "CV-201",
   "no_baseline_continuous_VOC": true,
   "current_observation_profile": {
@@ -38,5 +37,14 @@
       "VT-201A",
       "VT-201B"
     ]
+  },
+  "reservoir_gauge_pressure_Pa": 200000,
+  "distribution_boundary_law": {
+    "form": "dH_d = c * (Q / 300)^2",
+    "Q_unit": "m3/h",
+    "dH_d_unit": "m",
+    "position": "boundary-law element between DISTRIBUTION_BOUNDARY and the reservoir; not an edge and not a node",
+    "c_source": "config/delivery_boundary.json",
+    "decision": "D2 version 3.0"
   }
 }

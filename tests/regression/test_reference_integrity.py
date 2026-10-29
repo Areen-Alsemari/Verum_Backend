@@ -34,7 +34,6 @@ SCHEMA_FILES = [
 UNPATCHED_CONTRACTS = [
     "topology_contract.json",
     "fluid_contract.json",
-    "dataset_release_policy.json",
 ]
 REFERENCE_JSON = [
     "topology_contract.json",

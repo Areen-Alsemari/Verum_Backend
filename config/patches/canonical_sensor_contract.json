@@ -96,6 +96,12 @@
       "old": "withheld_missing_device_model",
       "new": "withheld",
       "reason": "Shorter status value for tags that are declared but not emitted."
+    },
+    {
+      "path": "/sensors/PT-203/adapter",
+      "old": "Pa_abs to bar_gauge; fixed pressure = 2 barg in reference cases; no fault-dependent pressure drops here under Dirichlet boundary",
+      "new": "Pa_abs to bar_gauge; static pressure at DISTRIBUTION_BOUNDARY, which varies with flow: the reservoir gauge pressure beyond the boundary plus the boundary-law head (decision D2 version 3.0); the pressure follows the hydraulic state and is not fixed",
+      "reason": "The reference text describes PT-203 as a fixed pressure under a Dirichlet boundary. Decision D2 version 2.0 places the reservoir beyond the boundary node with a flow-dependent boundary-law head between them, so the node pressure varies with flow. The measured_variable_ref is unchanged."
     }
   ]
 }

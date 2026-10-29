@@ -9,6 +9,9 @@ Key assumptions:
       error, so a patch cannot be applied to the wrong version of a contract.
     * Every entry carries a non-empty reason; a correction without a stated
       reason is rejected.
+    * Adding and removing a key use two markers instead of extra fields: an
+      ``old`` of ``{"$absent": true}`` requires the key to be missing (the entry
+      adds it), and a ``new`` of ``{"$remove": true}`` deletes the key.
 
 Source: ``CONTRIBUTING.md`` (inputs and configuration);
 ``VERUM_INTEGRATION_README.md`` section D (binding clarification of the
@@ -27,6 +30,8 @@ from verum.contracts.errors import ContractError
 from verum.contracts.paths import config_dir
 
 _ENTRY_KEYS = frozenset({"path", "old", "new", "reason"})
+ABSENT = {"$absent": True}
+REMOVE = {"$remove": True}
 
 
 @dataclass(frozen=True)
@@ -65,14 +70,19 @@ def _unescape(token: str) -> str:
     return token.replace("~1", "/").replace("~0", "~")
 
 
-def _parent_and_key(document: Any, pointer: str) -> tuple[Any, str | int]:
+def _parent_and_key(document: Any, pointer: str, adding: bool) -> tuple[Any, str | int]:
     if not pointer.startswith("/"):
         raise ContractError(f"patch path {pointer!r} is not a JSON Pointer")
     tokens = [_unescape(t) for t in pointer[1:].split("/")]
     node = document
     for token in tokens[:-1]:
-        node = _step(node, token, pointer)
-    return node, _key(node, tokens[-1], pointer)
+        node = node[_key(node, token, pointer)]
+    last = tokens[-1]
+    if adding:
+        if not isinstance(node, dict) or last in node:
+            raise ContractError(f"patch path {pointer!r}: the key must be absent in an object")
+        return node, last
+    return node, _key(node, last, pointer)
 
 
 def _key(node: Any, token: str, pointer: str) -> str | int:
@@ -85,20 +95,22 @@ def _key(node: Any, token: str, pointer: str) -> str | int:
     return token
 
 
-def _step(node: Any, token: str, pointer: str) -> Any:
-    return node[_key(node, token, pointer)]
-
-
 def apply_patches(document: dict[str, Any], patch: PatchFile) -> dict[str, Any]:
     """Return a corrected deep copy of ``document``."""
     result = copy.deepcopy(document)
     for entry in patch.entries:
-        parent, key = _parent_and_key(result, entry.path)
-        if parent[key] != entry.old:
+        adding = entry.old == ABSENT
+        parent, key = _parent_and_key(result, entry.path, adding)
+        if not adding and parent[key] != entry.old:
             raise ContractError(
                 f"patch {entry.path}: expected {entry.old!r}, found {parent[key]!r}"
             )
-        parent[key] = copy.deepcopy(entry.new)
+        if entry.new == REMOVE:
+            if adding:
+                raise ContractError(f"patch {entry.path}: cannot add and remove in one entry")
+            del parent[key]
+        else:
+            parent[key] = copy.deepcopy(entry.new)
     return result
 
 
