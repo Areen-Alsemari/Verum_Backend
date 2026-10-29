@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 6 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 7 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -58,6 +58,13 @@ version superseded; records are not edited in place.
 | D36 | Cap as a pressure limit at the source tap; anchor of the head | DESIGN | 1.0 |
 | D37 | Tier of episodes with flagged windows | DESIGN | 1.0 |
 | D38 | Pending sensitivity studies | DESIGN | 1.0 |
+| D27 | Observation units and the atmosphere stratum | DESIGN | 1.0 |
+| D28 | Noise standard deviations | SIM | 1.0 |
+| D29 | Quantisation and clipping | SIM | 1.0 |
+| D30 | Sample dropout | SIM | 1.0 |
+| D31 | Valve contacts | SIM | 1.0 |
+| D32 | Sample phase | SIM | 1.0 |
+| D33 | Independent high-high detector inside the engine | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -747,6 +754,62 @@ version superseded; records are not edited in place.
 - **Reason.** They were required by D22 and D23 and were not run in Phase 3b.
 - **Sensitivity required.** The studies themselves.
 - **Notes.** Each is *proposed*.
+
+## D27 - Observation units and the atmosphere stratum
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Observation values are in the engineering units of the sensor contract (m, m3/h, barg, C, boolean). A gauge pressure is the true absolute pressure minus the atmosphere of the episode stratum (D24), so the same state reads differently in the two strata only for sensors that measure absolute pressure and report gauge. All pressure transmitters of the contract are of that kind (the transmitter is referenced to the site atmosphere, the truth is absolute). Ranges and units are validated against the contract table.
+- **Reason.** The truth stores absolute pressure; an instrument reports gauge relative to its own surroundings.
+- **Sensitivity required.** The elevated stratum is itself the check.
+- **Notes.** The sensor contract file holds the tag mapping; the unit, range, rate, lag and comms delay are in the instrumentation document (section 6.1.1) and are copied to `config/sensor_specs.json`.
+
+## D28 - Noise standard deviations
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** Gaussian noise with standard deviation: level 0.25 mm (half of the plus or minus 0.5 mm accuracy, k = 2), flow 0.2 m3/h, pressure 0.005 bar, temperature 0.075 C (half of the plus or minus 0.15 C accuracy read as k = 2). One stream per tag.
+- **Reason.** A k = 2 accuracy is two standard deviations.
+- **Sensitivity required.** *Proposed*: half and twice each value.
+- **Notes.** Flow, pressure and temperature values are selections; only level and temperature follow from a stated accuracy.
+
+## D29 - Quantisation and clipping
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The reading is quantised to span/65535 of the calibrated range and clipped at the range limits; a clipped value has quality `suspect`. A negative gauge value inside the range is valid and is not clipped (the range of PT-201 starts at -1 bar).
+- **Reason.** A 16-bit converter over the calibrated range.
+- **Sensitivity required.** None.
+- **Notes.** The range limits are those of the contract table.
+
+## D30 - Sample dropout
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** Each scheduled sample is lost with probability 0.05 percent, the same in every episode whatever its content. A lost sample is a row with a null value, availability `missing_sample` and quality `bad`.
+- **Reason.** A dropout rate that depended on the scenario would reveal the scenario.
+- **Sensitivity required.** *Proposed*: 0.1 and 0.02 percent.
+- **Notes.** The draw has its own stream per tag.
+
+## D31 - Valve contacts
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The open contact is 1 when the valve opening alpha reaches 0.98 and returns to 0 when alpha falls below 0.97 (hysteresis 0.01). Only the open contact is emitted (contract). The contact change is delayed by the lag of the sensor table and the row becomes available after the comms delay. Every event-triggered tag has a row at t = 0 with its initial state. The closed contact (alpha at most 0.02) is not emitted.
+- **Reason.** A limit switch is an event with a lag, not a position.
+- **Sensitivity required.** *Proposed*: thresholds 0.95 and 0.99.
+- **Notes.** The pump running indicators and the LSHH detectors are event tags with the same rule for the row at t = 0.
+
+## D32 - Sample phase
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The first sample of a tag is at a phase equal to the SHA-256 digest of its name modulo its sample interval (in milliseconds); later samples follow at the interval.
+- **Reason.** Tags must not all sample at the same instant, and the phase must not depend on the scenario.
+- **Sensitivity required.** None.
+- **Notes.** The phase is a pure function of the tag name.
+
+## D33 - Independent high-high detector inside the engine
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** Each tank has an independent detector: the true level plus a fixed offset (standard deviation 1 mm, drawn once per episode from its own named stream), and an output delay of 0.2 s. It asserts when level plus offset reaches the trip level; the assertion is located by root-finding (D26) and delivered 0.2 s later. The protection logic consumes the detector output for the high-high trip; the LSHH observation is the same signal after the comms delay. The tag `truth_placeholder` is removed from the rows. The ordinary process level of the alarm is the level estimate of the control system and carries the tag `process_level`.
+- **Reason.** The trip must be decided on a signal that has its own error and delay, not on the truth.
+- **Sensitivity required.** *Proposed*: offset sigma 0.5 and 2 mm; delay 0.1 and 0.5 s.
+- **Notes.** The process level used for the high alarm is still the true level in this phase, labelled as such.
 
 ## Episode profile
 
