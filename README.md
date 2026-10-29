@@ -14,7 +14,8 @@ published here.
 
 ## Scope of the current phase
 
-Phase 0 is infrastructure only. It contains:
+Phases 0 and 1 cover infrastructure, topology, tanks, lineups, the inventory
+ledger and the protection logic. They contain:
 
 - the audited input package, vendored unmodified under `vendor/verum_audited/`
   with SHA-256 hashes in `vendor/MANIFEST.sha256`;
@@ -23,12 +24,21 @@ Phase 0 is infrastructure only. It contains:
 - a parameter model in which an unresolved value cannot be read
   (`verum.params`);
 - loaders and validators for the contracts and schemas (`verum.contracts`);
-- a directed-graph view of the topology (`verum.graph`);
+- a graph view of the topology with lineup-dependent connectivity and route
+  geometry (`verum.graph`);
+- tank calibration, roof state and the response-headroom screen
+  (`verum.tanks`);
+- the sixteen operating lineups and their transition rules
+  (`verum.lineups`);
+- inventory ledgers driven by prescribed flows (`verum.ledger`);
+- the independent protection state machine, as pure logic
+  (`verum.protection`);
 - a fail-closed dataset release gate (`verum.gates`);
 - tests for the above and a record of design decisions in
   `docs/design_decisions.md`.
 
-No hydraulic, vapor, fault or sensor physics is implemented. The release policy
+No hydraulic, vapor, fault or sensor physics is implemented; ledgers and
+protection are driven by prescribed or injected signals. The release policy
 in `config/dataset_release_policy.json` keeps `production_generation_enabled`
 false, and the gate refuses the `production_candidate` tier while it is false.
 
@@ -45,7 +55,7 @@ not selected are represented as unresolved and raise an error when read.
 | `vendor/` | Audited input package, read-only, with hash manifest |
 | `config/` | Machine-readable contracts used by the loaders |
 | `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `api` |
+| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `api` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
 

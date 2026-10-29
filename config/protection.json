@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Parameters of the independent protection logic. Every entry is a ParamValue.",
+  "source": "docs/design_decisions.md D4, D12, D13; revised/01_facility_tanks_topology.md sections 3.5 and 6.3",
+  "parameters": {
+    "isolation_timeout_stroke_multiplier": {
+      "value": 2.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D12-v1.0"
+    },
+    "residual_flow_threshold_m3h": {
+      "value": 1.0,
+      "unit": "m3/h",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D13-v1.0"
+    },
+    "stroke_time_s": {
+      "XV-R000": {
+        "value": 10.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D4-v2.0"
+      },
+      "XV-R101": {
+        "value": 30.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D4-v2.0"
+      },
+      "XV-R102": {
+        "value": 30.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D4-v2.0"
+      },
+      "XV-R103": {
+        "value": 30.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D4-v2.0"
+      }
+    },
+    "contact_lag_s": {
+      "XV-R000": {
+        "value": 2.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "XV-R101": {
+        "value": 1.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "XV-R102": {
+        "value": 1.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "XV-R103": {
+        "value": 1.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      }
+    }
+  }
+}

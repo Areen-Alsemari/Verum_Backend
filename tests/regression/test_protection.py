@@ -1,0 +1,508 @@
+"""Protection state machine: trip, isolation, availability, reset, no handles.
+
+Inputs: injected signal sequences and ``config/protection.json``. Outputs:
+pass/fail. There is no hydraulics; levels, closure evidence and flows are
+written directly into the tests.
+Key assumptions: the isolation timeout for TK-101 is the slowest requested
+valve, 2 x 30 s + 1.5 s = 61.5 s (XV-R101); the common valve alone would be
+2 x 10 s + 2.0 s = 22 s. The residual-flow threshold is 1.0 m3/h. The state
+machine takes one transition per update.
+
+Source: ``revised/01_facility_tanks_topology.md`` section 6.3 (state machine
+and the six required protection tests); ``docs/design_decisions.md`` D12, D13.
+"""
+
+from __future__ import annotations
+
+import ast
+import inspect
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+import verum.protection.machine as machine_module
+from verum.contracts import ContractError, Topology
+from verum.lineups import LineupTable, load_lineup_table
+from verum.params import UnresolvedParameter
+from verum.protection import (
+    AuthorisedReset,
+    ProtectionState,
+    ReceiptBlocked,
+    ResetRefused,
+    Signals,
+    TankProtection,
+    assert_receipt_allowed,
+    load_protection_config,
+)
+from verum.protection.config import parse_protection_config
+
+S = ProtectionState
+CLOSED = {"XV-R000": True, "XV-R101": True}
+TIMEOUT = 61.5
+
+
+@pytest.fixture
+def prot(topology: Topology) -> TankProtection:
+    return TankProtection(load_protection_config(topology, "TK-101"))
+
+
+@pytest.fixture(scope="module")
+def table(topology: Topology) -> LineupTable:
+    return load_lineup_table(topology)
+
+
+def now(p: TankProtection) -> ProtectionState:
+    """Current state, typed widely so later comparisons are not narrowed."""
+    return p.state
+
+
+def sig(t: float, lt: float | None = 10.0, ind: float | None = 10.0, **kw: Any) -> Signals:
+    return Signals(t_s=t, process_level_m=lt, independent_level_m=ind, **kw)
+
+
+def trip(p: TankProtection, t: float = 100.0) -> None:
+    p.update(sig(t, lt=12.0, ind=13.0))
+    assert p.state is S.HIGH_HIGH
+
+
+# --- configuration -------------------------------------------------------------------
+
+
+def test_timing_comes_from_provisional_parameter_records(topology: Topology) -> None:
+    cfg = load_protection_config(topology, "TK-101")
+    for record in (cfg.timeout_multiplier, cfg.residual_flow_m3h):
+        assert (record.status, record.evidence_tag) == ("provisional", "SIM")
+        assert record.provenance_id
+    assert cfg.timeout_multiplier.value == 2.0
+    assert cfg.residual_flow_threshold_m3h == 1.0
+
+
+def test_timeouts_are_two_strokes_plus_lag(topology: Topology) -> None:
+    cfg = load_protection_config(topology, "TK-101")
+    assert cfg.valve_timeout_s("XV-R000") == 22.0
+    assert cfg.valve_timeout_s("XV-R101") == 61.5
+    assert cfg.timeout_s() == TIMEOUT
+    assert cfg.isolation_valves == ("XV-R000", "XV-R101")
+
+
+@pytest.mark.parametrize("tank", ["TK-101", "TK-102", "TK-103"])
+def test_every_tank_has_a_configuration(topology: Topology, tank: str) -> None:
+    cfg = load_protection_config(topology, tank)
+    assert (cfg.high_alarm_m, cfg.high_high_m) == (12.5, 13)
+    assert cfg.isolation_valves == ("XV-R000", f"XV-R{tank[3:]}")
+    assert cfg.timeout_s() == TIMEOUT
+
+
+def test_unknown_tank_is_rejected(topology: Topology) -> None:
+    with pytest.raises(ContractError):
+        load_protection_config(topology, "TK-999")
+
+
+@pytest.mark.parametrize(
+    "name", ["isolation_timeout_stroke_multiplier", "residual_flow_threshold_m3h"]
+)
+def test_an_unresolved_parameter_stops_start_up(topology: Topology, name: str, root: Path) -> None:
+    raw = json.loads((root / "config" / "protection.json").read_text(encoding="utf-8"))
+    raw["parameters"][name] = {
+        "value": None,
+        "unit": "1",
+        "status": "unresolved",
+        "evidence_tag": "OPEN",
+        "unresolved_reason": "not selected",
+    }
+    with pytest.raises(UnresolvedParameter):
+        TankProtection(parse_protection_config(raw, topology.tanks[0]))
+
+
+def test_an_unresolved_stroke_time_stops_start_up(topology: Topology, root: Path) -> None:
+    raw = json.loads((root / "config" / "protection.json").read_text(encoding="utf-8"))
+    raw["parameters"]["stroke_time_s"]["XV-R101"] = {
+        "value": None,
+        "unit": "s",
+        "status": "unresolved",
+        "evidence_tag": "OPEN",
+    }
+    with pytest.raises(UnresolvedParameter):
+        TankProtection(parse_protection_config(raw, topology.tanks[0]))
+
+
+def test_a_missing_valve_entry_is_a_contract_error(topology: Topology, root: Path) -> None:
+    raw = json.loads((root / "config" / "protection.json").read_text(encoding="utf-8"))
+    del raw["parameters"]["contact_lag_s"]["XV-R101"]
+    with pytest.raises(ContractError):
+        TankProtection(parse_protection_config(raw, topology.tanks[0]))
+
+
+# --- trip ------------------------------------------------------------------------------
+
+
+def test_starts_normal_and_unlatched(prot: TankProtection) -> None:
+    assert prot.state is S.NORMAL
+    assert not prot.trip_latched
+    assert prot.normal_receipt_permitted
+
+
+def test_high_high_trips_on_the_independent_signal_when_lt_drifts_low(prot: TankProtection) -> None:
+    prot.update(sig(0, lt=11.0, ind=11.0))
+    prot.update(sig(1, lt=12.0, ind=13.05))  # LT reads a metre low
+    assert prot.state is S.HIGH_HIGH
+    assert prot.trip_latched
+    assert [e.kind for e in prot.events] == ["HIGH_HIGH_TRIP"]
+
+
+def test_trip_is_direct_from_normal_and_skips_the_high_alarm(prot: TankProtection) -> None:
+    prot.update(sig(0, lt=12.4, ind=12.4))
+    prot.update(sig(1, lt=12.4, ind=13.0))
+    assert prot.state is S.HIGH_HIGH
+    assert "HIGH_ALARM" not in [e.kind for e in prot.events]
+
+
+def test_trip_level_is_inclusive_and_just_below_does_not_trip(prot: TankProtection) -> None:
+    prot.update(sig(0, ind=12.999))
+    assert prot.state is S.NORMAL
+    prot.update(sig(1, ind=13.0))
+    assert now(prot) is S.HIGH_HIGH
+
+
+def test_a_high_lt_alone_gives_an_alarm_and_never_a_trip(prot: TankProtection) -> None:
+    prot.update(sig(0, lt=13.5, ind=12.0))
+    assert prot.state is S.HIGH_ALARM
+    assert not prot.trip_latched
+    assert prot.normal_receipt_permitted
+
+
+def test_high_alarm_starts_at_12_5_and_clears_below(prot: TankProtection) -> None:
+    prot.update(sig(0, lt=12.49))
+    assert prot.state is S.NORMAL
+    prot.update(sig(1, lt=12.5))
+    assert now(prot) is S.HIGH_ALARM
+    prot.update(sig(2, lt=12.0))
+    assert prot.state is S.NORMAL
+    assert [e.kind for e in prot.events] == ["HIGH_ALARM", "ALARM_CLEARED"]
+
+
+def test_the_alarm_does_not_inhibit_the_trip(prot: TankProtection) -> None:
+    prot.update(sig(0, lt=12.6, ind=12.6))
+    prot.update(sig(1, lt=12.6, ind=13.1))
+    assert prot.state is S.HIGH_HIGH
+
+
+def test_a_missing_independent_reading_never_trips(prot: TankProtection) -> None:
+    prot.update(sig(0, lt=14.0, ind=None))
+    assert prot.state is S.HIGH_ALARM
+
+
+# --- isolation -------------------------------------------------------------------------
+
+
+def test_next_update_requests_isolation_without_confirming(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2, receipt_flow_m3h=600.0))
+    assert prot.state is S.ISOLATION_REQUESTED
+    event = prot.events[-1]
+    assert event.kind == "ISOLATION_REQUESTED"
+    assert event.requested_valves == ("XV-R000", "XV-R101")
+    assert "not confirmed" in event.detail
+
+
+def test_request_without_closure_never_reaches_confirmed(prot: TankProtection) -> None:
+    trip(prot)
+    seen = set()
+    for i in range(1, 400):
+        prot.update(sig(100 + i, ind=13.2, receipt_flow_m3h=0.0))
+        seen.add(prot.state)
+    assert S.CONFIRMED_ISOLATED not in seen
+    assert prot.state is S.FAILED_ISOLATION
+    assert "without closure evidence" in prot.events[-1].detail
+
+
+def test_closure_evidence_with_flow_stop_confirms_before_the_timeout(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2, receipt_flow_m3h=600.0))
+    prot.update(sig(120, ind=13.2, receipt_flow_m3h=0.2, closed_confirmed=CLOSED))
+    assert prot.state is S.CONFIRMED_ISOLATED
+    assert prot.trip_latched
+    assert prot.events[-1].kind == "ISOLATION_CONFIRMED"
+
+
+def test_closure_without_flow_stop_does_not_confirm(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2))
+    prot.update(sig(120, ind=13.2, receipt_flow_m3h=50.0, closed_confirmed=CLOSED))
+    assert prot.state is S.ISOLATION_REQUESTED
+
+
+def test_only_one_valve_closed_does_not_confirm(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2))
+    prot.update(sig(120, ind=13.2, receipt_flow_m3h=0.0, closed_confirmed={"XV-R000": True}))
+    assert prot.state is S.ISOLATION_REQUESTED
+
+
+def test_the_flow_threshold_is_inclusive(topology: Topology) -> None:
+    at, above = (TankProtection(load_protection_config(topology, "TK-101")) for _ in range(2))
+    for p, flow, expected in (
+        (at, 1.0, S.CONFIRMED_ISOLATED),
+        (above, 1.0001, S.ISOLATION_REQUESTED),
+    ):
+        trip(p)
+        p.update(sig(101, ind=13.2))
+        p.update(sig(110, ind=13.2, receipt_flow_m3h=flow, closed_confirmed=CLOSED))
+        assert p.state is expected
+
+
+def test_residual_flow_after_the_timeout_fails_isolation(prot: TankProtection) -> None:
+    trip(prot, t=100.0)
+    prot.update(sig(101, ind=13.2))
+    prot.update(sig(100 + TIMEOUT - 1, ind=13.2, receipt_flow_m3h=5.0, closed_confirmed=CLOSED))
+    assert prot.state is S.ISOLATION_REQUESTED  # flow is allowed while the valves travel
+    prot.update(sig(100 + TIMEOUT, ind=13.2, receipt_flow_m3h=5.0, closed_confirmed=CLOSED))
+    assert now(prot) is S.FAILED_ISOLATION
+    assert "residual flow" in prot.events[-1].detail
+
+
+def test_timeout_without_flow_evidence_fails(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2))
+    prot.update(sig(100 + TIMEOUT, ind=13.2, closed_confirmed=CLOSED, receipt_flow_m3h=None))
+    assert prot.state is S.FAILED_ISOLATION
+    assert "without flow evidence" in prot.events[-1].detail
+
+
+def test_withdrawn_closure_evidence_is_a_contradiction(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2))
+    prot.update(sig(105, ind=13.2, receipt_flow_m3h=100.0, closed_confirmed={"XV-R000": True}))
+    prot.update(sig(110, ind=13.2, receipt_flow_m3h=100.0, closed_confirmed={"XV-R000": False}))
+    assert prot.state is S.FAILED_ISOLATION
+    assert "contradiction" in prot.events[-1].detail
+
+
+def test_evidence_withdrawn_after_confirmation_fails(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2))
+    prot.update(sig(110, ind=13.2, receipt_flow_m3h=0.0, closed_confirmed=CLOSED))
+    assert prot.state is S.CONFIRMED_ISOLATED
+    prot.update(sig(111, ind=13.2, receipt_flow_m3h=0.0, closed_confirmed={"XV-R000": True}))
+    assert now(prot) is S.FAILED_ISOLATION
+
+
+def test_failed_isolation_is_latched_and_does_not_divert(prot: TankProtection) -> None:
+    trip(prot)
+    for i in range(1, 200):
+        prot.update(sig(100 + i, ind=13.2, receipt_flow_m3h=0.0, closed_confirmed=None))
+    assert prot.state is S.FAILED_ISOLATION
+    prot.update(sig(400, ind=10.0, receipt_flow_m3h=0.0, closed_confirmed=CLOSED))
+    assert prot.state is S.FAILED_ISOLATION
+    assert all(not e.requested_valves or e.kind == "ISOLATION_REQUESTED" for e in prot.events)
+
+
+def test_the_timeout_runs_from_the_trip_time(prot: TankProtection) -> None:
+    trip(prot, t=1000.0)
+    prot.update(sig(1000.0 + TIMEOUT - 0.5, ind=13.2))
+    assert prot.state is S.ISOLATION_REQUESTED
+    prot.update(sig(1000.0 + TIMEOUT, ind=13.2))
+    assert now(prot) is S.FAILED_ISOLATION
+
+
+# --- availability ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("kw", [{"independent_valid": False}, {"power_ok": False}])
+def test_unavailable_protection_blocks_normal_receipt(
+    prot: TankProtection, table: LineupTable, kw: dict[str, bool]
+) -> None:
+    prot.update(sig(0, **kw))
+    assert prot.state is S.PROTECTION_UNAVAILABLE
+    assert not prot.normal_receipt_permitted
+    with pytest.raises(ReceiptBlocked, match="PROTECTION_UNAVAILABLE"):
+        assert_receipt_allowed(table.mode("RECEIVE_101"), {"TK-101": prot})
+    assert prot.events[-1].kind == "PROTECTION_UNAVAILABLE"
+
+
+def test_unavailable_protection_does_not_block_delivery_or_other_tanks(
+    prot: TankProtection, table: LineupTable, topology: Topology
+) -> None:
+    prot.update(sig(0, independent_valid=False))
+    other = TankProtection(load_protection_config(topology, "TK-102"))
+    assert_receipt_allowed(table.mode("DELIVER_101_A"), {"TK-101": prot})
+    assert_receipt_allowed(table.mode("RECEIVE_102"), {"TK-101": prot, "TK-102": other})
+
+
+def test_one_unavailable_tank_blocks_a_two_tank_receipt(
+    prot: TankProtection, table: LineupTable, topology: Topology
+) -> None:
+    other = TankProtection(load_protection_config(topology, "TK-102"))
+    other.update(sig(0, power_ok=False))
+    with pytest.raises(ReceiptBlocked, match="TK-102"):
+        assert_receipt_allowed(table.mode("RECEIVE_101_102"), {"TK-101": prot, "TK-102": other})
+
+
+def test_missing_protection_blocks_receipt(table: LineupTable) -> None:
+    with pytest.raises(ReceiptBlocked, match="no protection"):
+        assert_receipt_allowed(table.mode("RECEIVE_101"), {})
+
+
+def test_a_high_alarm_still_permits_receipt(prot: TankProtection, table: LineupTable) -> None:
+    prot.update(sig(0, lt=12.6))
+    assert_receipt_allowed(table.mode("RECEIVE_101"), {"TK-101": prot})
+
+
+def test_a_latched_trip_blocks_receipt(prot: TankProtection, table: LineupTable) -> None:
+    trip(prot)
+    with pytest.raises(ReceiptBlocked):
+        assert_receipt_allowed(table.mode("RECEIVE_101"), {"TK-101": prot})
+
+
+def test_an_invalid_signal_does_not_trip(prot: TankProtection) -> None:
+    prot.update(sig(0, ind=13.5, independent_valid=False))
+    assert prot.state is S.PROTECTION_UNAVAILABLE
+    assert not prot.trip_latched
+
+
+def test_protection_recovers_to_normal_when_the_signal_returns(prot: TankProtection) -> None:
+    prot.update(sig(0, independent_valid=False))
+    prot.update(sig(1))
+    assert prot.state is S.NORMAL
+    assert [e.kind for e in prot.events] == ["PROTECTION_UNAVAILABLE", "PROTECTION_AVAILABLE"]
+
+
+def test_a_latched_trip_survives_a_later_invalid_signal(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=None, independent_valid=False))
+    assert prot.state is S.ISOLATION_REQUESTED
+    assert prot.trip_latched
+
+
+# --- latch and reset -------------------------------------------------------------------
+
+
+def test_a_latched_trip_does_not_clear_when_the_level_falls(prot: TankProtection) -> None:
+    trip(prot)
+    for i in range(1, 50):
+        prot.update(sig(100 + i, lt=8.0, ind=8.0, receipt_flow_m3h=0.0, closed_confirmed=CLOSED))
+    assert prot.trip_latched
+    assert prot.state is S.CONFIRMED_ISOLATED
+
+
+@pytest.mark.parametrize(
+    "source", ["agent", "verum", "advisory", "", "OPERATIONS", "simulator_truth"]
+)
+def test_reset_from_any_other_source_is_refused(prot: TankProtection, source: str) -> None:
+    trip(prot)
+    with pytest.raises(ResetRefused, match="not authorised"):
+        prot.reset(AuthorisedReset(source, "someone", 200.0), sig(200, ind=8.0))
+    assert prot.trip_latched
+
+
+def test_reset_needs_a_named_authoriser(prot: TankProtection) -> None:
+    trip(prot)
+    with pytest.raises(ResetRefused):
+        prot.reset(AuthorisedReset("operations", "", 200.0), sig(200, ind=8.0))
+
+
+@pytest.mark.parametrize(
+    "signals",
+    [
+        sig(200, ind=13.0),
+        sig(200, ind=14.0),
+        sig(200, ind=None),
+        sig(200, ind=8.0, independent_valid=False),
+    ],
+)
+def test_reset_needs_the_safe_predicates(prot: TankProtection, signals: Signals) -> None:
+    trip(prot)
+    with pytest.raises(ResetRefused, match="safe predicates"):
+        prot.reset(AuthorisedReset("operations", "shift lead", 200.0), signals)
+    assert prot.trip_latched
+
+
+@pytest.mark.parametrize("source", ["operations", "protection"])
+def test_an_authorised_reset_clears_the_latch(prot: TankProtection, source: str) -> None:
+    trip(prot)
+    state = prot.reset(AuthorisedReset(source, "shift lead", 200.0), sig(200, ind=8.0))
+    assert state is S.NORMAL and not prot.trip_latched
+    assert prot.events[-1].kind == "RESET"
+    prot.update(sig(201, ind=13.1))
+    assert prot.state is S.HIGH_HIGH
+
+
+def test_reset_without_a_latched_trip_is_refused(prot: TankProtection) -> None:
+    with pytest.raises(ResetRefused, match="no latched trip"):
+        prot.reset(AuthorisedReset("operations", "shift lead", 1.0), sig(1))
+
+
+def test_time_cannot_go_backwards(prot: TankProtection) -> None:
+    prot.update(sig(10))
+    with pytest.raises(ValueError):
+        prot.update(sig(9))
+
+
+# --- no handle for an agent ------------------------------------------------------------
+
+FORBIDDEN = (
+    "bypass",
+    "override",
+    "inhibit",
+    "force",
+    "actuate",
+    "command",
+    "open",
+    "close",
+    "set_",
+    "write",
+)
+
+
+def test_public_surface_of_the_state_machine_is_the_expected_set(prot: TankProtection) -> None:
+    public = {n for n in dir(prot) if not n.startswith("_")}
+    assert public == {
+        "events",
+        "normal_receipt_permitted",
+        "reset",
+        "state",
+        "timeout_s",
+        "trip_latched",
+        "update",
+    }
+
+
+def test_no_public_callable_suggests_command_or_bypass(prot: TankProtection) -> None:
+    # Data names such as the constant RESET_SOURCES are not handles; callables are.
+    callables = [
+        n
+        for n in dir(machine_module)
+        if not n.startswith("_") and callable(getattr(machine_module, n))
+    ]
+    callables += [n for n in dir(prot) if not n.startswith("_") and callable(getattr(prot, n))]
+    assert not [n for n in callables if any(f in n.lower() for f in FORBIDDEN)]
+    assert "reset" in callables  # the only mutator, guarded by an authorised event
+
+
+def test_reset_is_the_only_mutator_and_it_demands_an_authorised_event() -> None:
+    parameters = inspect.signature(TankProtection.reset).parameters
+    assert parameters["event"].annotation in (AuthorisedReset, "AuthorisedReset")
+
+
+def test_state_and_latch_are_read_only_properties(prot: TankProtection) -> None:
+    for name in ("state", "trip_latched", "normal_receipt_permitted", "timeout_s"):
+        with pytest.raises(AttributeError):
+            setattr(prot, name, True)
+
+
+def test_the_machine_module_imports_no_actuation_or_hydraulic_package() -> None:
+    tree = ast.parse(Path(machine_module.__file__ or "").read_text(encoding="utf-8"))
+    imported = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)} | {
+        a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
+    }
+    assert not [m for m in imported if m.startswith(("verum.graph", "verum.lineups", "verum.api"))]
+
+
+def test_events_carry_data_only(prot: TankProtection) -> None:
+    trip(prot)
+    prot.update(sig(101, ind=13.2))
+    for event in prot.events:
+        assert not callable(event.requested_valves)
+        assert all(isinstance(v, str) for v in event.requested_valves)
