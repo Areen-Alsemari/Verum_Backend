@@ -30,6 +30,10 @@ from verum.contracts.paths import config_dir
 from verum.params import ParamValue, ParamValueError
 
 FILENAME = "pumping_minimum_levels.json"
+STRATUM_FILENAMES = {
+    "sea_level": "pumping_minimum_levels_sea_level_fd0p8.json",
+    "elevated": "pumping_minimum_levels_elevated_fd0p8.json",
+}
 SITE_PRESSURE_FILENAME = "pumping_minimum_levels_site_pressure.json"
 
 

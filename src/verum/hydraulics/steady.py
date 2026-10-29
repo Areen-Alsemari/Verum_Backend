@@ -26,6 +26,12 @@ Key assumptions:
       apart by ``atmosphere_pa_abs``.
     * A solved pump flow outside the curve is rejected, never extrapolated.
       Phase and NPSH failures are reported in the result and nothing is clipped.
+    * Dynamic use (decision D22): the engine may impose the delivery flow (the reservoir
+      and the boundary law then play no part in the solve; the engine applies them in
+      its flow equation), switch the receipt cap off (the engine applies it), and add
+      inertial head offsets to node heads after the solve. The offsets are the
+      ``(L / (g A)) dQ/dt`` terms of the rigid column, so the pressures and the NPSH
+      screen see the surge.
 
 Source: ``revised/02_hydraulic_model.md`` sections 3 and 4 and 8 (gates G2 to
 G4); ``docs/design_decisions.md`` D2 (version 3.0), D3, D7, D11, D14, D15.
@@ -33,6 +39,7 @@ G4); ``docs/design_decisions.md`` D2 (version 3.0), D3, D7, D11, D14, D15.
 
 from __future__ import annotations
 
+import copy
 import math
 from collections import deque
 from collections.abc import Mapping
@@ -85,6 +92,9 @@ class SteadyInputs:
     npsh3_coefficient_m: float | None = None
     valve_positions: Mapping[str, float] = field(default_factory=dict)
     warm_start: Mapping[str, float] | None = None
+    imposed_delivery_flow_m3h: float | None = None
+    head_offsets_m: Mapping[str, float] = field(default_factory=dict)
+    apply_cap: bool = True
 
 
 class _PumpLaw(sv.FlowLaw):
@@ -155,6 +165,12 @@ class HydraulicModel:
                     raise HydraulicInputError(f"node {node} has two elevations")
         return z
 
+    def for_stratum(self, stratum: str) -> HydraulicModel:
+        """A copy of the model with the atmosphere of an episode stratum (decision D24)."""
+        clone = copy.copy(self)
+        clone.patm = self.config.atmosphere_pa_abs(stratum)
+        return clone
+
     def default_pump(self) -> FixedSpeedPump:
         c = self.config
         return FixedSpeedPump(
@@ -217,6 +233,27 @@ class HydraulicModel:
                 self.g,
             )
         return total
+
+    def edge_k(self, lineup: Lineup, profile: str, multiplier: float = 1.0) -> dict[str, float]:
+        """Local loss coefficient of each edge of the active set of a lineup, valves open."""
+        key = (profile, multiplier)
+        if key not in self._profiles:
+            self._profiles[key] = load_fitting_profile(*key, self.directory)
+        if lineup not in self._active:
+            self._active[lineup] = self.network.active_edges(lineup)
+        return edge_loss_coefficients(
+            self.topology, self.geometry, self._profiles[key], self._active[lineup], self._bends
+        )
+
+    def valve_extra_k(self, alpha: float) -> float:
+        """Loss coefficient a valve at opening ``alpha`` adds to its full-open value."""
+        c = self.config
+        if alpha >= 1.0:
+            return 0.0
+        k = loss_coefficient(
+            alpha, c["valve_full_open_k"], c["valve_alpha_c"], c["valve_rangeability"]
+        )
+        return k - c["valve_full_open_k"]
 
     def _add_valve_throttling(self, ks: dict[str, float], positions: Mapping[str, float]) -> None:
         """Extra K of a partly open valve, charged to the edge that starts at the valve."""
@@ -317,6 +354,9 @@ class _Case:
                 ).value
             c = m._laws[inp.fitting_profile]
         self.c_law = c
+        if inp.imposed_delivery_flow_m3h is not None:
+            self.inflow[BOUNDARY] = -inp.imposed_delivery_flow_m3h / 3600.0
+            return
         h_res = self._reservoir_head()
         if c > 0:
             law = _BoundaryLaw(c, m.config["pump_reference_flow_m3h"])
@@ -366,7 +406,7 @@ class _Case:
         sol = sv.solve_heads(
             self.edges, self.fixed, self.inflow, tol, itmax, self.inputs.warm_start
         )
-        if self.receipt_active and SOURCE in self.inflow:
+        if self.receipt_active and SOURCE in self.inflow and self.inputs.apply_cap:
             cap = m.config["receipt_pressure_cap_pa_gauge"]
             p_source = m.rho * m.g * (sol.heads[SOURCE] - m.node_z[SOURCE])
             if p_source > cap:
@@ -384,6 +424,9 @@ class _Case:
         if self.deadhead:
             self._deadhead_heads(heads)
         self._static_heads(heads)
+        for node, offset in self.inputs.head_offsets_m.items():
+            if node in heads:
+                heads[node] += offset
         return heads
 
     def _deadhead_heads(self, heads: dict[str, float]) -> None:

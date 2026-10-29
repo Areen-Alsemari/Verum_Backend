@@ -8,10 +8,14 @@ Key assumptions:
     * ``healthy_envelope`` turns on gate SG3 (levels 1.8 to 12 m, protection NORMAL).
     * The schedule is passed unchanged to the operations controller; this module
       only checks its shape.
-    * The seed is recorded in the episode; no random draw is made in healthy episodes.
+    * The seed is recorded in the episode. The only random draw is the downstream demand
+      process (decision D23), on the named stream ``demand``, and only if the scenario
+      switches ``demand_process`` on.
+    * ``atmosphere_stratum`` is ``sea_level`` or ``elevated`` (decision D24). Receipt
+      set-points are chosen from 0, 300, 400, 500 and 600 m3/h (decision D23).
 
 Source: ``revised/01_facility_tanks_topology.md`` section 6.2;
-``docs/design_decisions.md`` D6, D11, D21.
+``docs/design_decisions.md`` D6, D11, D21, D23, D24.
 """
 
 from __future__ import annotations
@@ -32,9 +36,13 @@ REQUIRED = (
     "temperature_c",
     "fitting_profile",
     "healthy_envelope",
+    "atmosphere_stratum",
+    "demand_process",
     "initial",
     "schedule",
 )
+STRATA = ("sea_level", "elevated")
+RECEIPT_SETPOINTS_M3H = (0.0, 300.0, 400.0, 500.0, 600.0)
 
 
 @dataclass(frozen=True)
@@ -46,11 +54,20 @@ class Scenario:
     temperature_c: float
     fitting_profile: str
     healthy_envelope: bool
+    atmosphere_stratum: str
+    demand_process: bool
     initial_mode: str
     tank_levels_m: dict[str, float]
     receipt_flow_m3h: float
     receipt_setpoint_m3h: float
     schedule: list[dict[str, Any]]
+
+
+def _check_setpoint(value: float) -> None:
+    if value not in RECEIPT_SETPOINTS_M3H:
+        raise ContractError(
+            f"scenario: receipt set-point {value:g} m3/h is not one of {RECEIPT_SETPOINTS_M3H}"
+        )
 
 
 def parse_scenario(raw: dict[str, Any]) -> Scenario:
@@ -63,9 +80,14 @@ def parse_scenario(raw: dict[str, Any]) -> Scenario:
             raise ContractError(f"scenario {raw['scenario_id']}: initial.{key} is required")
     if raw["duration_s"] <= 0:
         raise ContractError("scenario: duration must be positive")
+    if raw["atmosphere_stratum"] not in STRATA:
+        raise ContractError(f"scenario: atmosphere_stratum must be one of {STRATA}")
     for entry in raw["schedule"]:
         if ("t_s" in entry) == ("on" in entry):
             raise ContractError("scenario: a schedule entry has either t_s or on")
+        if entry.get("command") == "receipt_setpoint":
+            _check_setpoint(float(entry["value_m3h"]))
+    _check_setpoint(float(initial["receipt_setpoint_m3h"]))
     return Scenario(
         scenario_id=raw["scenario_id"],
         description=raw["description"],
@@ -74,6 +96,8 @@ def parse_scenario(raw: dict[str, Any]) -> Scenario:
         temperature_c=float(raw["temperature_c"]),
         fitting_profile=raw["fitting_profile"],
         healthy_envelope=bool(raw["healthy_envelope"]),
+        atmosphere_stratum=raw["atmosphere_stratum"],
+        demand_process=bool(raw["demand_process"]),
         initial_mode=initial["mode"],
         tank_levels_m={k: float(v) for k, v in initial["tank_levels_m"].items()},
         receipt_flow_m3h=float(initial["receipt_flow_m3h"]),

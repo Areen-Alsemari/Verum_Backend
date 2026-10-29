@@ -85,10 +85,12 @@ PROPOSED_SCHEMAS = [
     "events",
     "episode",
     "simulation_rejected",
+    "boundary_state",
+    "validity_windows",
 ]
 
 
-def test_schema_directory_holds_the_six_audited_and_six_proposed_schemas(root: Path) -> None:
+def test_schema_directory_holds_the_six_audited_and_eight_proposed_schemas(root: Path) -> None:
     names = sorted(p.name for p in (root / "schemas").glob("*.json"))
     assert names == sorted(f"{n}.schema.json" for n in [*SCHEMA_FILES, *PROPOSED_SCHEMAS])
 
@@ -99,7 +101,7 @@ def test_proposed_schemas_are_marked_and_versioned(root: Path, name: str) -> Non
 
     schema = json.loads((root / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8"))
     assert schema["x-status"] == "backend-proposed"
-    assert schema["$id"] == f"urn:verum:{name}:0.5.0"
+    assert schema["$id"] == f"urn:verum:{name}:0.6.0"
     assert schema["properties"]["hidden"] == {"const": True}
     assert "hidden" in schema["required"]
 

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "description": "Parameters of the quasi-steady engine. Every entry is a ParamValue.",
-  "source": "docs/design_decisions.md D3, D4, D17, D18, D19",
+  "description": "Parameters of the path-dynamics engine. Every entry is a ParamValue.",
+  "source": "docs/design_decisions.md D3, D4, D17, D18, D19, D22 to D26",
   "parameters": {
     "time_step_s": {
       "value": 1.0,
@@ -38,13 +38,6 @@
       "evidence_tag": "SIM",
       "provenance_id": "VERUM-DD-D4-v2.0"
     },
-    "quasi_steady_factor": {
-      "value": 10.0,
-      "unit": "1",
-      "status": "provisional",
-      "evidence_tag": "DESIGN",
-      "provenance_id": "VERUM-DD-D18-v1.0"
-    },
     "receipt_event_duration_factor": {
       "value": 4.0,
       "unit": "1",
@@ -58,6 +51,97 @@
       "status": "provisional",
       "evidence_tag": "DESIGN",
       "provenance_id": "VERUM-PHASE3-NUMERICS"
+    },
+    "wave_criterion_factor": {
+      "value": 10.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D22-v1.0"
+    },
+    "wave_speed_dn200_m_s": {
+      "value": 1089.2,
+      "unit": "m/s",
+      "status": "provisional",
+      "evidence_tag": "CALC",
+      "provenance_id": "VERUM-M5-PAR-PIP-007"
+    },
+    "wave_speed_dn250_m_s": {
+      "value": 1082.8,
+      "unit": "m/s",
+      "status": "provisional",
+      "evidence_tag": "CALC",
+      "provenance_id": "VERUM-M5-PAR-PIP-007"
+    },
+    "wave_speed_dn300_m_s": {
+      "value": 1078.2,
+      "unit": "m/s",
+      "status": "provisional",
+      "evidence_tag": "CALC",
+      "provenance_id": "VERUM-M5-PAR-PIP-007"
+    },
+    "collapse_high_fraction": {
+      "value": 0.9,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D22-v1.0"
+    },
+    "collapse_low_fraction": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D22-v1.0"
+    },
+    "demand_sigma_log": {
+      "value": 0.05,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D23-v1.0"
+    },
+    "demand_correlation_time_s": {
+      "value": 1800.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D23-v1.0"
+    },
+    "demand_factor_min": {
+      "value": 0.8,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D23-v1.0"
+    },
+    "demand_factor_max": {
+      "value": 1.25,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D23-v1.0"
+    },
+    "integrator_rtol": {
+      "value": 1e-09,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-PHASE3B-NUMERICS"
+    },
+    "integrator_atol_m3s": {
+      "value": 1e-12,
+      "unit": "m3/s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-PHASE3B-NUMERICS"
+    },
+    "crossing_landing_tolerance_m": {
+      "value": 1e-06,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D26-v1.0"
     }
   }
 }

@@ -24,7 +24,14 @@ import json
 from pathlib import Path
 from typing import Any, Protocol
 
-DATASETS = ("hydraulic_state", "solver_diagnostics", "mass_ledger", "events")
+DATASETS = (
+    "hydraulic_state",
+    "solver_diagnostics",
+    "mass_ledger",
+    "events",
+    "boundary_state",
+    "validity_windows",
+)
 MANIFEST = "MANIFEST.sha256"
 
 

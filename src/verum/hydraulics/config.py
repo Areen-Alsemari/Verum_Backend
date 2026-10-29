@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +54,7 @@ class HydraulicConfig:
     scenarios: dict[str, str]
     strata_c: dict[str, ParamValue]
     tap_reference_edges: dict[str, str]
+    atmosphere_strata_pa_abs: dict[str, ParamValue] = field(default_factory=dict)
 
     def __getitem__(self, name: str) -> float:
         try:
@@ -63,6 +64,12 @@ class HydraulicConfig:
 
     def record(self, name: str) -> ParamValue:
         return self.parameters[name]
+
+    def atmosphere_pa_abs(self, stratum: str) -> float:
+        try:
+            return self.atmosphere_strata_pa_abs[stratum].value
+        except KeyError:
+            raise ContractError(f"hydraulics config: no atmosphere stratum {stratum!r}") from None
 
     def temperature_c(self, stratum: str) -> float:
         try:
@@ -81,6 +88,7 @@ def load_hydraulic_config(directory: Path | None = None) -> HydraulicConfig:
         },
         strata_c=_records(raw["temperature_strata_c"]),
         tap_reference_edges=dict(raw["tap_reference_edges"]),
+        atmosphere_strata_pa_abs=_records(raw.get("atmosphere_strata_pa_abs", {})),
     )
 
 

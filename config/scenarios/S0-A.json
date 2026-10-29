@@ -6,6 +6,8 @@
   "temperature_c": 25.0,
   "fitting_profile": "reference_fittings",
   "healthy_envelope": true,
+  "atmosphere_stratum": "sea_level",
+  "demand_process": false,
   "initial": {
     "mode": "DELIVER_101_A",
     "tank_levels_m": {

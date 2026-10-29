@@ -1,7 +1,8 @@
 """Row builders: turn an engine snapshot into the typed truth records.
 
 Inputs: a ``Snapshot`` (state at one instant) and the model. Outputs: row
-dictionaries for the hydraulic-state, solver-diagnostic and mass-ledger datasets.
+dictionaries for the hydraulic-state, solver-diagnostic, boundary-state and mass-ledger
+datasets.
 Key assumptions:
     * Pressures are written in Pa absolute (gauge plus the configured atmosphere);
       a pressure that the solve could not determine is ``null``, never zero.
@@ -9,7 +10,7 @@ Key assumptions:
       two rows written at an event time.
     * Protection rows carry ``signal_source = "truth_placeholder"``: in this phase the
       protection logic is fed the true level and the true flow.
-    * Every row carries ``hidden = true`` and the schema version 0.5.0.
+    * Every row carries ``hidden = true`` and the schema version 0.6.0.
 
 Source: ``revised/05_simulation_validation_dataset.md`` section 7.4.8;
 ``schemas/hydraulic_state.schema.json`` and the other proposed schemas.
@@ -24,7 +25,7 @@ from typing import Any
 from verum.hydraulics import HydraulicModel, SteadyResult
 from verum.hydraulics.valves import loss_coefficient
 
-SCHEMA_VERSION = "0.5.0"
+SCHEMA_VERSION = "0.6.0"
 SIGNAL_SOURCE = "truth_placeholder"
 CHECK_VALVES = ("CV-PA", "CV-PB")
 VALVES = (
@@ -42,17 +43,6 @@ class ValveView:
 
 
 @dataclass(frozen=True)
-class WindowView:
-    event_id: str
-    kind: str
-    element_id: str
-    duration_s: float
-    tau_s: float
-    ratio: float | None
-    invalid: bool
-
-
-@dataclass(frozen=True)
 class Snapshot:
     t: float
     result: SteadyResult
@@ -65,8 +55,9 @@ class Snapshot:
     iterations: int
     max_residual_kg_s: float
     ledger: dict[str, Any]
-    active_windows: tuple[WindowView, ...] = ()
-    started_windows: tuple[WindowView, ...] = ()
+    window_ids: tuple[str, ...] = ()
+    mode: str = "inactive"
+    boundary: dict[str, Any] = field(default_factory=dict)
     notes: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -253,8 +244,6 @@ def _pump_rows(
 
 def diagnostic_row(episode: str, snap: Snapshot, side: str | None) -> dict[str, Any]:
     row = _env("solver_diagnostics", episode)
-    active = snap.active_windows
-    ratios = [w.ratio for w in active if w.ratio is not None]
     row.update(
         t_sim_s=snap.t,
         side=side,
@@ -263,23 +252,16 @@ def diagnostic_row(episode: str, snap: Snapshot, side: str | None) -> dict[str, 
         convergence_ok=True,
         phase_validity_status=snap.result.phase.status if snap.result.pump else "NOT_APPLICABLE",
         domain_valid=True,
-        quasi_steady_ratio=min(ratios) if ratios else None,
-        quasi_steady_invalid=any(w.invalid for w in active),
-        active_event_ids=[w.event_id for w in active],
-        event_windows_started=[
-            {
-                "event_id": w.event_id,
-                "kind": w.kind,
-                "element_id": w.element_id,
-                "duration_s": w.duration_s,
-                "tau_s": w.tau_s,
-                "ratio": w.ratio,
-                "quasi_steady_invalid": w.invalid,
-            }
-            for w in snap.started_windows
-        ],
+        flow_model=snap.mode,
+        active_validity_window_ids=list(snap.window_ids),
         hidden=True,
     )
+    return row
+
+
+def boundary_row(episode: str, snap: Snapshot, side: str | None) -> dict[str, Any]:
+    row = _env("boundary_state", episode)
+    row.update(t_sim_s=snap.t, side=side, **snap.boundary, hidden=True)
     return row
 
 

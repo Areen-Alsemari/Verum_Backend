@@ -28,7 +28,6 @@ from typing import Any
 
 import pytest
 
-import _reference_hydraulics as ref
 from verum.contracts import ContractError, Topology
 from verum.hydraulics import HydraulicModel
 from verum.hydraulics.valves import kv_fraction, loss_coefficient
@@ -37,8 +36,9 @@ from verum.ops import Command, OperationsController, ValveOrder
 from verum.params import UnresolvedParameter
 from verum.sim.config import load_sim_config
 from verum.sim.engine import _hermite_root
+from verum.sim.path import delivery_edges, receipt_edges
 from verum.sim.scenario import load_scenario, parse_scenario
-from verum.sim.validity import delivery_path, is_valid, ratio, receipt_path, rigid_column_tau
+from verum.sim.validity import is_valid, ratio, round_trip_s, wave_speeds
 from verum.sim.valves import make_valve
 
 # --- valve law ----------
@@ -198,11 +198,17 @@ def test_an_unknown_schedule_command_is_refused(table: LineupTable) -> None:
 # --- scenarios and configuration ----------
 
 
-@pytest.mark.parametrize("sid", ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "REJ-1", "REJ-2"])
+@pytest.mark.parametrize(
+    "sid",
+    ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev", "REJ-1", "REJ-2"],
+)
 def test_scenario_files_are_valid(sid: str) -> None:
     sc = load_scenario(sid)
-    assert sc.fitting_profile == "reference_fittings" and sc.seed == 20261029
+    assert sc.fitting_profile == "reference_fittings"
+    assert sc.seed == (20261101 if sid == "S0-F" else 20261029)
     assert sc.duration_s == 3600.0 and sc.scenario_id == sid
+    assert sc.atmosphere_stratum == ("elevated" if sid == "S0-A-elev" else "sea_level")
+    assert sc.demand_process is (sid == "S0-F")
 
 
 def test_scenario_specifics() -> None:
@@ -210,7 +216,7 @@ def test_scenario_specifics() -> None:
         load_scenario("REJ-1").temperature_c == 45.0
         and load_scenario("REJ-1").tank_levels_m["TK-103"] == 5.0
     )
-    assert load_scenario("REJ-2").tank_levels_m["TK-101"] == 7.3
+    assert load_scenario("REJ-2").tank_levels_m["TK-101"] == 8.1
     assert (
         load_scenario("S0u-E").tank_levels_m["TK-101"] == 12.3
         and not load_scenario("S0u-E").healthy_envelope
@@ -228,6 +234,11 @@ def test_scenario_specifics() -> None:
         lambda d: d.update(duration_s=0),
         lambda d: d["initial"].pop("mode"),
         lambda d: d["schedule"].append({"t_s": 1.0, "on": "X"}),
+        lambda d: d.update(atmosphere_stratum="mountain"),
+        lambda d: d.pop("demand_process"),
+        lambda d: d["schedule"].append(
+            {"t_s": 5.0, "command": "receipt_setpoint", "value_m3h": 650.0}
+        ),
     ],
 )
 def test_bad_scenarios_are_refused(root: Path, mutate: Any) -> None:
@@ -278,43 +289,37 @@ def test_an_unresolved_sim_parameter_raises(tmp_path: Path, root: Path) -> None:
 # --- validity ----------
 
 
-def test_receipt_tau_matches_the_independent_hand_calculation(
-    model: HydraulicModel, topology: Topology
-) -> None:
-    edges = receipt_path(topology, "TK-101")
-    result = rigid_column_tau(model, edges, 600 / 3600, "reference_fittings")
-    area300, area200 = 3.141592653589793 * ref.D300**2 / 4, 3.141592653589793 * ref.D200**2 / 4
-    assert result.sum_l_over_a == pytest.approx(150 / area300 + 45 / area200, rel=1e-12)
-    loss = ref.loss(600 / 3600, ref.D300, 150.0, 1.4) + ref.loss(600 / 3600, ref.D200, 45.0, 2.0)
-    assert result.head_loss_m == pytest.approx(loss, rel=1e-9)
-    expected = result.sum_l_over_a * (600 / 3600) / (9.80665 * loss)
-    assert result.tau_s == pytest.approx(expected, rel=1e-9)
-    assert 5.0 < result.tau_s < 8.0
+def test_receipt_wave_round_trip_matches_the_hand_calculation(model: HydraulicModel) -> None:
+    """Independent: 2 (150 m / 1078.2 m/s + 45 m / 1089.2 m/s) = 0.36087 s (PAR-PIP-007)."""
+    edges = receipt_edges(model, "TK-101")
+    hand = 2.0 * (150.0 / 1078.2 + 45.0 / 1089.2)
+    assert round_trip_s(model, edges, wave_speeds(load_sim_config())) == pytest.approx(
+        hand, rel=1e-12
+    )
+    assert hand == pytest.approx(0.36087, abs=1e-5)
 
 
-def test_delivery_tau_includes_the_boundary_law(model: HydraulicModel, topology: Topology) -> None:
-    edges = delivery_path(topology, "TK-102", "P-101A")
-    plain = rigid_column_tau(model, edges, 300 / 3600, "reference_fittings", 0.0)
-    with_law = rigid_column_tau(model, edges, 300 / 3600, "reference_fittings", 10.060889)
-    assert with_law.head_loss_m == pytest.approx(plain.head_loss_m + 10.060889)
-    assert with_law.tau_s < plain.tau_s
+def test_delivery_wave_round_trip_uses_each_nominal_size(model: HydraulicModel) -> None:
+    """Independent: S-102 90 m and the pump leg 20 m are DN200, E-SH 35 m is DN250, D-MAIN 250 m."""
+    edges = delivery_edges(model, "TK-102", "P-101A")
+    hand = 2.0 * ((90.0 + 20.0 + 250.0) / 1089.2 + 35.0 / 1082.8)
+    assert round_trip_s(model, edges, wave_speeds(load_sim_config())) == pytest.approx(
+        hand, rel=1e-12
+    )
+
+
+def test_wave_speeds_are_the_screening_values_of_the_audited_package() -> None:
+    assert wave_speeds(load_sim_config()) == {200: 1089.2, 250: 1082.8, 300: 1078.2}
 
 
 def test_validity_rule_and_ratio() -> None:
     assert is_valid(60.0, 6.0, 10.0) and not is_valid(59.9, 6.0, 10.0)
-    assert ratio(30.0, 6.0) == 5.0 and ratio(30.0, 0.0) is None
+    assert ratio(30.0, 6.0) == 5.0
 
 
-def test_zero_flow_gives_no_inertia(model: HydraulicModel, topology: Topology) -> None:
-    assert (
-        rigid_column_tau(model, receipt_path(topology, None), 0.0, "reference_fittings").tau_s
-        == 0.0
-    )
-
-
-def test_paths_are_made_of_contract_edges(topology: Topology) -> None:
-    assert receipt_path(topology, "TK-101") == ("E001", "E002", "E003", "E-R101a", "E-R101b")
-    assert delivery_path(topology, "TK-102", "P-101B") == (
+def test_paths_are_made_of_contract_edges(model: HydraulicModel) -> None:
+    assert receipt_edges(model, "TK-101") == ("E001", "E002", "E003", "E-R101a", "E-R101b")
+    assert delivery_edges(model, "TK-102", "P-101B") == (
         "E-S102a", "E-S102b", "E-SH", "E-PB0", "E-PB1", "E-PB2", "E-PB3", "E-PB4", "E-D1", "E-D2",
     )  # fmt: skip
 

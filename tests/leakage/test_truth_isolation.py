@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -138,3 +139,34 @@ def test_hidden_dataset_schemas_require_the_marker_and_refuse_unknown_fields(nam
 
 def test_the_top_level_package_imports_nothing(root: Path) -> None:
     assert _imports(root / "src" / "verum" / "__init__.py") == set()
+
+
+# --- names of an episode on disk (Phase 3b) ----------
+
+EPISODE_FILES = {
+    "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",
+    "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
+    "episode.json", "provenance.json", "MANIFEST.sha256", "simulation_rejected.json",
+}  # fmt: skip
+
+
+def test_no_scenario_identifier_appears_in_any_directory_or_file_name(
+    episodes: dict[str, Any],
+) -> None:
+    """Only the opaque episode id names an episode directory; file names come from a fixed set.
+
+    Scenario identifiers (S0-A, S0u-E, REJ-1, ...) describe the injected situation and live
+    only inside the hidden episode record.
+    """
+    import re
+
+    ids = list(episodes)
+    for sid, result in episodes.items():
+        directory = result.directory
+        assert re.fullmatch(r"EP-[0-9A-F]{12}", directory.name), directory.name
+        assert directory.name == result.episode_id
+        names = [directory.name, *[p.name for p in directory.rglob("*")]]
+        for name in names:
+            assert not any(other.lower() in name.lower() for other in ids), (sid, name)
+            assert not re.search(r"(?i)S0u?-|REJ-", name), (sid, name)
+        assert {p.name for p in directory.iterdir()} <= EPISODE_FILES

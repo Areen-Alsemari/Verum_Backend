@@ -95,25 +95,25 @@ def test_sg0_rejects_when_no_level_passes_the_screen(root: Path, tmp_path: Path)
     )
     assert (
         outcome.rejection["parameter"]
-        == "pumping_minimum_level[TK-102,45C,reference_fittings,NPSH3=6m]"
+        == "pumping_minimum_level[TK-102,45C,reference_fittings,NPSH3=6m,sea_level,f_d=0.8]"
     )
     assert "no level" in outcome.rejection["detail"] and outcome.rejection["limit"] is None
 
 
 def test_sg0_pumping_minimum_boundary_at_the_stored_level(model: HydraulicModel) -> None:
-    # 35 C, reference fittings, NPSH3 = 4 m: the stored minimum of TK-101 is 3.008 m.
-    # At 3.05 m the level stays above it for the 60 s run (it falls about 0.024 m);
-    # at 2.95 m it is below at the start.
+    # 35 C, reference fittings, NPSH3 = 4 m: the stored minimum of TK-101 (sea level, f_d = 0.8)
+    # is 3.639 m. At 3.68 m the level stays above it for the 60 s run (it falls about 0.007 m);
+    # at 3.60 m it is below at the start.
     scenario = dataclasses.replace(
         load_scenario("S0-A"),
         temperature_c=35.0,
-        tank_levels_m={"TK-101": 3.05, "TK-102": 7.0, "TK-103": 5.0},
+        tank_levels_m={"TK-101": 3.68, "TK-102": 7.0, "TK-103": 5.0},
         healthy_envelope=False,
         duration_s=60.0,
     )
     assert _engine(model, scenario).run().rejection is None
     below = dataclasses.replace(
-        scenario, tank_levels_m={"TK-101": 2.95, "TK-102": 7.0, "TK-103": 5.0}
+        scenario, tank_levels_m={"TK-101": 3.60, "TK-102": 7.0, "TK-103": 5.0}
     )
     outcome = _engine(model, below).run()
     assert (

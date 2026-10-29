@@ -2,7 +2,7 @@
 
 Inputs: ``schemas/hydraulic_state|solver_diagnostics|mass_ledger|events|episode|
 simulation_rejected.schema.json`` and hand-built rows. Outputs: pass/fail.
-Key assumptions: these schemas are proposals (version 0.5.0, ``x-status`` marker) for
+Key assumptions: these schemas are proposals (version 0.6.0, ``x-status`` marker) for
 review by the schema owner; every row carries ``hidden = true``; the structural checks
 here say nothing about physical plausibility.
 
@@ -19,7 +19,7 @@ import pytest
 from verum.contracts import PROPOSED_SCHEMA_NAMES, load_schema, validator
 
 Doc = dict[str, Any]
-BASE = {"schema_version": "0.5.0", "episode_id": "EP-0123456789AB", "hidden": True}
+BASE = {"schema_version": "0.6.0", "episode_id": "EP-0123456789AB", "hidden": True}
 
 PAYLOADS: dict[str, Doc] = {
     "node_state": {
@@ -96,20 +96,33 @@ DIAG: Doc = {
     "convergence_ok": True,
     "phase_validity_status": "OK",
     "domain_valid": True,
-    "quasi_steady_ratio": 1.59,
-    "quasi_steady_invalid": True,
-    "active_event_ids": ["EV-0001"],
-    "event_windows_started": [
-        {
-            "event_id": "EV-0001",
-            "kind": "valve_stroke",
-            "element_id": "XV-R000",
-            "duration_s": 10.0,
-            "tau_s": 6.3,
-            "ratio": 1.59,
-            "quasi_steady_invalid": True,
-        }
-    ],
+    "flow_model": "inertial",
+    "active_validity_window_ids": ["VW-0001"],
+}
+BOUNDARY: Doc = {
+    **BASE,
+    "dataset": "boundary_state",
+    "t_sim_s": 5.0,
+    "side": None,
+    "demand_process": True,
+    "downstream_factor": 1.02,
+    "log_downstream_factor": 0.0198,
+    "boundary_law_coefficient_m": 10.26,
+    "reservoir_pressure_pa_gauge": 200000.0,
+    "atmosphere_stratum": "sea_level",
+    "atmosphere_pa_abs": 101325.0,
+}
+WINDOW: Doc = {
+    **BASE,
+    "dataset": "validity_windows",
+    "window_id": "VW-0001",
+    "kind": "flow_collapse",
+    "element_id": "XV-R000",
+    "t_start_s": 2978.8,
+    "t_end_s": 2978.99,
+    "reason": "flow_collapse_within_wave_criterion",
+    "ratio": 0.514,
+    "round_trip_s": 0.3609,
 }
 LEDGER: Doc = {
     **BASE,
@@ -142,7 +155,7 @@ EPISODE: Doc = {
     "seed": 1,
     "config_hash": "a" * 64,
     "lockfile_hash": "b" * 64,
-    "solver_version": "quasi-steady-heun-1",
+    "solver_version": "path-dynamics-radau-1",
     "dataset_tier": "analytic_verification",
     "step_size_s": 1.0,
     "duration_s": 3600.0,
@@ -152,6 +165,30 @@ EPISODE: Doc = {
     "fluid_density_kg_m3": 750.0,
     "initial_tank_levels_m": {"TK-101": 9.0},
     "tolerances": {"mass_conservation_kg_s": 4.2e-4},
+    "atmosphere_stratum": "sea_level",
+    "atmosphere_pa_abs": 101325.0,
+    "demand_process": False,
+    "events_evaluated": 3,
+    "validity_windows": [
+        {
+            k: v
+            for k, v in WINDOW.items()
+            if k
+            in (
+                "window_id",
+                "kind",
+                "element_id",
+                "t_start_s",
+                "t_end_s",
+                "reason",
+                "ratio",
+                "round_trip_s",
+            )
+        }
+    ],
+    "protection_crossings": [
+        {"t_sim_s": 848.23, "tank": "TK-101", "threshold": "high_alarm", "level_m": 12.5}
+    ],
     "pipe_inventory_constant": True,
     "status": "completed",
 }
@@ -191,7 +228,21 @@ POSITIVE: list[tuple[str, str, Doc]] = [
     (
         "solver_diagnostics",
         "diag without window",
-        _edit(_edit(DIAG, "quasi_steady_ratio", None), "event_windows_started", []),
+        _edit(_edit(DIAG, "active_validity_window_ids", []), "flow_model", "inactive"),
+    ),
+    ("boundary_state", "boundary", BOUNDARY),
+    ("boundary_state", "boundary without process", _edit(BOUNDARY, "demand_process", False)),
+    ("validity_windows", "window", WINDOW),
+    (
+        "validity_windows",
+        "branched window",
+        {
+            **WINDOW,
+            "kind": "branched_lineup",
+            "reason": "rigid_column_unavailable",
+            "ratio": None,
+            "round_trip_s": None,
+        },
     ),
     ("mass_ledger", "network", LEDGER),
     (
@@ -272,12 +323,19 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
         _edit(_state("tank_state"), "payload.roof_state", "sunk"),
     ),
     ("solver_diagnostics", "negative iterations", _edit(DIAG, "iterations", -1)),
-    ("solver_diagnostics", "ratio as text", _edit(DIAG, "quasi_steady_ratio", "low")),
-    (
-        "solver_diagnostics",
-        "window without ratio field",
-        _edit(DIAG, "event_windows_started", [{"event_id": "EV-1"}]),
-    ),
+    ("solver_diagnostics", "unknown flow model", _edit(DIAG, "flow_model", "steady")),
+    ("solver_diagnostics", "window ids as text", _edit(DIAG, "active_validity_window_ids", "VW-1")),
+    ("solver_diagnostics", "old ratio field", _edit(DIAG, "quasi_steady_ratio", 1.0)),
+    ("boundary_state", "factor below the clip", _edit(BOUNDARY, "downstream_factor", 0.5)),
+    ("boundary_state", "factor above the clip", _edit(BOUNDARY, "downstream_factor", 1.3)),
+    ("boundary_state", "unknown stratum", _edit(BOUNDARY, "atmosphere_stratum", "mountain")),
+    ("boundary_state", "missing log factor", _edit(BOUNDARY, "log_downstream_factor", _DROP)),
+    ("validity_windows", "no reason", _edit(WINDOW, "reason", _DROP)),
+    ("validity_windows", "unknown reason", _edit(WINDOW, "reason", "because")),
+    ("validity_windows", "unknown kind", _edit(WINDOW, "kind", "valve_leak")),
+    ("validity_windows", "open window", _edit(WINDOW, "t_end_s", None)),
+    ("episode", "unknown stratum", _edit(EPISODE, "atmosphere_stratum", "mountain")),
+    ("episode", "windows without reason", _edit(EPISODE, "validity_windows", [{"window_id": "x"}])),
     ("mass_ledger", "unknown scope", _edit(LEDGER, "scope", "TK-104")),
     ("mass_ledger", "missing residual", _edit(LEDGER, "residual_kg", _DROP)),
     ("events", "unknown event type", _edit(EVENT, "event_type", "fault_onset")),
@@ -315,8 +373,8 @@ def test_each_schema_has_positive_and_negative_cases(schema: str) -> None:
 @pytest.mark.parametrize("schema", PROPOSED_SCHEMA_NAMES)
 def test_each_schema_is_a_marked_proposal(schema: str) -> None:
     doc = load_schema(schema)
-    assert doc["x-status"] == "backend-proposed" and doc["$id"] == f"urn:verum:{schema}:0.5.0"
-    assert doc["properties"]["schema_version"]["pattern"] == "^0\\.5\\.[0-9]+$"
+    assert doc["x-status"] == "backend-proposed" and doc["$id"] == f"urn:verum:{schema}:0.6.0"
+    assert doc["properties"]["schema_version"]["pattern"] == "^0\\.6\\.[0-9]+$"
 
 
 def test_every_record_type_has_a_payload_definition() -> None:

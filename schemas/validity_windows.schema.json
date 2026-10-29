@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "urn:verum:validity_windows:0.6.0",
+  "title": "validity_windows (hidden, evaluator-only)",
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "window_id",
+    "kind",
+    "element_id",
+    "t_start_s",
+    "t_end_s",
+    "reason",
+    "ratio",
+    "round_trip_s"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.6\\.[0-9]+$"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "dataset": {
+      "const": "validity_windows"
+    },
+    "window_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "valve_stroke",
+        "receipt_setpoint",
+        "flow_collapse",
+        "path_closed",
+        "branched_lineup"
+      ]
+    },
+    "element_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "t_start_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "t_end_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "reason": {
+      "enum": [
+        "duration_below_wave_criterion",
+        "flow_collapse_within_wave_criterion",
+        "path_closed_with_flow",
+        "rigid_column_unavailable"
+      ]
+    },
+    "ratio": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "duration divided by the wave round-trip time; null if no single path exists or the interval is an instant"
+    },
+    "round_trip_s": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "2 sum(L/a) of the path, null for a branched lineup"
+    }
+  }
+}

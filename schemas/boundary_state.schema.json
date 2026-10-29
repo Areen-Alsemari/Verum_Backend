@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "urn:verum:boundary_state:0.6.0",
+  "title": "boundary_state (hidden, evaluator-only)",
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "t_sim_s",
+    "side",
+    "demand_process",
+    "downstream_factor",
+    "log_downstream_factor",
+    "boundary_law_coefficient_m",
+    "reservoir_pressure_pa_gauge",
+    "atmosphere_stratum",
+    "atmosphere_pa_abs"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.6\\.[0-9]+$"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "dataset": {
+      "const": "boundary_state"
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "side": {
+      "enum": [
+        "pre_event",
+        "post_event",
+        null
+      ]
+    },
+    "demand_process": {
+      "type": "boolean"
+    },
+    "downstream_factor": {
+      "type": "number",
+      "minimum": 0.8,
+      "maximum": 1.25,
+      "description": "f_d, the clipped factor that multiplies the boundary-law coefficient (decision D23)"
+    },
+    "log_downstream_factor": {
+      "type": "number",
+      "description": "the unclipped Ornstein-Uhlenbeck state, log f_d"
+    },
+    "boundary_law_coefficient_m": {
+      "type": "number",
+      "minimum": 0,
+      "description": "c f_d in m (pressure basis: head)"
+    },
+    "reservoir_pressure_pa_gauge": {
+      "type": "number"
+    },
+    "atmosphere_stratum": {
+      "enum": [
+        "sea_level",
+        "elevated"
+      ]
+    },
+    "atmosphere_pa_abs": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    }
+  }
+}

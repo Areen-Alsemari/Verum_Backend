@@ -9,11 +9,11 @@ Derivations (hand arithmetic):
       Q T - Q tau (1 - exp(-T/tau)), so after 3600 s it is 600 m3 - 0.33333 m3 (the
       transient deficit Q tau = 600/3600 x 2). With A = 706.858 m2 on the floating branch,
       the level rise is (600 - 0.33333)/706.858 = 0.848826 - 0.000472 = 0.848354 m. The
-      engine adds the trapezoid error of the Heun stage average, (dt^2/12) q'(0) / A =
-      1.0e-5 m at dt = 1 s.
+      Phase 3 engine added the trapezoid error of the Heun stage average, (dt^2/12) q'(0) / A =
+      1.0e-5 m at dt = 1 s; the implicit integration of Phase 3b removes it.
     * Accuracy target (decision D17): level error <= 0.025 mm = 2.5e-5 m.
-    * REJ-2. From 7.3 m to the stored minimum 7.1946 m the level falls 0.1054 m, i.e.
-      74.5 m3; at about 305 m3/h (0.0847 m3/s) that takes about 880 s.
+    * REJ-2. From 8.1 m to the stored minimum 7.9161 m (sea level, f_d = 0.8) the level falls
+      0.1839 m, i.e. 130.0 m3; at about 312 m3/h (0.0868 m3/s) that takes about 1498 s.
 Independence: the S0-B reference is a closed-form expression (independent). The S0-A,
 S0-C and REJ-2 references integrate the same steady flow function (the production
 hydraulic model) with an adaptive RK45 scheme, so they are independent in the time
@@ -42,6 +42,7 @@ from verum.hydraulics import (
     SteadyInputs,
     pumping_minimum_level,
 )
+from verum.hydraulics.pumping_minimum import STRATUM_FILENAMES
 from verum.lineups import load_lineup_table
 from verum.params import ParamValue
 from verum.sim.config import load_sim_config
@@ -223,34 +224,42 @@ def halving(model: HydraulicModel, geometry: TankGeometry) -> dict[float, dict[s
     return table
 
 
-def test_s0b_step_halving_shows_second_order_and_meets_the_target_at_one_second(
+def test_s0b_error_is_independent_of_the_step_and_far_below_the_target(
     halving: dict[float, dict[str, float]],
 ) -> None:
+    """The receipt flow ODE is integrated implicitly to a tolerance, not on the step grid.
+
+    Independent (closed form of S0-B). The Phase 3 engine had the Heun trapezoid error
+    (dt^2/12) q'(0) / A = 1.0e-5 m at dt = 1 s and second-order convergence; the present
+    integrator carries no step-size error, so the error sits at the integrator tolerance for
+    every grid step and the 2.5e-5 m target is met with a margin of more than four orders.
+    """
     errors = {dt: abs(v["S0-B"]) for dt, v in halving.items()}
-    orders = [math.log2(errors[a] / errors[b]) for a, b in ((2.0, 1.0), (1.0, 0.5), (0.5, 0.25))]
-    assert all(1.8 <= p <= 2.2 for p in orders), orders
-    assert min(orders) >= 0.8  # decision D8: observed order of at least 0.8 on three grids
-    assert (
-        errors[1.0] <= TARGET < errors[2.0]
-    )  # 1 s is the largest step of the grid that meets the target
-    assert errors[0.25] < errors[0.5] < errors[1.0]
+    assert all(e < 1e-9 for e in errors.values()), errors
+    assert all(e < TARGET * 1e-4 for e in errors.values())
 
 
-def test_s0b_error_matches_the_hand_trapezoid_estimate(
+def test_s0b_error_is_far_below_the_old_hand_trapezoid_estimate(
     halving: dict[float, dict[str, float]],
 ) -> None:
-    # (dt^2/12) q'(0) / A with q'(0) = Q/tau and A = 706.858 m2.
     for dt, row in halving.items():
         estimate = (dt**2 / 12.0) * (600.0 / 3600.0 / 2.0) / 706.858347
-        assert abs(row["S0-B"]) == pytest.approx(estimate, rel=0.05)
+        assert abs(row["S0-B"]) < 1e-3 * estimate, dt
 
 
-def test_s0a_is_smooth_enough_that_every_step_meets_the_target(
+def test_s0a_meets_the_target_at_every_step_and_does_not_depend_on_it(
     halving: dict[float, dict[str, float]],
 ) -> None:
-    assert all(abs(row["S0-A"]) <= TARGET for row in halving.values())
-    # S0-A errors sit at the solver-noise level (below 1e-8 m): no order is claimed.
-    assert all(abs(row["S0-A"]) < 1e-8 for row in halving.values())
+    """Not independent in the hydraulics: the reference integrates the steady solver.
+
+    The engine differs from the quasi-steady reference by the inertial lag of the delivery
+    column, hand-derived in ``test_path_dynamics`` (about 1.1e-6 m over the hour), so the
+    bound is 2e-6 m, and the spread over the grid steps is at the integrator tolerance.
+    """
+    errors = [row["S0-A"] for row in halving.values()]
+    assert all(abs(e) <= TARGET for e in errors)
+    assert all(abs(e) < 2e-6 for e in errors)
+    assert max(errors) - min(errors) < 1e-9
 
 
 # --- REJ-2 ----------
@@ -263,7 +272,9 @@ def test_rej2_crossing_time_matches_an_independent_integration(
 ) -> None:
     rejection = episodes["REJ-2"].outcome.rejection
     assert rejection is not None
-    minimum = pumping_minimum_level("TK-101", 45.0, "reference_fittings", 4.0).value
+    minimum = pumping_minimum_level(
+        "TK-101", 45.0, "reference_fittings", 4.0, None, STRATUM_FILENAMES["sea_level"]
+    ).value
     lineup = _lineup("DELIVER_101_A", model)
 
     def rhs(_t: float, y: Any) -> list[float]:
@@ -285,16 +296,17 @@ def test_rej2_crossing_time_matches_an_independent_integration(
     sol = solve_ivp(
         rhs,
         [0.0, 3600.0],
-        [geometry.volume_m3(7.3, RHO)],
+        [geometry.volume_m3(8.1, RHO)],
         method="RK45",
         rtol=1e-10,
         atol=1e-7,
         events=crossing,
     )
     t_ref = float(sol.t_events[0][0])
-    assert 878.0 < t_ref < 884.0  # hand estimate: 74.5 m3 at about 0.0847 m3/s
-    # The crossing time error follows from the level error target: 2.5e-5 m / (4.3e-4 m/s) = 0.06 s.
-    assert rejection["t_sim_s"] == pytest.approx(t_ref, abs=0.06)
+    # Hand estimate: (8.1 - 7.9161) m x 706.858 m2 = 130.0 m3 at about 0.0868 m3/s is 1498 s.
+    assert 1490.0 < t_ref < 1505.0
+    # The crossing time error follows from the level error target: 2.5e-5 m / (1.2e-4 m/s) = 0.2 s.
+    assert rejection["t_sim_s"] == pytest.approx(t_ref, abs=0.2)
     assert rejection["gate"] == "SG0"
-    assert minimum == pytest.approx(7.1946, abs=1e-4)
+    assert minimum == pytest.approx(7.9161, abs=1e-4)
     assert np.isfinite(t_ref)

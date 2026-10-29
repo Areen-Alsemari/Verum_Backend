@@ -186,5 +186,22 @@
     "DISCHARGE_HEADER": "E-D1",
     "DISTRIBUTION_BOUNDARY": "E-D2",
     "PIPELINE_RECEIPT_BOUNDARY": "E001"
-  }
+  },
+  "atmosphere_strata_pa_abs": {
+    "sea_level": {
+      "value": 101325.0,
+      "unit": "Pa",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D24-v1.0"
+    },
+    "elevated": {
+      "value": 94300.0,
+      "unit": "Pa",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D24-v1.0"
+    }
+  },
+  "atmosphere_strata_note": "elevated: sensitivity for a site near 600 m elevation, standard-atmosphere estimate, elevation from memory, to be confirmed by the team"
 }

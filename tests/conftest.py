@@ -82,7 +82,8 @@ def model() -> HydraulicModel:
     return HydraulicModel.load()
 
 
-SCENARIOS = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "REJ-1", "REJ-2"]
+COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
+SCENARIOS = [*COMPLETED, "REJ-1", "REJ-2"]
 
 
 @pytest.fixture(scope="session")
@@ -96,5 +97,5 @@ def episodes(
 
 @pytest.fixture(scope="session")
 def series(episodes: dict[str, EpisodeResult]) -> dict[str, Series]:
-    """Compact, schema-validated series of the five completed scenarios."""
-    return {sid: load_series(episodes[sid].directory) for sid in SCENARIOS[:5]}
+    """Compact, schema-validated series of the completed scenarios."""
+    return {sid: load_series(episodes[sid].directory) for sid in COMPLETED}

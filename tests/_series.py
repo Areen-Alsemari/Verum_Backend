@@ -20,7 +20,14 @@ from typing import Any
 
 from verum.contracts import validator
 
-DATASETS = ("hydraulic_state", "solver_diagnostics", "mass_ledger", "events")
+DATASETS = (
+    "hydraulic_state",
+    "solver_diagnostics",
+    "mass_ledger",
+    "events",
+    "boundary_state",
+    "validity_windows",
+)
 
 
 @dataclass
@@ -46,6 +53,11 @@ class Series:
     pump: dict[str, list[tuple[float, str | None, str, float, str, float | None]]] = field(
         default_factory=lambda: defaultdict(list)
     )
+    head: dict[str, list[tuple[float, str | None, float | None]]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+    boundary: list[dict[str, Any]] = field(default_factory=list)
+    windows: list[dict[str, Any]] = field(default_factory=list)
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
     ledger: list[dict[str, Any]] = field(default_factory=list)
     events: list[dict[str, Any]] = field(default_factory=list)
@@ -90,6 +102,7 @@ def _state_row(s: Series, row: dict[str, Any]) -> None:
         s.edge[el].append((t, side, p["flow_m3s"]))
     elif kind == "node_state":
         s.node[el].append((t, side, p["pressure_pa_abs"]))
+        s.head[el].append((t, side, p["hydraulic_head_m"]))
     elif kind == "protection_state":
         s.protection[el].append((t, side, p["state"], p["trip_latched"], p["signal_source"]))
     elif kind == "pump_state":
@@ -121,6 +134,10 @@ def load_series(directory: Path, validate_rows: bool = True) -> Series:
                 s.diagnostics.append(row)
             elif dataset == "mass_ledger":
                 s.ledger.append(row)
+            elif dataset == "boundary_state":
+                s.boundary.append(row)
+            elif dataset == "validity_windows":
+                s.windows.append(row)
             else:
                 s.events.append(row)
         s.rows[dataset], s.invalid[dataset] = count, bad

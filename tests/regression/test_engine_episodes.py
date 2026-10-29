@@ -15,13 +15,13 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import math
 import shutil
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-import _reference_hydraulics as ref
 from _series import Series
 from _truth_audit import audit, rewrite
 from verum.contracts import validate
@@ -34,7 +34,7 @@ from verum.sim.episode import EpisodeResult, run_episode
 from verum.sim.scenario import load_scenario
 from verum.truth import ListSink
 
-COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E"]
+COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
 AREA = 706.858347
 
 
@@ -50,16 +50,12 @@ def test_every_written_row_validates_against_its_schema(
     series: dict[str, Series], sid: str
 ) -> None:
     s = series[sid]
+    optional = {"events", "validity_windows"}  # healthy episodes may have none
     assert (
-        all(count > 0 for dataset, count in s.rows.items() if dataset != "events")
+        all(count > 0 for dataset, count in s.rows.items() if dataset not in optional)
         and s.rows["hydraulic_state"] > 100_000
     )
-    assert s.invalid == {
-        "hydraulic_state": 0,
-        "solver_diagnostics": 0,
-        "mass_ledger": 0,
-        "events": 0,
-    }
+    assert s.invalid == dict.fromkeys(s.rows, 0) and len(s.rows) == 6
 
 
 @pytest.mark.parametrize("sid", COMPLETED)
@@ -73,7 +69,8 @@ def test_manifest_lists_every_file_with_its_hash(
     files = {p.name for p in directory.iterdir() if p.name != "MANIFEST.sha256"}
     assert set(listed) == files == {
         "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",
-        "events.jsonl.gz", "episode.json", "provenance.json",
+        "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
+        "episode.json", "provenance.json",
     }  # fmt: skip
     for name, digest in listed.items():
         assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == digest
@@ -92,6 +89,11 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
         == episodes[sid].episode_id
     )
     assert doc["tolerances"]["mass_conservation_kg_s"] == 4.2e-4
+    stratum = "elevated" if sid == "S0-A-elev" else "sea_level"
+    assert doc["atmosphere_stratum"] == stratum
+    assert doc["atmosphere_pa_abs"] == (94300.0 if stratum == "elevated" else 101325.0)
+    assert doc["demand_process"] is (sid == "S0-F")
+    assert doc["solver_version"] == "path-dynamics-radau-1"
 
 
 def test_provenance_is_a_separate_file(episodes: dict[str, EpisodeResult]) -> None:
@@ -195,7 +197,7 @@ def test_audit_detects_a_ledger_that_disagrees_with_the_tank_state(
 # --- healthy envelope ----------
 
 
-@pytest.mark.parametrize("sid", ["S0-A", "S0-B", "S0-C", "S0u-D"])
+@pytest.mark.parametrize("sid", ["S0-A", "S0-B", "S0-C", "S0u-D", "S0-F", "S0-G", "S0-A-elev"])
 def test_healthy_scenarios_stay_normal_and_inside_the_level_envelope(
     series: dict[str, Series], sid: str
 ) -> None:
@@ -328,16 +330,23 @@ def _first(rows: list[tuple[Any, ...]], pred: Any) -> tuple[Any, ...]:
     return next(r for r in _grid(rows) if pred(r))
 
 
-def test_s0ue_trip_is_on_the_true_level_at_13_m(series: dict[str, Series]) -> None:
+def test_s0ue_trip_is_located_on_the_true_level_at_13_m(series: dict[str, Series]) -> None:
+    """Independent: 0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s (D26).
+
+    The receipt flow is 600 m3/h from the start (no ramp), the tank is on the floating branch
+    (constant area) and no other flow touches TK-101, so the level reaches 13 m at this time.
+    The trip is at that time, not on the 1 s grid, and the level there is the threshold.
+    """
     s = series["S0u-E"]
     trip = next(e for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
+    expected = 0.7 * AREA / (600.0 / 3600.0)
+    assert expected == pytest.approx(2968.805057, abs=1e-6)
+    assert trip["t_sim_s"] == pytest.approx(expected, abs=1e-3)  # error below 1 ms
+    assert trip["t_sim_s"] != round(trip["t_sim_s"])  # not quantised to the grid
     level = _first(s.tank["TK-101"], lambda r: r[0] == trip["t_sim_s"])[2]
-    assert 13.0 <= level <= 13.0 + (600 / 3600) * 1.0 / AREA + 1e-9  # at most one step of overshoot
-    previous = _first(s.tank["TK-101"], lambda r: r[0] == trip["t_sim_s"] - 1.0)[2]
-    assert previous < 13.0
-    # Independent estimate: 0.7 m x 706.858 m2 / (600/3600 m3/s) = 2968.8 s, less the ramp deficit.
-    assert trip["t_sim_s"] == pytest.approx(2969.0, abs=1.0)
+    assert level == pytest.approx(13.0, abs=1e-6)
     assert trip["payload"]["signal_source"] == "truth_placeholder"
+    assert trip["payload"]["crossing_located_s"] == trip["t_sim_s"]
 
 
 def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:
@@ -351,7 +360,8 @@ def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:
     t_trip = kinds[("HIGH_HIGH_TRIP", "TK-101")]
     t_req = kinds[("ISOLATION_REQUESTED", "TK-101")]
     t_conf = kinds[("ISOLATION_CONFIRMED", "TK-101")]
-    assert t_req == t_trip + 1.0 and kinds[("HIGH_ALARM", "TK-101")] < t_trip
+    assert t_req == math.floor(t_trip) + 1.0  # the next protection update after the trip
+    assert kinds[("HIGH_ALARM", "TK-101")] < t_trip
     request = next(e for e in ev if e["payload"].get("kind") == "ISOLATION_REQUESTED")
     assert request["payload"]["requested_valves"] == ["XV-R000", "XV-R101"]
     commands = [e for e in ev if e["event_type"] == "command" and e["payload"].get("open") is False]
@@ -382,84 +392,43 @@ def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:
     )
 
 
-def test_s0ue_level_after_closure_is_bounded_by_the_flow_decay(series: dict[str, Series]) -> None:
-    """Independent hand limit: the flow cannot exceed 600 m3/h until XV-R000 is physically closed.
+def test_s0ue_level_after_closure_is_bounded_by_hand_limits(series: dict[str, Series]) -> None:
+    """Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
 
-    The command comes one second after the trip, so the volume received after the trip is at most
-    (600/3600) x (1 + 9.99) m3 = 1.832 m3, a level rise of at most 0.00259 m; the flow is nearly
-    constant until the cap clips it (alpha below about 0.03), so the actual rise is close to it.
+    Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the
+    command at the next update (2969 s), so the volume received after the trip at 2968.805 s is
+    at most (600/3600) x (2978.99 - 2968.805) = 1.6975 m3, a level rise of 0.002402 m.
+    Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x
+    9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441
+    (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the
+    linear branch, reached 9.69 s into the stroke. The received volume is therefore at least
+    (600/3600) x (0.195 + 9.69) = 1.6475 m3, a level rise of 0.002331 m.
     """
     s = series["S0u-E"]
     trip = next(e["t_sim_s"] for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
     level_trip = _first(s.tank["TK-101"], lambda r: r[0] == trip)[2]
     final = _grid(s.tank["TK-101"])[-1][2]
-    bound = (600 / 3600) * (1.0 + 9.99) / AREA
-    assert level_trip < final <= level_trip + bound + 1e-9
-    assert (
-        final - level_trip
-    ) > 0.8 * bound  # the flow only collapses in the last 3 % of the stroke
-    assert final == pytest.approx(13.0 + 0.0025, abs=0.0006)
+    upper = (600 / 3600) * (2978.99 - trip) / AREA
+    lower = (600 / 3600) * (2969.0 - trip + 9.69) / AREA
+    assert upper == pytest.approx(0.002402, abs=1e-6) and lower == pytest.approx(0.002331, abs=2e-6)
+    assert lower <= final - level_trip <= upper
     later = [r[2] for r in _grid(s.tank["TK-101"]) if r[0] >= trip + 12.0]
     assert max(later) - min(later) < 1e-9  # no further rise after closure
     flows = {r[0]: r[2] for r in _grid(s.edge["E001"])}
-    t_cmd = trip + 1.0
-    assert flows[t_cmd + 5.0] * 3600 == pytest.approx(
-        600.0, rel=1e-6
-    )  # half-closed valve, below the cap
-    assert flows[t_cmd + 9.0] * 3600 == pytest.approx(
-        600.0, rel=1e-6
-    )  # alpha = 0.1: still below the cap
-    assert (
-        flows[t_cmd + 10.0] == 0.0
-    )  # the collapse happens inside the last second, between two rows
-    received = sum(
-        0.5 * (flows[a] + flows[b]) * (b - a)
-        for a, b in zip(sorted(flows), sorted(flows)[1:], strict=False)
-        if a >= trip
-    )
-    assert received / AREA == pytest.approx(
-        final - level_trip, rel=0.06
-    )  # 1 s trapezoid vs the last-second collapse
-
-
-def test_s0ue_quasi_steady_flag_on_the_esd_closure(series: dict[str, Series]) -> None:
-    """The ESD closure of XV-R000 (10 s) is flagged; the ratio is checked against a hand tau.
-
-    Hand tau (receipt path to TK-101 at 600 m3/h, valves open): sum L/A = 3471.8 1/m, Q0 = 1/6 m3/s,
-    head loss from the reference module with the hand-counted K (see test_sim_components).
-    """
-    s = series["S0u-E"]
-    started = [w for row in s.diagnostics for w in row["event_windows_started"]]
-    esd = next(w for w in started if w["element_id"] == "XV-R000")
-    inlet = next(w for w in started if w["element_id"] == "XV-R101")
-    loss = ref.loss(600 / 3600, ref.D300, 150.0, 1.4) + ref.loss(600 / 3600, ref.D200, 45.0, 2.0)
-    tau = 3471.8 * (600 / 3600) / (9.80665 * loss)
-    assert esd["tau_s"] == pytest.approx(tau, rel=2e-3) and esd["duration_s"] == 10.0
-    assert (
-        esd["ratio"] == pytest.approx(10.0 / tau, rel=2e-3) and esd["quasi_steady_invalid"] is True
-    )
-    assert (
-        inlet["ratio"] == pytest.approx(30.0 / tau, rel=2e-3)
-        and inlet["quasi_steady_invalid"] is True
-    )
-    flagged = [row for row in s.diagnostics if row["quasi_steady_invalid"]]
-    assert flagged and all(row["active_event_ids"] for row in flagged)
-    trip = next(e["t_sim_s"] for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
-    assert (
-        min(r["t_sim_s"] for r in flagged) == trip + 1.0
-        and max(r["t_sim_s"] for r in flagged) == trip + 31.0
-    )
-    assert all(
-        not row["quasi_steady_invalid"] and row["quasi_steady_ratio"] is None
-        for row in s.diagnostics
-        if row["t_sim_s"] < trip
-    )
+    t_cmd = math.floor(trip) + 1.0
+    assert flows[t_cmd + 5.0] * 3600 == pytest.approx(600.0, rel=1e-6)  # half closed, below the cap
+    assert flows[t_cmd + 9.0] * 3600 == pytest.approx(600.0, rel=1e-6)  # alpha = 0.1, below the cap
+    assert flows[t_cmd + 10.0] == 0.0  # the collapse happens inside the last second
+    received = [r for r in s.ledger if r["scope"] == "network" and r["side"] != "pre_event"]
+    at_trip = next(r for r in received if r["t_sim_s"] == trip)["cumulative_received_kg"]
+    at_end = received[-1]["cumulative_received_kg"]
+    assert (at_end - at_trip) / 750.0 / AREA == pytest.approx(final - level_trip, rel=1e-6)
 
 
 def test_the_flag_does_not_block_the_episode(episodes: dict[str, EpisodeResult]) -> None:
     for sid in ("S0u-D", "S0u-E"):
         assert not episodes[sid].rejected and episodes[sid].outcome.final_t == 3600.0
-        assert any(w.invalid for w in episodes[sid].outcome.windows)
+    assert episodes["S0u-E"].outcome.windows  # a flagged window does not stop the run
 
 
 # --- rejections ----------
@@ -472,8 +441,10 @@ def test_rej1_is_rejected_at_the_start_with_gate_time_and_parameter(
     record = json.loads((result.directory / "simulation_rejected.json").read_text())
     validate("simulation_rejected", record)
     assert (record["gate"], record["t_sim_s"]) == ("SG0", 0.0)
-    assert record["parameter"] == "pumping_minimum_level[TK-103,45C,reference_fittings,NPSH3=4m]"
-    assert record["value"] == 5.0 and record["limit"] == pytest.approx(8.7486, abs=1e-4)
+    assert record["parameter"] == (
+        "pumping_minimum_level[TK-103,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
+    )
+    assert record["value"] == 5.0 and record["limit"] == pytest.approx(9.6054, abs=1e-4)
     assert result.outcome.steps == 0
 
 
@@ -485,12 +456,13 @@ def test_rej2_is_rejected_when_the_level_crosses_the_pumping_minimum(
     validate("simulation_rejected", record)
     assert (
         record["gate"] == "SG0"
-        and record["parameter"] == "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m]"
+        and record["parameter"]
+        == "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
     )
-    assert 878.0 < record["t_sim_s"] < 884.0
+    assert 1480.0 < record["t_sim_s"] < 1520.0  # (8.1 - 7.9161) m x 706.858 m2 / 0.0868 m3/s
     assert (
         record["value"]
-        == pytest.approx(7.1946, abs=1e-4)
+        == pytest.approx(7.9161, abs=1e-4)
         == pytest.approx(record["limit"], abs=1e-4)
     )
 
@@ -573,11 +545,12 @@ def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
     outcome_b = b.run()
     for dataset in sink_a.rows:
         assert sink_a.rows[dataset][mark[dataset] :] == sink_b.rows[dataset], dataset
-        assert len(sink_b.rows[dataset]) > 0 or dataset == "events"
+        assert len(sink_b.rows[dataset]) > 0 or dataset in ("events", "validity_windows")
     assert (
         outcome_a.final_volumes == outcome_b.final_volumes and outcome_a.ledger == outcome_b.ledger
     )
-    assert [w.event_id for w in outcome_a.windows] == [w.event_id for w in outcome_b.windows]
+    assert [w.window_id for w in outcome_a.windows] == [w.window_id for w in outcome_b.windows]
+    assert outcome_a.crossings == outcome_b.crossings
 
 
 def test_the_checkpoint_is_independent_of_later_progress(model: HydraulicModel) -> None:

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:verum:episode:0.5.0",
+  "$id": "urn:verum:episode:0.6.0",
   "title": "episode (hidden, evaluator-only)",
   "x-status": "backend-proposed",
   "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
@@ -26,12 +26,18 @@
     "initial_tank_levels_m",
     "tolerances",
     "pipe_inventory_constant",
-    "status"
+    "status",
+    "atmosphere_stratum",
+    "atmosphere_pa_abs",
+    "demand_process",
+    "events_evaluated",
+    "validity_windows",
+    "protection_crossings"
   ],
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.5\\.[0-9]+$"
+      "pattern": "^0\\.6\\.[0-9]+$"
     },
     "dataset": {
       "const": "episode"
@@ -99,6 +105,105 @@
         "completed",
         "rejected"
       ]
+    },
+    "atmosphere_stratum": {
+      "enum": [
+        "sea_level",
+        "elevated"
+      ]
+    },
+    "atmosphere_pa_abs": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "demand_process": {
+      "type": "boolean"
+    },
+    "events_evaluated": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "validity_windows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "window_id",
+          "kind",
+          "element_id",
+          "t_start_s",
+          "t_end_s",
+          "reason",
+          "ratio",
+          "round_trip_s"
+        ],
+        "properties": {
+          "window_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "element_id": {
+            "type": "string"
+          },
+          "t_start_s": {
+            "type": "number",
+            "minimum": 0
+          },
+          "t_end_s": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ratio": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "round_trip_s": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "protection_crossings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "t_sim_s",
+          "tank",
+          "threshold",
+          "level_m"
+        ],
+        "properties": {
+          "t_sim_s": {
+            "type": "number",
+            "minimum": 0
+          },
+          "tank": {
+            "type": "string"
+          },
+          "threshold": {
+            "type": "string"
+          },
+          "level_m": {
+            "type": "number"
+          }
+        }
+      }
     }
   }
 }

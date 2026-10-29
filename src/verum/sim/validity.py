@@ -1,79 +1,80 @@
-"""Quasi-steady validity diagnostic: the rigid-column time constant of an event.
+"""Validity of the rigid-column model: the wave-round-trip criterion and the windows.
 
-Inputs: the path of an event (its edges), the flow before the event and the model.
-Outputs: ``tau`` and the event ratio ``duration / tau``.
+Inputs: the edges of a path, the screening wave speeds, an event duration and the
+factor. Outputs: the wave round-trip time of a path, the ratio ``duration / round trip``
+and the validity-window record.
 Key assumptions:
-    * ``tau = (sum L_i / A_i) Q0 / (g dH0)`` along the path (decision D18), where
-      ``dH0`` is the total head loss along the path at ``Q0`` with the valves fully
-      open. For a delivery path the boundary-law drop is part of ``dH0`` (it is a
-      resistance); the pump head is not a loss.
-    * ``Q0`` is the larger of the present flow and the flow the event moves towards
-      (the set-point for a receipt event; the reference flow if the pump is dead-headed),
-      so that an event that starts a flow from zero is not judged to have no inertia.
-    * An event is quasi-steady-valid only if ``duration >= factor * tau``; the factor
-      is a proposal (10). A failing event is flagged, never blocked, in this phase.
-    * Durations: a valve stroke lasts its travel time; a receipt set-point change lasts
-      four controller time constants.
+    * Decision D22: the rigid-column model is valid for an event only if the event lasts
+      at least ``factor`` (10) pressure-wave round trips of the path, ``duration >=
+      factor * 2 * sum(L_i / a_i)``. The wave speeds are the screening values of the audited
+      package for each nominal size; the factor is a proposal.
+    * A window is the interval in which the model does not represent the physics, with
+      the reason: a valve stroke or a set-point change shorter than the criterion, a flow
+      that collapses within it, a flow stopped by a closing path, or a branched lineup for
+      which no single rigid column exists. A window is hidden truth (decision D25).
 
-Source: ``docs/design_decisions.md`` D18.
+Source: ``docs/design_decisions.md`` D22 and D25; ``revised/05_simulation_validation_dataset.md``
+PAR-PIP-007 and VV-A2 (screening wave speeds).
 """
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
-from verum.contracts.topology import Topology
 from verum.hydraulics import HydraulicModel
+from verum.sim.config import SimConfig
+from verum.sim.path import _dn
+
+REASON_DURATION = "duration_below_wave_criterion"
+REASON_COLLAPSE = "flow_collapse_within_wave_criterion"
+REASON_STOPPED = "path_closed_with_flow"
+REASON_BRANCHED = "rigid_column_unavailable"
+KINDS = ("valve_stroke", "receipt_setpoint", "flow_collapse", "path_closed", "branched_lineup")
 
 
-@dataclass(frozen=True)
-class TauResult:
-    tau_s: float
-    sum_l_over_a: float
-    head_loss_m: float
-    flow_m3s: float
+@dataclass
+class ValidityWindow:
+    window_id: str
+    kind: str
+    element_id: str
+    t_start_s: float
+    t_end_s: float | None
+    reason: str
+    ratio: float | None
+    round_trip_s: float | None
+
+    def as_row(self) -> dict[str, object]:
+        return {
+            "window_id": self.window_id,
+            "kind": self.kind,
+            "element_id": self.element_id,
+            "t_start_s": self.t_start_s,
+            "t_end_s": self.t_end_s,
+            "reason": self.reason,
+            "ratio": self.ratio,
+            "round_trip_s": self.round_trip_s,
+        }
 
 
-def receipt_path(topology: Topology, tank: str | None) -> tuple[str, ...]:
-    ids = ["E001", "E002", "E003"]
-    if tank is not None:
-        ids += [e.edge_id for e in topology.edges if e.route_id == f"R-{tank[3:]}"]
-    return tuple(ids)
+def wave_speeds(cfg: SimConfig) -> dict[int, float]:
+    return {200: cfg["wave_speed_dn200_m_s"], 250: cfg["wave_speed_dn250_m_s"],
+            300: cfg["wave_speed_dn300_m_s"]}  # fmt: skip
 
 
-def delivery_path(topology: Topology, tank: str, pump: str) -> tuple[str, ...]:
-    branch = "P-A" if pump == "P-101A" else "P-B"
-    routes = (f"S-{tank[3:]}", "S-HEADER", branch, "D-MAIN")
-    return tuple(e.edge_id for r in routes for e in topology.edges if e.route_id == r)
+def round_trip_s(
+    model: HydraulicModel, edge_ids: tuple[str, ...], speeds: dict[int, float]
+) -> float:
+    """Time for a pressure wave to travel the path and return: ``2 sum L_i / a_i``."""
+    total = 0.0
+    for eid in edge_ids:
+        e = model.topology.edge(eid)
+        total += e.length_m / speeds[_dn(e.inner_diameter_m)]
+    return 2.0 * total
 
 
-def rigid_column_tau(
-    model: HydraulicModel,
-    edge_ids: tuple[str, ...],
-    flow_m3s: float,
-    profile: str,
-    law_coefficient_m: float = 0.0,
-) -> TauResult:
-    """Time constant of the liquid column along ``edge_ids`` at ``flow_m3s``."""
-    sum_l_over_a = sum(
-        model.topology.edge(e).length_m
-        / (math.pi * model.topology.edge(e).inner_diameter_m ** 2 / 4)
-        for e in edge_ids
-    )
-    ref = model.config["pump_reference_flow_m3h"]
-    loss = model.path_head_loss(edge_ids, flow_m3s, profile)
-    loss += law_coefficient_m * (flow_m3s * 3600.0 / ref) ** 2
-    if flow_m3s <= 0.0 or loss <= 0.0:
-        return TauResult(0.0, sum_l_over_a, loss, flow_m3s)
-    tau = sum_l_over_a * flow_m3s / (model.g * loss)
-    return TauResult(tau, sum_l_over_a, loss, flow_m3s)
+def ratio(duration_s: float, round_trip: float) -> float:
+    return duration_s / round_trip
 
 
-def ratio(duration_s: float, tau_s: float) -> float | None:
-    """duration / tau, or None when tau is zero (no inertia to compare with)."""
-    return None if tau_s <= 0.0 else duration_s / tau_s
-
-
-def is_valid(duration_s: float, tau_s: float, factor: float) -> bool:
-    return duration_s >= factor * tau_s
+def is_valid(duration_s: float, round_trip: float, factor: float) -> bool:
+    return duration_s >= factor * round_trip

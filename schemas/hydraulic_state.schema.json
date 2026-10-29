@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:verum:hydraulic_state:0.5.0",
+  "$id": "urn:verum:hydraulic_state:0.6.0",
   "title": "hydraulic_state (hidden, evaluator-only)",
   "x-status": "backend-proposed",
   "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
@@ -20,7 +20,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.5\\.[0-9]+$"
+      "pattern": "^0\\.6\\.[0-9]+$"
     },
     "dataset": {
       "const": "hydraulic_state"
