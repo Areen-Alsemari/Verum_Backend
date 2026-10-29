@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 9 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 10 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -64,7 +64,7 @@ version superseded; records are not edited in place.
 | D30 | Sample dropout | SIM | 1.0 |
 | D31 | Valve contacts | SIM | 1.0 |
 | D32 | Sample phase | SIM | 1.0 |
-| D33 | Independent high-high detector inside the engine | DESIGN | 1.0 |
+| D33 | Independent high-high detector inside the engine | DESIGN | 1.1 (supersedes 1.0) |
 | D39 | Dead-leg pressure | SIM | 1.0 |
 | D40 | Alarm on the level-transmitter chain | DESIGN | 1.0 |
 | D41 | Campaign episode seeds | DESIGN | 1.0 |
@@ -857,6 +857,26 @@ version superseded; records are not edited in place.
 - **Notes.** The phase is a pure function of the tag name.
 
 ## D33 - Independent high-high detector inside the engine
+
+- **Version:** 1.1 (2026-10-29)  **Status:** DESIGN  **Supersedes:** 1.0
+- **Decision.** Unchanged from version 1.0 (detector offset of 1 mm standard deviation fixed per
+  episode, delay 0.2 s, own named stream, protection consumes its output, the LSHH observation is
+  the same signal after the comms delay), with one recorded **deviation**: the hidden
+  `protection_state` field `independent_level_m` holds the level the detector sees (the true level
+  plus the episode offset), where version 1.0 and the first implementation wrote the true level
+  into it. The hidden field that was called `process_level_m` is now `true_level_m` and holds the
+  true level (Phase 4c).
+- **Reason.** The field is named for the detector's input; writing the true level there made two
+  fields carry one quantity and hid the offset from an evaluator reading the truth. The change was
+  made in Phase 4c together with the requested rename, without being asked for; it is recorded
+  here instead of being left as an unrecorded edit.
+- **Effect.** Hidden datasets only; the schemas of the proposed hidden datasets moved to version
+  0.7.0 (a breaking change for evaluators). No agent-visible schema, observation or trip time is
+  affected. Tests: `independent_level_m - true_level_m` equals the offset in the trip event.
+- **Sensitivity required.** *Proposed*: offset sigma 0.5 and 2 mm; delay 0.1 and 0.5 s.
+- **Notes.** Version 1.0 is kept below.
+
+## D33 - Independent high-high detector inside the engine (version 1.0, superseded)
 
 - **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
 - **Decision.** Each tank has an independent detector: the true level plus a fixed offset (standard deviation 1 mm, drawn once per episode from its own named stream), and an output delay of 0.2 s. It asserts when level plus offset reaches the trip level; the assertion is located by root-finding (D26) and delivered 0.2 s later. The protection logic consumes the detector output for the high-high trip; the LSHH observation is the same signal after the comms delay. The tag `truth_placeholder` is removed from the rows. The ordinary process level of the alarm is the level estimate of the control system and carries the tag `process_level`.
