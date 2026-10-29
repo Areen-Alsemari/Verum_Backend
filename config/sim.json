@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Parameters of the quasi-steady engine. Every entry is a ParamValue.",
+  "source": "docs/design_decisions.md D3, D4, D17, D18, D19",
+  "parameters": {
+    "time_step_s": {
+      "value": 1.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D17-v1.0"
+    },
+    "level_accuracy_target_m": {
+      "value": 2.5e-05,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D17-v1.0"
+    },
+    "receipt_controller_tau_s": {
+      "value": 2.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D3-v2.0"
+    },
+    "stroke_time_xv_r000_s": {
+      "value": 10.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D4-v2.0"
+    },
+    "stroke_time_other_motorized_s": {
+      "value": 30.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D4-v2.0"
+    },
+    "quasi_steady_factor": {
+      "value": 10.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D18-v1.0"
+    },
+    "receipt_event_duration_factor": {
+      "value": 4.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D18-v1.0"
+    },
+    "rejection_crossing_tolerance_s": {
+      "value": 1e-06,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-PHASE3-NUMERICS"
+    }
+  }
+}

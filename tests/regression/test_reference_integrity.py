@@ -78,8 +78,36 @@ def test_schema_copy_is_unchanged(root: Path, name: str) -> None:
     assert copy == (root / "config" / "reference" / "schemas" / file).read_bytes()
 
 
-def test_schema_directory_holds_exactly_six_schemas(root: Path) -> None:
-    assert len(list((root / "schemas").glob("*.json"))) == 6
+PROPOSED_SCHEMAS = [
+    "hydraulic_state",
+    "solver_diagnostics",
+    "mass_ledger",
+    "events",
+    "episode",
+    "simulation_rejected",
+]
+
+
+def test_schema_directory_holds_the_six_audited_and_six_proposed_schemas(root: Path) -> None:
+    names = sorted(p.name for p in (root / "schemas").glob("*.json"))
+    assert names == sorted(f"{n}.schema.json" for n in [*SCHEMA_FILES, *PROPOSED_SCHEMAS])
+
+
+@pytest.mark.parametrize("name", PROPOSED_SCHEMAS)
+def test_proposed_schemas_are_marked_and_versioned(root: Path, name: str) -> None:
+    import json
+
+    schema = json.loads((root / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8"))
+    assert schema["x-status"] == "backend-proposed"
+    assert schema["$id"] == f"urn:verum:{name}:0.5.0"
+    assert schema["properties"]["hidden"] == {"const": True}
+    assert "hidden" in schema["required"]
+
+
+@pytest.mark.parametrize("name", SCHEMA_FILES)
+def test_audited_schemas_carry_no_proposal_marker(root: Path, name: str) -> None:
+    text = (root / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8")
+    assert "backend-proposed" not in text
 
 
 @pytest.mark.parametrize("name", UNPATCHED_CONTRACTS)

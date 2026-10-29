@@ -121,6 +121,34 @@
       "status": "provisional",
       "evidence_tag": "DESIGN",
       "provenance_id": "VERUM-PHASE2-NUMERICS"
+    },
+    "valve_full_open_k": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D4-v2.0"
+    },
+    "valve_alpha_c": {
+      "value": 0.05,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D4-v2.0"
+    },
+    "valve_rangeability": {
+      "value": 50.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D4-v2.0"
+    },
+    "valve_closed_alpha": {
+      "value": 0.001,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D19-v1.0"
     }
   },
   "property_scenarios": {

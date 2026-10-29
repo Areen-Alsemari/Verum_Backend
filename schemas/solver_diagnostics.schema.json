@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:solver_diagnostics:0.5.0",
+  "title": "solver_diagnostics (hidden, evaluator-only)",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "t_sim_s",
+    "side",
+    "iterations",
+    "max_mass_residual_kg_s",
+    "convergence_ok",
+    "phase_validity_status",
+    "domain_valid",
+    "quasi_steady_ratio",
+    "quasi_steady_invalid",
+    "active_event_ids",
+    "event_windows_started"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "solver_diagnostics"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "side": {
+      "enum": [
+        "pre_event",
+        "post_event",
+        null
+      ]
+    },
+    "iterations": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_mass_residual_kg_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "convergence_ok": {
+      "type": "boolean"
+    },
+    "phase_validity_status": {
+      "enum": [
+        "OK",
+        "SCREEN_FAILED",
+        "NPSH_MARGIN_FAILED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "domain_valid": {
+      "type": "boolean"
+    },
+    "quasi_steady_ratio": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "quasi_steady_invalid": {
+      "type": "boolean"
+    },
+    "active_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "event_windows_started": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event_id",
+          "kind",
+          "element_id",
+          "duration_s",
+          "tau_s",
+          "ratio",
+          "quasi_steady_invalid"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "valve_stroke",
+              "receipt_setpoint"
+            ]
+          },
+          "element_id": {
+            "type": "string"
+          },
+          "duration_s": {
+            "type": "number"
+          },
+          "tau_s": {
+            "type": "number"
+          },
+          "ratio": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "quasi_steady_invalid": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

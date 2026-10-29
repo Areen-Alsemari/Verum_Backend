@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:episode:0.5.0",
+  "title": "episode (hidden, evaluator-only)",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "scenario_id",
+    "seed",
+    "config_hash",
+    "lockfile_hash",
+    "solver_version",
+    "dataset_tier",
+    "step_size_s",
+    "duration_s",
+    "temperature_c",
+    "fitting_profile",
+    "healthy_envelope",
+    "fluid_density_kg_m3",
+    "initial_tank_levels_m",
+    "tolerances",
+    "pipe_inventory_constant",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "episode"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "config_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "lockfile_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "solver_version": {
+      "type": "string"
+    },
+    "dataset_tier": {
+      "enum": [
+        "analytic_verification",
+        "restricted_benchmark"
+      ]
+    },
+    "step_size_s": {
+      "type": "number"
+    },
+    "duration_s": {
+      "type": "number"
+    },
+    "temperature_c": {
+      "type": "number"
+    },
+    "fitting_profile": {
+      "type": "string"
+    },
+    "healthy_envelope": {
+      "type": "boolean"
+    },
+    "fluid_density_kg_m3": {
+      "type": "number"
+    },
+    "initial_tank_levels_m": {
+      "type": "object"
+    },
+    "tolerances": {
+      "type": "object"
+    },
+    "pipe_inventory_constant": {
+      "const": true
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "rejected"
+      ]
+    }
+  }
+}

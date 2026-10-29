@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:events:0.5.0",
+  "title": "events (hidden, evaluator-only)",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "sequence_index",
+    "t_sim_s",
+    "event_type",
+    "actor",
+    "asset_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "events"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "sequence_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "event_type": {
+      "enum": [
+        "command",
+        "valve_move",
+        "lineup_change",
+        "alarm",
+        "protection_trip",
+        "protection_request",
+        "protection_state_change"
+      ]
+    },
+    "actor": {
+      "enum": [
+        "operator",
+        "autonomous_protection",
+        "simulator_truth"
+      ]
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

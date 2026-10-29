@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:mass_ledger:0.5.0",
+  "title": "mass_ledger (hidden, evaluator-only)",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "t_sim_s",
+    "side",
+    "scope",
+    "liquid_kg",
+    "cumulative_received_kg",
+    "cumulative_delivered_kg",
+    "cumulative_spill_kg",
+    "residual_kg",
+    "tolerance_kg",
+    "closed"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "mass_ledger"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "side": {
+      "enum": [
+        "pre_event",
+        "post_event",
+        null
+      ]
+    },
+    "scope": {
+      "enum": [
+        "network",
+        "TK-101",
+        "TK-102",
+        "TK-103"
+      ]
+    },
+    "liquid_kg": {
+      "type": "number"
+    },
+    "cumulative_received_kg": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "cumulative_delivered_kg": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "cumulative_spill_kg": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "residual_kg": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "tolerance_kg": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "closed": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    }
+  }
+}

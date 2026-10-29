@@ -67,9 +67,10 @@ def edge_loss_coefficients(
     geometry: RouteGeometry,
     profile: FittingProfile,
     edge_ids: Collection[str],
+    bends: dict[str, int] | None = None,
 ) -> dict[str, float]:
     """Total K for each requested edge under the profile."""
-    bends = bends_per_edge(topology, geometry)
+    bends = bends if bends is not None else bends_per_edge(topology, geometry)
     result: dict[str, float] = {}
     for edge in topology.edges:
         if edge.edge_id in edge_ids:

@@ -8,11 +8,20 @@ Source: ``VERUM_INTEGRATION_README.md`` section G (how to use the package).
 from verum.contracts.errors import ContractError
 from verum.contracts.fluid import FluidContract, load_fluid_contract
 from verum.contracts.policy import ReleasePolicy, load_policy
-from verum.contracts.schemas import SCHEMA_NAMES, load_schema, validate, validator
+from verum.contracts.schemas import (
+    ALL_SCHEMA_NAMES,
+    PROPOSED_SCHEMA_NAMES,
+    SCHEMA_NAMES,
+    load_schema,
+    validate,
+    validator,
+)
 from verum.contracts.sensors import SensorContract, load_sensor_contract
 from verum.contracts.topology import Topology, load_topology
 
 __all__ = [
+    "ALL_SCHEMA_NAMES",
+    "PROPOSED_SCHEMA_NAMES",
     "SCHEMA_NAMES",
     "ContractError",
     "FluidContract",

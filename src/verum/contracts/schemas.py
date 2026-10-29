@@ -5,6 +5,9 @@ Inputs: schema files in ``schemas/`` (Draft 2020-12) and candidate documents.
 Outputs: validators, and ``validate`` which raises ``ContractError`` on the
 first group of violations.
 Key assumptions:
+    * The six audited schemas are ``SCHEMA_NAMES``; the six hidden-dataset schemas
+      of the engine are ``PROPOSED_SCHEMA_NAMES`` (version 0.5.0, marked
+      ``x-status: backend-proposed`` for review by the schema owner).
     * ``fault_truth`` refers to ``urn:verum:paramvalue:0.4.0``; the registry
       built here resolves that reference locally, never over the network.
     * Format assertions (for example ``date-time``) are enabled; a schema that
@@ -39,6 +42,17 @@ SCHEMA_NAMES: Final = (
 )
 
 
+PROPOSED_SCHEMA_NAMES: Final = (
+    "hydraulic_state",
+    "solver_diagnostics",
+    "mass_ledger",
+    "events",
+    "episode",
+    "simulation_rejected",
+)
+ALL_SCHEMA_NAMES: Final = (*SCHEMA_NAMES, *PROPOSED_SCHEMA_NAMES)
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         with path.open(encoding="utf-8") as handle:
@@ -52,7 +66,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def load_schema(name: str, directory: Path | None = None) -> dict[str, Any]:
     """Load one schema by short name, for example ``"observation"``."""
-    if name not in SCHEMA_NAMES:
+    if name not in ALL_SCHEMA_NAMES:
         raise ContractError(f"unknown schema {name!r}")
     schema = _read_json((directory or schemas_dir()) / f"{name}.schema.json")
     try:
@@ -65,7 +79,7 @@ def load_schema(name: str, directory: Path | None = None) -> dict[str, Any]:
 def schema_registry(directory: Path | None = None) -> Registry[Any]:
     """Return a registry in which every VERUM schema resolves by its ``$id``."""
     registry: Registry[Any] = Registry()
-    for name in SCHEMA_NAMES:
+    for name in ALL_SCHEMA_NAMES:
         schema = load_schema(name, directory)
         registry = registry.with_resource(
             schema["$id"], Resource.from_contents(schema, DRAFT202012)

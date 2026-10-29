@@ -37,6 +37,10 @@ MIN_LOSS_SLOPE = 1e-12
 class FlowLaw:
     """Flow as a function of the head difference ``delta = H_a - H_b``."""
 
+    def evaluate(self, delta: float) -> tuple[float, float]:
+        """Flow and slope together (one inversion instead of two)."""
+        return self.flow(delta), self.slope(delta)
+
     def flow(self, delta: float) -> float:
         raise NotImplementedError
 
@@ -63,11 +67,15 @@ class LossLaw(FlowLaw):
         return math.copysign(q, delta)
 
     def slope(self, delta: float) -> float:
-        q = abs(self.flow(delta))
+        return self.evaluate(delta)[1]
+
+    def evaluate(self, delta: float) -> tuple[float, float]:
+        flow = self.flow(delta)
+        q = abs(flow)
         step = max(1e-6 * q, 1e-9)
         low = max(q - step, 0.0)
         d_loss = (self.loss(q + step) - self.loss(low)) / (q + step - low)
-        return 1.0 / max(d_loss, MIN_LOSS_SLOPE)
+        return flow, 1.0 / max(d_loss, MIN_LOSS_SLOPE)
 
 
 @dataclass(frozen=True)
@@ -81,6 +89,9 @@ class OneWay(FlowLaw):
 
     def slope(self, delta: float) -> float:
         return self.inner.slope(delta) if delta > 0 else SLOPE_FLOOR
+
+    def evaluate(self, delta: float) -> tuple[float, float]:
+        return self.inner.evaluate(delta) if delta > 0 else (0.0, SLOPE_FLOOR)
 
 
 @dataclass(frozen=True)
@@ -117,7 +128,10 @@ def _components(edges: list[Edge]) -> dict[str, int]:
 
 
 def _initial_heads(
-    edges: list[Edge], fixed: Mapping[str, float], inflow: Mapping[str, float]
+    edges: list[Edge],
+    fixed: Mapping[str, float],
+    inflow: Mapping[str, float],
+    initial: Mapping[str, float] | None = None,
 ) -> dict[str, float]:
     comp = _components(edges)
     fixed_by_comp: dict[int, list[float]] = defaultdict(list)
@@ -130,6 +144,9 @@ def _initial_heads(
             continue
         if not fixed_by_comp[c]:
             raise HydraulicInputError(f"node {node} has no fixed-head node in its component")
+        if initial is not None and node in initial:
+            heads[node] = initial[node]
+            continue
         mean = sum(fixed_by_comp[c]) / len(fixed_by_comp[c])
         heads[node] = mean + (5.0 if inflow.get(node, 0.0) > 0 else 0.0)
     return heads
@@ -140,10 +157,12 @@ def _evaluate(
 ) -> tuple[dict[str, float], dict[str, float]]:
     flows, slopes = {}, {}
     for e in edges:
-        delta = heads[e.a] - heads[e.b]
-        flows[e.name] = e.law.flow(delta)
-        slopes[e.name] = e.law.slope(delta)
+        flows[e.name], slopes[e.name] = e.law.evaluate(heads[e.a] - heads[e.b])
     return flows, slopes
+
+
+def _flows_only(edges: list[Edge], heads: Mapping[str, float]) -> dict[str, float]:
+    return {e.name: e.law.flow(heads[e.a] - heads[e.b]) for e in edges}
 
 
 def _balance(
@@ -165,9 +184,14 @@ def solve_heads(
     inflow: Mapping[str, float],
     tolerance: float,
     max_iterations: int,
+    initial: Mapping[str, float] | None = None,
 ) -> Solution:
-    """Solve node heads for the given edges and boundary data."""
-    heads = _initial_heads(edges, fixed, inflow)
+    """Solve node heads for the given edges and boundary data.
+
+    ``initial`` warm-starts the free nodes it names; the result does not depend on it
+    beyond the iteration path.
+    """
+    heads = _initial_heads(edges, fixed, inflow, initial)
     free = sorted(n for n in heads if n not in fixed)
     index = {n: i for i, n in enumerate(free)}
     for iteration in range(max_iterations + 1):
@@ -217,7 +241,7 @@ def _newton_step(
         trial = dict(heads)
         for node, i in index.items():
             trial[node] = heads[node] + alpha * step[i]
-        f_trial, _ = _evaluate(edges, trial)
+        f_trial = _flows_only(edges, trial)
         bal = _balance(edges, f_trial, inflow)
         if sum(bal[x] ** 2 for x in free) < (1 - 2e-4 * alpha) * merit0:
             return trial

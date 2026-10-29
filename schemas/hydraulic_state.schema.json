@@ -1,0 +1,447 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:hydraulic_state:0.5.0",
+  "title": "hydraulic_state (hidden, evaluator-only)",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "t_sim_s",
+    "record_type",
+    "element_id",
+    "side",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "hydraulic_state"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "record_type": {
+      "enum": [
+        "node_state",
+        "edge_state",
+        "tank_state",
+        "valve_state",
+        "pump_state",
+        "protection_state"
+      ]
+    },
+    "element_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "side": {
+      "enum": [
+        "pre_event",
+        "post_event",
+        null
+      ]
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "node_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pressure_pa_abs",
+        "hydraulic_head_m",
+        "pressure_basis",
+        "reference_edge"
+      ],
+      "properties": {
+        "pressure_pa_abs": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "hydraulic_head_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pressure_basis": {
+          "const": "Pa_abs"
+        },
+        "reference_edge": {
+          "type": "string"
+        }
+      }
+    },
+    "edge_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "flow_m3s",
+        "velocity_m_s",
+        "p_from_pa_abs",
+        "p_to_pa_abs",
+        "fluid_temperature_K"
+      ],
+      "properties": {
+        "flow_m3s": {
+          "type": "number"
+        },
+        "velocity_m_s": {
+          "type": "number"
+        },
+        "p_from_pa_abs": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "p_to_pa_abs": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fluid_temperature_K": {
+          "type": "number"
+        }
+      }
+    },
+    "tank_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level_m",
+        "volume_m3",
+        "net_inflow_m3s",
+        "temperature_K",
+        "roof_state"
+      ],
+      "properties": {
+        "level_m": {
+          "type": "number"
+        },
+        "volume_m3": {
+          "type": "number"
+        },
+        "net_inflow_m3s": {
+          "type": "number"
+        },
+        "temperature_K": {
+          "type": "number"
+        },
+        "roof_state": {
+          "enum": [
+            "landed",
+            "transition",
+            "floating"
+          ]
+        }
+      }
+    },
+    "valve_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "element_class",
+        "commanded_open",
+        "position_frac",
+        "physically_closed",
+        "flow_m3s",
+        "delta_p_pa",
+        "check_state",
+        "k_loss"
+      ],
+      "properties": {
+        "element_class": {
+          "enum": [
+            "isolation",
+            "check"
+          ]
+        },
+        "commanded_open": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "position_frac": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "physically_closed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "flow_m3s": {
+          "type": "number"
+        },
+        "delta_p_pa": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "check_state": {
+          "enum": [
+            "open",
+            "closed",
+            null
+          ]
+        },
+        "k_loss": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "pump_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_state",
+        "speed_ratio",
+        "flow_m3s",
+        "head_m",
+        "shaft_power_W",
+        "NPSHa_m",
+        "NPSH3_m",
+        "NPSH_margin_ratio",
+        "domain_valid",
+        "phase_validity_status"
+      ],
+      "properties": {
+        "run_state": {
+          "enum": [
+            "stopped",
+            "running"
+          ]
+        },
+        "speed_ratio": {
+          "type": "number"
+        },
+        "flow_m3s": {
+          "type": "number"
+        },
+        "head_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shaft_power_W": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "NPSHa_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "NPSH3_m": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "NPSH_margin_ratio": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "domain_valid": {
+          "type": "boolean"
+        },
+        "phase_validity_status": {
+          "enum": [
+            "OK",
+            "SCREEN_FAILED",
+            "NPSH_MARGIN_FAILED",
+            "NOT_APPLICABLE"
+          ]
+        }
+      }
+    },
+    "protection_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "trip_latched",
+        "signal_source",
+        "process_level_m",
+        "independent_level_m"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "NORMAL",
+            "HIGH_ALARM",
+            "HIGH_HIGH",
+            "ISOLATION_REQUESTED",
+            "CONFIRMED_ISOLATED",
+            "FAILED_ISOLATION",
+            "PROTECTION_UNAVAILABLE"
+          ]
+        },
+        "trip_latched": {
+          "type": "boolean"
+        },
+        "signal_source": {
+          "const": "truth_placeholder"
+        },
+        "process_level_m": {
+          "type": "number"
+        },
+        "independent_level_m": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "record_type": {
+            "const": "node_state"
+          }
+        },
+        "required": [
+          "record_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/node_state"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_type": {
+            "const": "edge_state"
+          }
+        },
+        "required": [
+          "record_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/edge_state"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_type": {
+            "const": "tank_state"
+          }
+        },
+        "required": [
+          "record_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/tank_state"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_type": {
+            "const": "valve_state"
+          }
+        },
+        "required": [
+          "record_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/valve_state"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_type": {
+            "const": "pump_state"
+          }
+        },
+        "required": [
+          "record_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/pump_state"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "record_type": {
+            "const": "protection_state"
+          }
+        },
+        "required": [
+          "record_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/protection_state"
+          }
+        }
+      }
+    }
+  ]
+}

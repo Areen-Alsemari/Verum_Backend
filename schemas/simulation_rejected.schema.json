@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:simulation_rejected:0.5.0",
+  "title": "simulation_rejected (hidden, evaluator-only)",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "hidden",
+    "scenario_id",
+    "gate",
+    "t_sim_s",
+    "parameter",
+    "detail",
+    "value",
+    "limit"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.5\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "simulation_rejected"
+    },
+    "episode_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hidden": {
+      "const": true
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "gate": {
+      "enum": [
+        "SG0",
+        "SG1",
+        "SG2",
+        "SG3"
+      ]
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "parameter": {
+      "type": "string",
+      "minLength": 1
+    },
+    "detail": {
+      "type": "string"
+    },
+    "value": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "limit": {
+      "type": [
+        "number",
+        "null"
+      ]
+    }
+  }
+}

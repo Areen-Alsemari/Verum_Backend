@@ -49,17 +49,19 @@ from verum.graph import Lineup, Network, RouteGeometry, load_route_geometry
 from verum.hydraulics import solver as sv
 from verum.hydraulics.boundaries import DeliveryBoundary, ReceiptBoundary
 from verum.hydraulics.config import (
+    FittingProfile,
     HydraulicConfig,
     load_boundary_law_coefficient,
     load_fitting_profile,
     load_hydraulic_config,
 )
 from verum.hydraulics.errors import ConvergenceError, HydraulicInputError, PumpOutsideCurve
-from verum.hydraulics.fittings import edge_loss_coefficients
+from verum.hydraulics.fittings import bends_per_edge, edge_loss_coefficients
 from verum.hydraulics.friction import head_loss
 from verum.hydraulics.properties import vapor_pressure_pa
 from verum.hydraulics.pump import FixedSpeedPump, PumpElement, hydraulic_power_w, shaft_power_w
 from verum.hydraulics.result import PhaseGate, PumpPoint, SteadyResult
+from verum.hydraulics.valves import loss_coefficient
 
 SOURCE = "PIPELINE_RECEIPT_BOUNDARY"
 BOUNDARY = "DISTRIBUTION_BOUNDARY"
@@ -81,6 +83,8 @@ class SteadyInputs:
     delivery: DeliveryBoundary = field(default_factory=DeliveryBoundary)
     pump: PumpElement | None = None
     npsh3_coefficient_m: float | None = None
+    valve_positions: Mapping[str, float] = field(default_factory=dict)
+    warm_start: Mapping[str, float] | None = None
 
 
 class _PumpLaw(sv.FlowLaw):
@@ -128,6 +132,10 @@ class HydraulicModel:
         self.patm = config["atmosphere_pa_abs"]
         self.node_z = self._node_elevations()
         self._edges = {e.edge_id: e for e in topology.edges}
+        self._bends = bends_per_edge(topology, geometry)
+        self._profiles: dict[tuple[str, float], FittingProfile] = {}
+        self._active: dict[Lineup, frozenset[str]] = {}
+        self._laws: dict[str, float] = {}
 
     @classmethod
     def load(cls, directory: Path | None = None) -> HydraulicModel:
@@ -165,8 +173,13 @@ class HydraulicModel:
         return node
 
     def _pipe_edges(self, active: frozenset[str], inputs: SteadyInputs) -> list[sv.Edge]:
-        profile = load_fitting_profile(inputs.fitting_profile, inputs.k_multiplier, self.directory)
-        ks = edge_loss_coefficients(self.topology, self.geometry, profile, active)
+        key = (inputs.fitting_profile, inputs.k_multiplier)
+        if key not in self._profiles:
+            self._profiles[key] = load_fitting_profile(*key, self.directory)
+        ks = edge_loss_coefficients(
+            self.topology, self.geometry, self._profiles[key], active, self._bends
+        )
+        self._add_valve_throttling(ks, inputs.valve_positions)
         edges: list[sv.Edge] = []
         for eid in sorted(active, key=lambda x: self.topology.edge_ids.index(x)):
             e = self._edges[eid]
@@ -179,6 +192,45 @@ class HydraulicModel:
                 sv.Edge(eid, self._end(e.from_node, "from"), self._end(e.to_node, "to"), law)
             )
         return edges
+
+    def path_head_loss(
+        self, edge_ids: tuple[str, ...], flow_m3s: float, profile: str, multiplier: float = 1.0
+    ) -> float:
+        """Sum of friction and local losses along edges at a flow, with valves fully open."""
+        key = (profile, multiplier)
+        if key not in self._profiles:
+            self._profiles[key] = load_fitting_profile(*key, self.directory)
+        ks = edge_loss_coefficients(
+            self.topology, self.geometry, self._profiles[key], edge_ids, self._bends
+        )
+        total = 0.0
+        for eid in edge_ids:
+            e = self._edges[eid]
+            total += head_loss(
+                flow_m3s,
+                e.inner_diameter_m,
+                e.length_m,
+                ks[eid],
+                self.rho,
+                self.mu,
+                self.roughness,
+                self.g,
+            )
+        return total
+
+    def _add_valve_throttling(self, ks: dict[str, float], positions: Mapping[str, float]) -> None:
+        """Extra K of a partly open valve, charged to the edge that starts at the valve."""
+        c = self.config
+        for valve, alpha in positions.items():
+            if alpha >= 1.0:
+                continue
+            extra = loss_coefficient(
+                alpha, c["valve_full_open_k"], c["valve_alpha_c"], c["valve_rangeability"]
+            )
+            extra -= c["valve_full_open_k"]
+            for eid, edge in self._edges.items():
+                if edge.from_node == valve and eid in ks:
+                    ks[eid] += extra
 
     def _loss_function(self, diameter: float, length: float, k: float):  # type: ignore[no-untyped-def]
         rho, mu, rough, g = self.rho, self.mu, self.roughness, self.g
@@ -202,7 +254,9 @@ class HydraulicModel:
         assert inputs.scenario is not None
         pump = inputs.pump or self.default_pump()
         self.network.check_lineup(inputs.lineup)
-        active = self.network.active_edges(inputs.lineup)
+        if inputs.lineup not in self._active:
+            self._active[inputs.lineup] = self.network.active_edges(inputs.lineup)
+        active = self._active[inputs.lineup]
         case = _Case(self, inputs, active, pump)
         return case.run(vp)
 
@@ -257,7 +311,11 @@ class _Case:
             self.edges.append(sv.Edge(p, f"{p}:in", f"{p}:out", _PumpLaw(self.pump)))
         c = inp.delivery.law_coefficient_m
         if c is None:
-            c = load_boundary_law_coefficient(inp.fitting_profile, m.directory).value
+            if inp.fitting_profile not in m._laws:
+                m._laws[inp.fitting_profile] = load_boundary_law_coefficient(
+                    inp.fitting_profile, m.directory
+                ).value
+            c = m._laws[inp.fitting_profile]
         self.c_law = c
         h_res = self._reservoir_head()
         if c > 0:
@@ -305,7 +363,9 @@ class _Case:
         tol, itmax = m.config["newton_flow_tolerance_m3s"], int(m.config["newton_max_iterations"])
         if not self.edges:
             return sv.Solution(dict(self.fixed), {}, {}, 0)
-        sol = sv.solve_heads(self.edges, self.fixed, self.inflow, tol, itmax)
+        sol = sv.solve_heads(
+            self.edges, self.fixed, self.inflow, tol, itmax, self.inputs.warm_start
+        )
         if self.receipt_active and SOURCE in self.inflow:
             cap = m.config["receipt_pressure_cap_pa_gauge"]
             p_source = m.rho * m.g * (sol.heads[SOURCE] - m.node_z[SOURCE])
