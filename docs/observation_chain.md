@@ -18,10 +18,25 @@ protection module and reads only `observations.jsonl.gz`.
 Only the 30 tags with status `emit` in the sensor contract have a specification
 (`config/sensor_specs.json`, from table 6.1.1 of the instrumentation document, and
 `config/sensors.json`). The six withheld tags (`YS-201A/B`, `VT-201A/B`, `IT-201A/B`) have none
-and produce no row. A quantity the hydraulic solve never determined in an episode (for example
-the pressure of an idle branch) gives rows with a null value, availability `missing_sample` and
-quality `bad`; nothing is invented in its place. These structural nulls depend on the operating
-state, which is a property of the truth model and is listed under limitations.
+and produce no row. Every truth quantity a tag reads is determined: a segment that carries no flow
+has a pressure (decision D39, below), so a null row is always a random dropout and the null rate
+is the same in every episode.
+
+### Dead-leg pressure (D39)
+
+A segment that the steady solve leaves without flow takes the head of the tank or the reservoir it
+is open to; an isolated, liquid-full segment holds the head it had when it was isolated and
+relaxes to the head across its closed isolation valve with a time constant of 60 s. A standby
+pump branch therefore reads the head of the suction tee, and PT-001 after a receipt closure
+decays from its last value toward the hydrostatic head of the receiving tank. Trapped-liquid
+thermal and compressibility effects are not modelled.
+
+### The two PT-001 values (D36 version 2)
+
+The observed PT-001 reads the start of `E002` (sensor contract): the source head less the loss of
+`E001` and `Lambda_E001 dQ/dt`, with `Lambda_E001 = 42.4 s2/m2`. The hidden tap value for the end
+of `E002` keeps `E001` and `E002` (63.6 s2/m2) and is labelled `end_of_E002_lambda_E001_E002` in
+the node row.
 
 ## The chain, in order
 
@@ -70,9 +85,12 @@ comms delay. Only the open contact is emitted.
 The high-high trip of the protection logic is decided on a detector inside the engine: the true
 level plus a fixed offset (standard deviation 1 mm, one draw per episode from the stream
 `detector/<tank>`), located by root-finding and delivered after 0.2 s. The LSHH observation is
-that signal after the comms delay. The alarm still uses the process level (the true level in
-this phase). In the S0u-E episode the offset moves the trip by 0.085 s against the former
-truth-based trip.
+that signal after the comms delay. HIGH_ALARM and its clearing use the level-transmitter chain
+itself (decision D40): the engine samples the same lag, noise, quantisation and dropout draws as
+the observation chain and the protection logic sees a sample when it has arrived, so the alarm
+time equals the `t_available_s` of the first `LT` observation at or above the alarm level. In the
+S0u-E episode the offset moves the trip by 0.085 s against the former truth-based trip, and the
+alarm moves from 848.23 s (true crossing) to 852.54 s.
 
 ## The gateway
 
@@ -84,12 +102,16 @@ allowlist that rejects keys outside the interface and strings that name a scenar
 window, a dataset tier or a truth dataset. The inspection catalog is empty: no catalog exists in
 the audited package or the configuration, and none has been invented.
 
+## Joining windows to observations
+
+The audited audit schema is closed. `verum.evaluation.attach_window_ids` (evaluation side, not in
+`verum.api`) attaches the identifiers of the validity windows that contain the sample time to
+copies of the observation rows. The joined rows are evaluator data.
+
 ## Limitations
 
 - Truth between rows is linear; outside valve strokes and validity windows the truth rows are 1 s
   apart (decision D34), so fast changes there are not resolved.
-- Rows that are null because the quantity was never determined reveal the operating state; a
-  static-pressure model for idle branches is needed to remove that.
+- Dead-leg pressures follow a selected relaxation (D39); they are not a model of trapped liquid.
 - Noise is white and Gaussian; there is no bias, drift, stuck value or spike.
-- The process level of the alarm is the true level.
 - Nothing in this document has been validated against measured data.

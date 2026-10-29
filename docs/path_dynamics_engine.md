@@ -115,13 +115,20 @@ logic only requests isolation. Commands and valve orders can be created only ins
 
 ## Protection signals
 
-The alarm uses the process level (the true level in this phase, labelled as such). The
-high-high trip is decided on an independent detector inside the engine (decision D33): the
+The alarm and its clearing use the level-transmitter chain of the tank (decision D40): lag,
+noise, quantisation, dropout and comms delay with the draws of the observation chain; the
+protection logic sees the latest sample that has arrived. The high-high trip is decided on an independent detector inside the engine (decision D33): the
 true level plus a fixed offset (standard deviation 1 mm, one draw per episode from the
 named stream `detector/<tank>`), located by root-finding, delivered to the protection logic
 after 0.2 s. A static test fails if any call hands anything but the detector function's
 output to the protection logic as the independent level. The LSHH observation is this same
 signal after the comms delay.
+
+## Dead legs (decision D39)
+
+Segments without flow have a pressure: a segment open to a tank or the distribution boundary takes
+its head; an isolated segment holds its head and relaxes to the head across its closed valve with
+60 s (`verum.sim.deadleg`). Every edge of the network therefore has end pressures at every row.
 
 ## Validity windows (decisions D22 and D25)
 

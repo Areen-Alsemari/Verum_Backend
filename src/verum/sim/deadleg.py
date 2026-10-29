@@ -38,7 +38,7 @@ def _determined_heads(
     rho_g = model.rho * model.g
     for e in model.topology.edges:
         ends = result.edge_end_pressures_pa_gauge.get(e.edge_id)
-        if ends is None:
+        if ends is None or e.edge_id in result.dead_edges:  # an earlier overlay is not a solve
             continue
         area = 3.141592653589793 * e.inner_diameter_m**2 / 4
         v2 = (result.edge_flows_m3s[e.edge_id] / area) ** 2 / (2.0 * model.g)

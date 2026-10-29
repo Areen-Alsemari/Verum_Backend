@@ -421,14 +421,18 @@ class Engine:
             st.dead_edges, t - st.edge_heads_t, self.cfg["dead_leg_time_constant_s"],
         )  # fmt: skip
         rho_g = m.rho * m.g
-        ends = dict(result.edge_end_pressures_pa_gauge)
+        ends = {
+            k: v
+            for k, v in result.edge_end_pressures_pa_gauge.items()
+            if k not in result.dead_edges
+        }
         for e in m.topology.edges:
             if e.edge_id not in ends:
                 h = heads[e.edge_id]
                 ends[e.edge_id] = (rho_g * (h - e.z_from_m), rho_g * (h - e.z_to_m))
         taps, tap_heads = dict(result.tap_pressures_pa_gauge), dict(result.tap_heads_m)
         for node, ref in m.config.tap_reference_edges.items():
-            if node not in taps:
+            if node not in taps or ref in result.dead_edges:
                 taps[node] = rho_g * (heads[ref] - m.node_z[node])
                 tap_heads[node] = heads[ref]
         return dataclasses.replace(
@@ -711,10 +715,16 @@ class Engine:
         st.iterations, st.residual_kg_s = step.iterations, step.residual
         self._check_crossing(step.t0, step.t1 - step.t0, st.current, step.new)  # type: ignore[arg-type]
         st.current = step.new
-        st.edge_heads, st.edge_heads_t = dict(step.new.edge_heads_m), step.t1
-        st.dead_edges = step.new.dead_edges
+        fresh = step.new.dead_edges - st.dead_edges
         self._finish_inactive(self._plan(step.t1, step.t1), step.t1)
         self._write_interior(step, base_received, base_delivered)
+        if fresh:
+            # An edge isolated at the end of the step keeps the last head determined inside it.
+            open_now = {v for v, x in st.valves.items() if not x.is_physically_closed(step.t1)}
+            step.new = self._with_dead_legs(step.new, st.volumes, step.t1, open_now)
+            st.current = step.new
+        st.edge_heads, st.edge_heads_t = dict(step.new.edge_heads_m), step.t1
+        st.dead_edges = step.new.dead_edges
         if landing is not None and abs(landing[0] - step.t1) <= 1e-6:
             self._record_landing(landing)
         self._check_ledger(step.t1)
