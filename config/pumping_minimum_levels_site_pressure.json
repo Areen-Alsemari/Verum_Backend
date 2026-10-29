@@ -1,0 +1,448 @@
+{
+  "schema_version": "1.0.0",
+  "label": "sensitivity for a site near 600 m elevation, standard-atmosphere estimate, elevation from memory, to be confirmed by the team",
+  "description": "Pumping-minimum tank level as in pumping_minimum_levels.json, recomputed with the atmospheric pressure below. A sensitivity file: it does not replace the sea-level file.",
+  "atmosphere_pa_abs": 94300.0,
+  "scenario": "EPA_GENERIC_RVP10_REFERENCE",
+  "source": "local/tools/site_pressure_study.py",
+  "levels": {
+    "TK-101": {
+      "25": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 3.3256,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 4.1926,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        }
+      },
+      "35": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 3.4891,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 6.9001,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 2.0306,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 4.2684,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 7.8725,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        }
+      },
+      "45": {
+        "pipe_only": {
+          "2.5": {
+            "value": 5.1462,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 7.5683,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 11.4502,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 5.9084,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 8.455,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        }
+      }
+    },
+    "TK-102": {
+      "25": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 4.0148,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 4.9015,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        }
+      },
+      "35": {
+        "pipe_only": {
+          "2.5": {
+            "value": 2.0051,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 4.182,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 7.6704,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 2.6902,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 4.9789,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 8.665,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        }
+      },
+      "45": {
+        "pipe_only": {
+          "2.5": {
+            "value": 5.8767,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 8.3538,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 6.6563,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 9.2607,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        }
+      }
+    },
+    "TK-103": {
+      "25": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 4.7039,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 2.2507,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 5.6103,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        }
+      },
+      "35": {
+        "pipe_only": {
+          "2.5": {
+            "value": 2.6496,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 4.8748,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 8.4408,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 3.3499,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 5.6895,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": 9.4574,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          }
+        }
+      },
+      "45": {
+        "pipe_only": {
+          "2.5": {
+            "value": 6.6072,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 9.1393,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 7.4041,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "4": {
+            "value": 10.0664,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE3-SITE-PRESSURE-SENSITIVITY"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        }
+      }
+    }
+  }
+}

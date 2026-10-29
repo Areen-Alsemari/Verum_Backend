@@ -13,6 +13,8 @@ Key assumptions:
       ``UnresolvedParameter``.
     * The levels are computed for the duty pump A with the delivery boundary law
       of decision D2 version 3.0 and the margin ratio of decision D7.
+    * ``SITE_PRESSURE_FILENAME`` names a sensitivity table for a lower
+      atmospheric pressure (94300 Pa); it never replaces the sea-level table.
 
 Source: ``docs/design_decisions.md`` D7 (version 2.0); the study script
 ``local/tools/phase2_studies.py``.
@@ -28,6 +30,7 @@ from verum.contracts.paths import config_dir
 from verum.params import ParamValue, ParamValueError
 
 FILENAME = "pumping_minimum_levels.json"
+SITE_PRESSURE_FILENAME = "pumping_minimum_levels_site_pressure.json"
 
 
 def pumping_minimum_level(
@@ -36,9 +39,10 @@ def pumping_minimum_level(
     profile: str,
     npsh3_coefficient_m: float,
     directory: Path | None = None,
+    filename: str = FILENAME,
 ) -> ParamValue:
     """The configured pumping-minimum level record for one combination."""
-    path = (directory or config_dir()) / FILENAME
+    path = (directory or config_dir()) / filename
     try:
         levels = json.loads(path.read_text(encoding="utf-8"))["levels"]
         raw = levels[tank][f"{temperature_c:g}"][profile][f"{npsh3_coefficient_m:g}"]
