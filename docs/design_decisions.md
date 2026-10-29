@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 7 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 8 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -55,7 +55,7 @@ version superseded; records are not edited in place.
 | D26 | Protection thresholds located inside the step | DESIGN | 1.0 |
 | D34 | Truth grid density | DESIGN | 1.0 |
 | D35 | NPSH3 coefficient and feasible sampling band | SIM | 1.0 |
-| D36 | Cap as a pressure limit at the source tap; anchor of the head | DESIGN | 1.0 |
+| D36 | Cap as a pressure limit at the source tap; anchor of the head | DESIGN | 2.0 (supersedes 1.0) |
 | D37 | Tier of episodes with flagged windows | DESIGN | 1.0 |
 | D38 | Pending sensitivity studies | DESIGN | 1.0 |
 | D27 | Observation units and the atmosphere stratum | DESIGN | 1.1 (supersedes 1.0) |
@@ -65,6 +65,8 @@ version superseded; records are not edited in place.
 | D31 | Valve contacts | SIM | 1.0 |
 | D32 | Sample phase | SIM | 1.0 |
 | D33 | Independent high-high detector inside the engine | DESIGN | 1.0 |
+| D39 | Dead-leg pressure | SIM | 1.0 |
+| D40 | Alarm on the level-transmitter chain | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -717,6 +719,24 @@ version superseded; records are not edited in place.
 
 ## D36 - Cap as a pressure limit at the source tap; anchor of the head
 
+- **Version:** 2.0 (2026-10-29)  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D22
+- **Decision.** The 10 barg cap is a pressure limit at the supply end of the receipt column,
+  the start of `E001` (node `PIPELINE_RECEIPT_BOUNDARY`). Two taps are labelled separately:
+  - the *observed* PT-001 reads the start of `E002` (sensor contract, table 6.1.1): its head is
+    `H_source - loss(E001) - Lambda_up dQ/dt`, with `Lambda_up = L_E001 / (g A_DN300)`
+    (30 m, 42.4 s2/m2) over `E001` only;
+  - the *hidden* node value for the end of `E002` keeps `H_source - loss(E001, E002) -
+    Lambda_up dQ/dt` with `Lambda_up` over `E001` and `E002` (63.6 s2/m2).
+  Every other node head is anchored at the end where the drive acts as before.
+- **Reason.** Version 1.0 put the PT-001 tap after `E002`; the contract puts it at the start
+  of `E002`, so the observed value must not include the inertance and loss of `E002`.
+- **Sensitivity required.** None.
+- **Notes.** Both values are written to the hidden truth: the edge row of `E002` carries
+  the start-of-`E002` pressure, the tap node row the end-of-`E002` value. Version 1.0 is kept
+  below.
+
+## D36 - Cap as a pressure limit at the source tap; anchor of the head (version 1.0, superseded)
+
 - **Version:** 1.0 (2026-10-29)  **Status:** DESIGN  **Refines:** D22
 - **Decision.** The 10 barg cap is a pressure limit at `PIPELINE_RECEIPT_BOUNDARY`, the
   tap of PT-001, which lies at the start of `E001`. The column from the tap to the tank
@@ -841,6 +861,22 @@ version superseded; records are not edited in place.
 - **Reason.** The trip must be decided on a signal that has its own error and delay, not on the truth.
 - **Sensitivity required.** *Proposed*: offset sigma 0.5 and 2 mm; delay 0.1 and 0.5 s.
 - **Notes.** The process level used for the high alarm is still the true level in this phase, labelled as such.
+
+## D39 - Dead-leg pressure
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** An isolated, liquid-full segment holds the pressure it had when it was isolated and relaxes to its connected hydrostatic or boundary pressure with a time constant of 60 s: `H(t) = H_target + (H_0 - H_target) exp(-(t - t_0)/60 s)`. A segment that is open to a tank takes that tank's head, and one open to the distribution boundary takes the reservoir head, without delay. The connected pressure of an isolated segment is the head across its closed isolation valve (first the valve at its inlet end, then other closed valves, then check valves and pumps; neighbours in sorted order); a segment with no neighbour at all takes zero gauge pressure at its elevation. No segment is undetermined.
+- **Reason.** A closed pipe does not lose its pressure when the solver has no flow through it; a null would also reveal the operating state to the agent.
+- **Sensitivity required.** The time constant at 10, 60 and 300 s (*proposed*).
+- **Notes.** Trapped-liquid thermal expansion and compressibility are outside the model: a real isolated segment can hold a pressure unrelated to its neighbours, or rise with temperature. This is a limitation.
+
+## D40 - Alarm on the level-transmitter chain
+
+- **Version:** 1.0 (2026-10-29)  **Status:** DESIGN
+- **Decision.** HIGH_ALARM and its clearing are decided on the level-transmitter chain of the tank (lag, noise, quantisation, dropout, comms delay) with the same per-tag streams as the observation, sampled in the engine at the transmitter's own sample times. The protection logic sees the latest sample that has arrived; nothing arrives for a dropped sample. Only the high-high trip is independent (D33).
+- **Reason.** The ordinary alarm is a control-system alarm built on the level reading, not on the truth.
+- **Sensitivity required.** None beyond the sensor parameters.
+- **Notes.** Version 1.0 of D26 located the alarm threshold on the true level; for the alarm that is superseded by this decision, and the located crossing stays for the detector.
 
 ## Episode profile
 
