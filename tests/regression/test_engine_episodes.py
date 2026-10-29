@@ -594,7 +594,8 @@ def test_rej3_is_rejected_at_the_start_and_names_the_stored_minimum(
     assert record["parameter"] == (
         "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,coastal,RVP_9_0,f_d=0.8]"
     )
-    assert record["value"] == 6.0 and record["limit"] == pytest.approx(6.278, abs=1e-3)
+    assert record["value"] == pytest.approx(6.0, abs=1e-9)  # volume-to-level round trip
+    assert record["limit"] == pytest.approx(6.278, abs=1e-3)
     assert result.outcome.steps == 0
 
 

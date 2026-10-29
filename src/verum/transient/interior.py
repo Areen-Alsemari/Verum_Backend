@@ -38,11 +38,12 @@ class PointConstants:
     rho: float
     mu: float
     roughness: float
+    friction_scale: float = 1.0  # 0 switches wall friction off (verification cases only)
 
 
 def _reach_resistance(pc: PointConstants, target: np.ndarray, flow: np.ndarray) -> np.ndarray:
     d = pc.diameter[target]
-    f = darcy_factor(flow / pc.area[target], d, pc.rho, pc.mu, pc.roughness)
+    f = pc.friction_scale * darcy_factor(flow / pc.area[target], d, pc.rho, pc.mu, pc.roughness)
     return (f * pc.dx[target] / d + pc.k_per_reach[target]) * pc.inv_2ga2[target]
 
 

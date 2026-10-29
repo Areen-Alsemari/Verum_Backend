@@ -166,7 +166,7 @@ class TransientEngine:
             b=(wv / (self.g * a))[edge_of], diameter=d[edge_of], area=a[edge_of], dx=dx[edge_of],
             k_per_reach=(scale * k * dx / ln)[edge_of],
             inv_2ga2=(1.0 / (2.0 * self.g * a**2))[edge_of],
-            rho=self.rho, mu=self.model.mu, roughness=self.model.roughness * scale,
+            rho=self.rho, mu=self.model.mu, roughness=self.model.roughness, friction_scale=scale,
         )  # fmt: skip
         z = np.empty(n)
         for i, e in enumerate(self.edges):
