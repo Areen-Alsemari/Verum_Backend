@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0.0",
+  "source": "revised/01_facility_tanks_topology.md section 6.2 (static operating lineups)",
+  "provenance_id": "VERUM-M1-R1.2",
+  "hold_states": [
+    "SWITCH_RECEIPT_HOLD",
+    "CHANGEOVER_HOLD"
+  ],
+  "modes": {
+    "IDLE": {
+      "open_valves": [],
+      "running_pumps": []
+    },
+    "RECEIVE_101": {
+      "open_valves": [
+        "XV-R000",
+        "XV-R101"
+      ],
+      "running_pumps": []
+    },
+    "DELIVER_101_A": {
+      "open_valves": [
+        "XV-PAI",
+        "XV-PAO",
+        "XV-S101"
+      ],
+      "running_pumps": [
+        "P-101A"
+      ]
+    },
+    "DELIVER_101_B": {
+      "open_valves": [
+        "XV-PBI",
+        "XV-PBO",
+        "XV-S101"
+      ],
+      "running_pumps": [
+        "P-101B"
+      ]
+    },
+    "RECEIVE_102": {
+      "open_valves": [
+        "XV-R000",
+        "XV-R102"
+      ],
+      "running_pumps": []
+    },
+    "DELIVER_102_A": {
+      "open_valves": [
+        "XV-PAI",
+        "XV-PAO",
+        "XV-S102"
+      ],
+      "running_pumps": [
+        "P-101A"
+      ]
+    },
+    "DELIVER_102_B": {
+      "open_valves": [
+        "XV-PBI",
+        "XV-PBO",
+        "XV-S102"
+      ],
+      "running_pumps": [
+        "P-101B"
+      ]
+    },
+    "RECEIVE_103": {
+      "open_valves": [
+        "XV-R000",
+        "XV-R103"
+      ],
+      "running_pumps": []
+    },
+    "DELIVER_103_A": {
+      "open_valves": [
+        "XV-PAI",
+        "XV-PAO",
+        "XV-S103"
+      ],
+      "running_pumps": [
+        "P-101A"
+      ]
+    },
+    "DELIVER_103_B": {
+      "open_valves": [
+        "XV-PBI",
+        "XV-PBO",
+        "XV-S103"
+      ],
+      "running_pumps": [
+        "P-101B"
+      ]
+    },
+    "RECEIVE_101_DELIVER_102_A": {
+      "open_valves": [
+        "XV-PAI",
+        "XV-PAO",
+        "XV-R000",
+        "XV-R101",
+        "XV-S102"
+      ],
+      "running_pumps": [
+        "P-101A"
+      ]
+    },
+    "RECEIVE_101_DELIVER_101_A": {
+      "open_valves": [
+        "XV-PAI",
+        "XV-PAO",
+        "XV-R000",
+        "XV-R101",
+        "XV-S101"
+      ],
+      "running_pumps": [
+        "P-101A"
+      ]
+    },
+    "RECEIVE_101_102": {
+      "open_valves": [
+        "XV-R000",
+        "XV-R101",
+        "XV-R102"
+      ],
+      "running_pumps": []
+    },
+    "CHANGEOVER_HOLD": {
+      "open_valves": [],
+      "running_pumps": []
+    },
+    "MAINTENANCE_ISOLATED": {
+      "open_valves": [],
+      "running_pumps": []
+    },
+    "SWITCH_RECEIPT_HOLD": {
+      "open_valves": [],
+      "running_pumps": []
+    }
+  }
+}
