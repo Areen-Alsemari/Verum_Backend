@@ -60,7 +60,7 @@ version superseded; records are not edited in place.
 | D38 | Pending sensitivity studies | DESIGN | 1.0 |
 | D27 | Observation units and the atmosphere stratum | DESIGN | 1.0 |
 | D28 | Noise standard deviations | SIM | 1.0 |
-| D29 | Quantisation and clipping | SIM | 1.0 |
+| D29 | Quantisation and clipping | SIM | 1.1 (supersedes 1.0) |
 | D30 | Sample dropout | SIM | 1.0 |
 | D31 | Valve contacts | SIM | 1.0 |
 | D32 | Sample phase | SIM | 1.0 |
@@ -772,6 +772,21 @@ version superseded; records are not edited in place.
 - **Notes.** Flow, pressure and temperature values are selections; only level and temperature follow from a stated accuracy.
 
 ## D29 - Quantisation and clipping
+
+- **Version:** 1.1 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** The reading is quantised to span/65535 of the calibrated range and clipped at
+  the range limits. A clipped value has quality `suspect` when the unclipped reading lies
+  beyond the limit by more than three noise standard deviations of its class (a real
+  overrange); a reading that is outside only by noise (for example a flow of zero) is
+  clipped and stays `good`. A negative gauge value inside the range is valid and is not
+  clipped (the range of PT-201 starts at -1 bar).
+- **Reason.** Version 1.0 flagged every clipped value. A flow meter at zero flow would then
+  be `suspect` in half of its samples whenever nothing flows, a pattern that would reveal
+  the operating state. The three-sigma rule keeps the flag for true overrange.
+- **Sensitivity required.** *Proposed*: two and four standard deviations.
+- **Notes.** Version 1.0 is kept below.
+
+## D29 - Quantisation and clipping (version 1.0, superseded)
 
 - **Version:** 1.0 (2026-10-29)  **Status:** SIM
 - **Decision.** The reading is quantised to span/65535 of the calibrated range and clipped at the range limits; a clipped value has quality `suspect`. A negative gauge value inside the range is valid and is not clipped (the range of PT-201 starts at -1 bar).

@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Parameters of the sensor chain. Every entry is a ParamValue.",
+  "source": "docs/design_decisions.md D27 to D33",
+  "parameters": {
+    "noise_sigma_level_m": {
+      "value": 0.00025,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D28"
+    },
+    "noise_sigma_flow_m3h": {
+      "value": 0.2,
+      "unit": "m3/h",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D28"
+    },
+    "noise_sigma_pressure_bar": {
+      "value": 0.005,
+      "unit": "bar",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D28"
+    },
+    "noise_sigma_temperature_c": {
+      "value": 0.075,
+      "unit": "C",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D28"
+    },
+    "adc_steps": {
+      "value": 65535,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D29"
+    },
+    "dropout_probability": {
+      "value": 0.0005,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D30"
+    },
+    "contact_open_alpha": {
+      "value": 0.98,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D31"
+    },
+    "contact_hysteresis": {
+      "value": 0.01,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D31"
+    },
+    "detector_offset_sigma_m": {
+      "value": 0.001,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D33"
+    },
+    "detector_delay_s": {
+      "value": 0.2,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D33"
+    }
+  },
+  "episode_start_utc": "2026-01-01T00:00:00.000Z",
+  "episode_start_utc_note": "Synthetic fixed start of every episode; the pilot example of the audited package uses the same date."
+}

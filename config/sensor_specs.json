@@ -1,0 +1,1010 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Sensor table 6.1.1 of revised/04 for the 30 emitted tags (units, ranges, rates, lag, comms delay). Every number is a ParamValue.",
+  "source": "revised/04_instrumentation_inspection.md section 6.1.1; config/canonical_sensor_contract.json",
+  "tags": {
+    "FT-001": {
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E001",
+        "field": "flow_m3s"
+      },
+      "lag_s": {
+        "value": 0.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "m3/h",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "m3/h",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 800.0,
+        "unit": "m3/h",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "PT-001": {
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E002",
+        "field": "p_from_pa_abs"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "barg",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 10.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "TT-001": {
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E001",
+        "field": "fluid_temperature_K"
+      },
+      "lag_s": {
+        "value": 3.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "C",
+      "range_lo": {
+        "value": -10.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 60.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "XV-R000": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R000",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 2.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-R101": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R101",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-R102": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R102",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-R103": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-R103",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "LT-101": {
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-101",
+        "field": "level_m"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "m",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 18.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "TT-101": {
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-101",
+        "field": "temperature_K"
+      },
+      "lag_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "C",
+      "range_lo": {
+        "value": -10.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 60.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 10.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "window_mean",
+      "window_s": {
+        "value": 30.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      }
+    },
+    "LSHH-101": {
+      "measured_variable_ref": {
+        "record_type": "protection_state",
+        "element_id": "LSHH-101",
+        "field": "trip_latched"
+      },
+      "lag_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.05,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "LT-102": {
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-102",
+        "field": "level_m"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "m",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 18.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "TT-102": {
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-102",
+        "field": "temperature_K"
+      },
+      "lag_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "C",
+      "range_lo": {
+        "value": -10.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 60.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 10.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "window_mean",
+      "window_s": {
+        "value": 30.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      }
+    },
+    "LSHH-102": {
+      "measured_variable_ref": {
+        "record_type": "protection_state",
+        "element_id": "LSHH-102",
+        "field": "trip_latched"
+      },
+      "lag_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.05,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "LT-103": {
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-103",
+        "field": "level_m"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "m",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 18.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "TT-103": {
+      "measured_variable_ref": {
+        "record_type": "tank_state",
+        "element_id": "TK-103",
+        "field": "temperature_K"
+      },
+      "lag_s": {
+        "value": 5.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "C",
+      "range_lo": {
+        "value": -10.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 60.0,
+        "unit": "C",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 10.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "window_mean",
+      "window_s": {
+        "value": 30.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      }
+    },
+    "LSHH-103": {
+      "measured_variable_ref": {
+        "record_type": "protection_state",
+        "element_id": "LSHH-103",
+        "field": "trip_latched"
+      },
+      "lag_s": {
+        "value": 0.2,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.05,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-S101": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-S101",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 2.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-S102": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-S102",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 2.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-S103": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-S103",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 2.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "PT-201": {
+      "measured_variable_ref": {
+        "record_type": "node_state",
+        "element_id": "PUMP_SUCTION_TEE",
+        "field": "pressure_pa_abs"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "barg",
+      "range_lo": {
+        "value": -1.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 5.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "XV-PAI": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PAI",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "P-101A": {
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101A",
+        "field": "run_state"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.05,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "PT-202A": {
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E-PA2",
+        "field": "p_from_pa_abs"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "barg",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 10.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "XV-PAO": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PAO",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "XV-PBI": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PBI",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "P-101B": {
+      "measured_variable_ref": {
+        "record_type": "pump_state",
+        "element_id": "P-101B",
+        "field": "run_state"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.05,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "PT-202B": {
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E-PB2",
+        "field": "p_from_pa_abs"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "barg",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 10.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "XV-PBO": {
+      "measured_variable_ref": {
+        "record_type": "valve_contact_state",
+        "element_id": "XV-PBO",
+        "field": "open_contact"
+      },
+      "lag_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "event"
+    },
+    "FT-201": {
+      "measured_variable_ref": {
+        "record_type": "edge_state",
+        "element_id": "E-D1",
+        "field": "flow_m3s"
+      },
+      "lag_s": {
+        "value": 0.5,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "m3/h",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "m3/h",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 500.0,
+        "unit": "m3/h",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    },
+    "PT-203": {
+      "measured_variable_ref": {
+        "record_type": "node_state",
+        "element_id": "DISTRIBUTION_BOUNDARY",
+        "field": "pressure_pa_abs"
+      },
+      "lag_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "comms_delay_s": {
+        "value": 0.1,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "kind": "continuous",
+      "unit": "barg",
+      "range_lo": {
+        "value": 0.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "range_hi": {
+        "value": 10.0,
+        "unit": "barg",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-M4-6.1.1"
+      },
+      "mode": "instantaneous_interpolated"
+    }
+  }
+}
