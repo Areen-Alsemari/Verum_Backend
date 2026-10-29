@@ -80,7 +80,10 @@ def test_manifest_lists_every_file_with_its_hash(
 def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult], sid: str) -> None:
     doc = json.loads((episodes[sid].directory / "episode.json").read_text())
     validate("episode", doc)
-    assert doc["status"] == "completed" and doc["dataset_tier"] == "analytic_verification"
+    assert doc["status"] == "completed"
+    assert doc["dataset_tier"] == (
+        "restricted_benchmark" if sid == "S0u-E" else "analytic_verification"
+    )
     assert doc["config_hash"] == config_hash() and doc["step_size_s"] == 1.0
     assert doc["pipe_inventory_constant"] is True and doc["fitting_profile"] == "reference_fittings"
     assert (
@@ -652,3 +655,23 @@ def test_episode_directories_hold_no_observation_fields(series: dict[str, Series
             "autonomous_protection",
             "simulator_truth",
         }
+
+
+def test_tier_follows_the_flagged_windows_and_the_gate_still_blocks_production(
+    episodes: dict[str, EpisodeResult],
+) -> None:
+    """Decision D37: only the episode with a flagged window is restricted; the release gate
+    refuses production_candidate while generation is disabled and allows the other tiers."""
+    from verum.gates import ReleaseNotAllowed, assert_release_allowed
+
+    for sid, result in episodes.items():
+        doc = json.loads((result.directory / "episode.json").read_text())
+        flagged = bool(doc["validity_windows"])
+        assert flagged is (sid == "S0u-E")
+        assert doc["dataset_tier"] == (
+            "restricted_benchmark" if flagged else "analytic_verification"
+        )
+    assert_release_allowed("analytic_verification")
+    assert_release_allowed("restricted_benchmark")
+    with pytest.raises(ReleaseNotAllowed):
+        assert_release_allowed("production_candidate")

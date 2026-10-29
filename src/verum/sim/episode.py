@@ -6,8 +6,9 @@ rejected) and a hash manifest; and an ``EpisodeResult``.
 Key assumptions:
     * The episode record lists the atmosphere stratum, the validity windows and the
       protection threshold crossings (decisions D24 to D26); it is hidden truth.
-    * The dataset tier is ``analytic_verification``; the release gate is asked first
-      and fails closed.
+    * The dataset tier is ``analytic_verification``, or ``restricted_benchmark`` for an
+      episode that lists a flagged validity window (decision D37). The release gate is asked
+      first for the former and again for the tier actually produced; it fails closed.
     * The episode identifier is derived from the seed, the scenario and the
       configuration hash; two runs with the same inputs write identical files.
     * A rejected episode keeps only its records: the truth files are removed so that
@@ -16,7 +17,7 @@ Key assumptions:
       does not.
 
 Source: ``VERUM_INTEGRATION_README.md`` section E (rejected candidates are stored as
-such); ``docs/design_decisions.md`` D20, D24, D25, D26.
+such); ``docs/design_decisions.md`` D20, D24, D25, D26, D37.
 """
 
 from __future__ import annotations
@@ -38,6 +39,12 @@ from verum.truth import DirectorySink
 
 SOLVER_VERSION = "path-dynamics-radau-1"
 TIER = "analytic_verification"
+RESTRICTED_TIER = "restricted_benchmark"
+
+
+def tier_of(outcome: EpisodeOutcome) -> str:
+    """Decision D37: an episode with a flagged validity window is restricted."""
+    return RESTRICTED_TIER if outcome.windows else TIER
 
 
 @dataclass(frozen=True)
@@ -72,7 +79,7 @@ def episode_document(
         "config_hash": chash,
         "lockfile_hash": lockfile_hash(),
         "solver_version": SOLVER_VERSION,
-        "dataset_tier": TIER,
+        "dataset_tier": tier_of(outcome),
         "step_size_s": cfg["time_step_s"],
         "duration_s": scenario.duration_s,
         "temperature_c": scenario.temperature_c,
@@ -129,6 +136,7 @@ def run_episode(
         }
         validate("simulation_rejected", record)
         sink.write_json("simulation_rejected.json", record)
+    assert_release_allowed(tier_of(outcome))  # the tier actually produced is asked as well
     document = episode_document(scenario, cfg, model, episode, chash, status, outcome)
     validate("episode", document)
     sink.write_json("episode.json", document)
