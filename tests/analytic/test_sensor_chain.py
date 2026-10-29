@@ -121,7 +121,7 @@ def test_noise_has_zero_mean_and_the_specified_deviation(
     assert abs(values.mean() - truth) < 4.0 * math.sqrt(var / n) + step / 2
     assert values.std() == pytest.approx(math.sqrt(var), abs=4.0 * math.sqrt(var / (2 * n)))
     # quantisation: every value lies on the lattice lo + k step
-    k = (values - spec.range_lo) / step  # type: ignore[operator]
+    k = (values - spec.range_lo) / step
     assert np.max(np.abs(k - np.round(k))) < 1e-6
 
 
