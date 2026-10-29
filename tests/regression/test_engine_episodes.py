@@ -405,21 +405,24 @@ def test_s0ue_level_after_closure_is_bounded_by_hand_limits(series: dict[str, Se
     """Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
 
     Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the
-    command at the next update (2969 s), so the volume received after the trip at 2968.805 s is
-    at most (600/3600) x (2978.99 - 2968.805) = 1.6975 m3, a level rise of 0.002402 m.
+    command at the next update (2969 s), so the volume received after the trip (decided by the
+    detector at 2968.8897 s in this episode) is at most (600/3600) x (2978.99 - 2968.8897) =
+    1.6834 m3, a level rise of 0.0023815 m.
     Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x
     9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441
     (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the
     linear branch, reached 9.69 s into the stroke. The received volume is therefore at least
-    (600/3600) x (0.195 + 9.69) = 1.6475 m3, a level rise of 0.002331 m.
+    (600/3600) x (0.110 + 9.683) = 1.6322 m3, a level rise of 0.0023091 m.
     """
     s = series["S0u-E"]
     trip = next(e["t_sim_s"] for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
     level_trip = _first(s.tank["TK-101"], lambda r: r[0] == trip)[2]
     final = _grid(s.tank["TK-101"])[-1][2]
     upper = (600 / 3600) * (2978.99 - trip) / AREA
-    lower = (600 / 3600) * (2969.0 - trip + 9.69) / AREA
-    assert upper == pytest.approx(0.002402, abs=1e-6) and lower == pytest.approx(0.002331, abs=2e-6)
+    lower = (600 / 3600) * (2969.0 - trip + 9.683) / AREA
+    assert upper == pytest.approx(0.0023815, abs=2e-6) and lower == pytest.approx(
+        0.0023091, abs=2e-6
+    )
     assert lower <= final - level_trip <= upper
     later = [r[2] for r in _grid(s.tank["TK-101"]) if r[0] >= trip + 12.0]
     assert max(later) - min(later) < 1e-9  # no further rise after closure

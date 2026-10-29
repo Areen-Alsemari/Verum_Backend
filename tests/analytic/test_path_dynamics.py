@@ -206,34 +206,44 @@ def _quasi_steady_head(
     return model.solve(inputs).node_heads_m["PIPELINE_RECEIPT_BOUNDARY"]
 
 
-def test_pt001_surge_head_is_the_inertance_times_the_flow_rate(
+def test_pt001_surge_head_is_the_downstream_inertance_times_the_flow_rate(
     model: HydraulicModel, series: dict[str, Series]
 ) -> None:
-    """S0-B ramp: head(PT-001) - quasi-steady head = I dQ/dt, with dQ/dt from the closed form.
+    """S0-B ramp, with the tap anchored by decision D36: head(PT-001) - (quasi-steady source
+    head - loss_up) = (I - Lambda_up) dQ/dt, the inertance of the column from the tap to the tank
+    (290.5 s2/m2 by hand: 354.0 - 63.56), with dQ/dt from the closed form.
 
-    The quasi-steady head is a steady solve at the logged flow and level (same formulas as the
-    engine's lumped path, so this checks the offset, not the loss law).
+    The quasi-steady source head is a steady solve at the logged flow and level (same formulas
+    as the engine's lumped path, so this checks the offsets, not the loss law); loss_up is the
+    hand loss of E001 and E002 from the separate reference implementation.
     """
     s = series["S0-B"]
     head = {t: h for t, side, h in s.head["PIPELINE_RECEIPT_BOUNDARY"] if side != "pre_event"}
     flow = {t: q for t, side, q in s.edge["E001"] if side != "pre_event"}
     level = {t: lv for t, side, lv, _v, _f in s.tank["TK-101"] if side != "pre_event"}
+    downstream = INERTANCE - 45.0 / (G * A300)
+    assert downstream == pytest.approx(290.5, abs=0.1)
     for t in (1.0, 2.0, 4.0):
         qdot = (600.0 / 3600.0) / 2.0 * math.exp(-t / 2.0)
         quasi = _quasi_steady_head(model, level[t], flow[t] * 3600.0, None, "RECEIVE_101")
-        source_head = head[t]
-        assert source_head is not None  # the source tap has a head while the path is open
-        assert source_head - quasi == pytest.approx(INERTANCE * qdot, rel=1e-4), t
-    assert INERTANCE * (600.0 / 3600.0) / 2.0 * math.exp(-0.5) == pytest.approx(17.9, abs=0.05)
+        tap = head[t]
+        assert tap is not None  # the tap has a head while the path is open
+        loss_up = _loss_up(flow[t])
+        assert tap - (quasi - loss_up) == pytest.approx(downstream * qdot, rel=1e-4), t
+
+
+def _loss_up(q: float) -> float:
+    return ref.loss(q, ref.D300, 30.0, 0.0) + ref.loss(q, ref.D300, 15.0, 1.0)
 
 
 @pytest.mark.slow
-def test_pt001_is_at_the_cap_and_the_surge_is_i_times_the_decay_rate_under_the_cap(
+def test_pt001_under_the_cap_is_the_cap_less_the_upstream_loss_plus_the_upstream_inertia(
     model: HydraulicModel,
 ) -> None:
-    """Slow closure (2000 s stroke) of XV-R000 at 600 m3/h: under the cap the head at PT-001 is
-    the cap head 136.96 m, and the offset to the quasi-steady head is I |dQ/dt|, with dQ/dt
-    taken from the logged flow by a central difference over two seconds.
+    """Slow closure (2000 s stroke) of XV-R000 at 600 m3/h: under the cap the source head is the
+    cap head 136.96 m and the tap (D36) reads the cap less loss_up plus Lambda_up |dQ/dt|;
+    relative to the quasi-steady tap the offset is (I - Lambda_up) dQ/dt. dQ/dt is taken from
+    the logged flow by a central difference over two seconds.
     """
     cfg0 = load_sim_config()
     cfg = dataclasses.replace(
@@ -263,13 +273,14 @@ def test_pt001_is_at_the_cap_and_the_surge_is_i_times_the_decay_rate_under_the_c
         q = flows[t]["flow_m3s"]
         qdot = (flows[t + 1.0]["flow_m3s"] - flows[t - 1.0]["flow_m3s"]) / 2.0
         assert qdot < 0.0 and q * 3600.0 < 600.0 - 1.0  # decaying under the cap
-        assert heads[t]["hydraulic_head_m"] == pytest.approx(H_CAP, abs=1e-6)
+        # Decision D36: the source head is the cap; the tap is after E001 and E002.
+        tap = heads[t]["hydraulic_head_m"]
+        assert tap == pytest.approx(H_CAP - _loss_up(q) + 45.0 / (G * A300) * abs(qdot), abs=0.02)
         quasi = _quasi_steady_head(
             model, levels[t]["level_m"], q * 3600.0, valve[t]["position_frac"], "RECEIVE_101"
         )
-        assert heads[t]["hydraulic_head_m"] - quasi == pytest.approx(
-            INERTANCE * abs(qdot) * (-1.0), rel=0.05
-        ) or (heads[t]["hydraulic_head_m"] - quasi) == pytest.approx(-INERTANCE * qdot, rel=0.05)
+        downstream = INERTANCE - 45.0 / (G * A300)
+        assert tap - (quasi - _loss_up(q)) == pytest.approx(downstream * qdot, rel=0.05)
         checked += 1
     assert checked == 4
 

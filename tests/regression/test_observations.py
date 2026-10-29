@@ -43,6 +43,7 @@ EMITTED = set(CFG.tags)
 WITHHELD = {"YS-201A", "VT-201A", "IT-201A", "YS-201B", "VT-201B", "IT-201B"}
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
 OBS_KEYS = set(load_schema("observation")["properties"])
+CAPPED_CLOSURES = {"S0u-D", "S0u-E"}
 EVENT_TAGS = {t for t, s in CFG.tags.items() if s.kind == "event"}
 ALWAYS_DETERMINED = [t for t in CFG.tags if t.startswith(("LT-", "TT-", "FT-001"))]
 
@@ -241,13 +242,14 @@ def test_lk09_dropout_rate_is_the_same_in_every_episode(
 def test_lk10_quality_flags_carry_no_scenario_pattern(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """A real overrange is the only systematic cause of ``suspect``: PT-001 in S0u-E. Elsewhere
-    ``suspect`` is the noise tail beyond 3 sigma below zero flow (P = 0.00135 per sample), a
-    binomial count that is the same kind in every episode."""
+    """A real overrange is the only systematic cause of ``suspect``: PT-001 where the receipt
+    path closes under the 10 barg cap (S0u-E, and the closure of the S0u-D receipt switch).
+    Elsewhere ``suspect`` is the noise tail beyond 3 sigma below zero flow (P = 0.00135 per
+    sample), a binomial count that is the same kind in every episode."""
     for sid in COMPLETED:
         suspect = [r for r in obs[sid] if r["quality_flag"] == "suspect"]
         pt001 = [r for r in suspect if r["tag_id"] == "PT-001"]
-        assert (len(pt001) > 0) is (sid == "S0u-E"), sid
+        assert (len(pt001) > 0) is (sid in CAPPED_CLOSURES), sid
         rest = len(suspect) - len(pt001)
         samples = sum(r["tag_id"] in ("FT-001", "FT-201") for r in obs[sid])
         mean = samples * 0.00135
