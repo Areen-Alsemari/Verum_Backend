@@ -17,25 +17,29 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- All records are version 1.0, dated 2026-10-29.
+- Log version 2 (2026-10-29). Records are version 1.0 unless stated. A record
+  with a later version states the version it supersedes and keeps the earlier
+  version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
   `vendor/verum_audited/`.
 
 ## Index
 
-| ID | Subject | Status |
-| --- | --- | --- |
-| D1 | Solver architecture and time step | DESIGN |
-| D2 | Delivery boundary and pump operating point | SIM |
-| D3 | Receipt boundary | SIM |
-| D4 | Valve characteristics and stroke times | SIM |
-| D5 | Check-valve closure | SIM |
-| D6 | Pump start, trip and changeover excluded | DESIGN |
-| D7 | NPSH3 relation and margin | SIM |
-| D8 | Numerical tolerances | DESIGN |
-| D9 | Motor, current and vibration channels not emitted | DESIGN |
-| D10 | Validity condition for leaks | SIM |
-| D11 | Bulk-liquid temperature stratum | SIM |
+| ID | Subject | Status | Current version |
+| --- | --- | --- | --- |
+| D1 | Solver architecture and time step | DESIGN | 1.0 |
+| D2 | Delivery boundary and pump operating point | SIM | 2.0 |
+| D3 | Receipt boundary | SIM | 2.0 |
+| D4 | Valve characteristics and stroke times | SIM | 2.0 |
+| D5 | Check-valve closure | SIM | 1.0 |
+| D6 | Pump start, trip and changeover excluded | DESIGN | 1.0 |
+| D7 | NPSH3 relation and margin | SIM | 2.0 |
+| D8 | Numerical tolerances | DESIGN | 1.0 |
+| D9 | Motor, current and vibration channels not emitted | DESIGN | 1.0 |
+| D10 | Validity condition for leaks | SIM | 1.0 |
+| D11 | Bulk-liquid temperature stratum | SIM | 1.0 |
+| D12 | Isolation confirmation timeout | SIM | 1.0 |
+| D13 | Residual-flow threshold for failed isolation | SIM | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -65,7 +69,36 @@ version superseded; records are not edited in place.
 
 ## D2 - Delivery boundary and pump operating point
 
-- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+### Version 2.0 (current)
+
+- **Version:** 2.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** The pump runs at fixed speed (s = 1). The 2 barg reservoir lies
+  beyond `DISTRIBUTION_BOUNDARY`. The added resistance
+  dH_d = 11.96 (Q/300)^2 m, with Q in m3/h, is a boundary-law element between
+  the boundary node, where `PT-203` sits, and the reservoir. It is not a new
+  edge and not a new node. `PT-203` = 2 barg + rho g dH_d, in gauge pressure.
+- **Reason.** Version 1.0 did not say where the resistance sits relative to the
+  `PT-203` tap. Placing the reservoir beyond the boundary node keeps the
+  28-edge topology unchanged and makes the node pressure flow-dependent, as the
+  resistance requires. The coefficient and the pump-curve argument are those of
+  version 1.0.
+- **Sensitivity required.** Vary the coefficient (11.96 m) and the reservoir
+  pressure (2 barg); report duty points for the three tanks at initial and
+  minimum levels. Both sweeps are *proposals*; the decision log specifies none.
+- **Notes.**
+  - At 300 m3/h, rho g dH_d = 750 x 9.80665 x 11.96 = about 87.97 kPa, so
+    `PT-203` is about 2.88 barg at 300 m3/h and varies with flow.
+  - This conflicts with the configuration contract and with the prose of the
+    audited package, which describe `DISTRIBUTION_BOUNDARY` as a fixed 2 barg
+    Dirichlet node (`fixed_distribution_boundary_gauge_Pa` and the `PT-203`
+    adapter text). The contract is not patched in this version; the patch
+    belongs with the hydraulic phase that implements the boundary law.
+  - The duty points computed for version 1.0 (312.6, 300.0 and 287.5 m3/h for
+    TK-101, TK-102 and TK-103 at their initial levels) are unchanged.
+
+### Version 1.0 (superseded)
+
+- **Version:** 1.0 (2026-10-29)  **Superseded by:** 2.0  **Status:** SIM
 - **Decision.** The pump runs at fixed speed (speed ratio s = 1). The
   distribution boundary is 2 barg plus a downstream resistance
   dH_d = 11.96 (Q/300)^2 m, with Q in m3/h. This places the duty point at 42 m
@@ -103,7 +136,25 @@ version superseded; records are not edited in place.
 
 ## D3 - Receipt boundary
 
-- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+### Version 2.0 (current)
+
+- **Version:** 2.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** The receipt flow controller responds as a first-order lag with
+  time constant tau = 2 s towards the 600 m3/h target. The 10 barg supply cap
+  clips the flow. There is no explicit ramp.
+- **Reason.** A first-order controller response replaces the unspecified
+  ramp-down of version 1.0, so no ramp-time parameter is needed. When `XV-R000`
+  closes, the flow falls through the controller response and the valve stroke,
+  and the cap limits the pressure the source can supply.
+- **Sensitivity required.** Specified: tau swept from 1 to 5 s. The cap sweep of
+  version 1.0 (8 and 12 barg) is retained as a *proposal*.
+- **Notes.** The 10 barg cap equals the upper end of the `PT-001` span (0 to
+  10 barg). Operation in the clipped regime delivers less than 600 m3/h and must
+  be flagged in the episode record.
+
+### Version 1.0 (superseded)
+
+- **Version:** 1.0 (2026-10-29)  **Superseded by:** 2.0  **Status:** SIM
 - **Decision.** The receipt source is flow-controlled at 600 m3/h with a supply
   pressure cap of 10 barg. When `XV-R000` closes, the flow ramps down.
 - **Reason.** The hydraulic workstream requires a flow-controlled source or a
@@ -120,7 +171,29 @@ version superseded; records are not edited in place.
 
 ## D4 - Valve characteristics and stroke times
 
-- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+### Version 2.0 (current)
+
+- **Version:** 2.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** The valve flow coefficient is continuous in the opening
+  fraction alpha and zero at alpha = 0. With alpha_c = 0.05:
+  - for alpha <= alpha_c, Kv = Kv_max (alpha / alpha_c) 50^(alpha_c - 1);
+  - for alpha > alpha_c, Kv = Kv_max 50^(alpha - 1).
+  Full-open loss coefficient K = 0.1. Stroke time is 10 s for `XV-R000` and
+  30 s for the other motorized valves.
+- **Reason.** Version 1.0 gave Kv(0) = Kv_max / 50, which cannot isolate. The
+  linear segment below alpha_c joins the equal-percentage curve at alpha_c
+  (both give Kv_max 50^(alpha_c - 1)) and reaches zero at alpha = 0.
+- **Sensitivity required.** Specified: stroke times 2, 10 and 30 s; full-open K
+  from 0.05 to 0.2. A sweep of alpha_c (for example 0.02 to 0.1) is a
+  *proposal*.
+- **Notes.** `Kv_max` per valve is still unspecified and is an unresolved
+  parameter. "Other motorized" is taken to mean every `XV-*` valve other than
+  `XV-R000`; this should be confirmed. Contact feedback is a separate model from
+  valve position (see `canonical_sensor_contract.json`).
+
+### Version 1.0 (superseded)
+
+- **Version:** 1.0 (2026-10-29)  **Superseded by:** 2.0  **Status:** SIM
 - **Decision.** Valve flow coefficient follows Kv(a) = Kv_max * 50^(a - 1),
   where a is the opening fraction. Full-open loss coefficient is K = 0.1. Stroke
   time is 10 s for `XV-R000` and 30 s for the other motorized valves.
@@ -169,7 +242,32 @@ version superseded; records are not edited in place.
 
 ## D7 - NPSH3 relation and margin
 
-- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+### Version 2.0 (current)
+
+- **Version:** 2.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Decision.** The NPSH3 relation, NPSH3 = 4 (Q/300)^2 m, and the margin ratio
+  1.3 are unchanged. The 1.8 m geometry minimum is kept as a geometric limit
+  (roof support, nozzle elevations) and is not a pumping guarantee. A
+  pumping-minimum level is derived for each tank and temperature stratum as the
+  lowest level at which available NPSH, evaluated at the solved flow, meets the
+  margin. NPSH is evaluated at the solved flow of the duty point and not at
+  300 m3/h.
+- **Reason.** Version 1.0 screened at 300 m3/h, but with D2 the solved flow
+  differs between tanks (about 312.6, 300.0 and 287.5 m3/h at the initial
+  levels), and both NPSHa losses and NPSH3 depend on flow. Keeping the
+  geometry minimum separate from the pumping minimum follows the audit, which
+  states that 1.8 m is not an NPSH-safe level.
+- **Sensitivity required.** Specified: NPSH3 coefficient 2.5, 4 and 6 m;
+  temperature stratum 25, 35 and 45 C (D11). Report the derived pumping-minimum
+  level for every combination. No new sweep is proposed.
+- **Notes.** The pumping-minimum level is an output of the hydraulic phase and
+  is not computed in Phase 1. The version 1.0 check at 300 m3/h (TK-103,
+  1.8 m, 25 C: 4.83 m available against 5.2 m required) indicates that the
+  pumping minimum of TK-103 exceeds 1.8 m.
+
+### Version 1.0 (superseded)
+
+- **Version:** 1.0 (2026-10-29)  **Superseded by:** 2.0  **Status:** SIM
 - **Decision.** Required NPSH is NPSH3 = 4 (Q/300)^2 m, with Q in m3/h. The
   coefficient is swept over 2.5, 4 and 6 m. The required margin ratio is 1.3
   (available NPSH divided by NPSH3).
@@ -253,3 +351,37 @@ version superseded; records are not edited in place.
 - **Notes.** The vapor-pressure reference is a generic correlation and not a
   PG95 assay. The audit reports a negative NPSHa for TK-103 at 1.8 m and 45 C,
   which the screening rejects (`revised/02_hydraulic_model.md` section 4).
+
+## D12 - Isolation confirmation timeout
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The timeout for confirming isolation after an isolation request
+  is 2 x stroke time + sensor lag. The stroke time is that of the valve being
+  closed (D4); the sensor lag is the nominal lag of its confirming contact.
+- **Reason.** Confirmation cannot be expected before the valve has travelled and
+  its contact has reported. A factor of two on the stroke time leaves a margin
+  for a slow but healthy valve, and the lag term accounts for the reporting
+  delay (`revised/01_facility_tanks_topology.md` section 6.3; the contact lags
+  are in section 3.5).
+- **Sensitivity required.** Vary the factor (for example 1.5, 2 and 3) and the
+  stroke time (D4: 2, 10 and 30 s). Both are *proposals*.
+- **Notes.** With the D4 stroke times and the section 3.5 lags, the timeout is
+  2 x 10 + 2.0 = 22 s for `XV-R000` and 2 x 30 + 1.5 = 61.5 s for `XV-R101`,
+  `XV-R102` and `XV-R103`. The sensor lags are not in the machine-readable
+  contracts and are held in `config/protection.json`. A one-hour response
+  envelope is used by the headroom screen; the timeout above is a separate,
+  shorter quantity.
+
+## D13 - Residual-flow threshold for failed isolation
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** Isolation is declared failed if the flow measured after the
+  timeout exceeds 1.0 m3/h.
+- **Reason.** The threshold is five times the standard deviation of the receipt
+  flow-meter noise (0.2 m3/h, `PAR-SNS-002`), which keeps the false-failure
+  probability of a healthy closed line negligible for Gaussian noise.
+- **Sensitivity required.** Vary the multiple of sigma (for example 3 to 10).
+  *Proposed.*
+- **Notes.** The check applies to the receipt flow measurement (`FT-001`)
+  after receipt isolation. Meter noise is not guaranteed to be bounded at five
+  sigma (`revised/01_facility_tanks_topology.md` section 6.4 item 4).
