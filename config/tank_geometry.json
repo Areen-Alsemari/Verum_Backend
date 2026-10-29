@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Tank and roof geometry and the response-headroom screen inputs. Every entry is a ParamValue.",
+  "source": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+  "parameters": {
+    "shell_diameter_m": {
+      "value": 30.0,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "deck_diameter_m": {
+      "value": 29.7,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "roof_support_height_m": {
+      "value": 1.5,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "roof_areal_mass_kg_m2": {
+      "value": 20.0,
+      "unit": "kg/m2",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "headroom_response_time_s": {
+      "value": 3600.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "headroom_residual_delivery_m3": {
+      "value": 20.0,
+      "unit": "m3",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "headroom_level_allowance_m": {
+      "value": 0.05,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    },
+    "normal_response_time_s": {
+      "value": 900.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-M1-R1.2"
+    }
+  }
+}

@@ -21,6 +21,7 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.5",
     "types-jsonschema",
+    "hypothesis>=6.170.13",
 ]
 # Needed only to re-run the vendored reference scripts, not by the package.
 # numpy >= 2 because the audited schema reference tests call numpy.trapezoid.
