@@ -22,6 +22,7 @@ from verum.hydraulics.errors import (
 )
 from verum.hydraulics.friction import friction_factor, head_loss
 from verum.hydraulics.pump import FixedSpeedPump, PumpElement
+from verum.hydraulics.pumping_minimum import pumping_minimum_level
 from verum.hydraulics.result import PhaseGate, PumpPoint, SteadyResult
 from verum.hydraulics.steady import HydraulicModel, SteadyInputs
 
@@ -48,4 +49,5 @@ __all__ = [
     "load_boundary_law_coefficient",
     "load_fitting_profile",
     "load_hydraulic_config",
+    "pumping_minimum_level",
 ]

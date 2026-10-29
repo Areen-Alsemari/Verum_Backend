@@ -220,3 +220,45 @@ def test_pump_curve_values() -> None:
     assert pump.flow_m3s(-54.0) == 0.0 and pump.flow_m3s(-60.0) == 0.0
     with pytest.raises(ValueError):
         FixedSpeedPump(54.0, 12.0, 300.0, 350.0, 0.75, speed_ratio=0.9)
+
+
+# --- K multiplier sensitivity -------------------------------------------------------------
+
+
+@pytest.mark.parametrize("multiplier", [0.5, 1.0, 2.0])
+def test_k_multiplier_sensitivity_matches_the_closed_form(
+    model: HydraulicModel, multiplier: float
+) -> None:
+    """Independent: the hand-counted K of the TK-102 path is scaled and solved (c fixed)."""
+    c = load_boundary_law_coefficient("reference_fittings").value
+    segments = [
+        (d, length, k * multiplier) for d, length, k in ref.tank2_reference_fittings_segments()
+    ]
+    expected = ref.operating_flow_m3h(7.0, c, segments)
+    result = model.solve(
+        delivery_case("TK-102", 7.0, profile="reference_fittings", multiplier=multiplier)
+    )
+    assert result.pump is not None
+    assert result.pump.flow_m3h == pytest.approx(expected, rel=1e-6)
+
+
+def test_k_multiplier_effect_on_tk102_is_a_few_percent(model: HydraulicModel) -> None:
+    flows = {
+        m: model.solve(
+            delivery_case("TK-102", 7.0, profile="reference_fittings", multiplier=m)
+        ).pump
+        for m in (0.5, 1.0, 2.0)
+    }
+    q = {m: p.flow_m3h for m, p in flows.items() if p is not None}
+    assert q[0.5] > q[1.0] > q[2.0]
+    assert 100 * (q[0.5] / q[1.0] - 1) == pytest.approx(1.47, abs=0.05)
+    assert 100 * (q[2.0] / q[1.0] - 1) == pytest.approx(-2.76, abs=0.05)
+
+
+def test_the_two_profiles_have_equal_flow_at_the_calibration_point(model: HydraulicModel) -> None:
+    a = model.solve(delivery_case("TK-102", 7.0, profile="pipe_only")).pump
+    b = model.solve(delivery_case("TK-102", 7.0, profile="reference_fittings")).pump
+    assert a is not None and b is not None
+    assert a.flow_m3h == pytest.approx(300.0, abs=0.05) and b.flow_m3h == pytest.approx(
+        300.0, abs=0.05
+    )
