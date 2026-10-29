@@ -116,7 +116,7 @@
       "provenance_id": "VERUM-PHASE2-NUMERICS"
     },
     "newton_max_iterations": {
-      "value": 100.0,
+      "value": 500.0,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "DESIGN",

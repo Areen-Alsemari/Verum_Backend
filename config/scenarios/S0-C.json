@@ -1,0 +1,26 @@
+{
+  "scenario_id": "S0-C",
+  "description": "TK-101 receiving 600 m3/h while TK-102 delivers through pump A (lineup RECEIVE_101_DELIVER_102_A).",
+  "seed": 20261029,
+  "duration_s": 3600,
+  "temperature_c": 25.0,
+  "fitting_profile": "reference_fittings",
+  "healthy_envelope": true,
+  "initial": {
+    "mode": "RECEIVE_101_DELIVER_102_A",
+    "tank_levels_m": {
+      "TK-101": 9.0,
+      "TK-102": 7.0,
+      "TK-103": 5.0
+    },
+    "receipt_flow_m3h": 0.0,
+    "receipt_setpoint_m3h": 0.0
+  },
+  "schedule": [
+    {
+      "t_s": 0.0,
+      "command": "receipt_setpoint",
+      "value_m3h": 600.0
+    }
+  ]
+}

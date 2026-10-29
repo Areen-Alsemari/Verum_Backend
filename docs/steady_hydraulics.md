@@ -141,7 +141,7 @@ selections with a provenance identifier:
 - the NPSH3 relation and margin 1.3 (D7), and the temperature strata (D11);
 - the roughness 4.5e-5 m, the atmosphere 101325 Pa and the pipe bores (design
   values of the package);
-- the solver settings (tolerance 1e-9 m3/s, 100 iterations), chosen for this
+- the solver settings (tolerance 1e-9 m3/s, 500 iterations), chosen for this
   phase and not taken from the audited documents.
 
 The vapor-pressure correlation is a generic published reference, not a PG95
