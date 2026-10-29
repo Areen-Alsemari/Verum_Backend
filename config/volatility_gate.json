@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Tabulated points used by the verification gate of decision D46 version 3: the gasoline rows of Table 7.1-2 and the worked example of the US EPA AP-42 chapter 7.1 (June 2026 edition). The edition fetched on 2026-10-29 tabulates three gasoline classes (RVP 13, 10, 7), not the eight classes named in the decision; the others (7.8, 8.3, 11.5, 13.5, 15) do not appear in it.",
+  "source": "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf, Table 7.1-2 (page 7.1-102) and the example of Section 7.1.4 (page 7.1-212)",
+  "distillation_slope_S": 3.0,
+  "tolerance_constants_relative": 0.001,
+  "tolerance_pressure_relative": 0.02,
+  "table_7_1_2": [
+    {
+      "rvp_psi": 13.0,
+      "A": 11.644,
+      "B_degR": 5043.6,
+      "true_vapor_pressure_60F_psia": 7.0
+    },
+    {
+      "rvp_psi": 10.0,
+      "A": 11.724,
+      "B_degR": 5237.3,
+      "true_vapor_pressure_60F_psia": 5.2
+    },
+    {
+      "rvp_psi": 7.0,
+      "A": 11.833,
+      "B_degR": 5500.6,
+      "true_vapor_pressure_60F_psia": 3.5
+    }
+  ],
+  "worked_example_528_37_degR": [
+    {
+      "rvp_psi": 12.0,
+      "A": 11.668,
+      "B_degR": 5102.7,
+      "vapor_pressure_psia": 7.47
+    },
+    {
+      "rvp_psi": 7.0,
+      "A": 11.833,
+      "B_degR": 5500.6,
+      "vapor_pressure_psia": 4.15
+    }
+  ]
+}

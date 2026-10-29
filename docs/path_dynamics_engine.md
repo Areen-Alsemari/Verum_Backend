@@ -85,7 +85,7 @@ logarithm between grid points and clipped to [0.8, 1.25]. Only a scenario with
 hidden `boundary_state` dataset. Receipt set-points are chosen from 0, 300, 400, 500 and
 600 m3/h.
 
-Each episode has an atmosphere stratum, `sea_level` (101325 Pa) or `elevated` (94300 Pa,
+Each episode has an atmosphere stratum, `coastal` (101325 Pa) or `inland` (94300 Pa,
 an estimate for a site near 600 m, elevation from memory and to be confirmed). The
 pumping-minimum tables are stored per stratum, for both fitting profiles and the NPSH3
 sweep, computed at the worst-case `f_d = 0.8` (the largest flow and the smallest margin).
@@ -203,7 +203,7 @@ rows after the checkpoint for equality as floating-point numbers on the same pla
 - Temperature is constant in an episode (decision D21).
 - Protection acts on true signals; instrument lags, noise and failures are absent.
 - A branched lineup falls back to the quasi-steady scheme and is flagged.
-- The pumping-minimum tables and the strata are provisional selections; the elevated
+- The pumping-minimum tables and the strata are provisional selections; the inland
   stratum rests on an elevation from memory.
 - Tests of the lumped path against the steady solver share formulas with the
   implementation and are not independent validation of the hydraulics.

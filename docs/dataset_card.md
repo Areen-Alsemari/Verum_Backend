@@ -34,7 +34,7 @@ lists a validity window (`validity_windows` in `episode.json`); the hidden join 
 
 Families: hydraulic only; no faults are implemented. Scenario classes: healthy delivery, healthy
 receipt, concurrent receipt and delivery, receipt switch, fill to high-high with isolation,
-set-point step, delivery with a downstream demand process, delivery in the elevated stratum, and
+set-point step, delivery with a downstream demand process, delivery in the inland stratum, and
 two rejected starts. Episode count and horizon: **unresolved** (a campaign has not been defined);
 the shipped scenarios last 3600 s.
 
@@ -67,7 +67,7 @@ independent validation.** No independent validation exists: **none**.
 - The sensor noise, dropout, quantisation and delay values are selections, not measurements.
 - The alarm uses the level-transmitter chain; the high-high trip uses a detector with a selected
   offset and delay (D33, D40).
-- The elevated stratum rests on an elevation recalled from memory and to be confirmed.
+- The inland stratum rests on an elevation recalled from memory and to be confirmed.
 - The inspection catalog is empty: no catalog exists in the audited package.
 - Pressure convention (velocity head): static pressure is `rho g (H - z) - rho v^2 / 2` at the
   end of an edge, as described in `docs/steady_hydraulics.md`.

@@ -96,6 +96,7 @@ def episode_document(
             "level_accuracy_m": cfg["level_accuracy_target_m"],
         },
         "atmosphere_stratum": scenario.atmosphere_stratum,
+        "volatility_class": scenario.volatility_class,
         "atmosphere_pa_abs": model.for_stratum(scenario.atmosphere_stratum).patm,
         "demand_process": scenario.demand_process,
         "events_evaluated": outcome.events_evaluated,

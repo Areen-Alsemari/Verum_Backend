@@ -43,7 +43,7 @@ REASONS = {
     "rigid_column_unavailable",
 }
 RECEIPT_ROUND_TRIP = 2.0 * (150.0 / 1078.2 + 45.0 / 1089.2)
-CLEAN = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0-F", "S0-G", "S0-A-elev"]
+CLEAN = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0-F", "S0-G", "S0-A-inland"]
 
 
 def _run(model: HydraulicModel, scenario: Any, cfg: Any = None) -> tuple[Engine, Any]:
@@ -154,14 +154,14 @@ def test_a_branched_lineup_is_flagged_as_unavailable(model: HydraulicModel) -> N
 
 # Events judged against the wave criterion, counted by hand from the scenario files: a valve
 # stroke on an active path and a change of the receipt set-point each count once.
-#   S0-A, S0-F, S0-A-elev: none (steady delivery).
+#   S0-A, S0-F, S0-A-inland: none (steady delivery).
 #   S0-B: the set-point 0 -> 600 at 0 s (1).  S0-G: the step 600 -> 300 at 1200 s (1).
 #   S0-C: the set-point at 0 s (1).
 #   S0u-D: set-point 600 -> 0 and the hold lineup at 600 s: XV-R000, XV-R101 strokes (3);
 #          RECEIVE_102 and the set-point 0 -> 600 at 1200 s: XV-R000, XV-R102 strokes (3).
 #   S0u-E: the two closures XV-R000, XV-R101 ordered by the protection request (2).
 EVENTS = {
-    "S0-A": 0, "S0-F": 0, "S0-A-elev": 0, "S0-B": 1, "S0-G": 1, "S0-C": 1, "S0u-D": 6, "S0u-E": 2,
+    "S0-A": 0, "S0-F": 0, "S0-A-inland": 0, "S0-B": 1, "S0-G": 1, "S0-C": 1, "S0u-D": 6, "S0u-E": 2,
 }  # fmt: skip
 
 

@@ -1,12 +1,13 @@
 {
   "scenario_id": "REJ-1",
-  "description": "Delivery from TK-103 at 5 m and 45 C: below the pumping minimum at the start.",
+  "description": "Delivery from TK-103 at 5 m and 45 C (coastal, RVP_9_0): below the stored pumping minimum 7.888 m at the start.",
   "seed": 20261011,
   "duration_s": 3600,
   "temperature_c": 45.0,
   "fitting_profile": "reference_fittings",
   "healthy_envelope": true,
-  "atmosphere_stratum": "sea_level",
+  "atmosphere_stratum": "coastal",
+  "volatility_class": "RVP_9_0",
   "demand_process": false,
   "initial": {
     "mode": "DELIVER_103_A",

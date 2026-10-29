@@ -32,7 +32,8 @@
     "demand_process",
     "events_evaluated",
     "validity_windows",
-    "protection_crossings"
+    "protection_crossings",
+    "volatility_class"
   ],
   "properties": {
     "schema_version": {
@@ -108,8 +109,8 @@
     },
     "atmosphere_stratum": {
       "enum": [
-        "sea_level",
-        "elevated"
+        "coastal",
+        "inland"
       ]
     },
     "atmosphere_pa_abs": {
@@ -204,6 +205,13 @@
           }
         }
       }
+    },
+    "volatility_class": {
+      "enum": [
+        "RVP_9_0",
+        "RVP_9_5",
+        "RVP10"
+      ]
     }
   }
 }

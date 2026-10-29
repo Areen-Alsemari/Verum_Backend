@@ -12,8 +12,8 @@ Derivations (hand arithmetic):
       Phase 3 engine added the trapezoid error of the Heun stage average, (dt^2/12) q'(0) / A =
       1.0e-5 m at dt = 1 s; the implicit integration of Phase 3b removes it.
     * Accuracy target (decision D17): level error <= 0.025 mm = 2.5e-5 m.
-    * REJ-2. From 8.1 m to the stored minimum 7.9161 m (sea level, f_d = 0.8) the level falls
-      0.1839 m, i.e. 130.0 m3; at about 308 m3/h (0.0856 m3/s) that takes about 1519 s.
+    * REJ-2. From 6.46 m to the stored minimum 6.278 m (coastal, RVP_9_0, f_d = 0.8) the level
+      falls 0.182 m, i.e. 128.6 m3; at about 301 m3/h (0.0836 m3/s) that takes about 1539 s.
 Independence: the S0-B reference is a closed-form expression (independent). The S0-A,
 S0-C and REJ-2 references integrate the same steady flow function (the production
 hydraulic model) with an adaptive RK45 scheme, so they are independent in the time
@@ -42,7 +42,7 @@ from verum.hydraulics import (
     SteadyInputs,
     pumping_minimum_level,
 )
-from verum.hydraulics.pumping_minimum import STRATUM_FILENAMES
+from verum.hydraulics.pumping_minimum import stratum_filename
 from verum.lineups import load_lineup_table
 from verum.params import ParamValue
 from verum.sim.config import load_sim_config
@@ -273,7 +273,7 @@ def test_rej2_crossing_time_matches_an_independent_integration(
     rejection = episodes["REJ-2"].outcome.rejection
     assert rejection is not None
     minimum = pumping_minimum_level(
-        "TK-101", 45.0, "reference_fittings", 4.0, None, STRATUM_FILENAMES["sea_level"]
+        "TK-101", 45.0, "reference_fittings", 4.0, None, stratum_filename("coastal", "RVP_9_0")
     ).value
     lineup = _lineup("DELIVER_101_A", model)
 
@@ -296,20 +296,20 @@ def test_rej2_crossing_time_matches_an_independent_integration(
     sol = solve_ivp(
         rhs,
         [0.0, 3600.0],
-        [geometry.volume_m3(8.1, RHO)],
+        [geometry.volume_m3(6.46, RHO)],
         method="RK45",
         rtol=1e-10,
         atol=1e-7,
         events=crossing,
     )
     t_ref = float(sol.t_events[0][0])
-    # Hand estimate: (8.1 - 7.9161) m x 706.858 m2 = 130.0 m3. The TK-101 duty flow is
-    # 312.5 m3/h at 9 m (audited duty point) and falls 4.5 m3/h per metre of level (slope of
-    # the pump/system intersection, 1.24e-3 m3/s per m), so it is about 308 m3/h = 0.0856 m3/s
-    # over this fall: 130.0 / 0.0856 = 1519 s.
-    assert 1510.0 < t_ref < 1530.0
+    # Hand estimate: (6.46 - 6.278) m x 706.858 m2 = 128.6 m3. The TK-101 duty flow is
+    # 312.5 m3/h at 9 m (audited duty point) and falls 4.46 m3/h per metre of level (slope of
+    # the pump/system intersection, 1.24e-3 m3/s per m), so it is about 301 m3/h = 0.0836 m3/s
+    # over this fall: 128.6 / 0.0836 = 1539 s.
+    assert 1525.0 < t_ref < 1555.0
     # The crossing time error follows from the level error target: 2.5e-5 m / (1.2e-4 m/s) = 0.2 s.
     assert rejection["t_sim_s"] == pytest.approx(t_ref, abs=0.2)
     assert rejection["gate"] == "SG0"
-    assert minimum == pytest.approx(7.9161, abs=1e-4)
+    assert minimum == pytest.approx(6.278, abs=1e-3)
     assert np.isfinite(t_ref)

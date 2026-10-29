@@ -65,7 +65,7 @@ from verum.hydraulics import (
     load_boundary_law_coefficient,
     pumping_minimum_level,
 )
-from verum.hydraulics.pumping_minimum import STRATUM_FILENAMES
+from verum.hydraulics.pumping_minimum import stratum_filename
 from verum.ledger.tank import UNIT_ROUNDOFF
 from verum.lineups import LineupTable
 from verum.ops import Command, OperationsController
@@ -92,7 +92,6 @@ from verum.sim.valves import Valve, make_valve
 from verum.tanks import load_tank_geometry
 from verum.truth import TruthSink
 
-SCENARIO_NAME = "EPA_GENERIC_RVP10_REFERENCE"
 RANK_COMMAND, RANK_DETECTOR, RANK_VALVE = 0, 1, 2
 SOURCE_NODE = "PIPELINE_RECEIPT_BOUNDARY"
 BOUNDARY_NODE = "DISTRIBUTION_BOUNDARY"
@@ -384,7 +383,7 @@ class Engine:
         inputs = SteadyInputs(
             lineup=Lineup(frozenset(open_valves), st.running),
             tank_levels_m=self._levels(volumes),
-            scenario=SCENARIO_NAME,
+            scenario=self.scenario.volatility_class,
             temperature_c=self.scenario.temperature_c,
             fitting_profile=self.scenario.fitting_profile,
             receipt=ReceiptBoundary(flow_m3h=receipt_m3h),
@@ -1011,7 +1010,7 @@ class Engine:
         sc = self.scenario
         label = (
             f"pumping_minimum_level[{tank},{sc.temperature_c:g}C,{sc.fitting_profile},"
-            f"NPSH3={c:g}m,{sc.atmosphere_stratum},f_d=0.8]"
+            f"NPSH3={c:g}m,{sc.atmosphere_stratum},{sc.volatility_class},f_d=0.8]"
         )
         record = pumping_minimum_level(
             tank,
@@ -1019,7 +1018,7 @@ class Engine:
             sc.fitting_profile,
             c,
             self.model.directory,
-            STRATUM_FILENAMES[sc.atmosphere_stratum],
+            stratum_filename(sc.atmosphere_stratum, sc.volatility_class),
         )
         try:
             return record.value, label

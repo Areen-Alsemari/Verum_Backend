@@ -43,7 +43,7 @@ from verum.sim.valves import make_valve
 
 FIXED_SEEDS = {
     "S0-A": 20261001, "S0-B": 20261002, "S0-C": 20261003, "S0u-D": 20261004,
-    "S0u-E": 20261005, "S0-F": 20261101, "S0-G": 20261007, "S0-A-elev": 20261008,
+    "S0u-E": 20261005, "S0-F": 20261101, "S0-G": 20261007, "S0-A-inland": 20261008,
     "REJ-1": 20261011, "REJ-2": 20261012, "REJ-3": 20261013,
 }  # fmt: skip
 
@@ -214,7 +214,7 @@ def test_an_unknown_schedule_command_is_refused(table: LineupTable) -> None:
         "S0u-E",
         "S0-F",
         "S0-G",
-        "S0-A-elev",
+        "S0-A-inland",
         "REJ-1",
         "REJ-2",
         "REJ-3",
@@ -225,7 +225,7 @@ def test_scenario_files_are_valid(sid: str) -> None:
     assert sc.fitting_profile == "reference_fittings"
     assert sc.seed == FIXED_SEEDS[sid]  # decision D41: fixed and distinct (see test_seeds)
     assert sc.duration_s == 3600.0 and sc.scenario_id == sid
-    assert sc.atmosphere_stratum == ("elevated" if sid == "S0-A-elev" else "sea_level")
+    assert sc.atmosphere_stratum == ("inland" if sid == "S0-A-inland" else "coastal")
     assert sc.demand_process is (sid == "S0-F")
 
 
@@ -234,7 +234,7 @@ def test_scenario_specifics() -> None:
         load_scenario("REJ-1").temperature_c == 45.0
         and load_scenario("REJ-1").tank_levels_m["TK-103"] == 5.0
     )
-    assert load_scenario("REJ-2").tank_levels_m["TK-101"] == 8.1
+    assert load_scenario("REJ-2").tank_levels_m["TK-101"] == 6.46
     assert (
         load_scenario("S0u-E").tank_levels_m["TK-101"] == 12.3
         and not load_scenario("S0u-E").healthy_envelope

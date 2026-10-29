@@ -41,7 +41,7 @@ from verum.sim.episode import EpisodeResult
 CFG = load_sensor_config()
 EMITTED = set(CFG.tags)
 WITHHELD = {"YS-201A", "VT-201A", "IT-201A", "YS-201B", "VT-201B", "IT-201B"}
-COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
+COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-inland"]
 OBS_KEYS = set(load_schema("observation")["properties"])
 TIMELINE = esd_timeline()
 CAPPED_CLOSURES = {"S0u-D", "S0u-E"}
@@ -221,7 +221,7 @@ def test_pt203_varies_with_flow_through_the_boundary_law(
 def test_gauge_readings_agree_between_the_strata_while_the_absolute_truth_differs(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]]
 ) -> None:
-    """S0-A and S0-A-elev share the hydraulics defined in gauge terms (2 barg reservoir). The
+    """S0-A and S0-A-inland share the hydraulics defined in gauge terms (2 barg reservoir). The
     truth pressure is absolute (gauge + the stratum atmosphere), and every emitted pressure
     transmitter reports gauge against the episode atmosphere (decision D27), so the readings
     agree; no emitted tag is referenced to a fixed atmosphere. The hidden truth differs by
@@ -232,13 +232,13 @@ def test_gauge_readings_agree_between_the_strata_while_the_absolute_truth_differ
         values = [r["value"] for r in obs[sid] if r["tag_id"] == tag and r["value"] is not None]
         return float(np.mean(values))
 
-    assert mean("S0-A", "PT-203") == pytest.approx(mean("S0-A-elev", "PT-203"), abs=0.002)
-    assert mean("S0-A", "FT-201") == pytest.approx(mean("S0-A-elev", "FT-201"), abs=0.01)
+    assert mean("S0-A", "PT-203") == pytest.approx(mean("S0-A-inland", "PT-203"), abs=0.002)
+    assert mean("S0-A", "FT-201") == pytest.approx(mean("S0-A-inland", "FT-201"), abs=0.01)
     docs = {
         sid: json.loads((episodes[sid].directory / "episode.json").read_text())["atmosphere_pa_abs"]
-        for sid in ("S0-A", "S0-A-elev")
+        for sid in ("S0-A", "S0-A-inland")
     }
-    assert docs["S0-A"] - docs["S0-A-elev"] == 7025.0
+    assert docs["S0-A"] - docs["S0-A-inland"] == 7025.0
 
 
 def test_lk09_null_rate_is_the_binomial_dropout_rate_for_every_tag_in_every_episode(

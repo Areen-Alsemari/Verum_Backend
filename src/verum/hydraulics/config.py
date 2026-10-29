@@ -27,6 +27,7 @@ from typing import Any
 
 from verum.contracts.errors import ContractError
 from verum.contracts.paths import config_dir
+from verum.hydraulics.volatility import derived_constants
 from verum.params import ParamValue, ParamValueError
 
 
@@ -55,6 +56,7 @@ class HydraulicConfig:
     strata_c: dict[str, ParamValue]
     tap_reference_edges: dict[str, str]
     atmosphere_strata_pa_abs: dict[str, ParamValue] = field(default_factory=dict)
+    derived_vapor_constants: dict[str, tuple[ParamValue, ParamValue]] = field(default_factory=dict)
 
     def __getitem__(self, name: str) -> float:
         try:
@@ -89,6 +91,7 @@ def load_hydraulic_config(directory: Path | None = None) -> HydraulicConfig:
         strata_c=_records(raw["temperature_strata_c"]),
         tap_reference_edges=dict(raw["tap_reference_edges"]),
         atmosphere_strata_pa_abs=_records(raw.get("atmosphere_strata_pa_abs", {})),
+        derived_vapor_constants=derived_constants(directory),
     )
 
 

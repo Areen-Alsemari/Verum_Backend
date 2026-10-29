@@ -154,6 +154,15 @@
   "property_scenarios": {
     "EPA_GENERIC_RVP10_REFERENCE": {
       "fluid_contract_vapor_reference_id": "EPA_GENERIC_MOTOR_GASOLINE_RVP10"
+    },
+    "RVP10": {
+      "fluid_contract_vapor_reference_id": "EPA_GENERIC_MOTOR_GASOLINE_RVP10"
+    },
+    "RVP_9_0": {
+      "fluid_contract_vapor_reference_id": "DERIVED"
+    },
+    "RVP_9_5": {
+      "fluid_contract_vapor_reference_id": "DERIVED"
     }
   },
   "temperature_strata_c": {
@@ -177,6 +186,13 @@
       "status": "provisional",
       "evidence_tag": "SIM",
       "provenance_id": "VERUM-DD-D11-v1.0"
+    },
+    "40": {
+      "value": 40.0,
+      "unit": "degC",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D11-v3"
     }
   },
   "tap_reference_edges": {
@@ -188,14 +204,14 @@
     "PIPELINE_RECEIPT_BOUNDARY": "E001"
   },
   "atmosphere_strata_pa_abs": {
-    "sea_level": {
+    "coastal": {
       "value": 101325.0,
       "unit": "Pa",
       "status": "provisional",
       "evidence_tag": "DESIGN",
       "provenance_id": "VERUM-DD-D24-v1.0"
     },
-    "elevated": {
+    "inland": {
       "value": 94300.0,
       "unit": "Pa",
       "status": "provisional",
@@ -203,5 +219,5 @@
       "provenance_id": "VERUM-DD-D24-v1.0"
     }
   },
-  "atmosphere_strata_note": "elevated: sensitivity for a site near 600 m elevation, standard-atmosphere estimate, elevation from memory, to be confirmed by the team"
+  "atmosphere_strata_note": "inland: Riyadh-area elevation about 600 to 625 m; standard-atmosphere estimate about 94.0 kPa; observed airport field pressures about 95.3 kPa on two days (decision D24 version 2); equal weight with coastal, no single site claimed"
 }

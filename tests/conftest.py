@@ -82,7 +82,7 @@ def model() -> HydraulicModel:
     return HydraulicModel.load()
 
 
-COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
+COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-inland"]
 SCENARIOS = [*COMPLETED, "REJ-1", "REJ-2", "REJ-3"]
 
 

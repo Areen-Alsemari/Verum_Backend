@@ -36,7 +36,7 @@ from verum.sim.scenario import load_scenario
 from verum.truth import ListSink
 
 TIMELINE = esd_timeline()
-COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
+COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-inland"]
 AREA = 706.858347
 
 
@@ -95,9 +95,9 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
         == episodes[sid].episode_id
     )
     assert doc["tolerances"]["mass_conservation_kg_s"] == 4.2e-4
-    stratum = "elevated" if sid == "S0-A-elev" else "sea_level"
+    stratum = "inland" if sid == "S0-A-inland" else "coastal"
     assert doc["atmosphere_stratum"] == stratum
-    assert doc["atmosphere_pa_abs"] == (94300.0 if stratum == "elevated" else 101325.0)
+    assert doc["atmosphere_pa_abs"] == (94300.0 if stratum == "inland" else 101325.0)
     assert doc["demand_process"] is (sid == "S0-F")
     assert doc["solver_version"] == "path-dynamics-radau-1"
 
@@ -203,7 +203,7 @@ def test_audit_detects_a_ledger_that_disagrees_with_the_tank_state(
 # --- healthy envelope ----------
 
 
-@pytest.mark.parametrize("sid", ["S0-A", "S0-B", "S0-C", "S0u-D", "S0-F", "S0-G", "S0-A-elev"])
+@pytest.mark.parametrize("sid", ["S0-A", "S0-B", "S0-C", "S0u-D", "S0-F", "S0-G", "S0-A-inland"])
 def test_healthy_scenarios_stay_normal_and_inside_the_level_envelope(
     series: dict[str, Series], sid: str
 ) -> None:
@@ -457,9 +457,9 @@ def test_rej1_is_rejected_at_the_start_with_gate_time_and_parameter(
     validate("simulation_rejected", record)
     assert (record["gate"], record["t_sim_s"]) == ("SG0", 0.0)
     assert record["parameter"] == (
-        "pumping_minimum_level[TK-103,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
+        "pumping_minimum_level[TK-103,45C,reference_fittings,NPSH3=4m,coastal,RVP_9_0,f_d=0.8]"
     )
-    assert record["value"] == 5.0 and record["limit"] == pytest.approx(9.6054, abs=1e-4)
+    assert record["value"] == 5.0 and record["limit"] == pytest.approx(7.8880, abs=1e-3)
     assert result.outcome.steps == 0
 
 
@@ -472,13 +472,13 @@ def test_rej2_is_rejected_when_the_level_crosses_the_pumping_minimum(
     assert (
         record["gate"] == "SG0"
         and record["parameter"]
-        == "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
+        == "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,coastal,RVP_9_0,f_d=0.8]"
     )
-    assert 1510.0 < record["t_sim_s"] < 1530.0  # 130.0 m3 / 0.0856 m3/s (308 m3/h at about 8 m)
+    assert 1525.0 < record["t_sim_s"] < 1555.0  # 128.7 m3 / 0.0836 m3/s (301 m3/h at about 6.4 m)
     assert (
         record["value"]
-        == pytest.approx(7.9161, abs=1e-4)
-        == pytest.approx(record["limit"], abs=1e-4)
+        == pytest.approx(6.278, abs=1e-3)
+        == pytest.approx(record["limit"], abs=1e-3)
     )
 
 
@@ -585,16 +585,16 @@ def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
 def test_rej3_is_rejected_at_the_start_and_names_the_stored_minimum(
     episodes: dict[str, EpisodeResult],
 ) -> None:
-    """Independent: 7.3 m is below the stored minimum 7.9161 m (45 C, reference fittings,
-    NPSH3 4 m, sea level, f_d = 0.8), so the run stops at t = 0 before any step."""
+    """Independent: 6.0 m is below the stored minimum 6.278 m (45 C, reference fittings,
+    NPSH3 4 m, coastal, RVP_9_0, f_d = 0.8), so the run stops at t = 0 before any step."""
     result = episodes["REJ-3"]
     record = json.loads((result.directory / "simulation_rejected.json").read_text())
     validate("simulation_rejected", record)
     assert (record["gate"], record["t_sim_s"]) == ("SG0", 0.0)
     assert record["parameter"] == (
-        "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,sea_level,f_d=0.8]"
+        "pumping_minimum_level[TK-101,45C,reference_fittings,NPSH3=4m,coastal,RVP_9_0,f_d=0.8]"
     )
-    assert record["value"] == 7.3 and record["limit"] == pytest.approx(7.9161, abs=1e-4)
+    assert record["value"] == 6.0 and record["limit"] == pytest.approx(6.278, abs=1e-3)
     assert result.outcome.steps == 0
 
 

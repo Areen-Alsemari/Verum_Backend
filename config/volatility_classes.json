@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Volatility classes (decision D46 version 3). RVP10 uses the audited constants of the fluid contract; the derived classes use the AP-42 gasoline correlation and are computed only if the verification gate in volatility_gate.json passes.",
+  "classes": {
+    "RVP10": {
+      "kind": "resolved",
+      "rvp_psi": {
+        "value": 10.0,
+        "unit": "psi",
+        "status": "provisional",
+        "evidence_tag": "REF",
+        "provenance_id": "VERUM-FLUID-CONTRACT"
+      },
+      "fluid_vapor_reference_id": "EPA_GENERIC_MOTOR_GASOLINE_RVP10",
+      "role": "stress class"
+    },
+    "RVP_9_0": {
+      "kind": "derived",
+      "rvp_psi": {
+        "value": 9.0,
+        "unit": "psi",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D46-v3"
+      },
+      "role": "baseline"
+    },
+    "RVP_9_5": {
+      "kind": "derived",
+      "rvp_psi": {
+        "value": 9.5,
+        "unit": "psi",
+        "status": "provisional",
+        "evidence_tag": "SIM",
+        "provenance_id": "VERUM-DD-D46-v3"
+      },
+      "role": "upper bracket"
+    }
+  }
+}

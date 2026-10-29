@@ -1,17 +1,18 @@
 {
   "scenario_id": "REJ-2",
-  "description": "Delivery from TK-101 starting at 8.1 m and 45 C: the level crosses the stored pumping minimum (stratum sea_level, f_d = 0.8 table).",
+  "description": "Delivery from TK-101 starting at 6.46 m and 45 C (coastal, RVP_9_0): the level crosses the stored pumping minimum 6.278 m.",
   "seed": 20261012,
   "duration_s": 3600,
   "temperature_c": 45.0,
   "fitting_profile": "reference_fittings",
   "healthy_envelope": true,
-  "atmosphere_stratum": "sea_level",
+  "atmosphere_stratum": "coastal",
+  "volatility_class": "RVP_9_0",
   "demand_process": false,
   "initial": {
     "mode": "DELIVER_101_A",
     "tank_levels_m": {
-      "TK-101": 8.1,
+      "TK-101": 6.46,
       "TK-102": 7.0,
       "TK-103": 5.0
     },

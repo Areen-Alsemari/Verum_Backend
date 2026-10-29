@@ -48,7 +48,7 @@ def _site_model(model: HydraulicModel) -> HydraulicModel:
     )
 
 
-def test_no_source_file_hard_codes_the_sea_level_atmosphere(root: Path) -> None:
+def test_no_source_file_hard_codes_the_coastal_atmosphere(root: Path) -> None:
     pattern = re.compile(r"101325|101\.325|1\.01325")
     hits = [
         p.as_posix()
@@ -104,7 +104,7 @@ COMBINATIONS = [
 
 
 @pytest.mark.parametrize(("tank", "temp", "profile", "coeff"), COMBINATIONS)
-def test_site_levels_are_never_lower_than_sea_level_and_match_the_solver(
+def test_site_levels_are_never_lower_than_coastal_and_match_the_solver(
     model: HydraulicModel, tank: str, temp: float, profile: str, coeff: float
 ) -> None:
     site_model = _site_model(model)

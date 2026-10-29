@@ -70,8 +70,8 @@
     },
     "atmosphere_stratum": {
       "enum": [
-        "sea_level",
-        "elevated"
+        "coastal",
+        "inland"
       ]
     },
     "atmosphere_pa_abs": {

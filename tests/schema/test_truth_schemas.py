@@ -109,7 +109,7 @@ BOUNDARY: Doc = {
     "log_downstream_factor": 0.0198,
     "boundary_law_coefficient_m": 10.26,
     "reservoir_pressure_pa_gauge": 200000.0,
-    "atmosphere_stratum": "sea_level",
+    "atmosphere_stratum": "coastal",
     "atmosphere_pa_abs": 101325.0,
 }
 WINDOW: Doc = {
@@ -165,7 +165,8 @@ EPISODE: Doc = {
     "fluid_density_kg_m3": 750.0,
     "initial_tank_levels_m": {"TK-101": 9.0},
     "tolerances": {"mass_conservation_kg_s": 4.2e-4},
-    "atmosphere_stratum": "sea_level",
+    "atmosphere_stratum": "coastal",
+    "volatility_class": "RVP_9_0",
     "atmosphere_pa_abs": 101325.0,
     "demand_process": False,
     "events_evaluated": 3,
@@ -344,6 +345,7 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
     ("validity_windows", "unknown kind", _edit(WINDOW, "kind", "valve_leak")),
     ("validity_windows", "open window", _edit(WINDOW, "t_end_s", None)),
     ("episode", "unknown stratum", _edit(EPISODE, "atmosphere_stratum", "mountain")),
+    ("episode", "unknown volatility class", _edit(EPISODE, "volatility_class", "RVP_12")),
     ("episode", "windows without reason", _edit(EPISODE, "validity_windows", [{"window_id": "x"}])),
     ("mass_ledger", "unknown scope", _edit(LEDGER, "scope", "TK-104")),
     ("mass_ledger", "missing residual", _edit(LEDGER, "residual_kg", _DROP)),

@@ -16,7 +16,7 @@ Derivations (hand arithmetic):
     * Dropout. The count of lost samples is binomial(N, 0.0005).
     * Atmosphere. All pressure transmitters are referenced to the site atmosphere, so the
       same absolute pressure reads (101325 - 94300)/1e5 = 0.07025 bar higher in the
-      sea-level stratum than in the elevated one; level, flow and temperature do not depend
+      coastal stratum than in the inland one; level, flow and temperature do not depend
       on the stratum.
 Independence: the closed forms and binomial/normal sampling bounds are hand derived; the
 random draws come from the code under test.
@@ -152,9 +152,9 @@ def test_clipping_flags_a_real_overrange_but_not_noise_at_zero() -> None:
     assert suspect < 0.01 * n  # nothing like the half that noise alone would clip
 
 
-def test_a_negative_gauge_value_in_the_elevated_stratum_is_not_clipped() -> None:
-    abs_pa, elevated = 90000.0, 94300.0
-    gauge = adapter._convert("pressure_pa_abs", abs_pa, elevated)
+def test_a_negative_gauge_value_in_the_inland_stratum_is_not_clipped() -> None:
+    abs_pa, inland = 90000.0, 94300.0
+    gauge = adapter._convert("pressure_pa_abs", abs_pa, inland)
     assert gauge == pytest.approx(-0.043)
     rows = _run("PT-201", gauge or 0.0, 600.0)  # PT-201 range is -1 to 5 barg
     values = np.array([r["value"] for r in rows if r["value"] is not None])

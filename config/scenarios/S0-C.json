@@ -6,7 +6,8 @@
   "temperature_c": 25.0,
   "fitting_profile": "reference_fittings",
   "healthy_envelope": true,
-  "atmosphere_stratum": "sea_level",
+  "atmosphere_stratum": "coastal",
+  "volatility_class": "RVP_9_0",
   "demand_process": false,
   "initial": {
     "mode": "RECEIVE_101_DELIVER_102_A",

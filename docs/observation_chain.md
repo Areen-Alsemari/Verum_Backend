@@ -45,7 +45,7 @@ the node row.
    atmosphere of the episode stratum (101325 or 94300 Pa), K to C. The truth pressure is
    absolute (gauge plus the stratum atmosphere) and every emitted transmitter reports gauge
    against the episode atmosphere, so the same hydraulics read the same in both strata. A
-   sensor referenced to a fixed atmosphere would read 0.07025 bar lower in the elevated
+   sensor referenced to a fixed atmosphere would read 0.07025 bar lower in the inland
    stratum; none of the 30 emitted tags is of that kind.
 2. **Transport delay.** None unless given.
 3. **First-order lag** with the time constant of the table. The discretisation is exact for a
