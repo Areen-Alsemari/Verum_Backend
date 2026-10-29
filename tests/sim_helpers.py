@@ -29,3 +29,42 @@ def protection_rows(
             elif r["record_type"] == "tank_state":
                 levels[r["t_sim_s"]] = r["payload"]["level_m"]
     return rows, levels
+
+
+def esd_timeline() -> dict[str, float]:
+    """Times of the S0u-E isolation, computed from the scenario file (hand arithmetic).
+
+    The detector asserts when the true level reaches 13 m minus its offset (the offset is the
+    first draw of the stream ``detector/TK-101``), at 0.7 m x 706.858347 m2 / (600/3600 m3/s)
+    - offset/rate after the start from 12.3 m; the trip follows 0.2 s later; the protection
+    logic acts at its next update, which is the next whole second or the next level-transmitter
+    sample or arrival of any tank (they are queue events); XV-R000 is physically closed 9.99 s
+    after the command.
+    """
+    import math
+
+    from verum.rng import RandomStreams
+    from verum.sensors import chain, load_sensor_config
+    from verum.sim.config import load_sim_config
+    from verum.sim.scenario import load_scenario
+
+    scenario = load_scenario("S0u-E")
+    sigma = load_sim_config()["detector_offset_sigma_m"]
+    offset = float(RandomStreams(scenario.seed).stream("detector/TK-101").normal(0.0, sigma))
+    rate = (600.0 / 3600.0) / 706.858347
+    trip = (13.0 - offset - 12.3) / rate + 0.2
+    candidates = [math.floor(trip) + 1.0]
+    for tag, spec in load_sensor_config().tags.items():
+        if tag.startswith("LT-"):
+            assert spec.interval_s
+            phase = chain.sample_phase(tag, spec.interval_s)
+            k = math.floor((trip - phase) / spec.interval_s) + 1
+            for j in (k - 1, k, k + 1):
+                for t in (
+                    phase + j * spec.interval_s,
+                    phase + j * spec.interval_s + spec.comms_delay_s,
+                ):
+                    if t > trip:
+                        candidates.append(t)
+    request = min(candidates)
+    return {"offset": offset, "trip": trip, "request": request, "closed": request + 9.99}

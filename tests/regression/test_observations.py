@@ -32,6 +32,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from sim_helpers import esd_timeline
 from verum.api import Gateway, GatewayViolation, check_allowlist
 from verum.contracts import ContractError, load_schema, validator
 from verum.sensors import load_sensor_config
@@ -42,6 +43,7 @@ EMITTED = set(CFG.tags)
 WITHHELD = {"YS-201A", "VT-201A", "IT-201A", "YS-201B", "VT-201B", "IT-201B"}
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
 OBS_KEYS = set(load_schema("observation")["properties"])
+TIMELINE = esd_timeline()
 CAPPED_CLOSURES = {"S0u-D", "S0u-E"}
 EVENT_TAGS = {t for t, s in CFG.tags.items() if s.kind == "event"}
 CONTINUOUS = [t for t, spec in CFG.tags.items() if spec.kind == "continuous"]
@@ -99,7 +101,7 @@ def test_the_gateway_never_returns_a_later_row_over_a_whole_episode(
     gateway = Gateway(episodes["S0u-E"].directory)
     rows = obs["S0u-E"]
     previous = 0
-    for t in (0.0, 0.05, 1.0, 600.0, 2968.9, 2979.0, 3000.0, 3600.0, 3601.0):
+    for t in (0.0, 0.05, 1.0, 600.0, TIMELINE["trip"], TIMELINE["closed"], 3000.0, 3600.0, 3601.0):
         got = gateway.query(t)["observations"]
         assert all(r["t_available_s"] <= t for r in got)
         assert len(got) == sum(1 for r in rows if r["t_available_s"] <= t) >= previous
@@ -130,11 +132,15 @@ def test_every_event_tag_has_an_initial_row_at_t_zero(
 def test_the_valve_contact_follows_the_stroke_with_the_lag_of_the_table(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """XV-R000 closes at 2969 s: alpha = 1 - (t - 2969)/10 falls below 0.97 at 2969.3 s, and
-    the contact row follows after the 2.0 s lag (hand: 2971.3 s) and the 0.1 s comms delay."""
+    """XV-R000 closes from the isolation request: alpha = 1 - (t - t_req)/10 falls below 0.97 at
+    t_req + 0.3 s, and the contact row follows after the 2.0 s lag (hand: t_req + 2.3 s) and the
+    0.1 s comms delay."""
     rows = [r for r in obs["S0u-E"] if r["tag_id"] == "XV-R000"]
-    assert [(r["t_sim_s"], r["value"]) for r in rows] == [(0.0, 1.0), (pytest.approx(2971.3), 0.0)]
-    assert rows[1]["t_available_s"] == pytest.approx(2971.4)
+    assert [(r["t_sim_s"], r["value"]) for r in rows] == [
+        (0.0, 1.0),
+        (pytest.approx(TIMELINE["request"] + 2.3), 0.0),
+    ]
+    assert rows[1]["t_available_s"] == pytest.approx(TIMELINE["request"] + 2.4)
     s0ud = [r for r in obs["S0u-D"] if r["tag_id"] == "XV-R101"]
     assert [r["value"] for r in s0ud] == [1.0, 0.0]
     assert s0ud[1]["t_sim_s"] == pytest.approx(
@@ -161,20 +167,21 @@ def test_lk11_the_lshh_observation_is_the_detector_output_after_the_comms_delay(
 def test_pt001_clips_at_ten_bar_then_relaxes_toward_the_hydrostatic_value(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """The head at the start of E002 reaches 13.5 barg at the closure (2978.99 s), above the 10
+    """The head at the start of E002 reaches 13.5 barg at the closure, above the 10
     barg range: clipped with quality suspect. The isolated segment then relaxes to the tank head
     with 60 s (decision D39): it is below 10 barg after 60 ln(13.46/10) = 18 s, and at the end
     of the hour it reads the hydrostatic value of TK-101 (13.0 m: (13.0 - 1.0 m) x 0.0735 = 0.88
     barg, less the tank-side losses)."""
     rows = [r for r in obs["S0u-E"] if r["tag_id"] == "PT-001" and r["value"] is not None]
-    clipped = [r for r in rows if 2978.5 < r["t_sim_s"] < 2990.0]
+    closed = TIMELINE["closed"]
+    clipped = [r for r in rows if closed < r["t_sim_s"] < closed + 15.0]
     assert clipped and all(r["value"] == 10.0 and r["quality_flag"] == "suspect" for r in clipped)
-    early = [r for r in rows if r["t_sim_s"] < 2900.0]
+    early = [r for r in rows if r["t_sim_s"] < closed - 100.0]
     assert all(r["quality_flag"] != "suspect" for r in early)
     final = [r["value"] for r in rows if r["t_sim_s"] > 3500.0]
-    assert all(r["quality_flag"] == "good" for r in rows if r["t_sim_s"] > 3000.0)
+    assert all(r["quality_flag"] == "good" for r in rows if r["t_sim_s"] > closed + 25.0)
     assert 0.5 < sum(final) / len(final) < 1.2
-    assert [r["value"] for r in rows if 3000.0 < r["t_sim_s"] < 3010.0][0] < 10.0
+    assert [r["value"] for r in rows if closed + 25.0 < r["t_sim_s"] < closed + 35.0][0] < 10.0
 
 
 def test_ft201_varies_with_the_falling_tank_level(obs: dict[str, list[dict[str, Any]]]) -> None:

@@ -24,6 +24,7 @@ import pytest
 
 from _series import Series
 from _truth_audit import audit, rewrite
+from sim_helpers import esd_timeline
 from verum.contracts import validate
 from verum.hydraulics import HydraulicModel
 from verum.lineups import load_lineup_table
@@ -34,6 +35,7 @@ from verum.sim.episode import EpisodeResult, run_episode
 from verum.sim.scenario import load_scenario
 from verum.truth import ListSink
 
+TIMELINE = esd_timeline()
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-elev"]
 AREA = 706.858347
 
@@ -369,7 +371,10 @@ def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:
     t_trip = kinds[("HIGH_HIGH_TRIP", "TK-101")]
     t_req = kinds[("ISOLATION_REQUESTED", "TK-101")]
     t_conf = kinds[("ISOLATION_CONFIRMED", "TK-101")]
-    assert t_req == math.floor(t_trip) + 1.0  # the next protection update after the trip
+    # The next protection update after the trip: a whole second or a level-transmitter event.
+    assert t_req == pytest.approx(TIMELINE["request"], abs=1e-9)
+    assert t_trip == pytest.approx(TIMELINE["trip"], abs=1e-3)
+    assert t_trip < t_req <= math.floor(t_trip) + 1.0
     assert kinds[("HIGH_ALARM", "TK-101")] < t_trip
     request = next(e for e in ev if e["payload"].get("kind") == "ISOLATION_REQUESTED")
     assert request["payload"]["requested_valves"] == ["XV-R000", "XV-R101"]
@@ -405,32 +410,30 @@ def test_s0ue_level_after_closure_is_bounded_by_hand_limits(series: dict[str, Se
     """Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
 
     Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the
-    command at the next update (2969 s), so the volume received after the trip (decided by the
-    detector at 2968.8897 s in this episode) is at most (600/3600) x (2978.99 - 2968.8897) =
-    1.6834 m3, a level rise of 0.0023815 m.
+    command at the next update, so the volume received after the trip (decided by the detector
+    at the time of ``esd_timeline``) is at most (600/3600) x (t_closed - t_trip) m3.
     Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x
     9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441
     (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the
     linear branch, reached 9.69 s into the stroke. The received volume is therefore at least
-    (600/3600) x (0.110 + 9.683) = 1.6322 m3, a level rise of 0.0023091 m.
+    (600/3600) x (t_request - t_trip + 9.683) m3.
     """
     s = series["S0u-E"]
     trip = next(e["t_sim_s"] for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
     level_trip = _first(s.tank["TK-101"], lambda r: r[0] == trip)[2]
     final = _grid(s.tank["TK-101"])[-1][2]
-    upper = (600 / 3600) * (2978.99 - trip) / AREA
-    lower = (600 / 3600) * (2969.0 - trip + 9.683) / AREA
-    assert upper == pytest.approx(0.0023815, abs=2e-6) and lower == pytest.approx(
-        0.0023091, abs=2e-6
-    )
+    t_cmd, t_closed = TIMELINE["request"], TIMELINE["closed"]
+    upper = (600 / 3600) * (t_closed - trip) / AREA
+    lower = (600 / 3600) * (t_cmd - trip + 9.683) / AREA
+    assert 0.0020 < lower < upper < 0.0035  # about a centimetre-scale fraction: 1.6 m3 of 707 m2
     assert lower <= final - level_trip <= upper
     later = [r[2] for r in _grid(s.tank["TK-101"]) if r[0] >= trip + 12.0]
     assert max(later) - min(later) < 1e-9  # no further rise after closure
     flows = {r[0]: r[2] for r in _grid(s.edge["E001"])}
-    t_cmd = math.floor(trip) + 1.0
-    assert flows[t_cmd + 5.0] * 3600 == pytest.approx(600.0, rel=1e-6)  # half closed, below the cap
-    assert flows[t_cmd + 9.0] * 3600 == pytest.approx(600.0, rel=1e-6)  # alpha = 0.1, below the cap
-    assert flows[t_cmd + 10.0] == 0.0  # the collapse happens inside the last second
+    # alpha is 1 - (t - t_cmd)/10: about half at +5 s, about 0.13 at +8.7 s, below the cap there.
+    assert flows[math.floor(t_cmd) + 5.0] * 3600 == pytest.approx(600.0, rel=1e-6)
+    assert flows[math.floor(t_cmd) + 8.0] * 3600 == pytest.approx(600.0, rel=1e-6)
+    assert flows[math.ceil(t_closed)] == 0.0  # the collapse happens inside the last 0.2 s
     received = [r for r in s.ledger if r["scope"] == "network" and r["side"] != "pre_event"]
     at_trip = next(r for r in received if r["t_sim_s"] == trip)["cumulative_received_kg"]
     at_end = received[-1]["cumulative_received_kg"]
@@ -546,14 +549,14 @@ def _engine(model: HydraulicModel, sid: str, sink: ListSink, state: Any = None) 
     ("sid", "checkpoint"),
     [
         ("S0u-D", 605.0),
-        ("S0u-E", 2975.0),
+        ("S0u-E", TIMELINE["request"] + 6.0),
         ("S0-C", 100.0),
         # Inside rigid-column transients: the receipt ramp of S0-B (2 s time constant), the
         # set-point step of S0-G, the instant before the capped collapse of the ESD closure
         # (the next step is the stiff one), and S0-F with its demand process running.
         ("S0-B", 1.0),
         ("S0-G", 1201.0),
-        ("S0u-E", 2978.0),
+        ("S0u-E", float(math.floor(TIMELINE["closed"]))),
         ("S0-F", 200.0),
     ],
 )
