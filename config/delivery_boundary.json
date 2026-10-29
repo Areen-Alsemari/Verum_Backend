@@ -3,18 +3,18 @@
   "description": "Coefficient c of the delivery boundary law dH_d = c (Q/300)^2, in metres, per fitting profile (decision D2 version 3.0). Solved by the study in local/tools/solve_boundary_law.py.",
   "parameters": {
     "pipe_only": {
-      "value": 11.96,
+      "value": 11.963444,
       "unit": "m",
       "status": "provisional",
       "evidence_tag": "CALC",
-      "provenance_id": "VERUM-DD-D2-v3.0-INITIAL"
+      "provenance_id": "VERUM-DD-D2-v3.0"
     },
     "reference_fittings": {
-      "value": null,
+      "value": 10.060889,
       "unit": "m",
-      "status": "unresolved",
-      "evidence_tag": "OPEN",
-      "unresolved_reason": "not yet solved for this profile"
+      "status": "provisional",
+      "evidence_tag": "CALC",
+      "provenance_id": "VERUM-DD-D2-v3.0"
     }
   }
 }

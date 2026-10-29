@@ -117,3 +117,43 @@ def speed_for_flow(level: float, q_m3h: float, segments: list[tuple[float, float
     q = q_m3h / 3600
     need = required_head(q, level, 0.0, 200000.0, segments)
     return math.sqrt((need + 12 * (q_m3h / 300) ** 2) / 54.0)
+
+
+RECEIPT_LENGTH = {"TK-101": 45.0, "TK-102": 80.0, "TK-103": 115.0}
+
+
+def receipt_flows(
+    levels: dict[str, float], opened: list[str], total_m3h: float = 600.0
+) -> tuple[list[float], float]:
+    """Signed receipt split and source pressure (bar gauge, head-based) by scalar root finds.
+
+    The source head above the datum z = 1 m must equal, for every open branch,
+    the tank level less 1 m plus the common-main loss plus the signed branch loss.
+    """
+    total = total_m3h / 3600
+    common = loss(total, D300, 150.0)
+
+    def branch(head: float, tank: str) -> float:
+        diff = head - (levels[tank] - 1.0 + common)
+        if diff == 0:
+            return 0.0
+        q = brentq(lambda x: loss(x, D200, RECEIPT_LENGTH[tank]) - abs(diff), 0.0, 1.0)
+        return math.copysign(float(q), diff)
+
+    head = brentq(lambda h: sum(branch(h, t) for t in opened) - total, -100.0, 100.0)
+    flows = [branch(head, t) * 3600 if t in opened else 0.0 for t in ("TK-101", "TK-102", "TK-103")]
+    return flows, RHO * G * float(head) / 1e5
+
+
+def source_pressure_for_single_inlet(tank: str, level: float, q: float) -> float:
+    """Head-based source gauge pressure (Pa) for one open inlet carrying q (m3/s)."""
+    return RHO * G * (level - 1.0 + loss(q, D300, 150.0) + loss(q, D200, RECEIPT_LENGTH[tank]))
+
+
+def flow_at_source_pressure(tank: str, level: float, pressure_pa: float) -> float:
+    """Receipt flow (m3/h) a single open inlet carries at an imposed source pressure."""
+
+    def f(q: float) -> float:
+        return source_pressure_for_single_inlet(tank, level, q) - pressure_pa
+
+    return float(brentq(f, 1e-9, 1.0, xtol=1e-14)) * 3600

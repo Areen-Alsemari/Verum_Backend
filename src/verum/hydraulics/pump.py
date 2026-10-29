@@ -81,6 +81,8 @@ class FixedSpeedPump:
 
     def slope(self, delta_m: float) -> float:
         head_rise = -delta_m
+        if head_rise >= self.shutoff_head_m:
+            return 0.0  # flow is identically zero here, so is its derivative
         gap = max(self.shutoff_head_m - head_rise, 1e-9)
         return self.q_ref_m3h / 3600.0 * 0.5 / math.sqrt(self.k_m * gap)
 

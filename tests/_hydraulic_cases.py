@@ -104,6 +104,8 @@ class VariableSpeedPump:
         return self.q_ref * math.sqrt((self.shutoff_head_m - rise) / self.k) / 3600.0
 
     def slope(self, delta_m: float) -> float:
+        if -delta_m >= self.shutoff_head_m:
+            return 0.0
         gap = max(self.shutoff_head_m + delta_m, 1e-9)
         return self.q_ref / 3600.0 * 0.5 / math.sqrt(self.k * gap)
 

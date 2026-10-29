@@ -211,6 +211,7 @@ def _newton_step(
         step = np.linalg.solve(jac, rhs)
     except np.linalg.LinAlgError as exc:
         raise ConvergenceError("singular Jacobian") from exc
+    merit0 = sum(balance[x] ** 2 for x in free)
     alpha = 1.0
     for _ in range(40):
         trial = dict(heads)
@@ -218,7 +219,7 @@ def _newton_step(
             trial[node] = heads[node] + alpha * step[i]
         f_trial, _ = _evaluate(edges, trial)
         bal = _balance(edges, f_trial, inflow)
-        if max((abs(bal[x]) for x in free), default=0.0) < (1 - 1e-4 * alpha) * worst:
+        if sum(bal[x] ** 2 for x in free) < (1 - 2e-4 * alpha) * merit0:
             return trial
         alpha *= 0.5
-    return trial
+    raise ConvergenceError("line search failed to reduce the node imbalance")
