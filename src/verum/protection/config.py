@@ -11,10 +11,12 @@ Key assumptions:
     * The request closes the common receipt valve ``XV-R000`` and the tank
       inlet valve of the tripped tank. This choice is a proposal: the audited
       text says "selected/common receipt isolation" without naming valves.
+    * The alarm and reset hysteresis (D16) lowers the level at which HIGH_ALARM
+      clears and the level below which a latched trip can be reset.
     * Values are read when a timeout is needed. An unresolved parameter raises
       ``UnresolvedParameter`` then; nothing substitutes a default.
 
-Source: ``docs/design_decisions.md`` D4, D12 and D13;
+Source: ``docs/design_decisions.md`` D4, D12, D13 and D16;
 ``revised/01_facility_tanks_topology.md`` sections 3.5 and 6.3.
 """
 
@@ -43,6 +45,7 @@ class ProtectionConfig:
     high_high_m: float
     timeout_multiplier: ParamValue
     residual_flow_m3h: ParamValue
+    hysteresis: ParamValue
     stroke_time_s: dict[str, ParamValue]
     contact_lag_s: dict[str, ParamValue]
 
@@ -62,6 +65,16 @@ class ProtectionConfig:
     def timeout_s(self) -> float:
         """Confirmation timeout of a request: the slowest requested valve."""
         return max(self.valve_timeout_s(v) for v in self.isolation_valves)
+
+    @property
+    def alarm_clear_m(self) -> float:
+        """Level below which HIGH_ALARM clears: alarm level minus the hysteresis."""
+        return self.high_alarm_m - self.hysteresis.value
+
+    @property
+    def reset_ceiling_m(self) -> float:
+        """Level below which a high-high latch may be reset: trip level minus the hysteresis."""
+        return self.high_high_m - self.hysteresis.value
 
     @property
     def residual_flow_threshold_m3h(self) -> float:
@@ -84,6 +97,7 @@ def parse_protection_config(raw: dict[str, object], tank: Tank) -> ProtectionCon
             high_high_m=dims["independent_high_high_m"],
             timeout_multiplier=ParamValue.from_mapping(p["isolation_timeout_stroke_multiplier"]),
             residual_flow_m3h=ParamValue.from_mapping(p["residual_flow_threshold_m3h"]),
+            hysteresis=ParamValue.from_mapping(p["alarm_hysteresis_m"]),
             stroke_time_s=_records(p["stroke_time_s"]),
             contact_lag_s=_records(p["contact_lag_s"]),
         )

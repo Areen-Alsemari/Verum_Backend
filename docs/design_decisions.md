@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 2 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 3 (2026-10-29). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -28,7 +28,7 @@ version superseded; records are not edited in place.
 | ID | Subject | Status | Current version |
 | --- | --- | --- | --- |
 | D1 | Solver architecture and time step | DESIGN | 1.0 |
-| D2 | Delivery boundary and pump operating point | SIM | 2.0 |
+| D2 | Delivery boundary and pump operating point | SIM | 3.0 |
 | D3 | Receipt boundary | SIM | 2.0 |
 | D4 | Valve characteristics and stroke times | SIM | 2.0 |
 | D5 | Check-valve closure | SIM | 1.0 |
@@ -40,6 +40,9 @@ version superseded; records are not edited in place.
 | D11 | Bulk-liquid temperature stratum | SIM | 1.0 |
 | D12 | Isolation confirmation timeout | SIM | 1.0 |
 | D13 | Residual-flow threshold for failed isolation | SIM | 1.0 |
+| D14 | Friction law | SIM | 1.0 |
+| D15 | Fitting profiles | SIM | 1.0 |
+| D16 | Alarm hysteresis | SIM | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -69,9 +72,35 @@ version superseded; records are not edited in place.
 
 ## D2 - Delivery boundary and pump operating point
 
-### Version 2.0 (current)
+### Version 3.0 (current)
 
-- **Version:** 2.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 1.0
+- **Version:** 3.0 (2026-10-29)  **Status:** SIM  **Supersedes:** 2.0
+- **Decision.** Version 2.0 stands (fixed speed, reservoir beyond
+  `DISTRIBUTION_BOUNDARY`, boundary-law element dH_d = c (Q/300)^2 m between the
+  node and the reservoir, `PT-203` = 2 barg + rho g dH_d). In addition, the
+  coefficient c is solved separately for each fitting profile (D15) so that
+  TK-102 at 7 m runs at 300 m3/h with 42 m of pump head. Each value is stored in
+  `config/delivery_boundary.json` with its provenance. For the `pipe_only`
+  profile the solved coefficient is 11.96 m to two decimals.
+- **Reason.** The coefficient of 11.96 m was derived for straight pipe without
+  fittings. With fittings the system needs less added resistance to give the
+  same duty point, so one value cannot serve both profiles.
+- **Contract.** The sensor and release contracts are patched
+  (`config/patches/`): the `PT-203` adapter no longer calls the pressure fixed,
+  the value 200000 Pa is labelled the reservoir gauge pressure, and a
+  boundary-law entry points to the configuration file. The `PT-203` reference is
+  unchanged.
+- **Sensitivity required.** As version 2.0: vary c and the reservoir pressure;
+  both sweeps are *proposals*. In addition, the fitting-profile multiplier of
+  D15 changes the operating flow at fixed c; the study is in the Phase 2 report.
+- **Notes.** The hydraulic model reports `PT-203` as a static pressure, that is
+  total-head pressure minus the velocity pressure of `E-D2` (about 2.5 kPa at
+  300 m3/h). The expression "2 barg + rho g dH_d" is the total-head (stagnation)
+  value at the boundary node.
+
+### Version 2.0 (superseded by 3.0)
+
+- **Version:** 2.0 (2026-10-29)  **Superseded by:** 3.0  **Status:** SIM  **Supersedes:** 1.0
 - **Decision.** The pump runs at fixed speed (s = 1). The 2 barg reservoir lies
   beyond `DISTRIBUTION_BOUNDARY`. The added resistance
   dH_d = 11.96 (Q/300)^2 m, with Q in m3/h, is a boundary-law element between
@@ -385,3 +414,67 @@ version superseded; records are not edited in place.
 - **Notes.** The check applies to the receipt flow measurement (`FT-001`)
   after receipt isolation. Meter noise is not guaranteed to be bounded at five
   sigma (`revised/01_facility_tanks_topology.md` section 6.4 item 4).
+
+## D14 - Friction law
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** The Darcy friction factor is 64/Re for Re < 2300 and the Haaland
+  expression, 1/sqrt(f) = -1.8 log10[(eps/D/3.7)^1.11 + 6.9/Re], for Re > 4000.
+  Between 2300 and 4000 it is blended linearly in Re between the laminar value
+  at 2300 and the Haaland value at 4000.
+- **Reason.** This is the law used by the audited reference calculations
+  (`revised/02_hydraulic_model.md` section 3), so the document values can be
+  reproduced. The linear blend avoids a jump at the transition.
+- **Sensitivity required.** None specified. The absolute roughness (4.5e-5 m)
+  is a design value of the package. A roughness sweep is a *proposal*.
+- **Notes.** The blend is a numerical device, not a physical model of transitional
+  flow. Flow is signed: the law is evaluated with |v| and the sign of the flow.
+
+## D15 - Fitting profiles
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** Two profiles. `pipe_only`: every loss coefficient K is zero.
+  `reference_fittings`: K = 0.3 per polyline bend, 0.5 at a tank outlet, 1.0 at a
+  tank inlet, 0.1 per open isolation valve, 2.0 per open check valve and 1.0 per
+  meter. All values are typical handbook figures selected for the simulation; they
+  are unverified and are not manufacturer or as-built data.
+- **Reason.** The audited package gives pipe-only results and states that the
+  installed fitting schedule is not supplied (`revised/01_facility_tanks_topology.md`
+  section 6.6). Two profiles keep the document values reproducible while giving a
+  more resistive case.
+- **Sensitivity required.** Specified: a multiplier on every K of 0.5, 1 and 2.
+- **Notes.**
+  - A polyline bend is an interior vertex of a route polyline at which the
+    direction changes; it is assigned to the edge that contains it.
+  - A loss at a valve, check valve, meter or tank is assigned to the edge that
+    starts at that element (the tank inlet to the edge that ends at the tank
+    nozzle), and uses that edge's diameter and velocity.
+  - The full-open valve value 0.1 is the D4 full-open coefficient; partial opening
+    is outside this phase.
+  - The exit into the reservoir has no loss coefficient in either profile.
+
+## D16 - Alarm hysteresis
+
+- **Version:** 1.0 (2026-10-29)  **Status:** SIM
+- **Decision.** A hysteresis of 0.05 m applies to the HIGH_ALARM and HIGH_HIGH
+  reset conditions. HIGH_ALARM clears when the process level falls below
+  12.5 - 0.05 = 12.45 m. A latched high-high trip can be reset only if the
+  independent level is below 13 - 0.05 = 12.95 m (and the other reset conditions
+  hold). The trip and alarm thresholds themselves are unchanged.
+- **Reason.** Without a band, a level that oscillates around a threshold toggles
+  the alarm on every sample. The value is a small fraction of the 0.5 m between
+  the alarm and the high-high level.
+- **Sensitivity required.** Vary the hysteresis (for example 0.02, 0.05 and
+  0.1 m). *Proposed.*
+- **Notes.** Applies to the protection configuration and tests of Phase 1.
+
+## Open proposals pending team confirmation
+
+These are Phase 1 choices that the audited documents do not state. They are
+implemented, but they are proposals and need confirmation by the team.
+
+| ID | Proposal | Where |
+| --- | --- | --- |
+| P1 | Lineup transitions other than the two documented chains: all-closed states reach each other; an active mode is entered from, and left to, a hold state only; the receipt hold serves modes that open `XV-R000`; the changeover hold serves modes with a running pump and keeps the source tank. | `verum.lineups.transitions` |
+| P2 | A high-high isolation request closes both `XV-R000` and the inlet valve of the tripped tank; the confirmation timeout is the larger of the two valve timeouts. | `verum.protection.config` |
+| P3 | A latched trip is reset only by an authorised event from operations or protection, with the independent signal valid and below the trip level minus the hysteresis of D16. | `verum.protection.machine` |

@@ -408,6 +408,8 @@ def test_reset_needs_a_named_authoriser(prot: TankProtection) -> None:
     [
         sig(200, ind=13.0),
         sig(200, ind=14.0),
+        sig(200, ind=12.96),
+        sig(200, ind=12.95),
         sig(200, ind=None),
         sig(200, ind=8.0, independent_valid=False),
     ],
@@ -427,6 +429,12 @@ def test_an_authorised_reset_clears_the_latch(prot: TankProtection, source: str)
     assert prot.events[-1].kind == "RESET"
     prot.update(sig(201, ind=13.1))
     assert prot.state is S.HIGH_HIGH
+
+
+def test_reset_is_allowed_just_below_the_hysteresis_ceiling(prot: TankProtection) -> None:
+    trip(prot)
+    state = prot.reset(AuthorisedReset("operations", "shift lead", 200.0), sig(200, ind=12.9499))
+    assert state is S.NORMAL
 
 
 def test_reset_without_a_latched_trip_is_refused(prot: TankProtection) -> None:

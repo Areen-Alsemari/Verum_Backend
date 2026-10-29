@@ -20,11 +20,13 @@ Key assumptions:
       trip is latched, the latch and its isolation sequence are not lost when a
       signal is later declared invalid.
     * The latch clears only on an authorised reset from operations or
-      protection, with the independent signal valid and below the trip level.
+      protection, with the independent signal valid and below the trip level
+      minus the hysteresis (D16). HIGH_ALARM clears below the alarm level minus
+      the hysteresis; an absent process level leaves the alarm unchanged.
       No agent can reset, bypass or command a valve through this module.
 
 Source: ``revised/01_facility_tanks_topology.md`` section 6.3 (state machine and
-required protection tests); ``docs/design_decisions.md`` D12 and D13.
+required protection tests); ``docs/design_decisions.md`` D12, D13 and D16.
 """
 
 from __future__ import annotations
@@ -102,6 +104,8 @@ class TankProtection:
         # Resolve the timing now so that an unresolved parameter stops start-up.
         self._timeout_s = config.timeout_s()
         self._threshold = config.residual_flow_threshold_m3h
+        self._alarm_clear_m = config.alarm_clear_m
+        self._reset_ceiling_m = config.reset_ceiling_m
         self._state = ProtectionState.NORMAL
         self._trip_t_s: float | None = None
         self._last_t_s = 0.0
@@ -155,11 +159,14 @@ class TankProtection:
             self._emit(s.t_s, "PROTECTION_AVAILABLE")
         if s.independent_level_m is not None and s.independent_level_m >= self._config.high_high_m:
             self._trip(s.t_s)
-        elif s.process_level_m is not None and s.process_level_m >= self._config.high_alarm_m:
-            if self._state is ProtectionState.NORMAL:
-                self._state = ProtectionState.HIGH_ALARM
-                self._emit(s.t_s, "HIGH_ALARM")
-        elif self._state is ProtectionState.HIGH_ALARM:
+            return
+        level = s.process_level_m
+        if level is None:
+            return
+        if self._state is ProtectionState.NORMAL and level >= self._config.high_alarm_m:
+            self._state = ProtectionState.HIGH_ALARM
+            self._emit(s.t_s, "HIGH_ALARM")
+        elif self._state is ProtectionState.HIGH_ALARM and level < self._alarm_clear_m:
             self._state = ProtectionState.NORMAL
             self._emit(s.t_s, "ALARM_CLEARED")
 
@@ -225,9 +232,10 @@ class TankProtection:
         if not self.trip_latched:
             raise ResetRefused("no latched trip to reset")
         level = signals.independent_level_m
-        if not signals.independent_valid or level is None or level >= self._config.high_high_m:
+        if not signals.independent_valid or level is None or level >= self._reset_ceiling_m:
             raise ResetRefused(
-                "safe predicates not met: independent level valid and below trip level"
+                "safe predicates not met: independent level valid and below the trip level "
+                "minus the hysteresis"
             )
         self._state = ProtectionState.NORMAL
         self._trip_t_s = None
