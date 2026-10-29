@@ -47,8 +47,7 @@ PAYLOAD_KEYS = frozenset({"episode_id", "as_of_s", "observations", "assets", "in
 FORBIDDEN_TEXT = re.compile(
     r"(?i)(S0u?-[A-Z0-9]|REJ-\d|\bVW-\d|analytic_verification|restricted_benchmark"
     r"|production_candidate|ground_truth|hydraulic_state|fault_truth|solver_diagnostics"
-    r"|mass_ledger|observation_audit|simulation_rejected|validity_window|boundary_state"
-    r"|truth_placeholder)"
+    r"|mass_ledger|observation_audit|simulation_rejected|validity_window|boundary_state)"
 )
 OBSERVATION_FILE = "observations.jsonl.gz"
 

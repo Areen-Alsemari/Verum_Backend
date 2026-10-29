@@ -435,8 +435,17 @@ def test_the_result_has_the_required_content(model: HydraulicModel, topology: To
 
 
 def test_the_hydraulics_package_is_not_reachable_from_the_api_package() -> None:
+    """The gateway (Phase 4) exposes only its own names and imports nothing from hydraulics."""
+    import ast
+
     import verum.api as api
 
-    assert not [n for n in dir(api) if not n.startswith("_")]
-    source = Path(api.__file__ or "").read_text(encoding="utf-8")
-    assert "hydraulics" not in source.replace("Ground truth, hydraulic state", "")
+    assert sorted(n for n in dir(api) if not n.startswith("_") and n != "gateway") == [
+        "Gateway", "GatewayViolation", "check_allowlist", "query",
+    ]  # fmt: skip
+    for module in (api.__file__, api.gateway.__file__):
+        tree = ast.parse(Path(module or "").read_text(encoding="utf-8"))
+        imported = [n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)] + [
+            a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
+        ]
+        assert not [m for m in imported if "hydraulics" in m or "verum.truth" in m], module
