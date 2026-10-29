@@ -89,14 +89,11 @@ def test_every_emitted_tag_fits_the_observation_tag_pattern(sensors: SensorContr
     assert all(pattern.fullmatch(tag) for tag in sensors.emitted_tags)
 
 
-def test_api_package_contains_only_a_docstring(root: Path) -> None:
-    tree = ast.parse((root / "src" / "verum" / "api" / "__init__.py").read_text(encoding="utf-8"))
-    assert len(tree.body) == 1
-    assert isinstance(tree.body[0], ast.Expr)
-    assert isinstance(tree.body[0].value, ast.Constant)
-    assert isinstance(tree.body[0].value.value, str)
-
-
-def test_api_package_has_no_other_modules(root: Path) -> None:
+def test_api_package_holds_only_the_gateway(root: Path) -> None:
+    """Phase 4 designed the read-only interface (a library, no server): the package is the
+    gateway module and its re-exporting init, nothing else."""
     files = sorted(p.name for p in (root / "src" / "verum" / "api").iterdir() if p.suffix == ".py")
-    assert files == ["__init__.py"]
+    assert files == ["__init__.py", "gateway.py"]
+    tree = ast.parse((root / "src" / "verum" / "api" / "__init__.py").read_text(encoding="utf-8"))
+    imported = [n for n in tree.body if isinstance(n, ast.ImportFrom)]
+    assert [n.module for n in imported] == ["verum.api.gateway"]

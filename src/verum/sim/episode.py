@@ -11,6 +11,8 @@ Key assumptions:
       first for the former and again for the tier actually produced; it fails closed.
     * The episode identifier is derived from the seed, the scenario and the
       configuration hash; two runs with the same inputs write identical files.
+    * A completed episode gets its observation rows (``verum.sensors``) after the truth is
+      final; they are written next to the truth and listed in the manifest.
     * A rejected episode keeps only its records: the truth files are removed so that
       a rejected run cannot be mistaken for data.
     * ``provenance.json`` carries the git commit; the deterministic episode record
@@ -32,10 +34,11 @@ from verum.gates import assert_release_allowed
 from verum.hydraulics import HydraulicModel
 from verum.lineups import load_lineup_table
 from verum.provenance import config_hash, episode_id, git_state, lockfile_hash
+from verum.sensors import observe_episode
 from verum.sim.config import SimConfig, load_sim_config
 from verum.sim.engine import Engine, EpisodeOutcome
 from verum.sim.scenario import Scenario, load_scenario
-from verum.truth import DirectorySink
+from verum.truth import DirectorySink, file_hashes
 
 SOLVER_VERSION = "path-dynamics-radau-1"
 TIER = "analytic_verification"
@@ -143,4 +146,7 @@ def run_episode(
     commit, dirty = git_state()
     sink.write_json("provenance.json", {"git_commit": commit, "git_dirty": dirty})
     hashes = sink.finalize()
+    if not outcome.rejection:
+        observe_episode(out_dir / episode)  # agent-visible rows, written next to the truth
+        hashes = file_hashes(out_dir / episode)
     return EpisodeResult(episode, out_dir / episode, outcome, wall, hashes)

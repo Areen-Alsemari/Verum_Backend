@@ -70,6 +70,7 @@ def test_manifest_lists_every_file_with_its_hash(
     assert set(listed) == files == {
         "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",
         "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
+        "observations.jsonl.gz", "observation_audit.jsonl.gz",
         "episode.json", "provenance.json",
     }  # fmt: skip
     for name, digest in listed.items():
