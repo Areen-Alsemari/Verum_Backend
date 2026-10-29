@@ -60,6 +60,7 @@ from verum.sim import validity
 from verum.sim.config import SimConfig
 from verum.sim.scenario import Scenario
 from verum.sim.valves import Valve, make_valve
+from verum.tanks import load_tank_geometry
 from verum.truth import TruthSink
 
 SCENARIO_NAME = "EPA_GENERIC_RVP10_REFERENCE"
@@ -175,6 +176,7 @@ class Engine:
         self.dt = config["time_step_s"]
         self.closed_alpha = model.config["valve_closed_alpha"]
         self.temperature_k = scenario.temperature_c + 273.15
+        self.geometry = load_tank_geometry(model.directory)
         self.state = state if state is not None else self._initial_state()
 
     # --- construction ----------
@@ -182,9 +184,6 @@ class Engine:
         sc, m = self.scenario, self.model
         mode = self.table.mode(sc.initial_mode)
         tanks = m.topology.tank_ids
-        from verum.tanks import load_tank_geometry
-
-        self.geometry = load_tank_geometry(m.directory)
         volumes = {t: self.geometry.volume_m3(sc.tank_levels_m[t], self.rho) for t in tanks}
         valves = {
             v: make_valve(v, self.cfg.stroke_time_s(v), self.closed_alpha, v in mode.open_valves)
@@ -210,14 +209,6 @@ class Engine:
         for command in ops.timed_commands:
             self._push(state, command.t_s, RANK_COMMAND, "command", command)
         return state
-
-    @property
-    def geometry(self):  # type: ignore[no-untyped-def]
-        return self._geometry
-
-    @geometry.setter
-    def geometry(self, value) -> None:  # type: ignore[no-untyped-def]
-        self._geometry = value
 
     @staticmethod
     def _push(state: EngineState, t: float, rank: int, kind: str, payload: Any) -> None:
