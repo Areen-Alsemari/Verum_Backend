@@ -1,7 +1,7 @@
 """Joining validity-window identifiers to observation rows by time (evaluation side).
 
-Inputs: the S0u-E episode (a collapse window and, since D54, a dead-leg window) and small
-synthetic cases. Outputs: pass/fail.
+Inputs: the S0u-E episode (a stroke window, a collapse window and, since D54, a dead-leg
+window) and small synthetic cases. Outputs: pass/fail.
 Key assumptions:
     * The join sits in ``verum.evaluation``, not in ``verum.api``; the gateway imports
       nothing from the evaluation package, and the audited audit schema is not changed.
@@ -31,8 +31,10 @@ def test_the_s0ue_windows_are_attached_to_the_samples_inside_them(
     with gzip.open(directory / "observations.jsonl.gz", "rt") as handle:
         rows = [json.loads(line) for line in handle]
     windows = load_windows(directory)
-    assert [w["kind"] for w in windows] == ["flow_collapse", "dead_leg_unvalidated"]
-    collapse = windows[0]
+    assert sorted(w["kind"] for w in windows) == [
+        "dead_leg_unvalidated", "flow_collapse", "valve_stroke",
+    ]  # fmt: skip
+    collapse = next(w for w in windows if w["kind"] == "flow_collapse")
     joined = attach_window_ids(rows, windows)
     for r in joined:
         expected = [
@@ -42,7 +44,7 @@ def test_the_s0ue_windows_are_attached_to_the_samples_inside_them(
     inside = [r for r in joined if collapse["window_id"] in r["validity_window_ids"]]
     # The collapse lasts 0.19 s: the seven 1 s tags put about 1.3 rows inside it.
     assert len(joined) == len(rows) and len(inside) >= 1
-    first = collapse["t_start_s"] - 1e-9
+    first = min(w["t_start_s"] for w in windows) - 1e-9  # the 10 s closure starts first
     assert all(not r["validity_window_ids"] for r in joined if r["t_sim_s"] < first)
     assert all("validity_window_ids" not in r for r in rows)  # the input is not modified
 

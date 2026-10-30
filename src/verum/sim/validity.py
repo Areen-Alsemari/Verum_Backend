@@ -6,9 +6,11 @@ and the validity-window record.
 Key assumptions:
     * Decisions D22 and D53: the rigid-column model is valid for an event only if the event
       lasts at least ``factor`` pressure-wave round trips of the path, ``duration >= factor * 2 *
-      sum(L_i / a_i)``; the factor is 25 for a valve stroke and 10 for a receipt set-point step,
-      a flow collapse and a path closure. The wave speeds are the screening
-      values of the audited package for each nominal size; the factors are proposals.
+      sum(L_i / a_i)``; the factor is 50 for a valve stroke and 10 for a receipt set-point step,
+      a flow collapse and a path closure. A stroke is judged only if the flow through the valve at
+      its start is at least 10 percent of the design flow of its path (decision D58). The wave
+      speeds are the screening values of the audited package for each nominal size; the factors
+      are proposals.
     * Decision D54: an isolated segment (decision D39) whose held pressure is more than 0.5 bar
       from its target opens a ``dead_leg_unvalidated`` window, closed below 0.05 bar.
     * A window is the interval in which the model does not represent the physics, with
@@ -16,7 +18,7 @@ Key assumptions:
       that collapses within it, a flow stopped by a closing path, or a branched lineup for
       which no single rigid column exists. A window is hidden truth (decision D25).
 
-Source: ``docs/design_decisions.md`` D22, D25, D53 and D54;
+Source: ``docs/design_decisions.md`` D22, D25, D53, D54, D58 and D59;
 ``revised/05_simulation_validation_dataset.md`` PAR-PIP-007 and VV-A2 (screening wave speeds).
 """
 
@@ -34,6 +36,8 @@ REASON_STOPPED = "path_closed_with_flow"
 REASON_BRANCHED = "rigid_column_unavailable"
 REASON_DEAD_LEG = "dead_leg_held_pressure_unvalidated"
 STROKE_FACTOR = "wave_criterion_factor_valve_stroke"
+# Window kinds inside which the truth is written every 0.1 s (decision D59).
+DENSE_KINDS = ("valve_stroke", "flow_collapse", "receipt_setpoint")
 KINDS = (
     "valve_stroke", "receipt_setpoint", "flow_collapse", "path_closed", "branched_lineup",
     "dead_leg_unvalidated",

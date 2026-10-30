@@ -165,11 +165,18 @@
       "provenance_id": "VERUM-DD-D39-v1.0"
     },
     "wave_criterion_factor_valve_stroke": {
-      "value": 25.0,
+      "value": 50.0,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "DESIGN",
-      "provenance_id": "VERUM-DD-D53-v1.2"
+      "provenance_id": "VERUM-DD-D53-v3.0"
+    },
+    "stroke_window_min_flow_fraction": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D58-v1.0"
     },
     "dead_leg_window_open_pa": {
       "value": 50000.0,

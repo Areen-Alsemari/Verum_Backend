@@ -1,16 +1,17 @@
-"""The sensitivity sweeps of decisions D38, D42, D50 and D53 as one study.
+"""The sensitivity sweeps of decisions D38, D42, D50, D53 and D58 as one study.
 
 Inputs: the plant model and the shipped scenarios. Outputs, by sweep name
-(``python tools/d42_study.py {d22|d53|d23|wave|d50}``): ``local/results/d42_d22.json`` (set-point
-factor 5, 10, 20), ``d42_d53.json`` (valve-stroke factor 10, 20, 25, 30, 55),
-``d42_d23.json`` (demand process), ``d42_wave.json`` (wave-speed restraint and bulk modulus on the
-ESD closure) and ``d42_d50.json`` (loss multiplier, meter K, pump steepness, NPSH3 coefficient).
-``tools/d42_report.py`` writes the report from them.
+(``python tools/d42_study.py {d22|d53|d58|d23|wave|d50}``), in ``local/results/``:
+``d42_d22.json`` (set-point factor 5, 10, 20), ``d42_d53.json`` (valve-stroke factor 10, 20, 25,
+30, 50, 55), ``d42_d58.json`` (flow fraction 0.05, 0.10, 0.20 below which a stroke is not
+judged), ``d42_d23.json`` (demand process), ``d42_wave.json`` (wave-speed restraint and bulk
+modulus on the ESD closure) and ``d42_d50.json`` (loss multiplier, meter K, pump steepness, NPSH3
+coefficient). ``tools/d42_report.py`` writes the report from them.
 Assumptions: each rigid-column run changes one configuration parameter of the shipped scenario; the
 transient runs use the ESD isolation T1 of ``tools/t_scenarios.py``; the pump-curve sweep keeps the
 duty point (300 m3/h, 42 m) by recalibrating the boundary coefficient; a sweep point outside the
 pump curve is recorded as an error and not dropped.
-Source: ``docs/design_decisions.md`` D22, D23, D38, D42, D43, D50, D53.
+Source: ``docs/design_decisions.md`` D22, D23, D38, D42, D43, D50, D53, D58.
 """
 
 from __future__ import annotations
@@ -115,7 +116,11 @@ def d22() -> None:
 
 
 def d53() -> None:
-    _sweep("d42_d53", STROKE_FACTOR, (10.0, 20.0, 25.0, 30.0, 55.0))
+    _sweep("d42_d53", STROKE_FACTOR, (10.0, 20.0, 25.0, 30.0, 50.0, 55.0))
+
+
+def d58() -> None:
+    _sweep("d42_d58", "stroke_window_min_flow_fraction", (0.05, 0.1, 0.2))
 
 
 def d23() -> None:
@@ -325,7 +330,7 @@ def d50() -> None:
         json.dump(out, fh, indent=1, default=str)
 
 
-SWEEPS = {"d22": d22, "d53": d53, "d23": d23, "wave": wave, "d50": d50}
+SWEEPS = {"d22": d22, "d53": d53, "d58": d58, "d23": d23, "wave": wave, "d50": d50}
 
 if __name__ == "__main__":
     SWEEPS[sys.argv[1]]()

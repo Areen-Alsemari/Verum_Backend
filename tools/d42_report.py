@@ -1,7 +1,8 @@
 """Report of the D42 sensitivity study: ``local/results/d42_study.md``.
 
-Inputs: ``local/results/d42_d22.json``, ``d42_d53.json``, ``d42_d23.json``, ``d42_wave.json``,
-``d42_d50.json`` and ``t3.json``, written by ``tools/d42_study.py`` and ``tools/t_scenarios.py``.
+Inputs: ``local/results/d42_d22.json``, ``d42_d53.json``, ``d42_d58.json``, ``d42_d23.json``,
+``d42_wave.json``, ``d42_d50.json`` and ``t3.json``, written by ``tools/d42_study.py`` and
+``tools/t_scenarios.py``.
 Outputs: the markdown report, one section per sweep with what was varied, what was measured and
 which results are stable or depend on the selection.
 Assumptions: the commentary under each table was written for the results of Phase 5 and is checked
@@ -92,7 +93,9 @@ def changing(rows: list[dict[str, Any]], key: str) -> list[str]:
     return sorted(s for s, v in by.items() if len(v) > 1)
 
 
-def section_windows(d22: list[dict[str, Any]], d53: list[dict[str, Any]]) -> list[str]:
+def section_windows(
+    d22: list[dict[str, Any]], d53: list[dict[str, Any]], d58: list[dict[str, Any]]
+) -> list[str]:
     out = ["## 1 Window factors", ""]
     out += ["### Set-point, collapse and closure factor (D22) 5, 10, 20", ""]
     out += window_sweep(d22, "wave_criterion_factor", (5.0, 10.0, 20.0))
@@ -103,12 +106,23 @@ def section_windows(d22: list[dict[str, Any]], d53: list[dict[str, Any]]) -> lis
         + ".",
         "",
     ]
-    out += ["### Valve-stroke factor (D53) 10, 20, 25, 30, 55", ""]
-    out += window_sweep(d53, "wave_criterion_factor_valve_stroke", (10.0, 20.0, 25.0, 30.0, 55.0))
+    out += ["### Valve-stroke factor (D53) 10, 20, 25, 30, 50, 55", ""]
+    out += window_sweep(
+        d53, "wave_criterion_factor_valve_stroke", (10.0, 20.0, 25.0, 30.0, 50.0, 55.0)
+    )
     out += [
         "",
         "Scenarios whose windows change with this factor: "
         + (", ".join(changing(d53, "wave_criterion_factor_valve_stroke")) or "none")
+        + ".",
+        "",
+    ]
+    out += ["### Minimum flow fraction of a judged stroke (D58) 0.05, 0.10, 0.20", ""]
+    out += window_sweep(d58, "stroke_window_min_flow_fraction", (0.05, 0.1, 0.2))
+    out += [
+        "",
+        "Scenarios whose windows change with this fraction: "
+        + (", ".join(changing(d58, "stroke_window_min_flow_fraction")) or "none")
         + ".",
         "",
     ]
@@ -220,7 +234,7 @@ def main() -> None:
         "which depend on the selection. All values are synthetic design selections (D48).",
         "",
     ]
-    lines += section_windows(load("d42_d22"), load("d42_d53"))
+    lines += section_windows(load("d42_d22"), load("d42_d53"), load("d42_d58"))
     lines += section_d23(load("d42_d23"))
     lines += [
         "## 3 D39 dead-leg time constant 10, 60, 300 s",

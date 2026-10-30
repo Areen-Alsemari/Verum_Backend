@@ -305,6 +305,7 @@ def test_the_esd_decay_time_lies_between_the_hand_bounds(
     assert w["element_id"] == "XV-R000"
     decay = w["t_end_s"] - w["t_start_s"]
     assert 0.02 < decay <= 0.275 + 1e-3
-    assert w["t_end_s"] == pytest.approx(episodes["S0u-E"].outcome.windows[0].t_end_s)
+    collapse = next(x for x in episodes["S0u-E"].outcome.windows if x.kind == "flow_collapse")
+    assert w["t_end_s"] == pytest.approx(collapse.t_end_s)
     assert w["ratio"] == pytest.approx(decay / w["round_trip_s"])
     assert w["ratio"] < 10.0

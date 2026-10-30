@@ -759,13 +759,21 @@ class Engine:
         self._push(st, t + lt.spec.comms_delay_s, RANK_DETECTOR, "lt_visible", (tank, value))
 
     def _dense_needed(self, t0: float, t1: float) -> bool:
-        """Decision D34: 0.1 s rows while a valve moves or inside a validity window."""
+        """Decisions D34 and D59: 0.1 s rows while a valve moves or inside a window of a transient
+        kind; the slow windows (a dead leg, a branched lineup, a closed path) do not need them."""
         st, tm = self.state, 0.5 * (t0 + t1)
         if any(v.is_moving(tm) for v in st.valves.values()):
             return True
-        return any(w.t_start_s <= tm and (w.t_end_s is None or tm <= w.t_end_s) for w in st.windows)
+        return any(
+            w.kind in vd.DENSE_KINDS
+            and w.t_start_s <= tm
+            and (w.t_end_s is None or tm <= w.t_end_s)
+            for w in st.windows
+        )
 
-    def _write_interior(self, step: Stepped, base_received: float, base_delivered: float) -> None:
+    def _write_interior(
+        self, step: Stepped, base_received: float, base_delivered: float, base_spilled: float
+    ) -> None:
         if step.inside is None or getattr(self.sink, "discards", False):
             return
         if not self._dense_needed(step.t0, step.t1):
@@ -966,6 +974,14 @@ class Engine:
             w.t_end_s = t
             self._write_window(w)
 
+    def _stroke_carries_flow(self, key: str, flow_m3h: float) -> bool:
+        """Decision D58: a stroke is judged only if the flow through the valve at its start is at
+        least a fraction of the design flow of its path (receipt flow, or the pump duty flow)."""
+        design = self.model.config[
+            "receipt_flow_m3h" if key == "receipt" else "pump_reference_flow_m3h"
+        ]
+        return flow_m3h >= self.cfg["stroke_window_min_flow_fraction"] * design
+
     def _factor(self, kind: str) -> float:
         """Decision D53: the minimum ratio of duration to round trip of a valve stroke is its own
         factor; a set-point step, a flow collapse and a path closure keep the factor of D22."""
@@ -1030,12 +1046,15 @@ class Engine:
         t: float,
         key: str,
         edges: tuple[str, ...] | None,
+        flow_m3h: float | None = None,
     ) -> None:
         if edges is None:
             return
         st = self.state
         trip = vd.round_trip_s(self.model, edges, self.speeds)
         st.events_evaluated += 1
+        if flow_m3h is not None and not self._stroke_carries_flow(key, flow_m3h):
+            return  # decision D58: the surge scales with the flow, which is too small here
         if not vd.is_valid(duration, trip, self._factor(kind)):
             self._add_window(
                 kind, element, t, t + duration, vd.REASON_DURATION, vd.ratio(duration, trip), trip
@@ -1508,8 +1527,10 @@ class Engine:
         if crossing is not None:
             self._push(self.state, crossing, RANK_VALVE, "threshold", valve.name)
         key = "receipt" if valve.name.startswith("XV-R") else "delivery"
+        st = self.state
+        flow = st.receipt_flow_m3h if key == "receipt" else st.delivery_flow_m3h
         self._evaluate_event(
-            "valve_stroke", valve.name, end - t, t, key, self._edges_of(key, valve.name)
+            "valve_stroke", valve.name, end - t, t, key, self._edges_of(key, valve.name), flow
         )
         self._start_track(valve, key)
 

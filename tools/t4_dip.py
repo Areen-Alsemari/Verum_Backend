@@ -91,6 +91,17 @@ def moc_series(
     return rec["t"] - 10.0, engine.rho * engine.g * (rec["pt.H"] - z) / 1e5
 
 
+def oscillation_amplitude(t: np.ndarray, p: np.ndarray) -> dict[str, float]:
+    """Largest departure (bar) of the transient pressure from its 2 s running mean, by interval
+    after the step: the elastic oscillation that the rigid column does not represent."""
+    mean = np.array([p[(t >= x - WINDOW_S / 2) & (t <= x + WINDOW_S / 2)].mean() for x in t])
+    out = {}
+    for lo, hi in ((1.0, 2.0), (2.0, 5.0), (5.0, 10.0), (10.0, 20.0), (20.0, 30.0)):
+        sel = (t >= lo) & (t < hi)
+        out[f"{lo:g}-{hi:g} s"] = float(np.abs(p[sel] - mean[sel]).max())
+    return out
+
+
 def spectrum_peaks(t: np.ndarray, p: np.ndarray, n: int = 4) -> list[tuple[float, float]]:
     """Frequencies (Hz) and periods (s) of the largest peaks after removing a slow trend."""
     grid = np.arange(3.0, t[-1], 0.002)
@@ -156,7 +167,9 @@ def case_table(
             / pt["hand_lambda_qdot_bar"]
         )
     if name.startswith("step_down"):
-        out["spectrum_hz_s"] = spectrum_peaks(*moc_series(model, level, flow0, to, 30.0))
+        series = moc_series(model, level, flow0, to, 30.0)
+        out["spectrum_hz_s"] = spectrum_peaks(*series)
+        out["oscillation_amplitude_bar"] = oscillation_amplitude(*series)
     return out
 
 

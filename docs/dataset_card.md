@@ -22,14 +22,15 @@ frequencies, detection performance or savings; claiming validated hydraulics.
 ## Restricted episodes
 
 **The S0u-E and S0u-D episodes are `restricted_benchmark` and must not be used in diagnostic
-scoring.** S0u-E (fill to the high-high level, emergency isolation): the closure of the receipt
-valve under the 10 barg cap produces a flow collapse of about 0.19 s, shorter than ten
-pressure-wave round trips of the path (decision D22), and the source side of the closed valve is a
-dead leg that holds its pressure for 329 s (decision D54). The rigid-column model does not
-represent that interval, and the pressure values around it (the clipped PT-001 reading and its
-relaxation) are not credible as physics. S0u-D (receipt switch): the 10 s opening of the receipt
-valve on the path to TK-102 lasts 23.5 round trips, below the 25 of decision D53. The episodes are
-kept for infrastructure tests only. The rule applies to every episode whose record
+scoring.** S0u-E (fill to the high-high level, emergency isolation): the 10 s closure of the
+receipt valve is 27.7 wave round trips, below the 50 of decision D53; the closure under the 10
+barg cap produces a flow collapse of about 0.19 s, shorter than ten round trips (D22); and the
+source side of the closed valve is a dead leg that holds its pressure for 329 s (D54). The
+rigid-column model does not represent that interval, and the pressure values around it (the
+clipped PT-001 reading and its relaxation) are not credible as physics. S0u-D (receipt switch):
+the 10 s closure of the receipt valve at 600 s starts with 600 m3/h and is flagged by the same
+factor, although the controller removes the flow before the valve has closed (D58). The episodes
+are kept for infrastructure tests only. The rule applies to every episode whose record
 lists a validity window (`validity_windows` in `episode.json`); the hidden join utility
 `verum.evaluation.attach_window_ids` marks the observation rows that fall inside a window.
 
@@ -72,6 +73,20 @@ against the paper; that is a check of the numerical method for those pipes, not 
   the pressure peak of a valve closure unless the stroke lasts many wave round trips (D53) and
   does not represent the last 2 to 3 percent of an emergency closure, where the downstream face of
   the valve reaches the vapor pressure.
+- A receipt set-point step excites an elastic oscillation of the pressure that the rigid-column
+  engine does not represent. In the transient engine after the step 600 to 300 m3/h (TK-101 at
+  9.28 m) the true PT-001 departs from its 2 s mean by up to 0.68 bar (135 noise standard
+  deviations of 0.005 bar) between 1 and 5 s after the step, 0.41 bar (83 sigma) from 5 to 10 s,
+  0.26 bar (52 sigma) from 10 to 20 s and 0.15 bar (30 sigma) from 20 to 30 s, with periods of
+  1.0 s and 0.41 s. The episodes contain only the mean (the inertial head of D22); a 1 s sample
+  of a real PT-001 would carry the oscillation.
+- The pumping-minimum tables make the feasible initial level depend on the fluid temperature (D35).
+  For the baseline (RVP_9_0, NPSH3 4 m, reference fittings, f_d 0.8) the minimum level rises by
+  0.22, 0.26 and 0.30 m per degree (TK-101, TK-102, TK-103, coastal) or 0.28, 0.33 and 0.36 m per
+  degree (inland) between 25 and 45 C, so that sampling the level uniformly in the feasible band
+  gives a correlation of temperature and initial level of 0.31, 0.38 and 0.45 (coastal) and 0.43,
+  0.50 and 0.57 (inland): a high temperature goes with a high starting level, and an agent can
+  read that from the data (`tools/feasibility_correlation.py`).
 - Faults, damaged-seal and fitting multipliers, and inspection outcomes do not exist yet.
 - Dead-leg pressures relax with a selected time constant; trapped-liquid thermal and
   compressibility effects are not modelled (D39).
