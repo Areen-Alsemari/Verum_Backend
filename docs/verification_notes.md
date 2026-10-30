@@ -298,3 +298,21 @@ Derivations (hand arithmetic):
 - Standby branch. With pump A delivering, pump B's discharge-side segment sits behind a closed XV-PBI and takes the head of the suction tee: its pressure is rho g (H_tee - z).
 
 Independence: the closed form is independent of the code; heads are read from written rows.
+
+## Engine episodes
+
+Key assumptions: timings in S0u-D and S0u-E follow from the scenario files (commands at 600 s and 1200 s; the ESD command one second after the trip) and the D4 stroke times.
+
+### S0ue trip follows the detector offset and delay
+
+Independent: the true level reaches 13 m - offset at 2968.805057 s - offset/rate, where 0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s and rate = 2.358e-4 m/s (D26). The detector (decision D33) sees level + offset, so it asserts when the true level is 13 m minus its offset (the offset is in the event record), and the trip follows 0.2 s later.
+
+The receipt flow is 600 m3/h from the start (no ramp), the tank is on the floating branch (constant area) and no other flow touches TK-101, so the level reaches 13 m at this time. The trip is at that time, not on the 1 s grid, and the level there is the threshold.
+
+### S0ue level after closure is bounded by hand limits
+
+Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
+
+Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the command at the next update, so the volume received after the trip (decided by the detector at the time of `esd_timeline`) is at most (600/3600) x (t_closed - t_trip) m3.
+
+Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x 9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441 (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the linear branch, reached 9.69 s into the stroke. The received volume is therefore at least (600/3600) x (t_request - t_trip + 9.683) m3.

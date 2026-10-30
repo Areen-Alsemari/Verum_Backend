@@ -1,13 +1,12 @@
-"""Engine episodes: ledger and audit, events, ESD, rejections, determinism, restart.
+"""Engine episodes: ledger and audit, events, the emergency isolation, rejections, determinism and
+restart.
 
-Inputs: the seven scenarios run once per test session (fixture ``episodes``), their
-schema-validated series (fixture ``series``) and independent hand calculations.
-Outputs: pass/fail. Each test says whether its expected value is independent.
-Key assumptions: timings in S0u-D and S0u-E follow from the scenario files (commands at
-600 s and 1200 s; the ESD command one second after the trip) and the D4 stroke times.
+Seven shipped scenarios are run once per test session, and their schema-validated series are checked
+against hand calculations. Timings in the valve and isolation scenarios follow from the scenario
+files and the stroke times. The hand limits for the isolation are in the "Engine episodes" section
+of the verification notes.
 
-Source: decisions D3, D4, D8, D17 to D21; ``revised/01_facility_tanks_topology.md``
-sections 6.2 and 6.3.
+See D3, D4, D8 and D17 to D21.
 """
 
 from __future__ import annotations
@@ -54,6 +53,9 @@ def _grid(rows: list[tuple[Any, ...]]) -> list[tuple[Any, ...]]:
 def test_every_written_row_validates_against_its_schema(
     series: dict[str, Series], sid: str
 ) -> None:
+    """Every row written for an episode validates against its schema, and only the optional datasets
+    may be missing. Independent: yes, because the schemas are separate files.
+    """
     s = series[sid]
     optional = set(OPTIONAL_DATASETS)  # healthy episodes may have none
     assert (
@@ -67,6 +69,9 @@ def test_every_written_row_validates_against_its_schema(
 def test_manifest_lists_every_file_with_its_hash(
     episodes: dict[str, EpisodeResult], sid: str
 ) -> None:
+    """The manifest lists every file of the episode directory with its SHA-256. Independent: yes,
+    because the hashes are recomputed from the files.
+    """
     directory = episodes[sid].directory
     listed = dict(
         line.split("  ")[::-1] for line in (directory / "MANIFEST.sha256").read_text().splitlines()
@@ -84,6 +89,9 @@ def test_manifest_lists_every_file_with_its_hash(
 
 @pytest.mark.parametrize("sid", COMPLETED)
 def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult], sid: str) -> None:
+    """The episode record validates against its schema and states a completed status. Independent:
+    yes, because the schema is a separate file.
+    """
     doc = json.loads((episodes[sid].directory / "episode.json").read_text())
     validate("episode", doc)
     assert doc["status"] == "completed"
@@ -107,6 +115,9 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
 
 
 def test_provenance_is_a_separate_file(episodes: dict[str, EpisodeResult]) -> None:
+    """The git commit is in the provenance file only and not in the episode record. Independent:
+    yes, because the check reads the written files.
+    """
     doc = json.loads((episodes["S0-A"].directory / "provenance.json").read_text())
     assert set(doc) == {"git_commit", "git_dirty"}
     assert "git_commit" not in (episodes["S0-A"].directory / "episode.json").read_text()
@@ -116,6 +127,9 @@ def test_provenance_is_a_separate_file(episodes: dict[str, EpisodeResult]) -> No
 def test_grid_rows_cover_every_second_and_event_rows_come_in_pairs(
     series: dict[str, Series], sid: str
 ) -> None:
+    """Grid rows cover every second and the rows at an event time come in a pre-event and a
+    post-event pair. Independent: yes, because the expected times are arithmetic on the duration.
+    """
     s = series[sid]
     times = [r[0] for r in s.tank["TK-101"] if r[1] is None]
     pre = [r[0] for r in s.tank["TK-101"] if r[1] == "pre_event"]
@@ -137,6 +151,9 @@ def test_grid_rows_cover_every_second_and_event_rows_come_in_pairs(
 def test_ledger_closes_at_the_declared_tolerance_at_every_row(
     series: dict[str, Series], sid: str
 ) -> None:
+    """The network ledger closes within its declared tolerance at every row. Independent: no,
+    because the closure is computed from the same cumulative flows that the ledger keeps.
+    """
     rows = [r for r in series[sid].ledger if r["scope"] == "network"]
     assert rows and all(r["closed"] for r in rows)
     for r in rows:
@@ -150,6 +167,9 @@ def test_ledger_closes_at_the_declared_tolerance_at_every_row(
 def test_post_hoc_audit_of_the_written_files_passes(
     episodes: dict[str, EpisodeResult], sid: str
 ) -> None:
+    """The audit that recomputes the ledgers from the written files finds no violation. Independent:
+    yes, because the audit is separate code that reads the files.
+    """
     result = audit(episodes[sid].directory)
     assert result["violations"] == []
     assert (
@@ -160,6 +180,9 @@ def test_post_hoc_audit_of_the_written_files_passes(
 def test_audit_detects_an_injected_double_subtraction(
     episodes: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
+    """The audit detects a delivered mass that is doubled in the written rows. Independent: yes,
+    because the error is injected by the test.
+    """
     def twice(row: dict[str, Any]) -> dict[str, Any]:
         if row["scope"] == "network" and row["t_sim_s"] >= 1800.0:
             row = {**row, "cumulative_delivered_kg": 2 * row["cumulative_delivered_kg"]}
@@ -174,6 +197,9 @@ def test_audit_detects_an_injected_double_subtraction(
 def test_audit_detects_an_injected_unbalanced_step(
     episodes: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
+    """The audit detects a tank row that was changed without a matching flow. Independent: yes,
+    because the error is injected by the test.
+    """
     def bump(row: dict[str, Any]) -> dict[str, Any]:
         if (
             row["record_type"] == "tank_state"
@@ -195,6 +221,9 @@ def test_audit_detects_an_injected_unbalanced_step(
 def test_audit_detects_a_ledger_that_disagrees_with_the_tank_state(
     episodes: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
+    """The audit detects a ledger that disagrees with the tank state by one kilogram. Independent:
+    yes, because the error is injected by the test.
+    """
     def skew(row: dict[str, Any]) -> dict[str, Any]:
         if row["scope"] == "TK-102" and row["t_sim_s"] == 100.0:
             row = {**row, "liquid_kg": row["liquid_kg"] + 1.0}
@@ -211,12 +240,18 @@ def test_audit_detects_a_ledger_that_disagrees_with_the_tank_state(
 def test_healthy_scenarios_stay_normal_and_inside_the_level_envelope(
     series: dict[str, Series], sid: str
 ) -> None:
+    """Healthy scenarios keep protection normal and every level between 1.8 and 12 m. Independent:
+    yes, because the limits are the stated envelope.
+    """
     s = series[sid]
     assert all(r[2] == "NORMAL" and not r[3] for rows in s.protection.values() for r in rows)
     assert all(1.8 <= r[2] <= 12.0 for rows in s.tank.values() for r in rows)
 
 
 def test_protection_rows_carry_the_placeholder_tag(series: dict[str, Series]) -> None:
+    """Every protection row states that its signal source is the independent detector. Independent:
+    yes, because the expected tag is the stated source.
+    """
     tags = {r[4] for s in series.values() for rows in s.protection.values() for r in rows}
     assert tags == {"independent_detector"}
 
@@ -229,7 +264,9 @@ def _alpha(s: Series, valve: str) -> dict[float, float]:
 
 
 def test_s0ud_inlet_valves_follow_the_linear_stroke(series: dict[str, Series]) -> None:
-    """Independent: alpha = 1 - (t - 600)/30 closing, (t - 1200)/30 opening; XV-R000 over 10 s."""
+    """The inlet valve openings follow the linear stroke of 30 s, and the common receipt valve moves
+    over 10 s. Independent: yes, because the openings are arithmetic on the stroke times.
+    """
     s = series["S0u-D"]
     r101, r102, r000 = _alpha(s, "XV-R101"), _alpha(s, "XV-R102"), _alpha(s, "XV-R000")
     for t, a in r101.items():
@@ -247,6 +284,9 @@ def test_s0ud_inlet_valves_follow_the_linear_stroke(series: dict[str, Series]) -
 
 
 def test_s0ud_event_order_and_times(series: dict[str, Series]) -> None:
+    """The events of the lineup change occur in the stated order at the times given by the schedule
+    and the stroke times. Independent: yes, because the times are arithmetic on the scenario file.
+    """
     ev = series["S0-C"].events  # sanity: a different scenario has far fewer events
     assert len(ev) < 10
     events = series["S0u-D"].events
@@ -281,6 +321,9 @@ def test_s0ud_event_order_and_times(series: dict[str, Series]) -> None:
 
 
 def test_s0ud_commanded_state_changes_before_the_actual_position(series: dict[str, Series]) -> None:
+    """At a command the commanded state changes at once while the actual position still has its old
+    value. Independent: yes, because the expected states follow from the actuator rule.
+    """
     rows = series["S0u-D"].valve["XV-R101"]
     pre = next(r for r in rows if r[0] == 600.0 and r[1] == "pre_event")
     post = next(r for r in rows if r[0] == 600.0 and r[1] == "post_event")
@@ -295,6 +338,9 @@ def test_s0ud_commanded_state_changes_before_the_actual_position(series: dict[st
 
 
 def test_s0ud_no_state_discontinuity_without_an_event(series: dict[str, Series]) -> None:
+    """The continuous state is identical across the rows at an event time and has no jump at any
+    instant without an event. Independent: yes, because only continuity is checked.
+    """
     s = series["S0u-D"]
     event_times = {e["t_sim_s"] for e in s.events}
     # (a) at an event time the continuous state of the pre and post rows is identical.
@@ -324,6 +370,9 @@ def test_s0ud_no_state_discontinuity_without_an_event(series: dict[str, Series])
 
 
 def test_s0ud_volume_moves_from_tk101_to_tk102_and_balances(series: dict[str, Series]) -> None:
+    """The volume that leaves tank TK-101 arrives in tank TK-102, and the third tank is unchanged.
+    Independent: yes, because the expected balance is conservation of volume.
+    """
     s = series["S0u-D"]
     v = {tank: _grid(s.tank[tank])[-1][3] for tank in ("TK-101", "TK-102", "TK-103")}
     start101 = s.tank["TK-101"][0][3]
@@ -341,14 +390,9 @@ def _first(rows: list[tuple[Any, ...]], pred: Any) -> tuple[Any, ...]:
 
 
 def test_s0ue_trip_follows_the_detector_offset_and_delay(series: dict[str, Series]) -> None:
-    """Independent: the true level reaches 13 m - offset at 2968.805057 s - offset/rate, where
-    0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s and rate = 2.358e-4 m/s (D26).
-    The detector (decision D33) sees level + offset, so it asserts when the true level is 13 m
-    minus its offset (the offset is in the event record), and the trip follows 0.2 s later.
-
-    The receipt flow is 600 m3/h from the start (no ramp), the tank is on the floating branch
-    (constant area) and no other flow touches TK-101, so the level reaches 13 m at this time.
-    The trip is at that time, not on the 1 s grid, and the level there is the threshold.
+    """The trip occurs 0.2 s after the true level reaches the high-high threshold less the detector
+    offset, at the time given by the hand calculation. Independent: yes, because the time is hand
+    arithmetic on the receipt flow and the tank area.
     """
     s = series["S0u-E"]
     trip = next(e for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
@@ -365,6 +409,9 @@ def test_s0ue_trip_follows_the_detector_offset_and_delay(series: dict[str, Serie
 
 
 def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:
+    """The isolation sequence runs through the trip, the request, the closure of both valves and the
+    confirmation in the stated order. Independent: yes, because the order is the stated sequence.
+    """
     s = series["S0u-E"]
     ev = s.events
     kinds = {
@@ -411,16 +458,8 @@ def test_s0ue_sequence_request_close_confirm(series: dict[str, Series]) -> None:
 
 
 def test_s0ue_level_after_closure_is_bounded_by_hand_limits(series: dict[str, Series]) -> None:
-    """Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
-
-    Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the
-    command at the next update, so the volume received after the trip (decided by the detector
-    at the time of ``esd_timeline``) is at most (600/3600) x (t_closed - t_trip) m3.
-    Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x
-    9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441
-    (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the
-    linear branch, reached 9.69 s into the stroke. The received volume is therefore at least
-    (600/3600) x (t_request - t_trip + 9.683) m3.
+    """The volume received after the trip lies between the hand-derived lower and upper limits for
+    the 10 s closure under the supply cap. Independent: yes, because the limits are hand arithmetic.
     """
     s = series["S0u-E"]
     trip = next(e["t_sim_s"] for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
@@ -445,6 +484,9 @@ def test_s0ue_level_after_closure_is_bounded_by_hand_limits(series: dict[str, Se
 
 
 def test_the_flag_does_not_block_the_episode(episodes: dict[str, EpisodeResult]) -> None:
+    """An episode with a flagged validity window still runs to its end. Independent: yes, because
+    the expected outcome is the rule that a flag does not stop a run.
+    """
     for sid in ("S0u-D", "S0u-E"):
         assert not episodes[sid].rejected and episodes[sid].outcome.final_t == 3600.0
     assert episodes["S0u-E"].outcome.windows  # a flagged window does not stop the run
@@ -456,6 +498,9 @@ def test_the_flag_does_not_block_the_episode(episodes: dict[str, EpisodeResult])
 def test_rej1_is_rejected_at_the_start_with_gate_time_and_parameter(
     episodes: dict[str, EpisodeResult],
 ) -> None:
+    """The first rejection scenario is rejected at the start with the gate, time and parameter in a
+    valid record. Independent: yes, because the expected gate follows from the scenario.
+    """
     result = episodes["REJ-1"]
     record = json.loads((result.directory / "simulation_rejected.json").read_text())
     validate("simulation_rejected", record)
@@ -470,6 +515,9 @@ def test_rej1_is_rejected_at_the_start_with_gate_time_and_parameter(
 def test_rej2_is_rejected_when_the_level_crosses_the_pumping_minimum(
     episodes: dict[str, EpisodeResult],
 ) -> None:
+    """The second rejection scenario is rejected when the level crosses the stored pumping minimum.
+    Independent: yes, because the stored minimum is a separate table.
+    """
     result = episodes["REJ-2"]
     record = json.loads((result.directory / "simulation_rejected.json").read_text())
     validate("simulation_rejected", record)
@@ -490,6 +538,9 @@ def test_rej2_is_rejected_when_the_level_crosses_the_pumping_minimum(
 def test_rejected_episodes_keep_only_their_records(
     episodes: dict[str, EpisodeResult], sid: str
 ) -> None:
+    """A rejected episode keeps only its record files and no truth files. Independent: yes, because
+    the expected file set is the stated rule.
+    """
     names = {p.name for p in episodes[sid].directory.iterdir()}
     assert names == {
         "simulation_rejected.json",
@@ -509,6 +560,9 @@ def test_rejected_episodes_keep_only_their_records(
 def test_regeneration_gives_identical_files(
     model: HydraulicModel, episodes: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
+    """Running an episode again gives byte-identical files, except for the provenance file.
+    Independent: yes, because equality is the property.
+    """
     again = run_episode("S0-A", tmp_path / "again", model)
     assert again.episode_id == episodes["S0-A"].episode_id
     # Every file except provenance.json is a pure function of seed, scenario and configuration.
@@ -581,6 +635,9 @@ def _engine(model: HydraulicModel, sid: str, sink: ListSink, state: Any = None) 
 def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
     model: HydraulicModel, sid: str, checkpoint: float
 ) -> None:
+    """A run restarted from a checkpoint gives exactly the rows of the continuous run. Independent:
+    yes, because equality is the property.
+    """
     sink_a = ListSink()
     a = _engine(model, sid, sink_a)
     a.run(until=checkpoint)
@@ -603,8 +660,9 @@ def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
 def test_rej3_is_rejected_at_the_start_and_names_the_stored_minimum(
     episodes: dict[str, EpisodeResult],
 ) -> None:
-    """Independent: 6.0 m is below the stored minimum 6.278 m (45 C, reference fittings,
-    NPSH3 4 m, coastal, RVP_9_0, f_d = 0.8), so the run stops at t = 0 before any step."""
+    """A start level of 6.0 m is below the stored minimum of 6.278 m, so the run stops at t = 0 and
+    names the minimum. Independent: yes, because the minimum is a stored value.
+    """
     result = episodes["REJ-3"]
     record = json.loads((result.directory / "simulation_rejected.json").read_text())
     validate("simulation_rejected", record)
@@ -618,6 +676,9 @@ def test_rej3_is_rejected_at_the_start_and_names_the_stored_minimum(
 
 
 def test_the_checkpoint_is_independent_of_later_progress(model: HydraulicModel) -> None:
+    """A checkpoint taken at 50 s is not changed by running the engine further. Independent: yes,
+    because the checkpoint is compared with a copy.
+    """
     a = _engine(model, "S0-A", ListSink())
     a.run(until=50.0)
     saved = a.checkpoint()
@@ -633,6 +694,10 @@ def test_the_checkpoint_is_independent_of_later_progress(model: HydraulicModel) 
 def test_check_valve_and_standby_branch_hold_at_every_recorded_time(
     series: dict[str, Series], sid: str
 ) -> None:
+    """The check valve never lets the pump branch flow reverse, and the standby branch carries no
+    flow, at every recorded time. Independent: yes, because the expected values are the sign rule
+    and zero.
+    """
     s = series[sid]
     for edge in ("E-PA1", "E-PA2", "E-PA3", "E-PA4"):
         assert all(r[2] >= 0.0 for r in s.edge[edge]), edge
@@ -647,6 +712,9 @@ def test_check_valve_and_standby_branch_hold_at_every_recorded_time(
 
 
 def test_the_pump_domain_is_enforced_inside_the_engine(root: Path, tmp_path: Path) -> None:
+    """A configuration that puts the pump outside its curve is rejected by the engine. Independent:
+    yes, because the expected outcome is the domain rule.
+    """
     shutil.copytree(root / "config", tmp_path / "config")
     path = tmp_path / "config" / "delivery_boundary.json"
     doc = json.loads(path.read_text())
@@ -667,6 +735,9 @@ def test_the_pump_domain_is_enforced_inside_the_engine(root: Path, tmp_path: Pat
 def test_release_gate_is_asked_before_an_episode(
     model: HydraulicModel, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The release gate is asked before an episode runs, and a refusal stops it. Independent: yes,
+    because the expected outcome is the gate rule.
+    """
     import verum.sim.episode as episode_module
     from verum.gates import ReleaseNotAllowed
 
@@ -680,6 +751,9 @@ def test_release_gate_is_asked_before_an_episode(
 
 
 def test_episode_directories_hold_no_observation_fields(series: dict[str, Series]) -> None:
+    """The truth events carry only the stated actors and no observation fields. Independent: yes,
+    because the expected set is written out.
+    """
     for s in series.values():
         assert {e["actor"] for e in s.events} <= {
             "operator",
@@ -691,8 +765,10 @@ def test_episode_directories_hold_no_observation_fields(series: dict[str, Series
 def test_tier_follows_the_flagged_windows_and_the_gate_still_blocks_production(
     episodes: dict[str, EpisodeResult],
 ) -> None:
-    """Decision D37: only the episodes with a flagged window are restricted; the release gate
-    refuses production_candidate while generation is disabled and allows the other tiers."""
+    """Only episodes with a flagged window are restricted, and the release gate still refuses
+    production while generation is disabled. Independent: yes, because the expected tiers are the
+    stated rule.
+    """
     from verum.gates import ReleaseNotAllowed, assert_release_allowed
 
     for sid, result in episodes.items():
