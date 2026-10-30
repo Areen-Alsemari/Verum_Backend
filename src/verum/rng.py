@@ -1,18 +1,9 @@
 """Named random streams that do not interfere with each other.
 
-Inputs: a master seed and stream names. Outputs: ``numpy.random.Generator`` objects.
-Key assumptions:
-    * A stream is keyed by the SHA-256 digest of its name: the first 16 bytes of the
-      digest become four 32-bit words of a ``SeedSequence`` spawn key. Creating or
-      drawing from one stream therefore cannot change another stream.
-    * There is no global seeding; the numpy global generator is never touched.
-    * Asking twice for the same name returns the same generator (the draws continue);
-      a new ``RandomStreams`` with the same master seed starts every stream afresh.
-    * No random draw is made in the healthy episodes of Phase 3; the facility exists
-      so that later phases cannot fall back on a global seed.
-
-Source: ``revised/05_simulation_validation_dataset.md`` sections 6.10 and 13.1
-(named streams, no global NumPy seed).
+A stream is keyed by the SHA-256 digest of its name, so creating or drawing from one stream cannot
+change another. There is no global seed and the numpy global generator is never touched. Asking
+twice for the same name continues the same stream, while a new set of streams with the same master
+seed starts every stream afresh.
 """
 
 from __future__ import annotations

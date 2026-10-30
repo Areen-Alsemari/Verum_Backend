@@ -1,16 +1,10 @@
 """Episode seeds of a campaign.
 
-Inputs: a campaign seed and an episode index. Outputs: the seed of the episode, a 64-bit
-integer.
-Key assumptions:
-    * Decision D41: the seed is the first 64-bit word of the state of
-      ``SeedSequence(entropy=campaign_seed, spawn_key=(episode_index,))``. It is a pure
-      function of the two numbers, so any episode of a campaign can be regenerated alone.
-    * Two indices of one campaign never give the same seed; ``campaign_seeds`` raises if they
-      do, and ``assert_distinct`` is the same check for any list of seeds.
-    * There is no global seed: the result is only handed to ``verum.rng.RandomStreams``.
+The seed of an episode is the first 64-bit word of the state of a seed sequence built from the
+campaign seed and the episode index. It is a pure function of the two numbers, so any episode can be
+regenerated alone, and two indices of one campaign never share a seed.
 
-Source: ``docs/design_decisions.md`` D41.
+See D41.
 """
 
 from __future__ import annotations

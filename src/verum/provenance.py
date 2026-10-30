@@ -1,22 +1,12 @@
 """Configuration hash and episode provenance record.
 
-Inputs: the working configuration directory (``config/*.json`` and
-``config/scenarios/*.json``), the lockfile and the git checkout. Outputs: a
-configuration hash, a lockfile hash, the commit identifier and an episode record.
-Key assumptions:
-    * The configuration hash is the SHA-256 of the canonical JSON (sorted keys,
-      compact separators) of every resolved configuration file, keyed by relative
-      path. Reference copies and patch files are excluded: the patched working
-      files already contain their effect.
-    * The hash covers values, not formatting: re-indenting a file does not change it,
-      changing any value does.
-    * The git commit and the dirty flag live in a separate provenance block so that
-      the deterministic episode record does not depend on the commit.
-    * If git is unavailable the commit is recorded as ``unknown``; it is never invented.
+The configuration hash is the SHA-256 of the canonical JSON of every resolved configuration file, so
+it covers values and not formatting. Reference copies and patch files are left out because the
+patched working files already contain their effect. The git commit sits in a separate block so that
+the episode record itself does not depend on it. If git is unavailable the commit is recorded as
+unknown and is never invented.
 
-Source: ``revised/05_simulation_validation_dataset.md`` section 13.1 rule 5 and
-section 6.10 (every episode writes the config hash, code commit, lockfile hash,
-tolerances and step sizes).
+See D41.
 """
 
 from __future__ import annotations

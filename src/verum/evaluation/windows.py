@@ -1,17 +1,11 @@
 """Attach validity-window identifiers to observation rows by time.
 
-Inputs: observation rows (agent-visible schema) and the validity-window records of the same
-episode (hidden). Outputs: copies of the observation rows with the key
-``validity_window_ids``, the identifiers of the windows that contain the sample time.
-Key assumptions:
-    * Evaluation side only. The audited ``observation_audit`` schema is closed and has no field
-      for this, so the join is made by time here instead of being stored in the audit row.
-    * A window contains a sample if ``t_start_s <= t_sim_s <= t_end_s`` (the sample time, not
-      the availability time). A window without an end is open to the end of the episode.
-    * The input rows are not modified; the joined rows are evaluator data and must never be
-      served.
+A window contains a sample when the sample time lies between its start and end, and a window without
+an end is open to the end of the episode. The join is made here because the audited audit schema has
+no field for it. The joined rows are evaluator data and must never be served; the input rows are not
+modified.
 
-Source: ``docs/design_decisions.md`` D25.
+See D25.
 """
 
 from __future__ import annotations

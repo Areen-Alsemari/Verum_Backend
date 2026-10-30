@@ -1,25 +1,12 @@
-"""Read-only gateway: what an agent may see of an episode at a time T.
+"""Read-only gateway: what an agent may see of an episode at a given time.
 
-Inputs: an episode directory (only ``observations.jsonl.gz`` is read) and the time T.
-Outputs: a dictionary with the observations available at T, the assets, and the inspection
-catalog, every object validated against a closed schema.
-Key assumptions:
-    * Library only. No framework, no server, no state beyond the loaded observations.
-    * The gateway imports no truth, engine, hydraulics, ledger or protection module and
-      reads no file other than the observation file. It never reads the audit file, the
-      truth datasets, the episode record, the validity windows or the tier.
-    * ``query(T)`` returns the observations with ``t_available_s <= T`` and nothing later.
-    * Every observation is validated against ``observation.schema.json`` (closed); every
-      asset against a closed schema defined here; the whole payload passes an allowlist:
-      keys outside the schemas and strings that name a scenario, a validity window, a tier
-      or a truth dataset are rejected.
-    * The episode identifier is the opaque id of the directory name; nothing else of the
-      path is returned.
-    * The inspection catalog is a static list. No catalog is present in the audited package
-      or the configuration, so it is empty (a missing input, not an invented one).
+Only the observation file of an episode is read. A query returns the observations that are available
+at the requested time and nothing later, together with the assets and the inspection catalog, each
+checked against a closed schema. The payload also passes an allowlist that rejects keys outside the
+schemas and strings that name a scenario, a validity window, a tier or a truth dataset.
 
-Source: ``CONTRIBUTING.md`` (data exposure); ``revised/05_simulation_validation_dataset.md``
-section 7.2.
+The inspection catalog is empty because no catalog is available in the audited input; it is a
+missing input, not an invented one.
 """
 
 from __future__ import annotations
