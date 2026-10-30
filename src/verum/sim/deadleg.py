@@ -1,12 +1,11 @@
 """Pressure of segments that carry no flow.
 
 An edge that the steady solve gave end pressures is determined, and its head is the mean of its end
-heads. Every other edge is a dead leg. Dead legs join into segments through nodes that are not
-barriers (a closed valve, a check valve, a pump). A segment that touches a tank takes that tank's
-head, and one that touches the distribution boundary takes the reservoir head. An isolated segment
-holds its last head and relaxes towards the head across its closed isolation valve with time
-constant tau, and one with no neighbour takes zero gauge pressure at its elevation, so no edge is
-left undetermined. Trapped-liquid thermal and compressibility effects are outside the model.
+heads. Every other edge is a dead leg, and dead legs join into segments through nodes that are not
+barriers. A segment that touches a tank or the distribution boundary takes that head. An isolated
+segment holds its last head and relaxes towards the head across its closed isolation valve with time
+constant tau, so no edge is left undetermined. Trapped-liquid thermal and compressibility effects
+are outside the model.
 
 See D39 and D54.
 """

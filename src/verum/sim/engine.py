@@ -1,17 +1,11 @@
 """Path-dynamics engine: rigid-column flows and tank volumes over a steady network.
 
-- State: tank volumes, valve actuators, the receipt and delivery path flows, the running pump (fixed
-  speed, no start or trip), the protection machines and the operations controller. Pipes are full
-  and incompressible.
-- A step is at most one time step long, and events (commands, the end of a valve stroke, a
-  protection threshold crossing) end a step exactly.
-- A receipt and a delivery path are rigid columns integrated together with the tank volumes. The
-  steady solve then runs at the imposed flows and the inertial head offsets are added.
-- A branched lineup has no single column, so it falls back to a simpler scheme and counts as a
-  validity window.
-- Gates run during the whole episode, and a failure stops the run with a rejection record. Nothing
-  is clipped or truncated.
-- A checkpoint is a deep copy of the state, and a restarted engine continues bit for bit.
+- State: tank volumes, valve actuators, path flows, the running pump, the protection machines and
+  the operations controller.
+- A step is at most one time step long, and events end a step exactly.
+- The receipt and delivery paths are rigid columns integrated with the tank volumes, and the steady
+  solve then runs at the imposed flows.
+- A restarted engine continues bit for bit from a checkpoint.
 
 See D6 and D17 to D26.
 """

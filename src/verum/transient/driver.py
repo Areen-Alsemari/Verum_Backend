@@ -1,15 +1,11 @@
 """The transient driver: builds the network from a steady solve and advances it in time.
 
-- The initial state is the steady solve for the same lineup, levels, fitting profile, property class
-  and downstream factor, interpolated linearly along each edge. An edge without a steady pressure
-  takes the head of the nearest determined edge.
-- Arithmetic is single-threaded float64 with no random numbers, so equal inputs give equal bits, and
-  a restarted engine continues bit for bit.
-- The receipt flow moves from the actual flow towards its set-point with a 2 s time constant and is
-  capped at 10 barg.
+- The initial state is the steady solve for the same lineup and levels, interpolated linearly along
+  each edge.
+- Arithmetic is single-threaded float64 with no random numbers, so equal inputs give equal bits.
+- The receipt flow moves towards its set-point with a 2 s time constant and is capped at 10 barg.
 - Valves move linearly and count as closed at an opening of 0.001 or less.
-- There is no cavitation model, so points at or below the vapor pressure open an invalid interval
-  and nothing is clipped.
+- There is no cavitation model, and nothing is clipped.
 
 See D43 to D47.
 """

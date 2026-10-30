@@ -2,11 +2,9 @@
 
 The episode record lists the atmosphere stratum, the validity windows and the protection threshold
 crossings, and is hidden truth. The dataset tier is analytic verification, or restricted benchmark
-for an episode with a flagged validity window, and the release gate is asked for the tier actually
-produced and fails closed. The episode identifier is derived from the seed, the scenario and the
-configuration hash, so equal inputs write identical files. A completed episode gets its observation
-rows after the truth is final, and a rejected episode keeps only its records so that it cannot be
-mistaken for data. The git commit goes in a separate provenance file.
+for an episode with a flagged validity window, and the release gate fails closed. The episode
+identifier derives from the seed, the scenario and the configuration hash, so equal inputs write
+identical files. A rejected episode keeps only its records so that it cannot be mistaken for data.
 
 See D20, D24 to D26, D37 and D73.
 """

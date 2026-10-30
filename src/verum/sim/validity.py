@@ -1,12 +1,10 @@
 """Validity of the rigid-column model: the wave-round-trip criterion and the windows.
 
-The rigid-column model is valid for an event only if the event lasts at least a factor times the
-pressure-wave round trip of the path, duration >= factor x 2 sum(L_i / a_i). The factor is 50 for a
-valve stroke and 10 for a receipt set-point step, a flow collapse and a path closure; both are
-proposals. A stroke is judged only if the flow through the valve is at least 10 percent of the
-design flow of its path. An isolated segment whose held pressure is more than 0.5 bar from its
-target opens a window that closes below 0.05 bar. A window is hidden truth that records why the
-model does not represent the physics.
+The model is valid for an event only if the event lasts at least a factor times the pressure-wave
+round trip of the path, duration >= factor x 2 sum(L_i / a_i). The factor is 50 for a valve stroke
+and 10 for a set-point step, a flow collapse and a path closure, and both are proposals. A stroke is
+judged only if the flow through the valve is at least 10 percent of the design flow of its path. A
+window is hidden truth that records why the model does not represent the physics.
 
 See D22, D25, D53, D54 and D58.
 """

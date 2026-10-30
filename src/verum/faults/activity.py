@@ -1,12 +1,10 @@
 """Lineup context of a fault: whether its asset is active and whether misrouting (b) is eligible.
 
 A fault is active if it can change a tag in at least one lineup state in force from its onset to the
-end of the episode, and latent otherwise. A state is the set of open valves and running pumps with
-the receipt set-point in force. Commands triggered by events are not applied, which can only turn an
-asset from active to latent, so a fault is never called latent that could act. Misrouting (b) needs
-a valve on a parallel branch: one of the tank inlet valves or of the tank outlet valves, open while
-another valve of its group is open. The two pump branches are never open together in the static
-lineups.
+end of the episode, and latent otherwise. Commands triggered by events are not applied, which can
+only turn an asset from active to latent, so a fault is never called latent that could act.
+Misrouting (b) needs a valve on a parallel branch: a tank inlet valve or outlet valve that is open
+while another valve of its group is open.
 
 See D75 and D76.
 """

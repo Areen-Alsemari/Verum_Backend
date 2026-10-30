@@ -1,12 +1,11 @@
 """The adapter between the hidden truth store and the sensor chain.
 
-It reads the hydraulic-state rows and the episode record of an episode directory, converts units
-(m3/s to m3/h, absolute pressure to gauge with the atmosphere of the episode stratum, K to C), and
-hands plain arrays to the chain. Every truth quantity must be determined, since an undetermined
-value is an error and never a null row or a held value. Event tags (valve contacts, pump indicators,
-high-high switch) are rows at t = 0 and at each change. A hook may change a sampled reading before
-noise and quantisation, and it is called for every scheduled sample in time order, so a stateful
-hook does not depend on the dropout draws. The six withheld tags produce no row.
+It reads the hydraulic-state rows and the episode record, converts units (m3/s to m3/h, absolute
+pressure to gauge, K to C), and hands plain arrays to the chain. Every truth quantity must be
+determined, since an undetermined value is an error and never a null row or a held value. Event tags
+are rows at t = 0 and at each change. A hook may change a sampled reading before noise and
+quantisation, and it is called for every scheduled sample in time order, so a stateful hook does not
+depend on the dropout draws.
 
 See D27 to D33 and D74.
 """

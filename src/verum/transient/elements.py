@@ -1,14 +1,11 @@
 """Series elements between two pipe ends: valve, pump, check valve, closed element.
 
-- A valve adds a resistance K2 = (K(alpha) - K_open) / (2 g A^2), and a closed valve is a zero-flow
+- A valve adds a resistance (K(alpha) - K_open) / (2 g A^2), and a closed valve is a zero-flow
   element.
-- A pump follows a quasi-steady curve h = H0 - k (Q / Q_ref)^2 with no inertia. A stopped pump is a
-  resistance with the same quadratic coefficient and no shutoff head, so reverse flow through it is
-  possible until a check valve closes.
-- A check valve closes a finite delay after the flow first reverses, accounts for the reverse volume
-  that passes meanwhile, and reopens when the upstream total head exceeds the downstream one.
-
-The flow is positive from the first end to the second.
+- A pump follows a quasi-steady curve. A stopped pump is a resistance with no shutoff head, so
+  reverse flow is possible until a check valve closes.
+- A check valve closes a finite delay after the flow first reverses and reopens when the upstream
+  head exceeds the downstream head.
 
 See D4, D6, D19 and D44.
 """

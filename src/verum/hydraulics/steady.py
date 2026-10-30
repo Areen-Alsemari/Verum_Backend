@@ -1,18 +1,14 @@
 """Steady-state network solve for one lineup, set of tank levels and boundary case.
 
-- Unknowns are node total heads. Tanks are constant-head nodes at their free-surface level, and only
-  edges on a flow path between terminals are solved.
-- The pump is split into an inlet and an outlet node. If the head it must add reaches its shutoff
-  head, the delivery path carries no flow.
-- Receipt either imposes the flow and solves the source pressure, or imposes the capped pressure and
-  reports the flow as clipped.
-- Static pressure at a tap is rho g (H - z) - rho v^2 / 2, in Pa gauge, and a tap may read a head
-  offset from its node (D36).
+- Unknowns are node total heads, with tanks as constant-head nodes. Only edges on a flow path
+  between terminals are solved.
+- The pump is split into an inlet and an outlet node, and a pump that must add its shutoff head
+  carries no flow.
+- Static pressure at a tap is rho g (H - z) - rho v^2 / 2, in Pa gauge.
 - A pump flow outside the curve is rejected, and phase and NPSH failures are reported and never
   clipped.
-- The engine may impose the delivery flow and add inertial head offsets after the solve (D22).
 
-See D2, D3, D7, D11, D14 and D15.
+See D2, D3, D7, D11, D14, D15, D22 and D36.
 """
 
 from __future__ import annotations

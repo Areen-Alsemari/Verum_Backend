@@ -1,15 +1,11 @@
 """Independent high-level protection state machine for one tank.
 
-- Pure logic: no hydraulics, no clock and no valve handle. The machine records that closure is
-  requested, and only injected closure evidence can confirm it.
+- Pure logic with no hydraulics, clock or valve handle. The machine only requests closure, and
+  injected closure evidence confirms it.
 - The trip is decided on the independent level signal alone. The process level can raise the high
-  alarm but never trips and cannot block a trip.
-- One transition per update. Confirmation needs closure evidence for every requested valve and an
-  observed receipt flow at or below the residual threshold; after the timeout, anything less fails
-  the isolation.
-- A latched trip is cleared only by an authorised reset with the independent signal valid and below
-  the trip level minus the hysteresis. No agent can reset, bypass or command a valve through this
-  module.
+  alarm but cannot trip or block a trip.
+- A latched trip is cleared only by an authorised reset, with the independent signal valid and below
+  the trip level minus the hysteresis.
 
 See D12, D13 and D16.
 """

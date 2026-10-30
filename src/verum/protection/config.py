@@ -1,12 +1,10 @@
 """Configuration of the independent protection logic for one tank.
 
-The level thresholds come from the topology contract, and the isolation-timeout multiplier,
-residual-flow threshold, valve stroke times and contact lags from the protection configuration, all
-as parameter records. The isolation timeout is the multiplier times the stroke time plus the contact
-lag, for each requested valve, and the request's timeout is the largest of them. The request closes
-the common receipt valve and the inlet valve of the tripped tank, which is a proposal because the
-audited text names no valves. Alarm and reset hysteresis lower the levels at which the high alarm
-clears and a latched trip can be reset.
+The level thresholds come from the topology contract, and the timeout multiplier, residual-flow
+threshold, valve stroke times and contact lags from the protection configuration, all as parameter
+records. The isolation timeout is the multiplier times the stroke time plus the contact lag, taken
+as the largest over the requested valves. The request closes the common receipt valve and the inlet
+valve of the tripped tank, which is a proposal because the audited text names no valves.
 
 See D4, D12, D13 and D16.
 """
