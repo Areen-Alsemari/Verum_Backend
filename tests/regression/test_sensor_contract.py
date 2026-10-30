@@ -1,15 +1,8 @@
 """Sensor contract: counts, references and tap locations.
 
-Inputs: ``config/canonical_sensor_contract.json`` and
-``config/topology_contract.json``.
-
-Outputs: pass/fail.
-Key assumptions: the reference checks are computed here from the raw JSON,
-independently of the loader, so a loader defect cannot hide a bad reference.
-The vocabulary below restates the typed hidden-state definitions.
-
-Source: ``canonical_sensor_contract.json``; ``verum_preflight.py``
-(``check_sensor_refs``); ``VERUM_INTEGRATION_README.md`` section B.
+The reference checks are computed here from the raw JSON and independently of the loader, so a
+loader defect cannot hide a bad reference. The vocabulary of record types and fields restates the
+typed hidden-state definitions.
 """
 
 from __future__ import annotations
@@ -47,6 +40,9 @@ def _existing_elements(raw_topology: dict[str, Any]) -> dict[str, set[str]]:
 
 
 def test_tag_counts(raw_sensors: dict[str, Any]) -> None:
+    """The contract declares 36 tags, of which 30 are emitted. Independent: yes, because the counts
+    are computed from the raw JSON.
+    """
     statuses = [s["status"] for s in raw_sensors["sensors"].values()]
     assert len(statuses) == 36
     assert statuses.count("emit") == 30
@@ -54,6 +50,9 @@ def test_tag_counts(raw_sensors: dict[str, Any]) -> None:
 
 
 def test_withheld_tags_are_the_motor_and_vibration_channels(sensors: SensorContract) -> None:
+    """The withheld tags are the motor and vibration channels and no emitted tag is among them.
+    Independent: yes, because the expected set is written out in the test.
+    """
     assert set(sensors.withheld_tags) == WITHHELD_TAGS
     assert len(sensors.emitted_tags) == 30
     assert not WITHHELD_TAGS & set(sensors.emitted_tags)
@@ -62,6 +61,9 @@ def test_withheld_tags_are_the_motor_and_vibration_channels(sensors: SensorContr
 def test_every_reference_is_allowed_and_existing(
     raw_sensors: dict[str, Any], raw_topology: dict[str, Any]
 ) -> None:
+    """Every reference uses an allowed record type and field and names an element that exists in the
+    topology. Independent: yes, because the checks are computed from the raw JSON.
+    """
     elements = _existing_elements(raw_topology)
     for tag, entry in raw_sensors["sensors"].items():
         ref = entry["measured_variable_ref"]
@@ -75,12 +77,18 @@ def test_every_reference_is_allowed_and_existing(
 def test_withheld_tags_have_no_reference(
     sensors: SensorContract, raw_sensors: dict[str, Any]
 ) -> None:
+    """Withheld tags carry no reference, both in the loaded contract and in the raw JSON.
+    Independent: yes, because the raw JSON is checked directly.
+    """
     for tag in sensors.withheld_tags:
         assert sensors.sensors[tag].ref is None
         assert raw_sensors["sensors"][tag]["measured_variable_ref"] is None
 
 
 def test_emitted_tags_all_have_a_reference(sensors: SensorContract) -> None:
+    """Every emitted tag has a reference. Independent: yes, because the expected outcome is the
+    contract rule.
+    """
     assert all(sensors.sensors[t].ref is not None for t in sensors.emitted_tags)
 
 
@@ -88,6 +96,9 @@ def test_emitted_tags_all_have_a_reference(sensors: SensorContract) -> None:
 def test_loader_rejects_a_reference_on_a_withheld_tag(
     raw_sensors: dict[str, Any], topology: Topology, tag: str
 ) -> None:
+    """The loader rejects a reference placed on a withheld tag. Independent: yes, because the
+    expected outcome is the loader rule.
+    """
     raw_sensors["sensors"][tag]["measured_variable_ref"] = {
         "record_type": "pump_state",
         "element_id": "P-101A",
@@ -100,6 +111,9 @@ def test_loader_rejects_a_reference_on_a_withheld_tag(
 def test_loader_rejects_an_emitted_tag_without_reference(
     raw_sensors: dict[str, Any], topology: Topology
 ) -> None:
+    """The loader rejects an emitted tag that has no reference. Independent: yes, because the
+    expected outcome is the loader rule.
+    """
     raw_sensors["sensors"]["FT-001"]["measured_variable_ref"] = None
     with pytest.raises(ContractError):
         parse_sensor_contract(raw_sensors, topology)
@@ -109,12 +123,19 @@ def test_loader_rejects_an_emitted_tag_without_reference(
 def test_pump_fields_other_than_run_state_cannot_be_referenced(
     raw_sensors: dict[str, Any], topology: Topology, field: str
 ) -> None:
+    """A pump tag that refers to a field other than the run state is rejected. Independent: yes,
+    because the expected outcome is the vocabulary rule.
+    """
     raw_sensors["sensors"]["P-101A"]["measured_variable_ref"]["field"] = field
     with pytest.raises(ContractError):
         parse_sensor_contract(raw_sensors, topology)
 
 
 def test_receipt_pressure_tap_is_upstream_of_the_isolation_valve(sensors: SensorContract) -> None:
+    """The receipt pressure tag PT-001 reads the pressure at the start of the second receipt edge,
+    upstream of the isolation valve. Independent: yes, because the expected reference is written out
+    in the test.
+    """
     ref = sensors.sensors["PT-001"].ref
     assert ref is not None
     assert (ref.record_type, ref.element_id, ref.field) == ("edge_state", "E002", "p_from_pa_abs")
@@ -124,6 +145,9 @@ def test_receipt_pressure_tap_is_upstream_of_the_isolation_valve(sensors: Sensor
 def test_pump_pressure_taps_are_before_the_check_valve(
     sensors: SensorContract, topology: Topology, tag: str, edge: str
 ) -> None:
+    """The pump pressure tags read the start of the edge that ends before the check valve.
+    Independent: yes, because the expected references are written out in the test.
+    """
     ref = sensors.sensors[tag].ref
     assert ref is not None
     assert (ref.record_type, ref.element_id, ref.field) == ("edge_state", edge, "p_from_pa_abs")
@@ -131,6 +155,9 @@ def test_pump_pressure_taps_are_before_the_check_valve(
 
 
 def test_boundary_and_suction_pressure_use_absolute_node_pressure(sensors: SensorContract) -> None:
+    """The suction and distribution boundary pressure tags read the absolute pressure of their
+    nodes. Independent: yes, because the expected references are written out in the test.
+    """
     for tag, node in (("PT-201", "PUMP_SUCTION_TEE"), ("PT-203", "DISTRIBUTION_BOUNDARY")):
         ref = sensors.sensors[tag].ref
         assert ref is not None
@@ -142,6 +169,9 @@ def test_boundary_and_suction_pressure_use_absolute_node_pressure(sensors: Senso
 
 
 def test_valve_tags_map_to_contact_state(sensors: SensorContract) -> None:
+    """The 11 valve tags map to the valve contact state. Independent: yes, because the expected
+    count and mapping are written out in the test.
+    """
     valves = [t for t in sensors.sensors if t.startswith("XV-")]
     assert len(valves) == 11
     for tag in valves:
@@ -152,6 +182,9 @@ def test_valve_tags_map_to_contact_state(sensors: SensorContract) -> None:
 
 
 def test_high_high_switches_use_protection_state(sensors: SensorContract) -> None:
+    """The three high-high level switches map to the protection state of their tank. Independent:
+    yes, because the expected references are written out in the test.
+    """
     for tank in ("101", "102", "103"):
         ref = sensors.sensors[f"LSHH-{tank}"].ref
         assert ref is not None
@@ -182,6 +215,9 @@ def _set_ref(tag: str, **changes: str) -> Any:
 def test_loader_rejects_bad_reference(
     raw_sensors: dict[str, Any], topology: Topology, change: Any
 ) -> None:
+    """The loader rejects references with an unknown record type, field or element, or a stale name.
+    Independent: yes, because the expected outcome is the vocabulary rule.
+    """
     clone = copy.deepcopy(raw_sensors)
     change(clone)
     with pytest.raises(ContractError):
@@ -189,6 +225,9 @@ def test_loader_rejects_bad_reference(
 
 
 def test_loader_rejects_unknown_status(raw_sensors: dict[str, Any], topology: Topology) -> None:
+    """The loader rejects a tag status that is neither emit nor withheld. Independent: yes, because
+    the expected outcome is the loader rule.
+    """
     raw_sensors["sensors"]["FT-001"]["status"] = "maybe"
     with pytest.raises(ContractError):
         parse_sensor_contract(raw_sensors, topology)

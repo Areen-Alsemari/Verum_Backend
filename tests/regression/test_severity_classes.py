@@ -1,22 +1,12 @@
-"""Severity class boundaries of the agent-side audit (``config/severity_classes.json``).
+"""Severity class boundaries of the agent-side audit.
 
-Inputs: the stored file. Outputs: pass/fail.
-Key assumptions (decisions D77 and D78):
-    * Every entry is a ``ParamValue``: a boundary that the audit reached is provisional (evidence
-      tag SIM) and carries a value in the units of the severity coordinate; one that it did not
-      reach inside the range is unresolved and raises when read.
-    * The key is ``<fault>/<asset class>/<marginal|clear>_from``; a fault has both boundaries for
-      each asset class, the boundary of the clear class is not less severe than that of the marginal
-      class, and a resolved value lies inside the severity range of the fault (decisions D60 to
-      D64; the range of the leak area, the closure fraction ``1 - ceiling`` of a restriction, the
-      head loss fraction ``1 - scale`` of a pump, the sensor fraction of span and the stuck
-      opening).
-    * Severity grows with the coordinate except for the stuck opening of misrouting (b), where it
-      grows as the opening falls, so its clear boundary is the smaller opening.
-Independence: the ranges are those of ``verum.faults.validate``, written here as hand arithmetic
-(closure 1 - 0.9 to 1 - 0.15, loss 1 - 0.98 to 1 - 0.70).
+Every entry is a parameter record: a boundary that the audit reached is provisional and carries a
+value in the units of the severity coordinate, and one that it did not reach inside the range is
+unresolved and raises when read. A fault has a marginal and a clear boundary for each asset class,
+the clear boundary is not less severe than the marginal one, and a resolved value lies inside the
+severity range of the fault. The ranges are written here as hand arithmetic.
 
-Source: ``docs/design_decisions.md`` D77 and D78.
+See D60 to D64, D77 and D78.
 """
 
 from __future__ import annotations
@@ -56,6 +46,9 @@ def _groups() -> dict[tuple[str, str], dict[str, ParamValue]]:
 
 
 def test_the_file_loads_and_every_group_has_both_boundaries() -> None:
+    """The stored file loads and every fault and asset class has both a marginal and a clear
+    boundary. Independent: yes, because the expected structure is the stated rule.
+    """
     groups = _groups()
     assert groups
     for (fault, _), pair in groups.items():
@@ -64,6 +57,10 @@ def test_the_file_loads_and_every_group_has_both_boundaries() -> None:
 
 
 def test_an_unreached_boundary_is_unresolved_and_raises() -> None:
+    """A boundary that the audit did not reach is unresolved and raises when its value is read.
+    Independent: yes, because the expected outcome is the rule that nothing replaces an unresolved
+    parameter.
+    """
     for pair in _groups().values():
         for value in pair.values():
             if value.status == "unresolved":
@@ -75,6 +72,9 @@ def test_an_unreached_boundary_is_unresolved_and_raises() -> None:
 
 
 def test_boundaries_lie_in_the_range_and_are_ordered() -> None:
+    """Resolved boundaries lie inside the severity range of their fault and the clear boundary is
+    not less severe than the marginal one. Independent: yes, because the ranges are hand arithmetic.
+    """
     for (fault, aclass), pair in _groups().items():
         lo, hi = RANGES[fault]
         resolved = {k: v.value for k, v in pair.items() if v.status != "unresolved"}

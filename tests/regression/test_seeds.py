@@ -1,17 +1,11 @@
-"""Campaign seeds and the fixed seeds of the named scenarios (decision D41).
+"""Campaign seeds and the fixed seeds of the named scenarios.
 
-Inputs: the seed helper and the scenario files in ``config/scenarios``. Outputs: pass/fail.
-Key assumptions:
-    * The seed of episode i is the first 64-bit word of the state of
-      ``SeedSequence(entropy=campaign_seed, spawn_key=(i,))``: a pure function of the pair.
-    * Within one campaign no two episodes share a seed (checked for 20000 indices and for two
-      campaigns); a duplicate is refused by ``assert_distinct``.
-    * The shipped scenarios each have their own fixed seed, so no two share a stream of
-      random draws.
-Independence: the expected seed is recomputed here with numpy directly; the distinctness
-checks are structural.
+The seed of an episode is the first 64-bit word of the state of a seed sequence built from the
+campaign seed and the episode index. No two episodes of a campaign share a seed, and each shipped
+scenario has its own fixed seed. The expected seed is recomputed with numpy directly, and the
+distinctness checks are structural.
 
-Source: ``docs/design_decisions.md`` D41.
+See D41.
 """
 
 from __future__ import annotations
@@ -27,6 +21,9 @@ from verum.sim.scenario import load_scenario
 
 
 def test_the_seed_is_the_first_word_of_the_spawned_sequence() -> None:
+    """The episode seed equals the first word of the spawned seed sequence for several campaigns and
+    indices. Independent: yes, because the expected seed is recomputed with numpy directly.
+    """
     for campaign, index in ((7, 0), (7, 1), (20261101, 41), (2**40, 9999)):
         sequence = np.random.SeedSequence(entropy=campaign, spawn_key=(index,))
         assert episode_seed(campaign, index) == int(sequence.generate_state(1, dtype=np.uint64)[0])
@@ -35,6 +32,9 @@ def test_the_seed_is_the_first_word_of_the_spawned_sequence() -> None:
 
 
 def test_no_two_episodes_of_a_campaign_share_a_seed() -> None:
+    """No two of 20000 episodes of a campaign share a seed. Independent: yes, because the check
+    counts distinct values.
+    """
     for campaign in (1, 20261101):
         seeds = campaign_seeds(campaign, 20000)
         assert len(set(seeds)) == len(seeds) == 20000
@@ -42,6 +42,9 @@ def test_no_two_episodes_of_a_campaign_share_a_seed() -> None:
 
 
 def test_the_check_fails_when_two_episodes_share_a_seed() -> None:
+    """The distinctness check accepts distinct seeds and refuses a list with a repeated seed.
+    Independent: yes, because the lists are written out in the test.
+    """
     assert_distinct([1, 2, 3])
     with pytest.raises(ValueError, match="share the seed"):
         assert_distinct([5, 9, 5])
@@ -52,6 +55,9 @@ def test_the_check_fails_when_two_episodes_share_a_seed() -> None:
 
 
 def test_negative_numbers_are_refused() -> None:
+    """A negative campaign seed or episode index is refused. Independent: yes, because the expected
+    outcome is the validation rule.
+    """
     with pytest.raises(ValueError):
         episode_seed(-1, 0)
     with pytest.raises(ValueError):
@@ -59,6 +65,9 @@ def test_negative_numbers_are_refused() -> None:
 
 
 def test_every_shipped_scenario_has_its_own_fixed_seed(root: Path) -> None:
+    """The 14 shipped scenarios each have their own fixed seed. Independent: yes, because the check
+    counts distinct values in the scenario files.
+    """
     files = sorted((root / "config" / "scenarios").glob("*.json"))
     seeds = {f.stem: json.loads(f.read_text())["seed"] for f in files}
     assert len(seeds) == 14  # the eleven of Phase 5b and the three v2 copies of Phase 6b
