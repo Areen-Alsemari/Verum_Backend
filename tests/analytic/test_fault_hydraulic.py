@@ -172,3 +172,17 @@ def test_misrouting_b_a_stuck_pump_branch_valve_matches_the_reference_loss(
     assert k_stuck == pytest.approx(1056.7, rel=1e-3)
     got = delivery_flow(model, {"XV-PAO": 0.02})
     assert got == pytest.approx(reference_flow(1.0, extra_k=k_stuck - 0.1), rel=2e-3)
+
+
+def test_a_head_degradation_of_the_stopped_pump_changes_nothing(model: HydraulicModel) -> None:
+    """P-101B does not run in S0-A, so a fault on it leaves every truth row unchanged."""
+    spec = FaultSpec("PUMP_HEAD_DEGRADATION", "head_scale", "P-101B", 100.0, 30.0, 0.7)
+    healthy, _ = fc.run(model, "S0-A", 400.0)
+    faulted, outcome = fc.run(model, "S0-A", 400.0, FaultSet((spec,)))
+    assert outcome.rejection is None
+    assert healthy.sink.rows == faulted.sink.rows  # type: ignore[attr-defined]
+    running = FaultSpec("PUMP_HEAD_DEGRADATION", "head_scale", "P-101A", 100.0, 30.0, 0.7)
+    changed, _ = fc.run(model, "S0-A", 400.0, FaultSet((running,)))
+    rows_changed: Any = changed.sink.rows["hydraulic_state"]  # type: ignore[attr-defined]
+    rows_healthy: Any = healthy.sink.rows["hydraulic_state"]  # type: ignore[attr-defined]
+    assert rows_changed != rows_healthy

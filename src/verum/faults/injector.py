@@ -93,10 +93,12 @@ class FaultSet:
                 return ValveFault(s)
         return None
 
-    def pump_scale(self, t: float) -> float:
+    def pump_scale(self, t: float, pump: str) -> float:
+        """Head scale of the named pump at time ``t`` (1 for a pump without a fault)."""
         scale = 1.0
         for s in self._of(fs.PUMP):
-            scale *= 1.0 - s.severity(t) * (1.0 - s.magnitude)
+            if s.asset_id == pump:
+                scale *= 1.0 - s.severity(t) * (1.0 - s.magnitude)
         return scale
 
     def knot_times(self, closed_alpha: float) -> tuple[float, ...]:

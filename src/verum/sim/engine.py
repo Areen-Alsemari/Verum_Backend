@@ -124,7 +124,7 @@ class FaultInjection(Protocol):
 
     def valve_fault(self, valve: str) -> OpeningModifier | None: ...
 
-    def pump_scale(self, t: float) -> float: ...
+    def pump_scale(self, t: float, pump: str) -> float: ...
 
     def knot_times(self, closed_alpha: float) -> tuple[float, ...]: ...
 
@@ -432,7 +432,7 @@ class Engine:
             head_offsets_m=offsets or {},
             apply_cap=apply_cap,
             tap_head_offsets_m=self._tap_offsets(t, receipt_m3h, qdot_receipt),
-            pump=self._pump(t),
+            pump=self._pump(t, next(iter(sorted(st.running)), None)),
             leaks=self._leaks(t),
         )
         try:
@@ -488,10 +488,10 @@ class Engine:
             dead_leg_gaps_m=gaps,
         )
 
-    def _pump(self, t: float) -> FixedSpeedPump:
-        """The duty pump with the head scale of a pump fault at time ``t`` (decision D62)."""
+    def _pump(self, t: float, name: str | None) -> FixedSpeedPump:
+        """The pump ``name`` with the head scale of a pump fault at time ``t`` (decision D62)."""
         pump = self.model.default_pump()
-        scale = 1.0 if self.faults is None else self.faults.pump_scale(t)
+        scale = 1.0 if self.faults is None or name is None else self.faults.pump_scale(t, name)
         if scale == 1.0:
             return pump
         return dataclasses.replace(pump, h0_m=pump.h0_m * scale, k_m=pump.k_m * scale)
@@ -643,7 +643,7 @@ class Engine:
         return dyn.DeliveryColumn(
             path,
             tank,
-            self._pump(t),
+            self._pump(t, pump),
             reservoir,
             self._law_c,
             level,
