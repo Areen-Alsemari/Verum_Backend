@@ -70,7 +70,18 @@ def zero(spec: FaultSpec) -> FaultSpec:
 
 ZERO_FAULTS = [
     zero(LEAK),
-    FaultSpec("VALVE_RESTRICTION", "restriction", "XV-S101", 600.0, 300.0, 0.5, None, None, 0.0),
+    FaultSpec(
+        "VALVE_RESTRICTION",
+        "restriction",
+        "XV-S101",
+        600.0,
+        300.0,
+        0.5,
+        None,
+        None,
+        0.0,
+        "position_visible",
+    ),
     FaultSpec("PUMP_HEAD_DEGRADATION", "head_scale", "P-101A", 600.0, 300.0, 0.8, None, None, 0.0),
     zero(BIAS),
     zero(STUCK),
@@ -191,6 +202,7 @@ def test_a_rejected_candidate_is_never_labelled_as_a_fault(
 
 # --- eligibility (no run) ----------
 
+VIS = "position_visible"
 EDGES = {"E-PA3", "E-S101a", "E003"}
 TAGS = {"PT-203", "FT-201", "LT-101"}
 
@@ -216,8 +228,26 @@ def test_an_eligible_specification_has_no_violation() -> None:
         (dataclasses.replace(LEAK, magnitude=1e-6), "leak area"),
         (dataclasses.replace(LEAK, position=0.99), "position"),
         (dataclasses.replace(LEAK, discharge_coefficient=None), "coefficient"),
-        (FaultSpec("VALVE_RESTRICTION", "restriction", "XV-R000", 600.0, 300.0, 0.5), "asset"),
-        (FaultSpec("VALVE_RESTRICTION", "restriction", "XV-S101", 600.0, 300.0, 0.95), "ceiling"),
+        (
+            FaultSpec(
+                "VALVE_RESTRICTION", "restriction", "XV-R000", 600.0, 300.0, 0.5, fault_mode=VIS
+            ),
+            "asset",
+        ),
+        (
+            FaultSpec(
+                "VALVE_RESTRICTION", "restriction", "XV-S101", 600.0, 300.0, 0.95, fault_mode=VIS
+            ),
+            "ceiling",
+        ),
+        (FaultSpec("VALVE_RESTRICTION", "restriction", "XV-S101", 600.0, 300.0, 0.5), "fault_mode"),
+        (
+            FaultSpec(
+                "VALVE_RESTRICTION", "restriction", "XV-S101", 600.0, 300.0, 0.5, fault_mode="half"
+            ),
+            "fault_mode",
+        ),
+        (dataclasses.replace(LEAK, fault_mode="obstruction"), "no fault_mode"),
         (FaultSpec("PUMP_HEAD_DEGRADATION", "head_scale", "P-101A", 600.0, 300.0, 0.6), "scale"),
         (FaultSpec("SENSOR_DRIFT", "bias", "XV-S101", 600.0, None, 0.03), "asset"),
         (FaultSpec("SENSOR_DRIFT", "bias", "PT-203", 600.0, None, 0.06), "of span"),

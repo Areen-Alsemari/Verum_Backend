@@ -207,6 +207,7 @@ FAULT_SPEC: Doc = {
     "position": 0.5,
     "discharge_coefficient": 0.62,
     "peak_severity": 1.0,
+    "fault_mode": None,
 }
 REJECTED: Doc = {
     **BASE,
@@ -277,6 +278,31 @@ POSITIVE: list[tuple[str, str, Doc]] = [
     ("events", "event", EVENT),
     ("episode", "episode", EPISODE),
     ("fault_spec", "leak", FAULT_SPEC),
+    (
+        "fault_spec",
+        "restriction",
+        {
+            **FAULT_SPEC,
+            "fault_type": "VALVE_RESTRICTION",
+            "variant": "restriction",
+            "asset_id": "XV-S101",
+            "magnitude": 0.5,
+            "position": None,
+            "discharge_coefficient": None,
+            "fault_mode": "obstruction",
+        },
+    ),
+    (
+        "boundary_state",
+        "profile v2 factor",
+        {
+            **BOUNDARY,
+            "downstream_factor": 7.3,
+            "demand_regime_value": 7.0,
+            "receipt_setpoint_nominal_m3h": 600.0,
+            "receipt_setpoint_effective_m3h": 612.0,
+        },
+    ),
     ("simulation_rejected", "rejected", REJECTED),
 ]
 NEGATIVE: list[tuple[str, str, Doc]] = [
@@ -352,8 +378,12 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
     ("solver_diagnostics", "unknown flow model", _edit(DIAG, "flow_model", "steady")),
     ("solver_diagnostics", "window ids as text", _edit(DIAG, "active_validity_window_ids", "VW-1")),
     ("solver_diagnostics", "old ratio field", _edit(DIAG, "quasi_steady_ratio", 1.0)),
-    ("boundary_state", "factor below the clip", _edit(BOUNDARY, "downstream_factor", 0.5)),
-    ("boundary_state", "factor above the clip", _edit(BOUNDARY, "downstream_factor", 1.3)),
+    # Profile v2 widens the factor to 0.6 to 10 (decision D73); the bounds are the new ones.
+    ("boundary_state", "factor below the range", _edit(BOUNDARY, "downstream_factor", 0.5)),
+    ("boundary_state", "factor above the range", _edit(BOUNDARY, "downstream_factor", 10.5)),
+    ("boundary_state", "regime value of zero", {**BOUNDARY, "demand_regime_value": 0.0}),
+    ("fault_spec", "unknown restriction mode", _edit(FAULT_SPEC, "fault_mode", "half")),
+    ("fault_spec", "missing restriction mode field", _edit(FAULT_SPEC, "fault_mode", _DROP)),
     ("boundary_state", "unknown stratum", _edit(BOUNDARY, "atmosphere_stratum", "mountain")),
     ("boundary_state", "missing log factor", _edit(BOUNDARY, "log_downstream_factor", _DROP)),
     ("validity_windows", "no reason", _edit(WINDOW, "reason", _DROP)),

@@ -102,7 +102,17 @@ from verum.sim.path import (
 )
 from verum.sim.scenario import Scenario
 from verum.sim.valves import OpeningModifier, Valve, make_valve
+from verum.sim.variability import (
+    Redraw,
+    Regime,
+    RegimeDemand,
+    RegimeDrawer,
+    SetpointDeviation,
+    check_receipt_headroom,
+)
 from verum.tanks import load_tank_geometry
+from verum.tanks.envelope import HeadroomScreen, LevelEnvelope
+from verum.tanks.geometry import load_tank_parameters
 from verum.truth import TruthSink
 
 RANK_COMMAND, RANK_DETECTOR, RANK_VALVE = 0, 1, 2
@@ -226,6 +236,8 @@ class EngineState:
     dead_edges: frozenset[str] = frozenset()
     detector_due: dict[str, float] = field(default_factory=dict)
     detector_on: list[str] = field(default_factory=list)
+    regimes: list[Regime] = field(default_factory=list)  # profile v2, decision D73
+    regime_redraws: list[Redraw] = field(default_factory=list)
 
 
 @dataclass
@@ -289,6 +301,8 @@ class EpisodeOutcome:
     crossings: list[dict[str, Any]]
     final_volumes: dict[str, float]
     ledger: dict[str, Any]
+    regimes: list[dict[str, Any]] = field(default_factory=list)
+    regime_redraws: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Engine:
@@ -314,7 +328,7 @@ class Engine:
         self.geometry = load_tank_geometry(model.directory)
         self._pconfig = {t: self._protection_config(t) for t in model.topology.tank_ids}
         self._isolation_valves = {t: c.isolation_valves for t, c in self._pconfig.items()}
-        self.demand = DemandProcess(
+        ou = DemandProcess(
             scenario.demand_process,
             RandomStreams(scenario.seed),
             scenario.duration_s,
@@ -323,6 +337,11 @@ class Engine:
             config["demand_factor_min"],
             config["demand_factor_max"],
         )
+        self.demand: DemandProcess | RegimeDemand = ou
+        self.setpoint_dev: SetpointDeviation | None = None
+        self._drawer: RegimeDrawer | None = None
+        if scenario.variability_profile == "v2":
+            self._init_profile_v2(ou)
         self.speeds = vd.wave_speeds(config)
         self._paths: dict[tuple[Any, ...], LumpedPath] = {}
         streams = RandomStreams(scenario.seed)
@@ -334,6 +353,35 @@ class Engine:
         self._lt = {t: self._level_chain(sensors, streams, t) for t in model.topology.tank_ids}
         self._law_c = load_boundary_law_coefficient(scenario.fitting_profile, model.directory).value
         self.state = state if state is not None else self._initial_state()
+
+    def _init_profile_v2(self, ou: DemandProcess) -> None:
+        """Decision D73: demand regimes on top of the OU factor and a receipt set-point process."""
+        sc, cfg = self.scenario, self.cfg
+        self._drawer = RegimeDrawer(sc.seed, cfg)
+        self.demand = RegimeDemand(
+            ou,
+            cfg["demand_total_factor_min_v2"],
+            lambda: self.state.regimes,
+            self._draw_regime,
+        )
+        self.setpoint_dev = SetpointDeviation(sc.seed, sc.duration_s, cfg)
+        nominal = [sc.receipt_setpoint_m3h] + [
+            float(e["value_m3h"]) for e in sc.schedule if e.get("command") == "receipt_setpoint"
+        ]
+        check_receipt_headroom(
+            nominal, self._receipt_headroom_limit_m3h(), cfg["receipt_setpoint_clip_fraction"]
+        )
+
+    def _receipt_headroom_limit_m3h(self) -> float:
+        """Largest inflow that passes the headroom screen after the trip level for one hour."""
+        params = load_tank_parameters(self.model.directory)
+        screen = HeadroomScreen.from_params(
+            self.geometry,
+            LevelEnvelope.from_tank(self.model.topology.tanks[0]),
+            params["headroom_residual_delivery_m3"],
+            params["headroom_level_allowance_m"],
+        )
+        return screen.limiting_flow_m3h(3600.0)
 
     def _level_chain(self, sensors: Any, streams: RandomStreams, tank: str) -> LevelChain:
         spec = sensors.tags[f"LT-{tank[3:]}"]
@@ -408,6 +456,40 @@ class Engine:
     def _levels(self, volumes: dict[str, float]) -> dict[str, float]:
         return {t: self.geometry.level_m(v, self.rho) for t, v in volumes.items()}
 
+    def _inputs(
+        self,
+        volumes: dict[str, float],
+        t: float,
+        receipt_m3h: float,
+        delivery_m3h: float | None = None,
+        offsets: dict[str, float] | None = None,
+        apply_cap: bool = True,
+        qdot_receipt: float = 0.0,
+        demand_factor: float | None = None,
+    ) -> SteadyInputs:
+        st = self.state
+        factor = self.demand.factor(t) if demand_factor is None else demand_factor
+        alphas = {v: valve.alpha(t) for v, valve in st.valves.items()}
+        open_valves = {v for v, valve in st.valves.items() if not valve.is_physically_closed(t)}
+        partial = {v: a for v, a in alphas.items() if v in open_valves and a < 1.0}
+        return SteadyInputs(
+            lineup=Lineup(frozenset(open_valves), st.running),
+            tank_levels_m=self._levels(volumes),
+            scenario=self.scenario.volatility_class,
+            temperature_c=self.scenario.temperature_c,
+            fitting_profile=self.scenario.fitting_profile,
+            receipt=ReceiptBoundary(flow_m3h=receipt_m3h),
+            delivery=DeliveryBoundary(law_coefficient_m=self._law_c * factor),
+            valve_positions=partial,
+            warm_start=st.warm,
+            imposed_delivery_flow_m3h=delivery_m3h,
+            head_offsets_m=offsets or {},
+            apply_cap=apply_cap,
+            tap_head_offsets_m=self._tap_offsets(t, receipt_m3h, qdot_receipt),
+            pump=self._pump(t, next(iter(sorted(st.running)), None)),
+            leaks=self._leaks(t),
+        )
+
     def _solve(
         self,
         volumes: dict[str, float],
@@ -419,25 +501,9 @@ class Engine:
         qdot_receipt: float = 0.0,
     ) -> SteadyResult:
         st = self.state
-        alphas = {v: valve.alpha(t) for v, valve in st.valves.items()}
         open_valves = {v for v, valve in st.valves.items() if not valve.is_physically_closed(t)}
-        partial = {v: a for v, a in alphas.items() if v in open_valves and a < 1.0}
-        inputs = SteadyInputs(
-            lineup=Lineup(frozenset(open_valves), st.running),
-            tank_levels_m=self._levels(volumes),
-            scenario=self.scenario.volatility_class,
-            temperature_c=self.scenario.temperature_c,
-            fitting_profile=self.scenario.fitting_profile,
-            receipt=ReceiptBoundary(flow_m3h=receipt_m3h),
-            delivery=DeliveryBoundary(law_coefficient_m=self._law_c * self.demand.factor(t)),
-            valve_positions=partial,
-            warm_start=st.warm,
-            imposed_delivery_flow_m3h=delivery_m3h,
-            head_offsets_m=offsets or {},
-            apply_cap=apply_cap,
-            tap_head_offsets_m=self._tap_offsets(t, receipt_m3h, qdot_receipt),
-            pump=self._pump(t, next(iter(sorted(st.running)), None)),
-            leaks=self._leaks(t),
+        inputs = self._inputs(
+            volumes, t, receipt_m3h, delivery_m3h, offsets, apply_cap, qdot_receipt
         )
         try:
             result = self.model.solve(inputs)
@@ -554,7 +620,75 @@ class Engine:
             list(st.crossings),
             dict(st.volumes),
             self._ledger(st.t),
+            [r.as_record() for r in st.regimes],
+            [r.as_record() for r in st.regime_redraws],
         )
+
+    # --- profile v2: demand regimes (decision D73) ----------
+    def _draw_regime(self) -> None:
+        """Append the next regime; its candidates are screened at the present state."""
+        st, drawer = self.state, self._drawer
+        assert drawer is not None
+        index = len(st.regimes)
+        t_start = 0.0 if index == 0 else st.regimes[-1].plateau_end_s
+        regime, redraws = drawer.draw(index, t_start, self._regime_gate)
+        st.regimes.append(regime)
+        st.regime_redraws.extend(redraws)
+        self._emit(
+            st.t,
+            "demand_regime",
+            "simulator_truth",
+            "DEMAND",
+            {**regime.as_record(), "redraws": [r.as_record() for r in redraws]},
+        )
+
+    def _regime_gate(self, value: float) -> str | None:
+        """Why a regime value is not acceptable now, or None.
+
+        Decision D73: the pump must stay inside its curve with a margin at the smallest total
+        factor of the regime, pass the phase and NPSH screen there, and keep the minimum stable
+        flow of decision D49 at the largest factor, with the delivering tank lowered by an
+        allowance for the level change over the ramp. Without a running pump the factor has no
+        effect on the flow and any value passes."""
+        st, cfg = self.state, self.cfg
+        tank = next(
+            (
+                k
+                for k in self.model.topology.tank_ids
+                if not st.valves[f"XV-S{k[3:]}"].is_physically_closed(st.t)
+            ),
+            None,
+        )
+        if not st.running or tank is None:
+            return None
+        level = self.geometry.level_m(st.volumes[tank], self.rho) - cfg["regime_level_allowance_m"]
+        volumes = {**st.volumes, tank: self.geometry.volume_m3(level, self.rho)}
+        low = max(value * cfg["demand_factor_min"], cfg["demand_total_factor_min_v2"])
+        high = value * cfg["demand_factor_max"]
+        for factor, largest in ((low, True), (high, False)):
+            reason = self._probe(volumes, factor, largest)
+            if reason is not None:
+                return reason
+        return None
+
+    def _probe(self, volumes: dict[str, float], factor: float, largest: bool) -> str | None:
+        st, cfg = self.state, self.cfg
+        inputs = self._inputs(volumes, st.t, st.receipt_flow_m3h, demand_factor=factor)
+        try:
+            result = self.model.solve(inputs)
+        except PumpOutsideCurve:
+            return "pump_domain"
+        except (ConvergenceError, HydraulicsError):
+            return "steady_solve"
+        pump = result.pump
+        if pump is None:
+            return None
+        if largest:
+            limit = self.model.config["pump_max_flow_m3h"] - cfg["pump_domain_margin_m3h"]
+            if pump.flow_m3h / pump.speed_ratio > limit:
+                return "pump_domain_margin"
+            return None if result.phase.status == "OK" else "phase_screen"
+        return None if pump.flow_m3h >= cfg["pump_min_stable_flow_m3h"] else "minimum_stable_flow"
 
     def _start(self) -> None:
         st = self.state
@@ -635,7 +769,20 @@ class Engine:
             self.cfg["receipt_controller_tau_s"],
             st.receipt_setpoint_m3h / 3600.0,
             self._layout(path, t),
+            self._setpoint_fn(st.receipt_setpoint_m3h),
         )
+
+    def _effective_setpoint(self, nominal_m3h: float, t: float) -> float:
+        """The set-point the controller follows; the nominal value unless profile v2 is on."""
+        if self.setpoint_dev is None:
+            return nominal_m3h
+        return self.setpoint_dev.effective(nominal_m3h, t)
+
+    def _setpoint_fn(self, nominal_m3h: float) -> Callable[[float], float] | None:
+        if self.setpoint_dev is None:
+            return None
+        dev = self.setpoint_dev
+        return lambda t: dev.effective(nominal_m3h, t) / 3600.0
 
     def _delivery_column(self, tank: str, pump: str, t: float) -> dyn.DeliveryColumn:
         st, m = self.state, self.model
@@ -760,9 +907,8 @@ class Engine:
         assert st.current is not None
         h, s0 = t1 - t0, st.current
         tau_c = self.cfg["receipt_controller_tau_s"]
-        q1 = st.receipt_setpoint_m3h + (st.receipt_flow_m3h - st.receipt_setpoint_m3h) * math.exp(
-            -h / tau_c
-        )
+        target = self._effective_setpoint(st.receipt_setpoint_m3h, t0 + 0.5 * h)
+        q1 = target + (st.receipt_flow_m3h - target) * math.exp(-h / tau_c)
         f1 = s0.tank_net_inflow_m3s
         predictor = {k: v + h * f1[k] for k, v in st.volumes.items()}
         s2 = self._solve(predictor, t1, q1)
@@ -1172,7 +1318,8 @@ class Engine:
         sc = self.scenario
         label = (
             f"pumping_minimum_level[{tank},{sc.temperature_c:g}C,{sc.fitting_profile},"
-            f"NPSH3={c:g}m,{sc.atmosphere_stratum},{sc.volatility_class},f_d=0.8]"
+            f"NPSH3={c:g}m,{sc.atmosphere_stratum},{sc.volatility_class},"
+            f"f_d={'0.6502' if sc.variability_profile == 'v2' else '0.8'}]"
         )
         record = pumping_minimum_level(
             tank,
@@ -1180,7 +1327,7 @@ class Engine:
             sc.fitting_profile,
             c,
             self.model.directory,
-            stratum_filename(sc.atmosphere_stratum, sc.volatility_class),
+            stratum_filename(sc.atmosphere_stratum, sc.volatility_class, sc.variability_profile),
         )
         try:
             return record.value, label
@@ -1384,7 +1531,7 @@ class Engine:
 
     def _boundary(self, t: float) -> dict[str, Any]:
         f = self.demand.factor(t)
-        return {
+        row = {
             "demand_process": self.scenario.demand_process,
             "downstream_factor": f,
             "log_downstream_factor": self.demand.unclipped_log(t),
@@ -1393,6 +1540,14 @@ class Engine:
             "atmosphere_stratum": self.scenario.atmosphere_stratum,
             "atmosphere_pa_abs": self.model.patm,
         }
+        if isinstance(self.demand, RegimeDemand) and self.setpoint_dev is not None:
+            nominal = self.state.receipt_setpoint_m3h
+            row |= {
+                "demand_regime_value": self.demand.regime(t),
+                "receipt_setpoint_nominal_m3h": nominal,
+                "receipt_setpoint_effective_m3h": self.setpoint_dev.effective(nominal, t),
+            }
+        return row
 
     def _snapshot(
         self,
@@ -1406,7 +1561,12 @@ class Engine:
         volumes = st.volumes if volumes is None else volumes
         levels = self._levels(volumes)
         valves = {
-            v: rw.ValveView(valve.alpha(t), valve.commanded_open, valve.is_physically_closed(t))
+            v: rw.ValveView(
+                valve.alpha(t),
+                valve.commanded_open,
+                valve.is_physically_closed(t),
+                valve.contact_alpha(t),
+            )
             for v, valve in st.valves.items()
         }
         prot = {

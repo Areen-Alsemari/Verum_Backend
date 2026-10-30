@@ -20,7 +20,11 @@ Derivations (hand arithmetic):
 Independence: the reference module solves the series path by a scalar root find and does not
 import the package; the valve law values are hand arithmetic.
 
-Source: ``docs/design_decisions.md`` D19, D31, D61, D62, D64; ``docs/fault_models.md``.
+    * Restriction modes (D74): in both modes the loss is K(0.5) = 5.0 (the valve adds 4.9 to the
+      open-valve loss); a visible restriction releases the open contact at 301.8 s, an obstruction
+      leaves it asserted.
+
+Source: ``docs/design_decisions.md`` D19, D31, D61, D62, D64, D74; ``docs/fault_models.md``.
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ from scipy.optimize import brentq
 
 import _fault_cases as fc
 import _reference_hydraulics as ref
+from verum.contracts.errors import ContractError
 from verum.faults import FaultSet, FaultSpec
 from verum.graph import Lineup
 from verum.hydraulics import DeliveryBoundary, HydraulicModel, ReceiptBoundary, SteadyInputs
@@ -89,7 +94,15 @@ def test_the_delivery_flow_falls_monotonically_with_the_opening(model: Hydraulic
 
 
 def test_the_restricted_valve_loss_and_contact_in_an_engine_run(model: HydraulicModel) -> None:
-    spec = FaultSpec("VALVE_RESTRICTION", "restriction", "XV-S101", 300.0, 30.0, 0.5)
+    spec = FaultSpec(
+        "VALVE_RESTRICTION",
+        "restriction",
+        "XV-S101",
+        300.0,
+        30.0,
+        0.5,
+        fault_mode="position_visible",
+    )
     e, outcome = fc.run(model, "S0-A", 500.0, FaultSet((spec,)))
     assert outcome.rejection is None
     rows: Any = e.sink.rows["hydraulic_state"]  # type: ignore[attr-defined]
@@ -102,6 +115,83 @@ def test_the_restricted_valve_loss_and_contact_in_an_engine_run(model: Hydraulic
     changes = _contact_changes(series, 0.98, 0.97)
     assert changes[0] == (0.0, 1) and len(changes) == 2 and changes[1][1] == 0
     assert changes[1][0] == pytest.approx(301.8, abs=0.05)
+
+
+def _restricted_delivery(model: HydraulicModel, mode: str | None) -> tuple[Any, float, float]:
+    """TK-102 delivering through XV-S102 with a ceiling of 0.5 from 300 s; flow and tank level
+    at 480 s."""
+    spec = FaultSpec(
+        "VALVE_RESTRICTION", "restriction", "XV-S102", 300.0, 30.0, 0.5, fault_mode=mode
+    )
+    e, outcome = fc.run(
+        model, "S0-A", 500.0, FaultSet((spec,)), initial_mode="DELIVER_102_A",
+        tank_levels_m={"TK-101": 9.0, "TK-102": 7.0, "TK-103": 5.0},
+    )  # fmt: skip
+    assert outcome.rejection is None
+    rows: Any = e.sink.rows["hydraulic_state"]  # type: ignore[attr-defined]
+    flow = next(
+        r["payload"]["flow_m3s"] * 3600.0
+        for r in rows
+        if r["t_sim_s"] == 480.0 and r["side"] is None and r["record_type"] == "pump_state"
+        and r["element_id"] == "P-101A"
+    )  # fmt: skip
+    level = next(
+        r["payload"]["level_m"]
+        for r in rows
+        if r["t_sim_s"] == 480.0 and r["side"] is None and r["record_type"] == "tank_state"
+        and r["element_id"] == "TK-102"
+    )  # fmt: skip
+    return e, flow, level
+
+
+@pytest.mark.parametrize("mode", ["position_visible", "obstruction"])
+def test_both_restriction_modes_reduce_the_flow_by_the_d19_hand_value(
+    model: HydraulicModel, mode: str
+) -> None:
+    """Decision D74: the loss follows the ceiling in both modes. Hand: K(0.5) = 0.1 x 50 = 5.0,
+    so the valve adds 5.0 - 0.1 = 4.9 to the open-valve loss, solved by the reference path."""
+    _, flow, level = _restricted_delivery(model, mode)
+    # The tank has fallen from 7 m to the level of the row, so the reference is solved there.
+    segments = [*ref.tank2_reference_fittings_segments(), (ref.D200, 0.0, 4.9)]
+
+    def residual(q: float) -> float:
+        need = ref.required_head(q, level, C_REFERENCE, 200000.0, segments)
+        return float(54.0 - 12.0 * (q * 3600.0 / 300.0) ** 2 - need)
+
+    expected = float(brentq(residual, 1e-6, 0.5, xtol=1e-14)) * 3600.0
+    assert flow == pytest.approx(expected, rel=2e-4)
+    assert flow < 300.0 - 1.0
+
+
+def test_the_contact_reads_open_for_an_obstruction_and_not_open_for_a_visible_restriction(
+    model: HydraulicModel,
+) -> None:
+    def contact(mode: str) -> list[tuple[float, int]]:
+        e, _, _ = _restricted_delivery(model, mode)
+        rows: Any = e.sink.rows["hydraulic_state"]
+        valve = [
+            r for r in rows if r["record_type"] == "valve_state" and r["element_id"] == "XV-S102"
+        ]
+        late = [r for r in valve if r["t_sim_s"] == 480.0 and r["side"] is None][0]["payload"]
+        if mode == "obstruction":
+            assert late["position_frac"] == pytest.approx(0.5) and late["k_loss"] == pytest.approx(
+                5.0
+            )
+            assert late["contact_position_frac"] == pytest.approx(1.0)  # the stem is open
+        else:
+            assert "contact_position_frac" not in late
+        series = [(r["t_sim_s"], r["side"], r["payload"]) for r in valve]
+        return _contact_changes(series, 0.98, 0.97)
+
+    assert contact("obstruction") == [(0.0, 1)]  # the contact never releases
+    visible = contact("position_visible")
+    assert len(visible) == 2 and visible[1][1] == 0  # released as the opening falls below 0.97
+    assert visible[1][0] == pytest.approx(301.8, abs=0.05)
+
+
+def test_a_restriction_without_a_mode_is_refused_when_injected(model: HydraulicModel) -> None:
+    with pytest.raises(ContractError, match="mode"):
+        _restricted_delivery(model, None)
 
 
 @pytest.mark.parametrize("scale", [1.0, 0.9, 0.7])

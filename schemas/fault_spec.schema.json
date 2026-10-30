@@ -18,7 +18,8 @@
     "magnitude",
     "position",
     "discharge_coefficient",
-    "peak_severity"
+    "peak_severity",
+    "fault_mode"
   ],
   "properties": {
     "schema_version": {
@@ -90,6 +91,14 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1
+    },
+    "fault_mode": {
+      "enum": [
+        "position_visible",
+        "obstruction",
+        null
+      ],
+      "description": "Valve restriction only (decision D74): position_visible, the actual opening and the open contact follow the ceiling; obstruction, the loss follows the ceiling and the open contact reads the stem position. null for every other fault."
     }
   }
 }

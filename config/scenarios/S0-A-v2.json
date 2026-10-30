@@ -1,0 +1,24 @@
+{
+  "scenario_id": "S0-A-v2",
+  "description": "Delivery from TK-101 at 9 m with pump A for one hour (lineup DELIVER_101_A) under variability profile v2 (decision D73).",
+  "seed": 20261021,
+  "duration_s": 3600,
+  "temperature_c": 25.0,
+  "fitting_profile": "reference_fittings",
+  "healthy_envelope": true,
+  "atmosphere_stratum": "coastal",
+  "volatility_class": "RVP_9_0",
+  "demand_process": true,
+  "variability_profile": "v2",
+  "initial": {
+    "mode": "DELIVER_101_A",
+    "tank_levels_m": {
+      "TK-101": 9.0,
+      "TK-102": 7.0,
+      "TK-103": 5.0
+    },
+    "receipt_flow_m3h": 0.0,
+    "receipt_setpoint_m3h": 0.0
+  },
+  "schedule": []
+}

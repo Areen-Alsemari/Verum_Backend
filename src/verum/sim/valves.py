@@ -15,7 +15,7 @@ Key assumptions:
     * The position is a pure function of time between orders, so the engine can
       evaluate it at any stage time without stepping the actuator.
 
-Source: ``docs/design_decisions.md`` D4 (version 2.0) and D19.
+Source: ``docs/design_decisions.md`` D4 (version 2.0), D19 and D74.
 """
 
 from __future__ import annotations
@@ -28,6 +28,9 @@ class OpeningModifier(Protocol):
     """A fault that changes the actual opening and nothing else (decisions D61 and D64)."""
 
     def apply(self, alpha: float, t: float) -> float: ...
+
+    @property
+    def hides_position(self) -> bool: ...
 
 
 @dataclass
@@ -52,6 +55,13 @@ class Valve:
         """Actual opening at time ``t``: the commanded motion, changed by a fault if any."""
         alpha = self.motion_alpha(t)
         return alpha if self.fault is None else self.fault.apply(alpha, t)
+
+    def contact_alpha(self, t: float) -> float | None:
+        """Stem position the open contact reads when a fault hides it from the opening that sets
+        the loss (an obstruction, decision D74); None when the two are the same."""
+        if self.fault is not None and self.fault.hides_position:
+            return self.motion_alpha(t)
+        return None
 
     def is_physically_closed(self, t: float) -> bool:
         # The tolerance absorbs the last bit of the linear motion at the threshold time.

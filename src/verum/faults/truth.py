@@ -5,7 +5,10 @@ follows the audited schema ``fault_truth`` (not modified), and the instance iden
 record lists.
 Key assumptions:
     * The instance identifier is ``FI-<episode>-<index>``; no scenario name or seed enters it.
-    * The mechanism names the variant; the mechanism status is provisional (all fault laws are
+    * The mechanism names the variant, and for a valve restriction the mode of decision D74
+      (``restriction_position_visible`` or ``restriction_obstruction``): ``fault_truth`` is a
+      vendored schema that stays as it is, so the mode and the activity of decision D76 are
+      also listed in the episode record. The mechanism status is provisional (all fault laws are
       selections). The physical parameter is the one the injector changes, with its baseline value
       and its value at severity one; the mapping states the linear law.
     * Rows are hidden truth and are never served by ``verum.api``.
@@ -54,6 +57,10 @@ def _param(value: float, unit: str, decision: str) -> dict[str, Any]:
     }  # fmt: skip
 
 
+def _mechanism(spec: fs.FaultSpec) -> str:
+    return spec.variant if spec.fault_mode is None else f"{spec.variant}_{spec.fault_mode}"
+
+
 def fault_truth_rows(episode_id: str, specs: Sequence[fs.FaultSpec]) -> list[dict[str, Any]]:
     rows = []
     for ident, spec in zip(instance_ids(episode_id, specs), specs, strict=True):
@@ -71,7 +78,7 @@ def fault_truth_rows(episode_id: str, specs: Sequence[fs.FaultSpec]) -> list[dic
             "asset_id": spec.asset_id,
             "location": location,
             "onset_t_sim_s": spec.onset_s,
-            "mechanism": spec.variant,
+            "mechanism": _mechanism(spec),
             "mechanism_status": "provisional",
             "severity_trajectory": {
                 "type": "piecewise_linear",

@@ -52,9 +52,9 @@
     },
     "downstream_factor": {
       "type": "number",
-      "minimum": 0.8,
-      "maximum": 1.25,
-      "description": "f_d, the clipped factor that multiplies the boundary-law coefficient (decision D23)"
+      "minimum": 0.6,
+      "maximum": 10.0,
+      "description": "f_d, the clipped factor that multiplies the boundary-law coefficient (decision D23); with profile v2 it is the regime value times the clipped OU factor, between 0.6 and 10 (decision D73)"
     },
     "log_downstream_factor": {
       "type": "number",
@@ -77,6 +77,21 @@
     "atmosphere_pa_abs": {
       "type": "number",
       "exclusiveMinimum": 0
+    },
+    "demand_regime_value": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Profile v2 only: the regime value of the downstream factor before the OU factor (decision D73)"
+    },
+    "receipt_setpoint_nominal_m3h": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Profile v2 only: the commanded receipt set-point"
+    },
+    "receipt_setpoint_effective_m3h": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Profile v2 only: the set-point the controller follows, the nominal value with the clipped deviation (decision D73)"
     }
   }
 }

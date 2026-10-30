@@ -221,6 +221,47 @@
         "RVP_9_5",
         "RVP10"
       ]
+    },
+    "variability_profile": {
+      "enum": [
+        "v2"
+      ],
+      "description": "Hidden. Present only for profile v2 (decision D73); episodes of profiles off and v1 do not carry the field."
+    },
+    "demand_regimes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Hidden. Profile v2: the accepted regimes (index, start, plateau, value, dwell, draws)."
+    },
+    "demand_regime_redraws": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Hidden. Profile v2: the candidate regimes that failed a gate and were redrawn, with the reason."
+    },
+    "fault_modes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "position_visible",
+          "obstruction",
+          null
+        ]
+      },
+      "description": "Hidden. Restriction mode of each injected fault, in the order of fault_instance_ids (decision D74); present only when a fault is injected."
+    },
+    "fault_activity": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "active",
+          "latent"
+        ]
+      },
+      "description": "Hidden. Whether each injected fault is on an asset that is active in the lineup from its onset (active) or not (latent), in the order of fault_instance_ids (decision D76); present only when a fault is injected."
     }
   }
 }

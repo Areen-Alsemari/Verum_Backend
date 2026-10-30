@@ -13,7 +13,9 @@ Key assumptions:
       undetermined value is an error, never a null row or a held value.
     * Event tags (valve contacts, pump indicators, LSHH) are rows at t = 0 and at each
       change. A valve open contact follows decision D31 (assert at alpha 0.98, release below
-      0.97, delay equal to the lag of the table). An LSHH row is the detector output of the
+      0.97, delay equal to the lag of the table); the position is ``contact_position_frac`` when
+      the row has it (an obstruction fault, decision D74) and ``position_frac`` otherwise.
+      An LSHH row is the detector output of the
       engine (which already includes the detector delay of decision D33), seen after the
       comms delay.
     * The six withheld tags have no specification and therefore produce no row.
@@ -172,7 +174,7 @@ def _contact_changes(
     out: list[tuple[float, int]] = []
     prev_t, prev_a, state = 0.0, None, 0
     for t, _side, payload in series:
-        a = float(payload["position_frac"])
+        a = float(payload.get("contact_position_frac", payload["position_frac"]))
         if prev_a is None:
             state = int(a >= on)
             out.append((t, state))

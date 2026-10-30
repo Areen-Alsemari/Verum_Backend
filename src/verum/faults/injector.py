@@ -4,6 +4,9 @@ Inputs: the fault specifications of an episode. Outputs: for the engine, the lea
 actual-opening modifier of a valve, the pump head scale at a time and the times at which a ramp
 changes slope; for the sensor chain, a hook that changes a reading.
 Key assumptions:
+    * A restriction in mode ``obstruction`` changes the opening that sets the loss and not the
+      stem position the open contact reads; in mode ``position_visible`` both follow the ceiling
+      (decision D74).
     * The injector acts only through physical parameters: a leak sink (area), the actual opening
       of a valve (the command is not touched), the head scale of the pump curve; and, for sensor
       faults, through the reading in the sensor chain. It does not read or write any state.
@@ -15,7 +18,7 @@ Key assumptions:
       bit).
     * The leak position and coefficient are passed through unchanged to the hydraulics.
 
-Source: ``docs/design_decisions.md`` D60 to D65; ``docs/fault_models.md``.
+Source: ``docs/design_decisions.md`` D60 to D65, D74; ``docs/fault_models.md``.
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from verum.contracts.errors import ContractError
 from verum.faults import spec as fs
 from verum.hydraulics.leaks import LeakInput
 
@@ -32,6 +36,20 @@ class ValveFault:
     """Actual opening of a valve under a restriction or a misrouting (decisions D61 and D64)."""
 
     spec: fs.FaultSpec
+
+    def __post_init__(self) -> None:
+        if self.spec.fault_type == fs.RESTRICTION and self.spec.fault_mode not in (
+            fs.RESTRICTION_MODES
+        ):
+            raise ContractError(
+                f"restriction on {self.spec.asset_id}: the mode {self.spec.fault_mode!r} is not "
+                f"one of {fs.RESTRICTION_MODES}; no mode is assumed (decision D74)"
+            )
+
+    @property
+    def hides_position(self) -> bool:
+        """An obstruction leaves the stem, and so the open contact, at the commanded motion."""
+        return self.spec.fault_type == fs.RESTRICTION and self.spec.fault_mode == fs.OBSTRUCTION
 
     def apply(self, alpha: float, t: float) -> float:
         s = self.spec.severity(t)

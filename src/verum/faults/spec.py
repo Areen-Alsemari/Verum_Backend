@@ -13,8 +13,11 @@ Key assumptions:
       the single knot ``(0, peak)`` for a step. ``peak`` is 1 except in the zero-fault test that
       checks a fault of severity 0 against the healthy episode.
     * Every physical parameter is a linear function of the severity.
+    * A valve restriction names its mode (decision D74): ``position_visible`` (the actual opening
+      is the ceiling and the open contact follows it) or ``obstruction`` (the loss follows the
+      ceiling and the open contact still reads the stem position); no default is chosen for it.
 
-Source: ``docs/design_decisions.md`` D60 to D65; ``docs/fault_models.md``;
+Source: ``docs/design_decisions.md`` D60 to D65, D74; ``docs/fault_models.md``;
 ``schemas/fault_truth.schema.json``.
 """
 
@@ -39,6 +42,9 @@ VARIANTS: dict[str, tuple[str, ...]] = {
     MISROUTING: ("closed_but_open", "open_but_stuck"),
 }
 RAMPS_S = (30.0, 300.0, 1200.0)
+POSITION_VISIBLE = "position_visible"
+OBSTRUCTION = "obstruction"
+RESTRICTION_MODES = (POSITION_VISIBLE, OBSTRUCTION)
 SCHEMA_VERSION = "0.7.0"
 
 
@@ -53,6 +59,7 @@ class FaultSpec:
     position: float | None = None  # fraction along the edge (leak)
     discharge_coefficient: float | None = None  # leak
     peak_severity: float = 1.0
+    fault_mode: str | None = None  # restriction only: position_visible or obstruction (D74)
 
     def severity(self, t: float) -> float:
         """Severity in [0, 1] at simulation time ``t``."""
@@ -87,6 +94,7 @@ class FaultSpec:
             "position": self.position,
             "discharge_coefficient": self.discharge_coefficient,
             "peak_severity": self.peak_severity,
+            "fault_mode": self.fault_mode,
             "hidden": True,
         }
 
@@ -108,4 +116,5 @@ def from_record(record: Mapping[str, Any]) -> FaultSpec:
             else float(record["discharge_coefficient"])
         ),
         peak_severity=float(record["peak_severity"]),
+        fault_mode=record["fault_mode"],
     )

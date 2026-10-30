@@ -22,6 +22,9 @@ Key assumptions:
       frozen leak flows of the layout, the boundary law uses the boundary flow, and the volumes
       that have passed are the flows into and out of the tank, ``dC_r = Q_r - leaks`` and
       ``dC_d = Q_d + suction leaks``. The inertial term keeps the single dQ/dt of D22.
+    * Profile v2 (decision D73) gives the receipt column a set-point that is a function of time
+      (the nominal set-point with a small clipped deviation); without it the set-point is the
+      constant of the column.
     * Only the lumped paths are used here. The steady network solve is called afterwards
       for the node heads and pressures at the imposed flows.
 
@@ -52,6 +55,7 @@ class ReceiptColumn:
     tau_c_s: float
     setpoint_m3s: float
     layout: LeakLayout | None = None
+    setpoint_fn: Callable[[float], float] | None = None  # profile v2: set-point in m3/s at t
 
 
 @dataclass(frozen=True)
@@ -100,7 +104,8 @@ def make_rhs(
         if receipt is not None:
             level = receipt.level_m + (c_r - (c_d if shared else 0.0)) / receipt.area_m2
             h_source = level + receipt.path.loss(q_r, _alphas(valves, r_valves, t), receipt.layout)
-            free = (receipt.setpoint_m3s - q_r) / receipt.tau_c_s
+            setpoint = receipt.setpoint_fn(t) if receipt.setpoint_fn else receipt.setpoint_m3s
+            free = (setpoint - q_r) / receipt.tau_c_s
             dq_r = min(free, (receipt.head_cap_m - h_source) / i_r)
         if delivery is not None:
             level = delivery.level_m + ((c_r if shared else 0.0) - c_d) / delivery.area_m2

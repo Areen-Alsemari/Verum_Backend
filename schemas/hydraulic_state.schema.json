@@ -228,6 +228,10 @@
             "number",
             "null"
           ]
+        },
+        "contact_position_frac": {
+          "type": "number",
+          "description": "Present only for a valve with an obstruction fault (decision D74): the stem position the open contact reads, while position_frac is the opening that sets the loss."
         }
       }
     },

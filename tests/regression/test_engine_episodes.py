@@ -561,6 +561,11 @@ def _engine(model: HydraulicModel, sid: str, sink: ListSink, state: Any = None) 
         ("S0-G", 1201.0),
         ("S0u-E", float(math.floor(TIMELINE["closed"]))),
         ("S0-F", 200.0),
+        # Profile v2 (decision D73): inside the first regime ramp (1091 to 1151 s), inside the
+        # ramp of S0-C-v2 (1698 to 1758 s), and S0-B-v2 with its moving receipt set-point.
+        ("S0-A-v2", 1120.0),
+        ("S0-C-v2", 1720.0),
+        ("S0-B-v2", 50.0),
     ],
 )
 def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(

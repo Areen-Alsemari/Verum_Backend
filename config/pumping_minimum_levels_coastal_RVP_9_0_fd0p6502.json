@@ -1,0 +1,594 @@
+{
+  "schema_version": "1.0.0",
+  "label": "atmosphere coastal, volatility class RVP_9_0, downstream factor 0.6502 (decisions D24 v2, D46 v3, D51, D73)",
+  "description": "Pumping-minimum tank level of a delivery computed at the worst-case downstream factor f_d = 0.6502.",
+  "atmosphere_stratum": "coastal",
+  "volatility_class": "RVP_9_0",
+  "downstream_factor": 0.6502,
+  "atmosphere_pa_abs": 101325.0,
+  "source": "tools/strata_tables.py",
+  "levels": {
+    "TK-101": {
+      "25": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 2.7984,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 3.4493,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "35": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 2.2574,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 6.2723,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 2.8999,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 7.0014,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "40": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 4.0873,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 8.3618,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 2.147,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 4.7713,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 9.1382,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "45": {
+        "pipe_only": {
+          "2.5": {
+            "value": 3.4037,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 6.1475,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 10.7146,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 4.0747,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 6.8784,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 11.5441,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      }
+    },
+    "TK-102": {
+      "25": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 3.5732,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 4.2232,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "35": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 3.018,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 7.1376,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 3.6598,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 7.8658,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "40": {
+        "pipe_only": {
+          "2.5": {
+            "value": 2.2603,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 4.8956,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 9.2816,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 2.8877,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 5.5789,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 10.0569,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "45": {
+        "pipe_only": {
+          "2.5": {
+            "value": 4.1942,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 7.0096,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 11.6956,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 4.8645,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 7.7396,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        }
+      }
+    },
+    "TK-103": {
+      "25": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 4.3479,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 4.9971,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "35": {
+        "pipe_only": {
+          "2.5": {
+            "value": 1.8,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 3.7786,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 8.0029,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 1.829,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 4.4198,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 8.7302,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "40": {
+        "pipe_only": {
+          "2.5": {
+            "value": 3.0016,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 5.704,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 10.2013,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 3.6284,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 6.3865,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": 10.9757,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          }
+        }
+      },
+      "45": {
+        "pipe_only": {
+          "2.5": {
+            "value": 4.9847,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 7.8716,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        },
+        "reference_fittings": {
+          "2.5": {
+            "value": 5.6544,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "4": {
+            "value": 8.6009,
+            "unit": "m",
+            "status": "provisional",
+            "evidence_tag": "CALC",
+            "provenance_id": "VERUM-PHASE6B-STRATA-FD0P6502"
+          },
+          "6": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "no level in the normal range 1.8 to 12 m passes the phase and NPSH screen"
+          }
+        }
+      }
+    }
+  }
+}

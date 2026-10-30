@@ -12,10 +12,12 @@ Key assumptions:
     * One fault in the episode and one fault per asset (this phase); a misrouted or restricted valve
       is one of the motorized valves (inlet, outlet, pump branch); the valve of a leak edge is not
       required to be open: whether the edge carries a determined pressure at run time is a gate.
+    * Decision D74: a restriction names its mode. Decision D75: misrouting (b) needs the lineup
+      states from the onset (``verum.faults.activity``) and a valve on a parallel branch.
     * Conditions that depend on the run (leak pressure above 10 kPa, every engine gate) are not
       checked here; they reject the candidate while it runs (decision D66).
 
-Source: ``docs/design_decisions.md`` D60 to D66; ``docs/fault_models.md``.
+Source: ``docs/design_decisions.md`` D60 to D66, D74, D75; ``docs/fault_models.md``.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from collections.abc import Collection, Sequence
 
 from verum.contracts.errors import ContractError
 from verum.faults import spec as fs
+from verum.faults.activity import LineupState, on_parallel_branch
 
 LEAK_AREA_M2 = (2.0e-6, 1.0e-3)
 LEAK_POSITION = (0.05, 0.95)
@@ -65,6 +68,28 @@ def _magnitude(spec: fs.FaultSpec) -> list[str]:
     return []
 
 
+def _mode(spec: fs.FaultSpec) -> list[str]:
+    """Decision D74: a restriction names its mode; no other fault has one."""
+    if spec.fault_type == fs.RESTRICTION:
+        if spec.fault_mode in fs.RESTRICTION_MODES:
+            return []
+        return [
+            f"a restriction needs a fault_mode in {fs.RESTRICTION_MODES}, not {spec.fault_mode}"
+        ]
+    return [] if spec.fault_mode is None else [f"{spec.fault_type} has no fault_mode"]
+
+
+def _branch(spec: fs.FaultSpec, states: Sequence[LineupState] | None) -> list[str]:
+    """Decision D75: a valve stuck nearly closed must be on a parallel branch at the onset."""
+    if spec.variant != "open_but_stuck":
+        return []
+    if not states:
+        return ["misrouting (b) needs the lineup in force at the onset to test the branch"]
+    if on_parallel_branch(spec.asset_id, states[0]):
+        return []
+    return [f"{spec.asset_id} is not on a parallel branch: misrouting (b) is not eligible"]
+
+
 def _asset(
     spec: fs.FaultSpec, edges: Collection[str], continuous_tags: Collection[str]
 ) -> list[str]:
@@ -95,6 +120,7 @@ def violations(
     edges: Collection[str],
     continuous_tags: Collection[str],
     duration_s: float,
+    states: Sequence[LineupState] | None = None,
 ) -> list[str]:
     problems: list[str] = []
     if len(specs) > 1:
@@ -108,7 +134,7 @@ def violations(
             problems.append(f"two faults on {spec.asset_id}")
         seen.add(spec.asset_id)
         problems += _asset(spec, edges, continuous_tags) + _timing(spec, duration_s)
-        problems += _magnitude(spec)
+        problems += _magnitude(spec) + _mode(spec) + _branch(spec, states)
         if spec.fault_type == fs.LEAK:
             if spec.position is None or not _within(spec.position, LEAK_POSITION):
                 problems.append(f"leak position {spec.position} outside {LEAK_POSITION}")
@@ -122,7 +148,8 @@ def check(
     edges: Collection[str],
     continuous_tags: Collection[str],
     duration_s: float,
+    states: Sequence[LineupState] | None = None,
 ) -> None:
-    problems = violations(specs, edges, continuous_tags, duration_s)
+    problems = violations(specs, edges, continuous_tags, duration_s, states)
     if problems:
         raise ContractError("fault specification rejected: " + "; ".join(problems))

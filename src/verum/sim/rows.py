@@ -43,6 +43,7 @@ class ValveView:
     alpha: float
     commanded_open: bool
     physically_closed: bool
+    contact_alpha: float | None = None  # only for an obstruction fault (decision D74)
 
 
 @dataclass(frozen=True)
@@ -182,6 +183,8 @@ def _valve_rows(
             "check_state": None,
             "k_loss": k,
         }
+        if view.contact_alpha is not None:
+            payload["contact_position_frac"] = view.contact_alpha
         rows.append(_state_row(episode, snap, side, "valve_state", valve, payload))
     for check in CHECK_VALVES:
         outbound = next(e for e in model.topology.edges if e.from_node == check)

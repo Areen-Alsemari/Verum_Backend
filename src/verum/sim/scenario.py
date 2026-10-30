@@ -10,13 +10,15 @@ Key assumptions:
       only checks its shape.
     * The seed is recorded in the episode. The only random draw is the downstream demand
       process (decision D23), on the named stream ``demand``, and only if the scenario
-      switches ``demand_process`` on.
+      switches ``demand_process`` on; profile ``v2`` (decision D73) adds the regime stream
+      ``demand_regime`` and the stream ``receipt_setpoint``. ``variability_profile`` is ``off``,
+      ``v1`` or ``v2``; a file without it is ``v1`` with the demand process and ``off`` without.
     * ``volatility_class`` is ``RVP_9_0`` (baseline), ``RVP_9_5`` or ``RVP10`` (decision D46).
     * ``atmosphere_stratum`` is ``coastal`` or ``inland`` (decision D24). Receipt
       set-points are chosen from 0, 300, 400, 500 and 600 m3/h (decision D23).
 
 Source: ``revised/01_facility_tanks_topology.md`` section 6.2;
-``docs/design_decisions.md`` D6, D11, D21, D23, D24.
+``docs/design_decisions.md`` D6, D11, D21, D23, D24, D73.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from typing import Any
 
 from verum.contracts.errors import ContractError
 from verum.contracts.paths import config_dir
+from verum.sim.variability import resolve_profile
 
 REQUIRED = (
     "scenario_id",
@@ -65,6 +68,7 @@ class Scenario:
     receipt_flow_m3h: float
     receipt_setpoint_m3h: float
     schedule: list[dict[str, Any]]
+    variability_profile: str = "off"
 
 
 def _check_setpoint(value: float) -> None:
@@ -110,6 +114,9 @@ def parse_scenario(raw: dict[str, Any]) -> Scenario:
         receipt_flow_m3h=float(initial["receipt_flow_m3h"]),
         receipt_setpoint_m3h=float(initial["receipt_setpoint_m3h"]),
         schedule=list(raw["schedule"]),
+        variability_profile=resolve_profile(
+            raw.get("variability_profile"), bool(raw["demand_process"])
+        ),
     )
 
 

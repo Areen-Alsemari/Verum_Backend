@@ -49,7 +49,8 @@
         "alarm",
         "protection_trip",
         "protection_request",
-        "protection_state_change"
+        "protection_state_change",
+        "demand_regime"
       ]
     },
     "actor": {

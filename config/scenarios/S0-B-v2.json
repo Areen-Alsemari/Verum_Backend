@@ -1,0 +1,30 @@
+{
+  "scenario_id": "S0-B-v2",
+  "description": "Receipt into TK-101 at 600 m3/h from 9 m for one hour (lineup RECEIVE_101) under variability profile v2 (decision D73); the flow starts at zero and follows the set-point with its deviation.",
+  "seed": 20261022,
+  "duration_s": 3600,
+  "temperature_c": 25.0,
+  "fitting_profile": "reference_fittings",
+  "healthy_envelope": true,
+  "atmosphere_stratum": "coastal",
+  "volatility_class": "RVP_9_0",
+  "demand_process": true,
+  "variability_profile": "v2",
+  "initial": {
+    "mode": "RECEIVE_101",
+    "tank_levels_m": {
+      "TK-101": 9.0,
+      "TK-102": 7.0,
+      "TK-103": 5.0
+    },
+    "receipt_flow_m3h": 0.0,
+    "receipt_setpoint_m3h": 0.0
+  },
+  "schedule": [
+    {
+      "t_s": 0.0,
+      "command": "receipt_setpoint",
+      "value_m3h": 600.0
+    }
+  ]
+}

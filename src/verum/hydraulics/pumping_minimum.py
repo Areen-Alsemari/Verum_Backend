@@ -16,7 +16,7 @@ Key assumptions:
     * ``SITE_PRESSURE_FILENAME`` names a sensitivity table for a lower
       atmospheric pressure (94300 Pa); it never replaces the sea-level table.
 
-Source: ``docs/design_decisions.md`` D7 (version 2.0); the study script
+Source: ``docs/design_decisions.md`` D7 (version 2.0), D51, D73; the study script
 ``tools/pumping_minimum_study.py``.
 """
 
@@ -32,9 +32,13 @@ from verum.params import ParamValue, ParamValueError
 FILENAME = "pumping_minimum_levels.json"
 
 
-def stratum_filename(atmosphere: str, volatility: str) -> str:
-    """Table of one (atmosphere, volatility) pair, computed at f_d = 0.8 (decision D51)."""
-    return f"pumping_minimum_levels_{atmosphere}_{volatility}_fd0p8.json"
+WORST_CASE_FACTOR_TAG = {"off": "fd0p8", "v1": "fd0p8", "v2": "fd0p6502"}
+
+
+def stratum_filename(atmosphere: str, volatility: str, profile: str = "v1") -> str:
+    """Table of one (atmosphere, volatility) pair at the worst-case downstream factor of a
+    variability profile: 0.8 for ``off`` and ``v1`` (decision D51), 0.6502 for ``v2`` (D73)."""
+    return f"pumping_minimum_levels_{atmosphere}_{volatility}_{WORST_CASE_FACTOR_TAG[profile]}.json"
 
 
 SITE_PRESSURE_FILENAME = "pumping_minimum_levels_site_pressure.json"

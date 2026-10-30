@@ -15,6 +15,8 @@ Key assumptions:
       final; they are written next to the truth and listed in the manifest.
     * A rejected episode keeps only its records: the truth files are removed so that
       a rejected run cannot be mistaken for data.
+    * Profile v2 (decision D73) adds the profile, the accepted demand regimes and the redrawn
+      candidates to the episode record; episodes of the other profiles do not carry them.
     * ``provenance.json`` carries the git commit; the deterministic episode record
       does not.
 
@@ -30,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from verum.contracts import validate
-from verum.faults import FaultSet, fault_truth_rows, instance_ids
+from verum.faults import FaultSet, activity, fault_truth_rows, instance_ids, lineup_states
 from verum.faults import check as check_faults
 from verum.gates import assert_release_allowed
 from verum.hydraulics import HydraulicModel
@@ -75,9 +77,10 @@ def episode_document(
     status: str,
     outcome: EpisodeOutcome,
     fault_ids: list[str] | None = None,
+    fault_notes: dict[str, list[Any]] | None = None,
 ) -> dict[str, Any]:
     levels = scenario.tank_levels_m
-    return {
+    document: dict[str, Any] = {
         "schema_version": "0.7.0",
         "dataset": "episode",
         "episode_id": episode,
@@ -111,6 +114,14 @@ def episode_document(
         "status": status,
         "hidden": True,
     }
+    if fault_ids and fault_notes:  # decisions D74 and D76; healthy episodes keep their record
+        document["fault_modes"] = fault_notes["modes"]
+        document["fault_activity"] = fault_notes["activity"]
+    if scenario.variability_profile == "v2":  # absent for off and v1, which stay as they were
+        document["variability_profile"] = "v2"
+        document["demand_regimes"] = outcome.regimes
+        document["demand_regime_redraws"] = outcome.regime_redraws
+    return document
 
 
 def run_episode(
@@ -126,13 +137,22 @@ def run_episode(
     scenario = scenario or load_scenario(scenario_id, model.directory)
     sensors = load_sensor_config(model.directory)
     continuous = [t for t, spec in sensors.tags.items() if spec.kind == "continuous"]
+    table = load_lineup_table(model.topology, model.directory)
+    notes: dict[str, list[Any]] | None = None
     if faults is not None and faults.specs:
         edges = [e.edge_id for e in model.topology.edges]
-        check_faults(faults.specs, edges, continuous, scenario.duration_s)
+        states = lineup_states(
+            scenario.initial_mode, scenario.receipt_setpoint_m3h, scenario.schedule,
+            table.modes, faults.specs[0].onset_s,
+        )  # fmt: skip
+        check_faults(faults.specs, edges, continuous, scenario.duration_s, states)
+        notes = {
+            "modes": [s.fault_mode for s in faults.specs],
+            "activity": [activity(s, states) for s in faults.specs],
+        }
     chash = config_hash(model.directory)
     episode = episode_id(scenario.seed, scenario.scenario_id, chash)
     sink = DirectorySink(out_dir / episode)
-    table = load_lineup_table(model.topology, model.directory)
     engine = Engine(model, table, scenario, cfg, sink, episode, faults=faults)
     start = time.perf_counter()
     outcome = engine.run()
@@ -157,7 +177,7 @@ def run_episode(
         for row in fault_truth_rows(episode, specs):
             validate("fault_truth", row)
             sink.write("fault_truth", row)
-    document = episode_document(scenario, cfg, model, episode, chash, status, outcome, ids)
+    document = episode_document(scenario, cfg, model, episode, chash, status, outcome, ids, notes)
     validate("episode", document)
     sink.write_json("episode.json", document)
     commit, dirty = git_state()
