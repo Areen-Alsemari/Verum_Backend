@@ -1,21 +1,10 @@
 """Tank volume, inverse level and roof state for an internal floating roof.
 
-Inputs: shell diameter, deck diameter, roof support height and roof areal mass
-(all ``ParamValue`` records from ``config/tank_geometry.json``), a liquid
-density and a level or volume. Outputs: liquid volume, level and roof state.
-Key assumptions:
-    * Flat bottom, uniform contacting deck, constant density per evaluation.
-      The volume is the net liquid volume, not the cylinder volume.
-    * The deck rests at ``z_s``. Above ``z_s`` it displaces liquid in
-      proportion to the immersion, up to the draft ``d = m_areal / rho``;
-      beyond that it floats and the displacement is constant.
-    * ``landed`` means level at or below ``z_s``; ``floating`` means level at
-      or above ``z_s + d``; ``transition`` is in between.
-    * Physical limits (shell height, level envelope) are not applied here; see
-      ``verum.tanks.envelope``.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 5 (E1 to E4 and the
-inverse calibration); ``revised/02_hydraulic_model.md`` section 2.1.
+The tank has a flat bottom and a uniform contacting deck, and density is constant per evaluation.
+The volume is the net liquid volume, not the cylinder volume. The deck rests at height z_s. Above it
+the deck displaces liquid in proportion to the immersion, up to the draft d = m_areal / rho, and
+beyond that it floats and the displacement is constant. The roof is landed at or below z_s, floating
+at or above z_s + d, and in transition between. Shell height and level limits are applied elsewhere.
 """
 
 from __future__ import annotations
@@ -129,7 +118,7 @@ def _check_density(rho: float) -> None:
 
 
 def load_tank_parameters(directory: Path | None = None) -> dict[str, ParamValue]:
-    """Load every parameter record of ``config/tank_geometry.json``."""
+    """Load every parameter record of the tank geometry configuration."""
     path = (directory or config_dir()) / FILENAME
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))["parameters"]

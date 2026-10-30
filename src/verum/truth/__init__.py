@@ -1,8 +1,8 @@
 """Hidden truth store: sinks for the evaluator-only datasets of an episode.
 
-Nothing in this package is reachable from ``verum.api`` or an observation package.
-Source: ``revised/05_simulation_validation_dataset.md`` section 7.2;
-``docs/design_decisions.md`` D20.
+Nothing in this package is reachable from the gateway or an observation package.
+
+See D20.
 """
 
 from verum.truth.sinks import (

@@ -1,7 +1,4 @@
-"""Tank calibration, roof state and level-envelope screens.
-
-Source: ``revised/01_facility_tanks_topology.md`` sections 5 and 6.1.
-"""
+"""Tank calibration, roof state and level-envelope screens."""
 
 from verum.tanks.envelope import (
     LEVEL_CLASSES,

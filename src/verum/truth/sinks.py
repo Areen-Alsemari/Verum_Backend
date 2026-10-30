@@ -1,19 +1,12 @@
 """Where truth rows go: memory, or a directory of gzip JSON Lines files.
 
-Inputs: dataset names and row dictionaries. Outputs: an in-memory list per dataset
-(``ListSink``) or files with a hash manifest (``DirectorySink``).
-Key assumptions:
-    * Rows are written exactly as given; nothing is added or filtered here.
-    * Files are gzip-compressed JSON Lines with no timestamp in the gzip header, so
-      identical rows give identical bytes (decision D20). Numbers use Python's
-      shortest round-trip representation; NaN and infinity are refused.
-    * The manifest lists the SHA-256 of every file except itself, sorted by name.
-    * A rejected episode keeps only its record files (see ``discard_data``).
-    * Evaluator data: this module is never imported by the observation or api
-      packages (a leakage test enforces it).
+Rows are written exactly as given, with nothing added or filtered. Files carry no timestamp in the
+gzip header, so identical rows give identical bytes, and numbers use the shortest round-trip form
+with NaN and infinity refused. The manifest lists the SHA-256 of every file except itself. A
+rejected episode keeps only its record files. This is evaluator data and is never imported by the
+observation or api packages.
 
-Source: ``docs/design_decisions.md`` D20; ``revised/05_simulation_validation_dataset.md``
-section 7.2 (hidden datasets are never served).
+See D20.
 """
 
 from __future__ import annotations

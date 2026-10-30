@@ -1,21 +1,10 @@
 """Level envelope classification and the response-headroom screen.
 
-Inputs: level thresholds from the topology contract, a ``TankGeometry`` and the
-screen parameters (response time, residual delivery, level allowance) from
-``config/tank_geometry.json``. Outputs: a level class, and the required height
-and margin of a headroom screen.
-Key assumptions:
-    * The screen is E7 of the audited package: after the independent high-high
-      level, the worst-case inflow for the response time plus a residual
-      delivery raises the level on the floating branch by
-      ``(Q t + V_post) / A + dh``, which must fit between the high-high level
-      and the critical level. No outflow credit is taken.
-    * It is a design screen, not an API equation or a setpoint.
-    * Level classes use closed lower bounds: a level exactly at a threshold is
-      in the higher class.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 5 (E7) and
-section 6.1.
+After the independent high-high level, the worst-case inflow for the response time plus a residual
+delivery raises the level on the floating branch by (Q t + V_post) / A + dh, and this must fit
+between the high-high level and the critical level. No outflow credit is taken. It is a design
+screen and not an API equation or a setpoint. Level classes use closed lower bounds, so a level
+exactly at a threshold is in the higher class.
 """
 
 from __future__ import annotations
