@@ -33,6 +33,7 @@ from verum.sim.config import load_sim_config
 from verum.sim.engine import Engine
 from verum.sim.episode import EpisodeResult, run_episode
 from verum.sim.scenario import load_scenario
+from verum.sim.variability import RegimeDrawer
 from verum.truth import ListSink
 
 TIMELINE = esd_timeline()
@@ -535,6 +536,14 @@ def test_regeneration_gives_identical_files(
     )
 
 
+def ramp_checkpoint(sid: str) -> float:
+    """30 s into the first regime ramp of a v2 scenario (the end of the first plateau plus 30 s)."""
+    first, _ = RegimeDrawer(load_scenario(sid).seed, load_sim_config()).draw(
+        0, 0.0, lambda value: None
+    )
+    return float(math.floor(first.plateau_end_s + 30.0))
+
+
 def _engine(model: HydraulicModel, sid: str, sink: ListSink, state: Any = None) -> Engine:
     return Engine(
         model,
@@ -561,10 +570,11 @@ def _engine(model: HydraulicModel, sid: str, sink: ListSink, state: Any = None) 
         ("S0-G", 1201.0),
         ("S0u-E", float(math.floor(TIMELINE["closed"]))),
         ("S0-F", 200.0),
-        # Profile v2 (decision D73): inside the first regime ramp (1091 to 1151 s), inside the
-        # ramp of S0-C-v2 (1698 to 1758 s), and S0-B-v2 with its moving receipt set-point.
-        ("S0-A-v2", 1120.0),
-        ("S0-C-v2", 1720.0),
+        # Profile v2 (decision D73): 30 s into the first regime ramp of each scenario (the time
+        # follows from the seed), and S0-B-v2 early, with its moving receipt set-point.
+        ("S0-A-v2", ramp_checkpoint("S0-A-v2")),
+        ("S0-C-v2", ramp_checkpoint("S0-C-v2")),
+        ("S0-B-v2", ramp_checkpoint("S0-B-v2")),
         ("S0-B-v2", 50.0),
     ],
 )

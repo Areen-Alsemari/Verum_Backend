@@ -337,14 +337,17 @@ def _engine(
 def test_the_mass_ledger_closes_through_a_regime_ramp_and_the_pump_stays_inside_the_curve(
     model: HydraulicModel,
 ) -> None:
-    engine = _engine(model, "S0-A-v2", 1300.0)
+    first, _ = RegimeDrawer(load_scenario("S0-A-v2").seed, CFG).draw(0, 0.0, lambda v: None)
+    duration = float(math.ceil(first.plateau_end_s + 60.0 + 40.0))  # the first ramp and 40 s more
+    engine = _engine(model, "S0-A-v2", duration)
     outcome = engine.run()
-    assert outcome.rejection is None and outcome.final_t == 1300.0
+    assert outcome.rejection is None and outcome.final_t == duration
     ramp = outcome.regimes[1]
-    assert ramp["t_start_s"] < 1300.0 and ramp["plateau_start_s"] > 1100.0  # the ramp is inside
+    assert ramp["t_start_s"] == first.plateau_end_s  # the ramp is inside the run
+    assert ramp["plateau_start_s"] < duration
     sink: Any = engine.sink
     network = [r for r in sink.rows["mass_ledger"] if r["scope"] == "network"]
-    assert len(network) > 1300 and all(r["closed"] for r in network)
+    assert len(network) > duration and all(r["closed"] for r in network)
     flows = [
         r["payload"]["flow_m3s"] * 3600.0
         for r in sink.rows["hydraulic_state"]
