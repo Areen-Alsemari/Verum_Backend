@@ -1,19 +1,12 @@
-"""Windowed use of the transient engine: a short window equals the continuous run (T1).
+"""Windowed use of the transient engine: a short window equals the continuous run.
 
-Inputs: the S0u-E isolation (XV-R000 over 10 s, XV-R101 over 30 s, 600 m3/h received into
-TK-101 at 12.98 m) run (a) from a steady start 2 s before the first command, and (b) from the
-same steady state but with the command given 20 s into a continuous run. Outputs: pass/fail.
-Key assumptions:
-    * The proposed rule (docs/transient_engine.md): a transient window starts from the steady
-      state of the rigid-column engine at the start of the window, a little before the first
-      command, and ends when the pressures have settled; the equivalence below is what makes
-      that start legitimate, because the state before the command is stationary.
-    * The command instants are placed half a step after a step boundary in both runs, so that
-      the same step applies the command and no comparison depends on a rounding of the clock.
-    * Independent: equality of two runs of the same engine is the property tested; it shows
-      that the start-up of a window carries no memory of the earlier steady period.
+An isolation with a 10 s and a 30 s valve stroke is run from a steady start two seconds before the
+first command, and from the same steady state with the command given 20 s into a continuous run. The
+window may start from the steady state of the rigid-column engine because the state before the
+command is stationary. The command instants sit half a step after a step boundary in both runs, so
+no comparison depends on the rounding of the clock.
 
-Source: ``docs/design_decisions.md`` D47; ``docs/transient_engine.md``.
+See D47.
 """
 
 from __future__ import annotations
@@ -47,6 +40,10 @@ def _run(
 
 
 def test_a_two_second_window_reproduces_the_continuous_run_on_t1(model: HydraulicModel) -> None:
+    """A window that starts two seconds before the first command reproduces the continuous run.
+    Independent: yes, because equality of two runs of the same engine is the property, and it shows
+    that the start of a window carries no memory of the earlier steady period.
+    """
     dt = TransientEngine(
         model,
         TransientSpec(

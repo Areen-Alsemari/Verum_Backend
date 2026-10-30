@@ -1,56 +1,12 @@
-"""Slow-limit equivalence of the transient engine and the rigid-column engine (R8).
+"""Slow-limit equivalence of the transient engine and the rigid-column engine.
 
-Inputs: a 600 s receipt valve closure into TK-101 and a 600 s closure of the pump outlet valve
-of a running delivery, each run by both engines from the same lineup, levels and valve command.
-Outputs: pass/fail.
-Key assumptions:
-    * The rigid-column engine has no delivery set-point (the delivery flow follows the pump
-      curve and the downstream law), so the slow delivery change is the 600 s stroke of
-      XV-PAO; the receipt case is the 600 s stroke of XV-R000 at 600 m3/h.
-    * Only for the receipt case, a term of 3 percent of the valve loss p - p(5 s) is allowed: it is
-      measured, not derived. During the slow receipt closure the rigid column's pressure exceeds
-      the steady package's value at the same opening by 0.2 to 2.0 percent of that loss (0.0072
-      bar at 408 s) although its flow is constant and its inertia term vanishes; the elastic
-      engine reproduces the steady package to 0.0001 bar. The cause in the rigid-column engine
-      was not traced and is recorded as a finding. A separate check compares the elastic series
-      with the steady package itself.
-    * The loss law K(alpha) changes regime at the opening valve_alpha_c; the one instant at that
-      opening is left out (the two engines sit on opposite sides of the kink by round-off).
-    * Compared on one-second instants from 5 s to 580 s, before the last 3 percent of the
-      stroke in which the throttling is a near-step and 2L/a is no longer small against the
-      time scale of the change.
-    * Not independent validation of either engine: both use the same valve law, friction law
-      and boundary definitions; the test shows that the elastic and the rigid models agree in
-      the limit in which they should.
+A 600 s receipt valve closure and a 600 s closure of the pump outlet valve of a running delivery are
+run by both engines from the same lineup, levels and valve command, and compared once per second.
+Both engines use the same valve law, friction law and boundary definitions, so this shows that the
+elastic and rigid models agree in the limit in which they should and does not validate either. The
+derived tolerance is in the "Transient engine: slow limit" section of the verification notes.
 
-Tolerance, derived. The two models differ in the inertia they carry: the rigid column has the
-lumped head Lambda dQ/dt, the elastic model carries the same inertia as waves of round-trip
-time T = 2 sum L/a. A flow that changes at the rate dQ/dt therefore differs between them by at
-most the inertial pressure rho (sum L/A) |dQ/dt| of the path, and by at most T |dQ/dt| in flow
-(the flow change during one round trip), apart from a relative 0.1 percent for the lumped
-treatment and the one-step lag. The elastic model also stores liquid as the pressure changes, a
-volume C dH with C = g sum(A L) / a^2 (4.0e-5 m3 per m of head on the receipt path), which the
-rigid column does not; at a throttled valve this makes the pressure lag the quasi-static value
-by tau = C dH/dQ = 2 C (head drop in the valve) / Q, at most 0.05 s over the compared range
-(valve opening down to 0.05). The rigid-column engine advances in steps of at most 1 s and
-writes the state at the end of a step, so its state can lead the elastic engine's by up to one
-step. The allowance is therefore delta = 1.2 s: one rigid step plus 0.2 s, four times the
-storage lag, for the one-second sampling and the interpolation of the elastic series. The
-rigid-column run also lets TK-101 fill (600 m3/h into 706.858 m2 raises the level 2.36e-4 m/s and
-the pressure at the tank 1.74 Pa/s) while the elastic run holds the tank level; the analytic
-drift is added to the bound. (A first version took the growing difference, 0.0072 bar at 408 s,
-for an error of the rigid-column engine; it is the filling of the tank, and the elastic engine
-reproduces the steady package at the opening of each instant to 0.0001 bar.) The bounds are
-    |dp| <= 0.001 |p| + rho (sum L/A) |dQ/dt| + delta |dp/dt| + rho g (Q / A_tank) (t - 5 s),
-    |dQ| <= 0.001 |Q| + T |dQ/dt|,
-with the sums over the edges of the path (receipt: E001, E002, E003, E-R101a, E-R101b, T = 0.36 s;
-delivery: the suction, pump and delivery edges to the distribution boundary, T = 0.67 s) and the
-rate taken from the rigid series by central difference. (A first version of the pressure bound
-used T |dp/dt|, which is the wrong scale for a pressure that differs through inertia; it failed
-by 45 percent at the last instant and the premise, not the data, was corrected.)
-
-Source: ``docs/design_decisions.md`` D22, D43; ``tests/analytic/test_pt001_anchor.py`` for the
-slow-closure pattern.
+See D22 and D43.
 """
 
 from __future__ import annotations
@@ -193,6 +149,10 @@ def _assert_elastic_equals_steady(model: HydraulicModel, moc: dict[str, np.ndarr
 
 @pytest.mark.slow
 def test_r8_receipt_closure_over_600_s_agrees_with_the_rigid_column(model: HydraulicModel) -> None:
+    """During a 600 s closure of the receipt valve the pressure and flow of the two engines agree
+    within the derived bounds. Independent: no, because both engines share the valve law, friction
+    law and boundary definitions.
+    """
     flow = {"receipt_flow_m3h": 600.0, "receipt_setpoint_m3h": 600.0}
     rigid = _rigid(model, "S0-B", "XV-R000", "E001", "E002", **flow)
     moc = _moc(model, "RECEIVE_101", "XV-R000", "E001", "E002", **flow)
@@ -208,6 +168,10 @@ def test_r8_receipt_closure_over_600_s_agrees_with_the_rigid_column(model: Hydra
 def test_r8_delivery_valve_closure_over_600_s_agrees_with_the_rigid_column(
     model: HydraulicModel,
 ) -> None:
+    """During a 600 s closure of the pump outlet valve the pressure and flow of the two engines
+    agree within the derived bounds. Independent: no, because both engines share the valve law,
+    friction law and boundary definitions.
+    """
     rigid = _rigid(model, "S0-A", "XV-PAO", "E-PA4", "E-PA4")
     moc = _moc(model, "DELIVER_101_A", "XV-PAO", "E-PA4", "E-PA4")
     path = (

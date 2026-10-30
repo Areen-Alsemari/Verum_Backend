@@ -1,32 +1,12 @@
-"""Verification ladder of the transient engine, idealised rungs R1 to R7.
+"""Verification ladder of the transient engine on idealised networks.
 
-Inputs: small networks built in ``_transient_cases`` (a tank, a pipe, a valve, a second tank)
-and the engine of ``verum.transient``. Outputs: pass/fail.
-Each docstring says whether the expected value is independent of the code under test.
+Small networks of a tank, a pipe, a valve and a second tank are compared with closed forms: the
+Joukowsky rise and arrival times, the square wave and its period, Michaud's peak for a prescribed
+linear flow, the Darcy-Weisbach profile and the decay of a perturbation, the Riemann solution at a
+tee, and the bound on the mass residual. The closed forms are in the "Transient engine: idealised
+verification ladder" section of the verification notes.
 
-Rungs in this file (R5 and R8 to R11 are in ``test_transient_equivalence.py``):
-    R1 Joukowsky (frictionless, Courant number one by construction): after an instantaneous
-       valve closure the head at the valve rises by a' v0 / g (a' the adjusted wave speed of
-       the grid), reaches the midpoint after L/(2a') and the reservoir after L/a'.
-       Independent: closed form.
-    R2 Period: the head at the closed valve is a square wave of amplitude a' v0 / g, positive
-       and negative for 2L/a' each, period 4L/a'. Independent: closed form.
-    R3 Slow closure (Michaud): for a flow that falls linearly over Tc >= 2L/a the head at the
-       valve is a triangle wave between h0 and h0 + 2 L v0 / (g Tc) with period 4L/a, so
-       Michaud's value is the exact peak for a prescribed linear flow (derivation in the
-       test). The loose Michaud band for a real valve law is tested with the finite-closure
-       rung in the equivalence file. Independent: closed form.
-    R4 Friction: a steady flow reproduces the Darcy-Weisbach gradient along the pipe, and a
-       flow perturbation decays at about the rate lambda = f v0 / (2 D) of the linearised
-       equations. Independent: closed forms; the friction factor is evaluated by the steady
-       package.
-    R6 Junction: a tee reproduces the head and flow of the closed-form Riemann problem; mass
-       continuity holds at every step. Independent: closed form.
-    R7 Ledger: the mass residual stays bounded by one step of the largest end flow, through a
-       transient, with and without a leak sink.
-
-Source: ``docs/design_decisions.md`` D43 and D45; Wylie and Streeter, Fluid Transients in
-Systems; Michaud (1878).
+See D43 and D45.
 """
 
 from __future__ import annotations
@@ -62,6 +42,10 @@ def _closure_run(
 
 
 def test_r1_joukowsky_rise_and_arrival_times(model: HydraulicModel) -> None:
+    """After an instantaneous closure the head at the valve rises by a v0 / g and the wave reaches
+    the midpoint and the reservoir at L/(2a) and L/a. Independent: yes, because the reference is a
+    closed form.
+    """
     e, a, rec = _closure_run(model, 0.1 + 1.9 * 2 * L / 1078.0)
     dt, t = e.dt, rec["t"]
     h0 = H_RES - V0**2 / (2 * G)
@@ -80,6 +64,9 @@ def test_r1_joukowsky_rise_and_arrival_times(model: HydraulicModel) -> None:
 
 
 def test_r2_square_wave_with_period_four_l_over_a(model: HydraulicModel) -> None:
+    """The head at the closed valve is a square wave of amplitude a v0 / g with period 4L/a.
+    Independent: yes, because the reference is a closed form.
+    """
     e, a, rec = _closure_run(model, 0.1 + 4.5 * 2 * L / 1078.0)
     dt, t = e.dt, rec["t"]
     h0 = H_RES - V0**2 / (2 * G)
@@ -97,16 +84,9 @@ def test_r2_square_wave_with_period_four_l_over_a(model: HydraulicModel) -> None
 
 
 def test_r3_prescribed_linear_flow_peaks_at_michauds_value(model: HydraulicModel) -> None:
-    """Frictionless pipe, prescribed linear flow reduction over Tc = 5 x 2L/a.
-
-    Closed form: with f the wave leaving the valve, H_v - h0 = f(t) - f(t - tau) and
-    v0 - v = (g/a)(f(t) + f(t - tau)), tau = 2L/a (the reservoir reflects with sign -1).
-    For a linear v the solution is, interval by interval, H_v - h0 = p s / tau, p - p s / tau,
-    p s / tau, ... (s the time in the interval): a triangle wave between 0 and
-    p = 2 L v0 / (g Tc) = Michaud's value, with period 2 tau = 4L/a. The peak and trough are
-    checked to a few sample steps of the ramp, and the upward crossings of p / 2 are spaced
-    2 tau.
-    Independent: closed form.
+    """For a prescribed linear flow reduction over five round trips the head at the valve is a
+    triangle wave with Michaud's peak 2 L v0 / (g Tc). Independent: yes, because the reference is a
+    closed form.
     """
     a = reservoir_pipe_valve(model, L, H_RES, V0).grid[0].wave_speed_m_s
     tau, tc, t0 = 2 * L / a, 5 * 2 * L / a, 0.05
@@ -139,11 +119,9 @@ def _friction_start(
 
 
 def test_r4_steady_friction_profile_is_stationary(model: HydraulicModel) -> None:
-    """Steady flow with friction and a local loss: head loss (f L / D + K) v^2 / 2g.
-
-    Closed form (Darcy-Weisbach with the steady package's friction law); the engine started on
-    that profile must stay on it. Tolerance 1 percent of the loss: the scheme evaluates friction
-    at the old point and the loss is distributed over the reaches.
+    """A steady flow started on the Darcy-Weisbach profile with a local loss stays on it within 1
+    percent of the loss. Independent: yes, because the reference is a closed form, with the friction
+    factor from the steady package.
     """
     v0, k_local = 1.0, 2.0
     loss, _ = _friction_start(model, v0, k_local)
@@ -173,13 +151,9 @@ def _friction_case(
 
 
 def test_r4_oscillation_decays_at_the_linearised_rate(model: HydraulicModel) -> None:
-    """A 1 percent flow step at the valve produces a square wave whose plateaus decay.
-
-    Closed form: linearising v_t + g H_x + (f / 2D) v |v| = 0 about v0 gives a travelling wave
-    that decays as exp(-lambda t) with lambda = f v0 / (2 D). Two round trips (4L/a) separate
-    plateaus k and k + 2. Tolerance: 15 percent on the ratio, because the scheme lumps the
-    friction of a reach at one end (first order) and the local loss adds a further damping that
-    the formula leaves out (K v0 / (2 L) per second, included below).
+    """A 1 percent flow step produces a square wave whose plateaus decay at the linearised rate f v0
+    / (2 D), within 15 percent. Independent: yes, because the reference is a closed form, with the
+    friction factor from the steady package.
     """
     v0, k_local = 1.0, 0.0
     loss, f = _friction_start(model, v0, k_local)
@@ -230,14 +204,9 @@ def _tee(model: HydraulicModel, d2: float, d3: float, delta: float = 10.0) -> Tr
 def test_r6_junction_matches_the_riemann_solution(
     model: HydraulicModel, d2: float, d3: float
 ) -> None:
-    """Tee: a head step delta arrives at the junction through pipe A.
-
-    Closed form (waves, not the engine): with admittance Y = g A / a for each pipe, the junction
-    head is H0 + delta Y_A / (Y_A + Y_B + Y_C) and the flow into pipe i is Y_i (H_i - H_J)
-    taken with the sign of its direction. For equal pipes the head rise is delta / 3 and the
-    transmitted wave is 2/3 of the incident one. Continuity of mass is checked at every step
-    from the probed end flows; the head agrees to the velocity head of the branches, because
-    the engine conserves total head and the closed form conserves piezometric head.
+    """A head step arriving at a tee gives the junction head and branch flows of the Riemann
+    solution, and mass is conserved at every step. Independent: yes, because the reference is a
+    closed form of the wave relations.
     """
     e = _tee(model, d2, d3)
     y = [G * g.area_m2 / g.wave_speed_m_s for g in e.grid]
@@ -274,13 +243,9 @@ def _leak_case(model: HydraulicModel, leak: tuple[str, float] | None) -> Transie
 def test_r7_ledger_residual_is_bounded_by_one_step_of_end_flow(
     model: HydraulicModel, leak: tuple[str, float] | None
 ) -> None:
-    """Inflow - outflow - leak - elastic storage stays below dt x (largest end flow).
-
-    Derivation of the bound: the end flows are sampled at the step instants while the elastic
-    storage is a trapezoid sum over the points, so the two differ by at most one step of the
-    flow at the boundaries; the residual neither accumulates (checked: the late maximum is not
-    above the early one by more than the bound) nor grows with the simulated time. The bound
-    is a property of the scheme, not of the engine's output.
+    """With and without a leak sink the mass residual stays below one step of the largest end flow
+    and does not accumulate. Independent: yes, because the bound is a property of the scheme and not
+    of the engine output.
     """
     e = _leak_case(model, leak)
     residuals, qmax = [], 0.0
@@ -296,7 +261,9 @@ def test_r7_ledger_residual_is_bounded_by_one_step_of_end_flow(
 
 
 def test_r7_ledger_closes_through_an_instantaneous_closure(model: HydraulicModel) -> None:
-    """Same bound for a closure with reflections: the residual stays within one step of flow."""
+    """Through an instantaneous closure with reflections the mass residual stays within one step of
+    flow. Independent: yes, because the bound is a property of the scheme.
+    """
     e = reservoir_pipe_valve(model, L, H_RES, 1.0, events=(instant_closure(0.1),))
     worst, qmax = 0.0, 0.0
     for _ in range(1600):

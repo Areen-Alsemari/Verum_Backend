@@ -1,15 +1,10 @@
-"""Random streams of the sensor chain: separate per tag and per purpose, order independent.
+"""Random streams of the sensor chain: separate per tag and per purpose, and independent of order.
 
-Inputs: the shipped sensor specifications and the named-stream facility. Outputs: pass/fail.
-Key assumptions:
-    * Each continuous tag draws noise from ``sensor/<tag>/noise`` and dropout from
-      ``sensor/<tag>/dropout``; the detector of the engine uses ``detector/<tank>``. No two
-      names are equal, and the facility keys each name by the SHA-256 of the name, so the keys
-      are distinct as well.
-    * The draws of one stream are not changed by drawing from another, whatever the order.
-Independence: the properties are structural (distinct keys, equal arrays); no statistics.
+Each continuous tag draws its noise and its dropout from separate named streams, and the engine
+detector uses its own. No two names are equal and their keys are distinct, and drawing from one
+stream never changes another, whatever the order. The checks are structural and use no statistics.
 
-Source: ``docs/design_decisions.md`` D30; ``verum.rng``.
+See D30.
 """
 
 from __future__ import annotations
@@ -29,12 +24,18 @@ def names() -> list[str]:
 
 
 def test_no_two_tags_or_purposes_share_a_stream() -> None:
+    """No two tags or purposes share a stream name or a stream key. Independent: yes, because the
+    check counts distinct names and keys.
+    """
     assert len(CONTINUOUS) == 14
     assert len(set(names())) == len(names()) == 14 * 2 + 3 + 1
     assert len({stream_key(n) for n in names()}) == len(names())
 
 
 def test_noise_and_dropout_of_a_tag_are_separate_streams() -> None:
+    """Drawing the dropout stream of a tag first leaves its noise stream unchanged, and the two
+    streams differ. Independent: yes, because equality of arrays is the property.
+    """
     fresh = RandomStreams(11).stream("sensor/LT-101/noise").standard_normal(500)
     streams = RandomStreams(11)
     streams.stream("sensor/LT-101/dropout").random(10_000)  # the dropout stream is used first
@@ -44,6 +45,9 @@ def test_noise_and_dropout_of_a_tag_are_separate_streams() -> None:
 
 
 def test_the_order_in_which_tags_are_processed_changes_nothing() -> None:
+    """Processing the tags in a different order gives the same observations. Independent: yes,
+    because equality of outputs is the property.
+    """
     nodes = chain.Nodes(np.array([0.0, 600.0]), np.array([5.0, 5.0]), np.array([False] * 2))
 
     def run(order: list[str], seed: int) -> dict[str, list[dict[str, object]]]:

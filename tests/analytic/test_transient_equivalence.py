@@ -1,22 +1,12 @@
-"""Transient engine: refinement, steady equivalence, check valve and restart (R5, R9 to R11).
+"""Transient engine: grid refinement, steady equivalence, the check valve and restart.
 
-Inputs: the idealised cases of ``_transient_cases`` and the full network with reference
-lineups. Outputs: pass/fail.
-Each docstring says whether the expected value is independent of the code under test.
+The checks cover three-grid convergence, steady equivalence on the reference lineups, check-valve
+closure and reverse-volume accounting, bit-identical restart, agreement of the friction factor and
+valve law with the steady package, the series-element root, and import isolation. The slow-limit
+check is in a separate module. The expected behaviour is derived in the "Transient engine:
+refinement, equivalence and restart" section of the verification notes.
 
-Rungs in this file:
-    R5  Grid refinement on three grids for a friction plus finite-closure case.
-    R9  Steady equivalence: the time stepping holds the steady solution of
-        ``verum.hydraulics`` at every edge end for the reference lineups.
-    R10 Check valve: blocked reverse flow after a pump stop, reverse-volume accounting, delay
-        sweep.
-    R11 Determinism and checkpoint restart, bit identical.
-    Also: the Darcy factor equals the steady package's, the valve law scale, the series-element
-    root near zero, and import isolation (decision D47).
-The slow-limit rung R8 is in ``test_transient_slow_limit.py``.
-
-Source: ``docs/design_decisions.md`` D43 to D47; Roache, Verification and Validation in
-Computational Science and Engineering (Richardson extrapolation).
+See D43 to D47.
 """
 
 from __future__ import annotations
@@ -51,16 +41,9 @@ def _closure(model: HydraulicModel, refine: int) -> tuple[TransientEngine, dict[
 
 
 def test_r5_three_grids_converge_at_first_order_within_the_d8_budget(model: HydraulicModel) -> None:
-    """Friction, a local loss and a 1 s stroke of the shipped valve law, on 200 to 800 reaches.
-
-    The wave speed is fixed so that the adjusted speed is the same on all grids (the adjustment
-    of decision D43 otherwise changes with the rounding of the reach count and masks the
-    order). Compared: head and flow at the valve on 40 instants up to 85 percent of the
-    stroke, before the final closure whose throttling is a near-step.
-    Expected (Roache): for a first-order scheme the observed order p = log2(d12 / d23) is about
-    one, and the error of the finest grid is d23 / (2^p - 1). The test requires p >= 0.8 and
-    that error below the D8 budget (50 Pa, 0.02 m3/h). Independent: a convergence property,
-    not a value of the code.
+    """Three grids of 200 to 800 reaches converge at about first order, and the error of the finest
+    grid is below the conservation budget. Independent: yes, because a convergence property is
+    checked and not a value of the code.
     """
     series = []
     for refine in (1, 2, 4):
@@ -76,8 +59,10 @@ def test_r5_three_grids_converge_at_first_order_within_the_d8_budget(model: Hydr
 
 
 def test_r5_unrefined_error_is_reported_against_the_finest_grid(model: HydraulicModel) -> None:
-    """The shipped step (the coarsest grid here) differs from the finest by less than 10 x the D8
-    head budget; this is a statement about this case, recorded in the engine document."""
+    """The shipped step differs from the finest grid by less than ten times the head budget, which
+    is recorded in the engine document. Independent: yes, because the finest grid is the reference
+    for a convergence statement about this case.
+    """
     _, coarse = _closure(model, 1)
     _, fine = _closure(model, 4)
     ts = np.linspace(0.2, 0.95, 40)
@@ -99,12 +84,9 @@ REFERENCE_LINEUPS = {
 def test_r9_time_stepping_holds_the_steady_solution_at_every_edge_end(
     model: HydraulicModel, name: str
 ) -> None:
-    """Start from the steady solve of ``verum.hydraulics`` and step for 3 s: heads and flows at
-    all edge ends stay on the steady values to 1e-6 m and 1e-9 m3/s.
-
-    Not independent of the boundary definitions, which the two share; it tests that the
-    characteristic equations with friction, the fitting profile, the pump curve and the check
-    valves have the steady state of the same equations as fixed point.
+    """Starting from the steady solve, three seconds of time stepping keep every edge end on the
+    steady heads and flows. Independent: no, because the two solvers share the boundary definitions
+    and only the fixed point of the characteristic equations is tested.
     """
     lineup, receipt = REFERENCE_LINEUPS[name]
     spec = TransientSpec(
@@ -143,16 +125,9 @@ def _stop_case(model: HydraulicModel, delay: float) -> TransientEngine:
 
 
 def test_r10_check_valve_blocks_reverse_flow_after_its_closure_delay(model: HydraulicModel) -> None:
-    """Pump stop on a running delivery: the downstream column drives flow backwards, the check
-    valve closes after the delay and then passes nothing until the flow turns forward again.
-
-    Expected, for the first closure after the stop: (a) the flow at the valve reverses before it
-    closes; (b) the closure instant is the start of the final uninterrupted reversal plus the
-    delay, within three steps; (c) the volume the valve accounts as reverse equals the sum of
-    -Q dt of the probed flow over the steps in which it passed reverse flow; (d) for the next
-    0.2 s, while it stays closed, the flow on both sides is exactly zero; (e) the reverse volume
-    grows with the delay (0.05, 0.3, 1 s). Independent: the integral is taken from the probed
-    flow, not from the valve's own counter.
+    """After a pump stop the check valve closes a delay after the flow reverses, passes nothing
+    while closed, and the reverse volume it accounts grows with the delay. Independent: yes, because
+    the reverse volume is integrated from the probed flow and not from the valve counter.
     """
     volumes = []
     for delay in (0.05, 0.3, 1.0):
@@ -190,9 +165,9 @@ def _checkpoint_case(model: HydraulicModel) -> TransientEngine:
 
 
 def test_r11_runs_are_deterministic_and_a_restart_is_bit_identical(model: HydraulicModel) -> None:
-    """Two runs of the same case give identical arrays; a run split at 1.2 s through
-    ``get_state`` / ``set_state`` on a fresh engine gives the same arrays as the continuous run.
-    Independent: equality is the property."""
+    """Two runs of a case give identical arrays, and a run split at 1.2 s through a checkpoint
+    matches the continuous run. Independent: yes, because equality is the property.
+    """
     a, b = _checkpoint_case(model), _checkpoint_case(model)
     probes = [Probe("p", "E002", 1.0)]
     full_a, full_b = a.run(2.5, probes), b.run(2.5, probes)
@@ -210,8 +185,9 @@ def test_r11_runs_are_deterministic_and_a_restart_is_bit_identical(model: Hydrau
 
 
 def test_darcy_factor_equals_the_steady_packages_law() -> None:
-    """The vectorised factor is the law of ``verum.hydraulics.friction`` over laminar,
-    transitional and turbulent Reynolds numbers (independent: the steady module is separate)."""
+    """The vectorised friction factor equals the steady package's law in the laminar, transitional
+    and turbulent ranges. Independent: yes, because the steady module is separate.
+    """
     d, rho, mu, rough = 0.30318, 750.0, 5e-4, 4.5e-5
     for v in (0.001, 0.2, 0.6, 1.0, 2.5, 6.0):
         re = rho * v * d / mu
@@ -220,8 +196,10 @@ def test_darcy_factor_equals_the_steady_packages_law() -> None:
 
 
 def test_valve_law_scale_is_k_over_two_g_a_squared(model: HydraulicModel) -> None:
-    """The extra head loss of a part-open valve is (K(alpha) - K_open) v^2 / 2g with v the
-    velocity in the edge that leaves the valve (hand arithmetic from the steady package's law)."""
+    """The extra loss of a part-open valve is (K(alpha) - K_open) v^2 / 2g with the velocity in the
+    edge that leaves the valve. Independent: yes, because the value is hand arithmetic from the
+    steady law.
+    """
     e = reservoir_pipe_valve(model, 100.0, 100.0, 1.0)
     e.alpha["XV-1"] = 0.4
     e._set_valve("XV-1")
@@ -233,7 +211,9 @@ def test_valve_law_scale_is_k_over_two_g_a_squared(model: HydraulicModel) -> Non
 
 
 def test_series_flow_is_exact_for_a_vanishing_quadratic_term() -> None:
-    """B q + K q|q| = W: the root tends to W / B as K -> 0 (closed form, no cancellation)."""
+    """The series-element root tends to W / B as the quadratic term vanishes and satisfies the
+    equation for a large one. Independent: yes, because the reference is a closed form.
+    """
     bs, w = np.array([20.0, 20.0, 20.0]), np.array([3.0, 3.0, -3.0])
     k2 = np.array([0.0, 1e-16, 1e-16])
     q = series_flow(bs, w, np.zeros(3), k2, np.zeros(3, dtype=bool))
@@ -243,8 +223,10 @@ def test_series_flow_is_exact_for_a_vanishing_quadratic_term() -> None:
 
 
 def test_the_transient_package_imports_neither_truth_nor_gateway_nor_engine() -> None:
-    """Decision D47: standalone library. A fresh interpreter importing it must not load the truth
-    store, the gateway or the rigid-column engine."""
+    """A fresh interpreter that imports the transient package loads neither the truth store, the
+    gateway nor the rigid-column engine. Independent: yes, because the check inspects the loaded
+    modules.
+    """
     code = (
         "import sys, verum.transient;"
         "bad=[m for m in sys.modules if m.startswith(('verum.truth','verum.api','verum.sim'))];"
