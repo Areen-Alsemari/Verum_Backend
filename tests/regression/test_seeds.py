@@ -70,7 +70,7 @@ def test_every_shipped_scenario_has_its_own_fixed_seed(root: Path) -> None:
     """
     files = sorted((root / "config" / "scenarios").glob("*.json"))
     seeds = {f.stem: json.loads(f.read_text())["seed"] for f in files}
-    assert len(seeds) == 14  # the eleven of Phase 5b and the three v2 copies of Phase 6b
+    assert len(seeds) == 14  # the eleven shipped scenarios and the three v2 copies
     assert_distinct(list(seeds.values()))
     assert all(load_scenario(name).seed == seed for name, seed in seeds.items())
     assert all(isinstance(seed, int) and seed >= 0 for seed in seeds.values())

@@ -175,7 +175,7 @@ def test_the_top_level_package_imports_nothing(root: Path) -> None:
     assert _imports(root / "src" / "verum" / "__init__.py") == set()
 
 
-# --- names of an episode on disk (Phase 3b) ----------
+# --- names of an episode on disk ----------
 
 EPISODE_FILES = {
     "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",

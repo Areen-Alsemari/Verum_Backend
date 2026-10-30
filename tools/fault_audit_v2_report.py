@@ -377,7 +377,7 @@ def share(c: dict[str, dict[str, int]], fault: str, keys: tuple[str, ...]) -> st
 
 
 def twin_counts() -> dict[str, list[int]]:
-    """Phase 6a: active cells with an observable consequence, by fault (restriction: visible)."""
+    """First-audit active cells with an observable consequence, by fault (restriction: visible)."""
     old = json.loads((RESULTS / "fault_audit.json").read_text(encoding="utf-8"))["runs"]
     twin: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     for r in old:

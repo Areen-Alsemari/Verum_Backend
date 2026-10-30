@@ -51,7 +51,7 @@ class Network:
             adjacency.setdefault(edge.to_node, set())
         return cls(topology, {node: frozenset(out) for node, out in adjacency.items()})
 
-    # --- phase 0 query: contract orientation, every element passable ---------
+    # --- contract-orientation query: every element passable ---------
     def reachable(self, source: str, target: str) -> bool:
         """True when ``target`` is reachable from ``source`` along directed edges."""
         if source not in self.successors or target not in self.successors:
