@@ -1,12 +1,8 @@
 """Streaming reader that turns an episode directory into compact time series.
 
-Inputs: an episode directory written by the engine. Outputs: a ``Series`` with the
-quantities the tests need, and a count of rows that failed schema validation.
-Key assumptions: the reader uses only ``gzip`` and ``json`` and the schemas, not the
-engine, so it also serves as an independent reader of the written files. Every row
-of every dataset is validated against its schema during the single pass.
-
-Source: ``schemas/hydraulic_state.schema.json`` and the other proposed schemas.
+The reader returns the quantities the tests need and a count of rows that failed schema validation.
+It uses only gzip, json and the schemas, not the engine, so it also serves as an independent reader
+of the written files, and every row of every dataset is validated during its single pass.
 """
 
 from __future__ import annotations

@@ -1,17 +1,11 @@
-"""Shared case builders and a reference-case variable-speed pump for hydraulics tests.
+"""Shared case builders and a reference-case variable-speed pump for the hydraulics tests.
 
-Inputs: tank levels and lineup choices. Outputs: ``SteadyInputs`` and a
-``VariableSpeedPump`` that exists only in tests.
-Key assumptions:
-    * The variable-speed pump is a reference-case device used to reproduce the
-      audited required-head and speed-ratio figures. Production code has only
-      the fixed-speed pump (decision D2).
-    * ``enforce_domain`` switches the ``Q / s <= 350`` rule on or off, so the
-      same pump can be used to find a speed ratio and then to show the
-      rejection.
+The variable-speed pump exists only in tests and reproduces the audited required-head and
+speed-ratio figures, while production code has only the fixed-speed pump. A switch turns the Q / s
+<= 350 domain rule on or off, so the same pump can first be used to find a speed ratio and then to
+show the rejection.
 
-Source: ``revised/02_hydraulic_model.md`` section 3.2 (affinity scaling and the
-domain rule).
+See D2.
 """
 
 from __future__ import annotations

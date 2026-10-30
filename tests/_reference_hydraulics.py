@@ -1,21 +1,12 @@
 """Independent reference calculations for the hydraulics tests.
 
-Inputs: literal constants of the audited reference case (written out here, not
-read from configuration) and path descriptions. Outputs: series-path head
-losses and closed-form operating points found with ``scipy.optimize.brentq``.
-Key assumptions:
-    * This module does not import ``verum.hydraulics``. It solves a single
-      series path (tank, suction branch, pump branch, distribution main) by a
-      scalar root find, which is a different method from the node-head Newton
-      solve of the package.
-    * The friction law is the same Darcy-Weisbach/Haaland/laminar/blend law as
-      decision D14, coded separately; agreement on the law is therefore not
-      independent evidence about the law itself, only about the network solve.
-    * Bore diameters, lengths, density, viscosity and pump curve are the
-      audited literals.
+The module solves a single series path (tank, suction branch, pump branch, distribution main) by a
+scalar root find, which is a different method from the node-head Newton solve of the package, and it
+does not import the hydraulics package. The constants are the audited literals written out here. The
+friction law is coded separately but is the same law as in the package, so agreement on it is
+evidence about the network solve and not about the law itself.
 
-Source: ``revised/02_hydraulic_model.md`` sections 2 and 3;
-``verum_member2_verify_corrected.py`` (functions ``friction`` and ``syst``).
+See D14.
 """
 
 from __future__ import annotations
@@ -72,11 +63,9 @@ def delivery_segments(tank: str) -> list[tuple[float, float, float]]:
 
 
 def tank2_reference_fittings_segments() -> list[tuple[float, float, float]]:
-    """TK-102 path with the reference fittings, counted by hand from the polylines.
-
-    Suction route: 3 bends x 0.3 + tank outlet 0.5 + XV-S102 0.1 = 1.5.
-    Pump branch A: 2 bends x 0.3 + XV-PAI 0.1 + check valve 2.0 + XV-PAO 0.1 = 2.8.
-    Distribution main: 1 bend x 0.3 + delivery meter 1.0 = 1.3. The header has none.
+    """Path of tank TK-102 with the reference fittings, with the loss coefficients counted by hand
+    from the polylines: 1.5 on the suction route, 2.8 on pump branch A and 1.3 on the distribution
+    main.
     """
     return [(D200, 90.0, 1.5), (D250, 35.0, 0.0), (D200, 20.0, 2.8), (D200, 250.0, 1.3)]
 
@@ -125,10 +114,8 @@ RECEIPT_LENGTH = {"TK-101": 45.0, "TK-102": 80.0, "TK-103": 115.0}
 def receipt_flows(
     levels: dict[str, float], opened: list[str], total_m3h: float = 600.0
 ) -> tuple[list[float], float]:
-    """Signed receipt split and source pressure (bar gauge, head-based) by scalar root finds.
-
-    The source head above the datum z = 1 m must equal, for every open branch,
-    the tank level less 1 m plus the common-main loss plus the signed branch loss.
+    """Signed receipt split and head-based source pressure (bar gauge), found by scalar root finds
+    so that every open branch gives the same source head above the 1 m datum.
     """
     total = total_m3h / 3600
     common = loss(total, D300, 150.0)

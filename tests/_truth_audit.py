@@ -1,20 +1,12 @@
 """Post-hoc mass audit that reads only the written truth files.
 
-Inputs: an episode directory (``episode.json``, ``hydraulic_state.jsonl.gz``,
-``mass_ledger.jsonl.gz``). Outputs: the largest residual and a list of violations.
-Key assumptions:
-    * Separate code: it uses ``gzip`` and ``json`` only and does not import the engine,
-      the ledger package or the truth package.
-    * Balance (network, liquid): ``received - delivered - (sum of tank mass - initial
-      sum of tank mass) = 0`` with the tank mass ``rho x volume`` taken from the
-      ``tank_state`` rows and ``rho`` from ``episode.json``. Pipe inventory is constant
-      (declared in the episode record) and there is no spill in a healthy episode.
-    * Tolerance: ``4.2e-4 kg/s x t`` (decision D8) plus the recursive-summation bound
-      ``(n - 1) 2^-53 sum|x|`` over the recorded increments, computed here.
-    * It also checks each tank's ledger row against its tank state, and the residual
-      written by the engine against the recomputed one.
+The audit recomputes the network liquid balance from the tank rows, checks each tank ledger against
+its tank state and the residual written by the engine against the recomputed one, and returns the
+largest residual and a list of violations. It uses gzip and json only and imports neither the
+engine, the ledger nor the truth package. The balance and the tolerance are described in the "Mass
+audit of written truth files" section of the verification notes.
 
-Source: decisions D8 and D20; ``revised/01_facility_tanks_topology.md`` section 5 (E5).
+See D8 and D20.
 """
 
 from __future__ import annotations

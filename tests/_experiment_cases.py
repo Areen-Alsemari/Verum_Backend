@@ -1,21 +1,12 @@
-"""Single-pipe reservoir-valve cases of the published experiments (rungs R12 and R13).
+"""Single-pipe reservoir-valve cases of the published water-hammer experiments.
 
-Inputs: one experiment of ``tests/data/jensen_2018_experiments.json``. Outputs: a transient
-engine on a reservoir, one pipe and a test-only valve, and the head at the valve over time.
-Key assumptions:
-    * The valve is test-only and follows the authors' laws: ``tau_v = 1 - (t/tc)^m`` (eq. 27) and
-      ``Q = Q0 tau_v sqrt(H/H0)`` (eq. 28) with H the pressure head at the valve and H0 its
-      steady value. It is imposed at the series node through the engine's ``flow_schedules`` hook,
-      solved implicitly with the C+ relation of the pipe end at each step.
-    * The stub after the valve is kept out of the vapor check by its elevation (see ``STUB_Z_M``).
-    * The wave speed is set directly; the pipe has 24 reaches and the time step is ``L/(24 a)``,
-      so the Courant number is one. A short stub after the valve ends in a tank at the valve head.
-    * Friction is the quasi-steady Darcy factor of the library (Haaland with the laminar blend,
-      not Colebrook) with the properties and roughness of the experiment.
-    * The engine's fluid properties are replaced by those of water after construction (density and
-      vapor pressure for the phase check; density, viscosity and roughness for the friction).
+Each case builds a transient engine on a reservoir, one pipe and a test-only valve that follows the
+authors' closure law, and returns the head at the valve over time. The wave speed is set directly
+with 24 reaches at Courant number one, and the friction is the quasi-steady Darcy factor of the
+library, not Colebrook. The valve law and the substitution of water properties are described in the
+"Experiment cases" section of the verification notes.
 
-Source: ``docs/design_decisions.md`` D56; Jensen et al. 2018, equations 27 and 28.
+See D56.
 """
 
 from __future__ import annotations
@@ -124,8 +115,9 @@ def head_at_valve(
 
 
 def peaks(t: np.ndarray, h: np.ndarray, h_res: float, surge: float) -> np.ndarray:
-    """Indices of the local maxima that rise above the reservoir head by 10 percent of the
-    Joukowsky surge, in time order (plateaus count once, at their middle)."""
+    """Indices of the head peaks that rise above the reservoir head by 10 percent of the Joukowsky
+    surge, in time order, with a plateau counted once at its middle.
+    """
     idx, _ = find_peaks(h, height=h_res + 0.1 * surge, prominence=0.05 * surge)
     return np.asarray(idx)
 

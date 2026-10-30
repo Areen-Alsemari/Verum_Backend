@@ -1,11 +1,8 @@
 """Short engine runs with an injected fault, shared by the fault tests.
 
-Inputs: a scenario identifier, a duration and a fault set. Outputs: the engine, its rows and its
-outcome (no files). Key assumptions: the run is made on the shipped scenario with its duration
-shortened, healthy twins use the same seed, and the faults are given directly (the eligibility
-validator is tested separately), so tests can use short onsets.
-
-Source: ``docs/fault_models.md``.
+A run uses a shipped scenario with its duration shortened, healthy twins use the same seed, and the
+faults are given directly because the eligibility validator is tested separately, so tests can use
+short onsets. The helpers return the engine, its rows and its outcome and write no files.
 """
 
 from __future__ import annotations

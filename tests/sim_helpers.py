@@ -1,9 +1,7 @@
 """Small readers shared by the protection-row tests.
 
-Inputs: an episode directory. Outputs: the protection rows of a tank and its tank levels.
-Key assumptions: reads the written hydraulic-state file with ``gzip`` and ``json`` only.
-
-Source: ``schemas/hydraulic_state.schema.json``.
+They return the protection rows of a tank and its tank levels from a written episode, using gzip and
+json only.
 """
 
 from __future__ import annotations
@@ -32,14 +30,8 @@ def protection_rows(
 
 
 def esd_timeline() -> dict[str, float]:
-    """Times of the S0u-E isolation, computed from the scenario file (hand arithmetic).
-
-    The detector asserts when the true level reaches 13 m minus its offset (the offset is the
-    first draw of the stream ``detector/TK-101``), at 0.7 m x 706.858347 m2 / (600/3600 m3/s)
-    - offset/rate after the start from 12.3 m; the trip follows 0.2 s later; the protection
-    logic acts at its next update, which is the next whole second or the next level-transmitter
-    sample or arrival of any tank (they are queue events); XV-R000 is physically closed 9.99 s
-    after the command.
+    """Times of the emergency isolation scenario, computed from the scenario file by hand
+    arithmetic; the derivation is in the "Isolation timeline" section of the verification notes.
     """
     import math
 

@@ -399,3 +399,34 @@ Key assumptions:
 Independence: the tabulated values are transcribed from the EPA document; the formula and its evaluation are recomputed here by hand arithmetic (natural logarithm of 10 is 2.302585).
 
 Bracketing (D46 version 4): RVP 8.3 is not tabulated in the edition fetched, so the derived classes are bracketed by the tabulated RVP 7 and RVP 10 constants at 25, 35, 40 and 45 C. This is a necessary check and not a validation of the derived classes.
+
+## Experiment cases
+
+Key assumptions:
+
+- The valve is test-only and follows the authors' laws: `tau_v = 1 - (t/tc)^m` (eq. 27) and `Q = Q0 tau_v sqrt(H/H0)` (eq. 28) with H the pressure head at the valve and H0 its steady value. It is imposed at the series node through the engine's `flow_schedules` hook, solved implicitly with the C+ relation of the pipe end at each step.
+- The stub after the valve is kept out of the vapor check by its elevation (see `STUB_Z_M`).
+- The wave speed is set directly; the pipe has 24 reaches and the time step is `L/(24 a)`, so the Courant number is one. A short stub after the valve ends in a tank at the valve head.
+- Friction is the quasi-steady Darcy factor of the library (Haaland with the laminar blend, not Colebrook) with the properties and roughness of the experiment.
+- The engine's fluid properties are replaced by those of water after construction (density and vapor pressure for the phase check; density, viscosity and roughness for the friction).
+
+## Mass audit of written truth files
+
+Key assumptions:
+
+- Separate code: it uses `gzip` and `json` only and does not import the engine, the ledger package or the truth package.
+- Balance (network, liquid): `received - delivered - (sum of tank mass - initial sum of tank mass) = 0` with the tank mass `rho x volume` taken from the `tank_state` rows and `rho` from `episode.json`. Pipe inventory is constant (declared in the episode record) and there is no spill in a healthy episode.
+- Tolerance: `4.2e-4 kg/s x t` (decision D8) plus the recursive-summation bound `(n - 1) 2^-53 sum|x|` over the recorded increments, computed here.
+- It also checks each tank's ledger row against its tank state, and the residual written by the engine against the recomputed one.
+
+## Isolation timeline
+
+Key assumptions: reads the written hydraulic-state file with `gzip` and `json` only.
+
+### Esd timeline
+
+Times of the S0u-E isolation, computed from the scenario file (hand arithmetic).
+
+The detector asserts when the true level reaches 13 m minus its offset (the offset is the first draw of the stream `detector/TK-101`), at 0.7 m x 706.858347 m2 / (600/3600 m3/s)
+
+- offset/rate after the start from 12.3 m; the trip follows 0.2 s later; the protection logic acts at its next update, which is the next whole second or the next level-transmitter sample or arrival of any tank (they are queue events); XV-R000 is physically closed 9.99 s after the command.

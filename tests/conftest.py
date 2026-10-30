@@ -1,10 +1,7 @@
-"""Shared fixtures: raw and parsed contracts loaded from ``config/``.
+"""Shared fixtures: raw and parsed contracts loaded from the configuration.
 
-Inputs: the four contract files in ``config/``. Outputs: pytest fixtures.
-Key assumption: tests receive deep copies of the raw contracts so that a
-mutation in one test cannot leak into another.
-
-Source: ``VERUM_INTEGRATION_README.md`` section G.
+Tests receive deep copies of the raw contracts so that a mutation in one test cannot leak into
+another.
 """
 
 from __future__ import annotations
@@ -105,9 +102,9 @@ SLOW_FIXTURES = {"episodes", "series", "halving"}
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Group the suite: ``slow`` for tests that use the shared episode runs or are marked
-    slow by hand (an engine run of more than a few seconds); every other test is ``fast``.
-    Both groups run in the full run; nothing is deselected."""
+    """Group the suite into slow tests, which use the shared episode runs or run the engine for more
+    than a few seconds, and fast tests. Both groups run in the full run and nothing is deselected.
+    """
     for item in items:
         fixtures = set(getattr(item, "fixturenames", ()))
         slow = item.get_closest_marker("slow") is not None or bool(fixtures & SLOW_FIXTURES)

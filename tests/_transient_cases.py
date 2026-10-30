@@ -1,12 +1,8 @@
 """Small idealised networks for the transient verification ladder.
 
-Inputs: lengths, bore, heads and velocities. Outputs: ``NetworkDef`` objects and engines built
-on them, with a uniform initial state (no steady solve).
-Key assumptions: node names follow the conventions of the engine (a tank is ``<name>:outlet_nozzle``
-or ``<name>:receipt_nozzle``, a valve ``XV-...``); the properties and wave-speed table come from
-the shipped configuration; heads are piezometric.
-
-Source: ``docs/transient_engine.md``.
+The builders return network definitions and engines with a uniform initial state and no steady
+solve. Node names follow the conventions of the engine, the properties and wave-speed table come
+from the shipped configuration, and heads are piezometric.
 """
 
 from __future__ import annotations
