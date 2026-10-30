@@ -152,9 +152,15 @@ Full tables are in the Phase 5 report. Summary for the ESD isolation (XV-R000 ov
   of the tank, which the transient engine (constant-head tanks) does not represent (1.74 Pa/s
   at 600 m3/h).
 - A pump-branch valve stroke of 30 and 10 s: agreement before the rigid engine rejects the run.
-- A receipt set-point step 600 to 300 m3/h: the flow agrees; the pressure at the start of E002
-  dips to -0.40 barg in the transient engine and not at all in the rigid column, which prescribes
-  the flow and omits the inertial head of the downstream column (about 1 bar).
+- A receipt set-point step 600 to 300 m3/h: the flow agrees. The pressure at the start of E002
+  oscillates in the transient engine (minimum -0.40 barg, mainly at 1.0 s and 0.41 s) about the
+  rigid-column value; the mean over a window of 2.0 s agrees with the rigid column to within 5
+  percent of the dip magnitude `Lambda_down |dQ/dt|` at 1, 2 and 4 s after the step, for the step
+  down, the step up and the start-up (Phase 5b, step 1). The statement of Phase 5 that the rigid
+  column has no inertial dip was wrong: the dip is present, and the earlier comparison set the
+  transient peak-to-peak oscillation against the 1 s rows of the rigid column and took the dip row
+  at 1 s for the final steady value. What was missing was the post-event row at the command
+  instant, which repeated the pre-event pressures (see `docs/path_dynamics_engine.md`).
 - A pump stop opens a `phase_invalid` window 0.37 s after the stop for every check-valve delay.
 
 ## Throughput and windowed use

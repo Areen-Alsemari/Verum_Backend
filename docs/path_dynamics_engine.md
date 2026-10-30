@@ -61,6 +61,13 @@ receipt path is anchored at its tank (offset `+Lambda_down dQ/dt`), a delivery p
 tank with a quasi-steady pump rise (offset `-Lambda_up dQ/dt`). Tap pressures therefore
 show surge, and the NPSH screen sees the reduced suction head of an accelerating delivery.
 
+A receipt set-point step changes `dQ/dt` at once while the flow is continuous, so the offsets,
+and the pressures with them, jump at the command. The pair of rows written at that instant
+therefore carries the rate after the command in the post-event row: at the step from 600 to
+300 m3/h the head at the start of E002 falls by `Lambda_down x 150/3600 = 12.99 m` (95.5 kPa)
+between the pre-event and the post-event row. Before this was added the post-event row repeated
+the pre-event pressures and the first dip appeared only in the next row.
+
 **Branched lineups.** When two receipt branches or two suction branches are open there is no
 single column. The step then uses the earlier scheme: Heun's method on the tank volumes
 with two steady solves, the receipt flow first order and exact, the cap applied in the
@@ -210,9 +217,10 @@ rows after the checkpoint for equality as floating-point numbers on the same pla
 - A branched lineup falls back to the quasi-steady scheme and is flagged.
 - The pumping-minimum tables, the strata and the derived volatility classes are provisional
   selections; the inland stratum rests on an elevation from memory.
-- The rigid-column model omits the inertial head of the downstream column when the flow at the
-  source is prescribed (receipt set-point change) and under-predicts the peak head of a valve
-  closure unless the stroke lasts about thirty wave round trips; see `docs/transient_engine.md`.
+- The rigid-column model under-predicts the peak head of a valve closure unless the stroke lasts
+  about thirty wave round trips; see `docs/transient_engine.md`. The inertial head of the
+  downstream column after a receipt set-point step is represented; the elastic oscillation about
+  it (period 1.0 s in the network response) is not.
 - Tests of the lumped path against the steady solver share formulas with the
   implementation and are not independent validation of the hydraulics.
 - Nothing in this document has been validated against measured data.

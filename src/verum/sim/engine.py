@@ -17,6 +17,9 @@ Key assumptions:
       method (``verum.sim.dynamics``); the steady network solve then runs at the imposed
       flows and the inertial head offsets are added. The 10 barg cap limits the receipt
       drive head, so under the cap or a closing valve the flow decays by inertia.
+    * A receipt set-point step changes dQ/dt at the command while the flow is continuous; the
+      post-command hydraulics are solved again with the new rate, so the post-event rows carry
+      the jump of the inertial offsets (decision D22).
     * A branched lineup (two receipt branches or two suction branches open) has no single
       column. The step falls back to the Phase 3 scheme: Heun on the tank volumes with two
       steady solves, the receipt flow first order, the cap applied in the solve. Such an
@@ -189,6 +192,7 @@ class EngineState:
     mode: str = "inactive"
     qdot_receipt: float = 0.0
     qdot_delivery: float = 0.0
+    rates_stale: bool = False
     edge_heads: dict[str, float] = field(default_factory=dict)
     edge_heads_t: float = 0.0
     dead_edges: frozenset[str] = frozenset()
@@ -1164,11 +1168,38 @@ class Engine:
         self._run_queue(t, {RANK_COMMAND, RANK_DETECTOR})
         self._protection_update(t)
         self._run_queue(t, {RANK_COMMAND, RANK_VALVE})
+        self._refresh_rates(t)
         post = self._snapshot(t)
         self._log(pre, post, st.event_index > before, t)
         st.processed_t = t
         self._check_screen(t, st.current)
         self._check_envelope(t)
+
+    def _refresh_rates(self, t: float) -> None:
+        """Decision D22: a set-point step changes dQ/dt at once while the flow is continuous, so
+        the inertial head offsets, and with them the pressures, jump at the command. The steady
+        solve of the last step carries the rate before the command; it is solved again with the
+        rate after it (the post-event rows and the next step start from that solve)."""
+        st = self.state
+        if not st.rates_stale:
+            return
+        st.rates_stale = False
+        plan = self._plan(t, t)
+        if plan.quasi or plan.receipt is None:
+            return
+        q_r = st.receipt_flow_m3h / 3600.0
+        q_d = st.delivery_flow_m3h / 3600.0 if plan.delivery is not None else 0.0
+        rates = dyn.make_rhs(plan.receipt, plan.delivery, st.valves)(
+            t, np.array([q_r, q_d, 0.0, 0.0])
+        )
+        offsets = plan.receipt.path.offsets(rates[0])
+        if plan.delivery is not None:
+            offsets.update(plan.delivery.path.offsets(rates[1]))
+        st.current = self._solve(
+            st.volumes, t, q_r * 3600.0, q_d * 3600.0 if plan.delivery is not None else None,
+            offsets, apply_cap=False, qdot_receipt=rates[0],
+        )  # fmt: skip
+        st.qdot_receipt, st.qdot_delivery = rates[0], rates[1]
 
     def _log(self, pre: rw.Snapshot, post: rw.Snapshot, event: bool, t: float) -> None:
         is_grid = abs(t / self.dt - round(t / self.dt)) < 1e-9 or t >= self.scenario.duration_s
@@ -1368,6 +1399,7 @@ class Engine:
         if command.kind == "receipt_setpoint":
             assert command.setpoint_m3h is not None
             old, st.receipt_setpoint_m3h = st.receipt_setpoint_m3h, command.setpoint_m3h
+            st.rates_stale = old != command.setpoint_m3h
             self._emit(
                 t,
                 "command",
