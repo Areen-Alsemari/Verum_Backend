@@ -4,7 +4,7 @@ The package holds the fault specifications and their validation, the injector th
 physical parameters and a sensor-chain hook, and the hidden fault-truth rows. Nothing here is
 reachable from the gateway, and the sensor package knows only the signature of the hook.
 
-See docs on fault models.
+See the fault models document.
 """
 
 from verum.faults.activity import LineupState, activity, lineup_states, on_parallel_branch
