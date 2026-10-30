@@ -82,16 +82,41 @@ uv run mypy
 ## Code conventions
 
 - Python 3.11 or later, `src` layout, package name `verum`.
-- Every `.py` file, including every test file, begins with a module docstring
-  that states what the module does, its inputs and outputs, its key
-  assumptions, and the source document and section it implements. A test checks
-  this.
-- Comments explain why, not what. Code is not narrated.
 - Type hints are used throughout and `mypy --strict` passes. Functions are short.
-- Dependencies are locked in `uv.lock`. Changing a dependency means updating the
-  lock file in the same commit.
-- Code, documentation and commit messages use a neutral, professional voice. They
-  contain no emojis and no mention of the tools used to write them.
+- Dependencies are locked in `uv.lock`. Changing a dependency means updating the lock file in the same commit.
+- Code, documentation and commit messages use a neutral, professional voice. They contain no emojis and no mention of the tools used to write them.
+- Comments explain why, not what. Code is not narrated.
+- Code and documents contain no process wording such as "as requested", "found by the audit" or "fixed in phase N".
+
+## Documentation conventions
+
+### Markdown
+
+- One paragraph per line, with no hard wrapping.
+- Use headings, bullet lists and tables where the content is a list or a comparison.
+- Keep paragraphs short and in plain language.
+- Define symbols once, in a short list.
+- Name repository paths and identifiers only where a reader needs them.
+
+### Module docstrings
+
+- Two to five plain sentences, or a few bullets, saying what the module is for and how it fits into the rest.
+- No file lists, no attribute or field lists, no chains of decision numbers.
+- At most one reference line, such as "See D22."
+
+### Function and class docstrings
+
+- One or two sentences.
+- Mention units and sign conventions when they are not obvious.
+- Never restate types or the signature.
+- Omit the docstring for trivial helpers.
+
+### Test docstrings
+
+- One to three sentences saying what behaviour is checked, ending with "Independent: yes, because ..." or "Independent: no, because ...".
+- A derivation of more than five lines goes to `docs/verification_notes.md`, in one section per test module. The docstring links to it by section name only.
+
+`tests/regression/test_documentation_style.py` checks the mechanical parts of these rules.
 
 ## Commits
 
