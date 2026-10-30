@@ -1,13 +1,8 @@
-"""Contract patches: applying them to the reference reproduces ``config/``.
+"""Contract patches: applying them to the reference reproduces the working configuration.
 
-Inputs: ``config/reference/`` (unmodified originals), ``config/patches/`` and
-the working contracts in ``config/``. Outputs: pass/fail.
-Key assumptions: a patch entry states the value it replaces, so applying it to
-anything but the reference fails; every entry has a reason. The working copy
-must equal the patched reference in content and in byte layout.
-
-Source: ``CONTRIBUTING.md`` (inputs and configuration);
-``canonical_sensor_contract.json`` (withheld tags).
+A patch entry states the value it replaces, so applying it to anything but the reference fails, and
+every entry has a reason. The working copy must equal the patched reference in content and in byte
+layout. The reference itself must never be modified by patching.
 """
 
 from __future__ import annotations
@@ -34,6 +29,9 @@ def _patch_names(root: Path) -> list[str]:
 
 
 def test_every_patch_reproduces_its_working_contract(root: Path) -> None:
+    """Applying each patch file to its reference reproduces the working contract in content and in
+    bytes. Independent: yes, because the working contract and the reference are separate files.
+    """
     names = _patch_names(root)
     assert names == ["canonical_sensor_contract.json", "dataset_release_policy.json"]
     for name in names:
@@ -43,6 +41,9 @@ def test_every_patch_reproduces_its_working_contract(root: Path) -> None:
 
 
 def test_reference_is_not_modified_by_patching(root: Path) -> None:
+    """Patching leaves the decoded reference unchanged. Independent: yes, because the reference is
+    compared with a copy taken before patching.
+    """
     name = "canonical_sensor_contract.json"
     reference = json.loads((root / "config" / "reference" / name).read_text(encoding="utf-8"))
     before = json.dumps(reference)
@@ -51,6 +52,9 @@ def test_reference_is_not_modified_by_patching(root: Path) -> None:
 
 
 def test_withheld_patch_content(root: Path) -> None:
+    """The sensor patch has 13 entries and marks exactly the withheld tags. Independent: yes,
+    because the entries and tags are written out in the test.
+    """
     patch = load_patch_file("canonical_sensor_contract.json")
     by_path = {e.path: e for e in patch.entries}
     assert len(patch.entries) == 13
@@ -63,6 +67,9 @@ def test_withheld_patch_content(root: Path) -> None:
 
 
 def test_patch_fails_on_a_changed_reference(root: Path) -> None:
+    """A patch applied to the already patched contract fails because the old value no longer
+    matches. Independent: yes, because the expected outcome is the stated-value rule.
+    """
     name = "canonical_sensor_contract.json"
     document: dict[str, Any] = json.loads((root / "config" / name).read_text(encoding="utf-8"))
     with pytest.raises(ContractError, match="expected"):
@@ -70,6 +77,9 @@ def test_patch_fails_on_a_changed_reference(root: Path) -> None:
 
 
 def test_patch_paths_are_checked(root: Path) -> None:
+    """A patch path that does not exist is rejected. Independent: yes, because the expected outcome
+    is the validation rule.
+    """
     raw: dict[str, Any] = {
         "file": "x.json",
         "entries": [{"path": "/sensors/NOPE/status", "old": "a", "new": "b", "reason": "r"}],
@@ -88,6 +98,9 @@ def test_patch_paths_are_checked(root: Path) -> None:
     ],
 )
 def test_malformed_entries_are_rejected(entry: dict[str, Any]) -> None:
+    """Entries with a missing field, an empty reason or a wrong type are rejected. Independent: yes,
+    because the expected outcome is the validation rule.
+    """
     with pytest.raises(ContractError):
         parse_patch_file({"file": "x.json", "entries": [entry]})
 
@@ -100,6 +113,9 @@ def _json(root: Path, *parts: str) -> Any:
 
 
 def test_pt203_reference_is_unchanged_and_text_no_longer_says_fixed(root: Path) -> None:
+    """The patched contract no longer calls the PT-203 pressure fixed, while the reference copy
+    keeps its original text. Independent: yes, because the two files are compared with each other.
+    """
     patched = _json(root, "config", "canonical_sensor_contract.json")["sensors"]["PT-203"]
     original = _json(root, "config", "reference", "canonical_sensor_contract.json")["sensors"][
         "PT-203"
@@ -113,6 +129,10 @@ def test_pt203_reference_is_unchanged_and_text_no_longer_says_fixed(root: Path) 
 
 
 def test_policy_labels_the_value_as_the_reservoir_pressure(root: Path) -> None:
+    """The release policy labels the 200000 Pa value as the reservoir pressure and no longer as a
+    fixed boundary pressure. Independent: yes, because the expected labels are written out in the
+    test.
+    """
     policy = _json(root, "config", "dataset_release_policy.json")
     assert "fixed_distribution_boundary_gauge_Pa" not in policy
     assert policy["reservoir_gauge_pressure_Pa"] == 200000
@@ -121,6 +141,10 @@ def test_policy_labels_the_value_as_the_reservoir_pressure(root: Path) -> None:
 
 
 def test_boundary_law_entry_holds_the_form_and_no_coefficient(root: Path) -> None:
+    """The boundary-law entry of the policy holds the form of the law and points to the
+    configuration for the coefficient, with no number of its own. Independent: yes, because the
+    check reads the file directly.
+    """
     law = _json(root, "config", "dataset_release_policy.json")["distribution_boundary_law"]
     assert law["form"] == "dH_d = c * (Q / 300)^2"
     assert law["c_source"] == "config/delivery_boundary.json"
@@ -128,6 +152,9 @@ def test_boundary_law_entry_holds_the_form_and_no_coefficient(root: Path) -> Non
 
 
 def test_no_working_contract_calls_pt203_fixed_or_constant(root: Path) -> None:
+    """No working contract calls the PT-203 pressure fixed or constant. Independent: yes, because
+    the check scans the contract text.
+    """
     for name in (
         "canonical_sensor_contract.json",
         "dataset_release_policy.json",
@@ -140,6 +167,9 @@ def test_no_working_contract_calls_pt203_fixed_or_constant(root: Path) -> None:
 
 
 def test_add_and_remove_markers() -> None:
+    """The absent and remove markers add and delete a key, and each is refused when its precondition
+    fails. Independent: yes, because the expected outcomes are the marker rules.
+    """
     from verum.contracts.patches import ABSENT, REMOVE
 
     patch = parse_patch_file(

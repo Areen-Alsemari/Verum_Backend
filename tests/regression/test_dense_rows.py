@@ -1,17 +1,11 @@
-"""Truth rows every 0.1 s inside validity windows and during valve strokes (decision D34).
+"""Truth rows every 0.1 s inside validity windows and during valve strokes.
 
-Inputs: the written episodes S0u-E, S0u-D and S0-A. Outputs: pass/fail.
-Key assumptions:
-    * Rows between two instants of the 1 s grid come from the dense solution of the
-      integrator; the step scheme is unchanged.
-    * From the start of a stroke to its end (and inside any validity window) every multiple
-      of 0.1 s has a row; elsewhere only the 1 s grid and the event instants have rows.
-    * Hence no two consecutive rows are more than 0.1 s apart where the flow collapses, and
-      the collapse of S0u-E (0.19 s) is resolved by rows.
-Independence: the expected row times are arithmetic on the stroke times of decision D4
-(10 s for XV-R000, 30 s for XV-R101) and the window recorded in the episode.
+From the start of a stroke to its end, and inside any validity window, every multiple of 0.1 s has a
+row, and elsewhere only the 1 s grid and the event instants have rows. The rows between grid
+instants come from the dense solution of the integrator, so the step scheme is unchanged and the
+0.19 s flow collapse of the isolation scenario is resolved.
 
-Source: ``docs/design_decisions.md`` D34.
+See D34.
 """
 
 from __future__ import annotations
@@ -34,6 +28,9 @@ def _multiples(a: float, b: float) -> list[float]:
 def test_every_tenth_of_a_second_has_a_row_during_the_esd_strokes(
     series: dict[str, Series],
 ) -> None:
+    """During the emergency closure strokes every multiple of 0.1 s has a row. Independent: yes,
+    because the expected times are arithmetic on the stroke times of 10 s and 30 s.
+    """
     s = series["S0u-E"]
     times = set(_times(s, "E001"))
     trip = next(e["t_sim_s"] for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
@@ -49,6 +46,9 @@ def test_every_tenth_of_a_second_has_a_row_during_the_esd_strokes(
 def test_no_pair_of_rows_spans_more_than_a_tenth_of_a_second_in_the_window(
     series: dict[str, Series],
 ) -> None:
+    """Inside the flow-collapse window no two consecutive rows are more than 0.1 s apart.
+    Independent: yes, because the window is read from the episode record.
+    """
     s = series["S0u-E"]
     window = next(w for w in s.windows if w["kind"] == "flow_collapse")
     times = sorted({t for t, side, _q in s.edge["E001"] if side != "pre_event"})
@@ -63,6 +63,9 @@ def test_no_pair_of_rows_spans_more_than_a_tenth_of_a_second_in_the_window(
 def test_the_slow_stroke_of_s0ud_has_rows_every_tenth_and_the_rest_the_grid(
     series: dict[str, Series],
 ) -> None:
+    """The 30 s stroke has a row every 0.1 s, and the rest of the episode keeps the 1 s grid.
+    Independent: yes, because the expected times are arithmetic on the stroke time.
+    """
     s = series["S0u-D"]
     times = _times(s, "E001")
     stroke = [t for t in times if 600.0 < t < 630.0]
@@ -72,12 +75,18 @@ def test_the_slow_stroke_of_s0ud_has_rows_every_tenth_and_the_rest_the_grid(
 
 
 def test_a_steady_episode_keeps_the_one_second_grid(series: dict[str, Series]) -> None:
+    """A steady episode keeps the 1 s grid with 3601 rows. Independent: yes, because the expected
+    count is arithmetic on the duration.
+    """
     times = _times(series["S0-A"], "E001")
     assert all(abs(t - round(t)) < 1e-9 for t in times)
     assert len(times) == 3601
 
 
 def test_dense_rows_keep_the_ledger_closed(series: dict[str, Series]) -> None:
+    """The network ledger stays closed on the dense rows. Independent: yes, because the check reads
+    the written closure flags.
+    """
     rows = [r for r in series["S0u-E"].ledger if r["scope"] == "network" and r["side"] is None]
     assert any(abs(r["t_sim_s"] - round(r["t_sim_s"])) > 1e-6 for r in rows)
     assert all(r["closed"] for r in rows)

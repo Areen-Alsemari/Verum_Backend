@@ -1,12 +1,10 @@
 """Engine gates SG0 to SG3, event queue order and event landing, on short runs.
 
-Inputs: scenario variants built from the shipped scenario files, run for a few
-seconds to a few minutes. Outputs: pass/fail.
-Key assumptions: a gate failure produces a rejection record naming gate, time and
-parameter; nothing is silently truncated or clipped. The queue orders events by
-(time, rank, sequence) with commands before valve changes.
+A gate failure produces a rejection record that names the gate, the time and the parameter, and
+nothing is silently truncated or clipped. The event queue orders events by time, rank and sequence,
+with commands before valve changes, and a step ends exactly on an event time.
 
-Source: decisions D17, D20; ``VERUM_INTEGRATION_README.md`` section E.
+See D17 and D20.
 """
 
 from __future__ import annotations
@@ -42,6 +40,9 @@ def _engine(model: HydraulicModel, scenario: Scenario) -> Engine:
 def test_sg3_rejects_a_healthy_scenario_that_leaves_the_level_envelope(
     model: HydraulicModel,
 ) -> None:
+    """A healthy scenario that leaves the level envelope is rejected by gate SG3. Independent: yes,
+    because the expected outcome is the gate rule.
+    """
     scenario = dataclasses.replace(
         load_scenario("S0-B"), tank_levels_m={"TK-101": 11.95, "TK-102": 7.0, "TK-103": 5.0}
     )
@@ -54,6 +55,9 @@ def test_sg3_rejects_a_healthy_scenario_that_leaves_the_level_envelope(
 
 
 def test_sg3_is_off_when_the_scenario_is_not_a_healthy_one(model: HydraulicModel) -> None:
+    """Gate SG3 does not apply when the scenario is not marked healthy. Independent: yes, because
+    the expected outcome is the gate rule.
+    """
     scenario = dataclasses.replace(
         load_scenario("S0-B"),
         tank_levels_m={"TK-101": 11.95, "TK-102": 7.0, "TK-103": 5.0},
@@ -64,6 +68,9 @@ def test_sg3_is_off_when_the_scenario_is_not_a_healthy_one(model: HydraulicModel
 
 
 def test_sg1_rejects_a_ledger_that_stops_closing(model: HydraulicModel) -> None:
+    """A ledger made to stop closing by an injected 5 m3 is rejected by gate SG1. Independent: yes,
+    because the error is injected by the test.
+    """
     engine = _engine(model, dataclasses.replace(load_scenario("S0-A"), duration_s=100.0))
     engine.run(until=10.0)
     engine.state.cum_received_m3 += 5.0  # an injected 5 m3 of unaccounted receipt
@@ -81,6 +88,9 @@ def test_sg1_rejects_a_ledger_that_stops_closing(model: HydraulicModel) -> None:
 
 
 def test_sg0_rejects_when_no_level_passes_the_screen(root: Path, tmp_path: Path) -> None:
+    """A configuration in which no level passes the phase and NPSH screen is rejected by gate SG0.
+    Independent: yes, because the expected outcome is the gate rule.
+    """
     shutil.copytree(root / "config", tmp_path / "config")
     path = tmp_path / "config" / "hydraulics.json"
     doc = json.loads(path.read_text(encoding="utf-8"))
@@ -104,6 +114,9 @@ def test_sg0_rejects_when_no_level_passes_the_screen(root: Path, tmp_path: Path)
 
 
 def test_sg0_pumping_minimum_boundary_at_the_stored_level(model: HydraulicModel) -> None:
+    """At the stored pumping-minimum level the run passes, and just below it gate SG0 rejects.
+    Independent: yes, because the boundary is the stored level.
+    """
     # 35 C, reference fittings, NPSH3 = 4 m: the stored minimum of TK-101 (coastal, RVP_9_0,
     # f_d = 0.8) is 2.372 m. At 2.42 m the level stays above it for the 60 s run (it falls about
     # 0.007 m); at 2.30 m it is below at the start.
@@ -128,6 +141,9 @@ def test_sg0_pumping_minimum_boundary_at_the_stored_level(model: HydraulicModel)
 
 @pytest.mark.slow
 def test_rejection_stops_the_run_at_the_failing_step(model: HydraulicModel) -> None:
+    """A rejected run stops at the failing step and not at the end of the episode. Independent: yes,
+    because the expected outcome is the stop rule.
+    """
     outcome = _engine(model, load_scenario("REJ-2")).run()
     assert outcome.rejection is not None
     assert outcome.final_t <= outcome.rejection["t_sim_s"] + 1.0
@@ -135,6 +151,9 @@ def test_rejection_stops_the_run_at_the_failing_step(model: HydraulicModel) -> N
 
 
 def test_the_queue_orders_by_time_then_rank_then_sequence(model: HydraulicModel) -> None:
+    """The event queue pops events by time, then rank, then sequence. Independent: yes, because the
+    order is stated by the rule.
+    """
     engine = _engine(model, load_scenario("S0-A"))
     state = engine.state
     state.queue.clear()
@@ -147,6 +166,9 @@ def test_the_queue_orders_by_time_then_rank_then_sequence(model: HydraulicModel)
 
 
 def test_steps_end_exactly_on_event_times(model: HydraulicModel) -> None:
+    """Every event time of a run with a valve stroke appears as a row time. Independent: yes,
+    because the event times are read from the written events.
+    """
     scenario = dataclasses.replace(load_scenario("S0u-D"), duration_s=640.0)
     engine = _engine(model, scenario)
     sink: Any = engine.sink
@@ -158,6 +180,9 @@ def test_steps_end_exactly_on_event_times(model: HydraulicModel) -> None:
 
 
 def test_a_pump_cannot_be_stopped_by_a_lineup_command(model: HydraulicModel) -> None:
+    """A lineup command cannot change which pump is running. Independent: yes, because the expected
+    outcome is the controller rule.
+    """
     scenario = dataclasses.replace(
         load_scenario("S0-A"),
         schedule=[{"t_s": 10.0, "command": "lineup", "mode": "CHANGEOVER_HOLD"}],
@@ -168,6 +193,9 @@ def test_a_pump_cannot_be_stopped_by_a_lineup_command(model: HydraulicModel) -> 
 
 
 def test_a_direct_receipt_switch_is_refused_by_the_lineup_controller(model: HydraulicModel) -> None:
+    """A direct receipt switch that skips the hold state is refused by the lineup controller.
+    Independent: yes, because the expected outcome is the transition rule.
+    """
     from verum.lineups import TransitionRejected
 
     scenario = dataclasses.replace(

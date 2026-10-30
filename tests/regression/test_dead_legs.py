@@ -1,20 +1,11 @@
-"""Dead-leg pressures (decision D39): relaxation, standby branch, every lineup.
+"""Dead-leg pressures: relaxation, the standby branch and every lineup.
 
-Inputs: short engine runs on custom scenarios and the written episode S0-A. Outputs:
-pass/fail.
+A segment cut off by a closing valve relaxes to the head across the valve with a 60 s time constant,
+and the standby pump branch reads the head of the suction tee within the lag of two first-order
+stages. Every lineup must give every edge an end pressure. The closed forms are in the "Dead-leg
+pressures" section of the verification notes.
 
-Derivations (hand arithmetic):
-    * Relaxation. A segment isolated at time t_c with head H_0 relaxes to the head across its
-      closed valve, H_target, as H(t) = H_target + (H_0 - H_target) exp(-(t - t_c)/60 s). Here
-      XV-R000 closes on a 300 m3/h receipt into TK-101 (9 m): the segment E001 + E002 is cut off
-      with a head a few metres above the tank and relaxes to the tank head, which the open
-      XV-R101 gives to the header beyond the valve. The target is constant (no flow after the
-      closure), so the closed form is exact for the model.
-    * Standby branch. With pump A delivering, pump B's discharge-side segment sits behind a
-      closed XV-PBI and takes the head of the suction tee: its pressure is rho g (H_tee - z).
-Independence: the closed form is independent of the code; heads are read from written rows.
-
-Source: ``docs/design_decisions.md`` D39.
+See D39.
 """
 
 from __future__ import annotations
@@ -45,6 +36,10 @@ def _engine(model: HydraulicModel, scenario: Any) -> Engine:
 def test_a_closed_receipt_segment_relaxes_to_the_tank_head_with_sixty_seconds(
     model: HydraulicModel,
 ) -> None:
+    """After the common receipt valve closes, the isolated segment relaxes to the tank head as H_t +
+    (H_0 - H_t) exp(-t/60 s). Independent: yes, because the closed form does not depend on the code
+    and the heads are read from written rows.
+    """
     scenario = dataclasses.replace(
         load_scenario("S0-B"),
         duration_s=500.0,
@@ -86,10 +81,9 @@ def test_a_closed_receipt_segment_relaxes_to_the_tank_head_with_sixty_seconds(
 
 
 def test_the_standby_branch_reads_the_suction_tee_head(series: dict[str, Series]) -> None:
-    """Pump B's discharge-side segment relaxes (60 s per stage, two stages: E-PB1 to the open
-    tee side, then E-PB2 to E-PB1) toward the tee head, which falls with the tank level; on a
-    ramp the lag of two first-order stages is 2 tau |dH/dt|. The reading therefore equals
-    rho g (H_tee - z) within that lag (hand: 2 x 60 s x 1.2e-4 m/s = 14 mm = 106 Pa)."""
+    """The standby pump branch reads rho g (H_tee - z) within the lag of two relaxation stages,
+    about 106 Pa. Independent: yes, because the lag is hand arithmetic.
+    """
     s = series["S0-A"]
     tee = {t: h for t, side, h in s.head["PUMP_SUCTION_TEE"] if side is None}
     standby = {t: p for t, side, p, _to in s.edge_p["E-PB2"] if side is None}
@@ -107,7 +101,9 @@ def test_the_standby_branch_reads_the_suction_tee_head(series: dict[str, Series]
 
 
 def test_no_lineup_produces_an_undetermined_pressure(model: HydraulicModel) -> None:
-    """All 16 lineups, three seconds each: every edge has end pressures and every tap a value."""
+    """In all 16 lineups every edge has end pressures and every tap has a value. Independent: yes,
+    because the expected outcome is the rule that no pressure is left undetermined.
+    """
     table = load_lineup_table(model.topology)
     names = sorted(table.modes) if hasattr(table, "modes") else []
     assert len(names) == 16

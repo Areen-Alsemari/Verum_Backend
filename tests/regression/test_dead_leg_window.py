@@ -1,22 +1,11 @@
-"""The dead-leg window of decision D54 in the ESD isolation S0u-E.
+"""The dead-leg window in the emergency isolation scenario.
 
-Inputs: the written episode S0u-E (XV-R000 and XV-R101 close at the high-high trip; E001 and E002
-stay isolated from the pipeline side at the pressure they held). Outputs: pass/fail.
+After the high-high trip the receipt segments stay isolated at the pressure they held and relax
+towards the pressure beyond the closed valve with a time constant of 60 s. The window opens when the
+gap exceeds 0.5 bar and closes below 0.05 bar, which the derivation in the "Dead-leg window" section
+of the verification notes puts at about 3295 s.
 
-Derivations (hand arithmetic):
-    * Decision D39: an isolated segment relaxes to the head across its closed valve,
-      ``H = H_t + (H_0 - H_t) exp(-dt / tau)``, tau = 60 s. For E001 and E002 (same elevation, 1 m)
-      the head difference is the pressure difference over rho g, so the gap in pressure decays as
-      ``g(t) = g_0 exp(-(t - t_0) / 60)``. The target is the pressure of E003 beyond the closed
-      XV-R000, which is constant after the closure.
-    * Decision D54: the window opens when the gap exceeds 0.5 bar and closes when it is below
-      0.05 bar. From the rows: g at 2968 s is about 11.8 bar, so the window opens at the closure
-      and closes at ``t_0 + 60 ln(g_0 / 0.05 bar)`` = 2967.33 + 60 x 5.46 = about 3295 s, to within
-      the 1 s rows of the grid.
-Independence: the prediction uses the written pressures of E001 and E003 and the time constant of
-D39; the window times come from the engine's window logic.
-
-Source: ``docs/design_decisions.md`` D39 and D54.
+See D39 and D54.
 """
 
 from __future__ import annotations
@@ -32,6 +21,10 @@ BAR = 1.0e5
 
 
 def test_the_dead_leg_window_follows_the_relaxation_law(series: dict[str, Series]) -> None:
+    """The dead-leg window opens at the closure and closes when the pressure gap, decaying with a 60
+    s time constant, falls below 0.05 bar. Independent: yes, because the prediction uses the written
+    pressures and the time constant, while the window times come from the engine's window logic.
+    """
     s = series["S0u-E"]
     window = next(w for w in s.windows if w["kind"] == "dead_leg_unvalidated")
     collapse = next(w for w in s.windows if w["kind"] == "flow_collapse")
@@ -51,12 +44,18 @@ def test_the_dead_leg_window_follows_the_relaxation_law(series: dict[str, Series
 
 
 def test_the_window_makes_the_episode_restricted(series: dict[str, Series]) -> None:
+    """A dead-leg window makes the dataset tier of the episode restricted benchmark. Independent:
+    yes, because the expected tier is the stated rule.
+    """
     kinds = {w["kind"] for w in series["S0u-E"].windows}
     assert "dead_leg_unvalidated" in kinds
     assert series["S0u-E"].episode["dataset_tier"] == "restricted_benchmark"
 
 
 def test_no_other_shipped_scenario_has_a_dead_leg_window(series: dict[str, Series]) -> None:
+    """No other shipped scenario has a dead-leg window. Independent: yes, because the check reads
+    the written windows.
+    """
     for sid, s in series.items():
         if sid != "S0u-E":
             assert all(w["kind"] != "dead_leg_unvalidated" for w in s.windows), sid

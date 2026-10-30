@@ -280,3 +280,21 @@ Key assumptions:
 - Not independent validation of either engine: both use the same valve law, friction law and boundary definitions; the test shows that the elastic and the rigid models agree in the limit in which they should.
 
 Tolerance, derived. The two models differ in the inertia they carry: the rigid column has the lumped head Lambda dQ/dt, the elastic model carries the same inertia as waves of round-trip time T = 2 sum L/a. A flow that changes at the rate dQ/dt therefore differs between them by at most the inertial pressure rho (sum L/A) |dQ/dt| of the path, and by at most T |dQ/dt| in flow (the flow change during one round trip), apart from a relative 0.1 percent for the lumped treatment and the one-step lag. The elastic model also stores liquid as the pressure changes, a volume C dH with C = g sum(A L) / a^2 (4.0e-5 m3 per m of head on the receipt path), which the rigid column does not; at a throttled valve this makes the pressure lag the quasi-static value by tau = C dH/dQ = 2 C (head drop in the valve) / Q, at most 0.05 s over the compared range (valve opening down to 0.05). The rigid-column engine advances in steps of at most 1 s and writes the state at the end of a step, so its state can lead the elastic engine's by up to one step. The allowance is therefore delta = 1.2 s: one rigid step plus 0.2 s, four times the storage lag, for the one-second sampling and the interpolation of the elastic series. The rigid-column run also lets TK-101 fill (600 m3/h into 706.858 m2 raises the level 2.36e-4 m/s and the pressure at the tank 1.74 Pa/s) while the elastic run holds the tank level; the analytic drift is added to the bound. (A first version took the growing difference, 0.0072 bar at 408 s, for an error of the rigid-column engine; it is the filling of the tank, and the elastic engine reproduces the steady package at the opening of each instant to 0.0001 bar.) The bounds are |dp| <= 0.001 |p| + rho (sum L/A) |dQ/dt| + delta |dp/dt| + rho g (Q / A_tank) (t - 5 s), |dQ| <= 0.001 |Q| + T |dQ/dt|, with the sums over the edges of the path (receipt: E001, E002, E003, E-R101a, E-R101b, T = 0.36 s; delivery: the suction, pump and delivery edges to the distribution boundary, T = 0.67 s) and the rate taken from the rigid series by central difference. (A first version of the pressure bound used T |dp/dt|, which is the wrong scale for a pressure that differs through inertia; it failed by 45 percent at the last instant and the premise, not the data, was corrected.)
+
+## Dead-leg window
+
+Derivations (hand arithmetic):
+
+- Decision D39: an isolated segment relaxes to the head across its closed valve, `H = H_t + (H_0 - H_t) exp(-dt / tau)`, tau = 60 s. For E001 and E002 (same elevation, 1 m) the head difference is the pressure difference over rho g, so the gap in pressure decays as `g(t) = g_0 exp(-(t - t_0) / 60)`. The target is the pressure of E003 beyond the closed XV-R000, which is constant after the closure.
+- Decision D54: the window opens when the gap exceeds 0.5 bar and closes when it is below 0.05 bar. From the rows: g at 2968 s is about 11.8 bar, so the window opens at the closure and closes at `t_0 + 60 ln(g_0 / 0.05 bar)` = 2967.33 + 60 x 5.46 = about 3295 s, to within the 1 s rows of the grid.
+
+Independence: the prediction uses the written pressures of E001 and E003 and the time constant of D39; the window times come from the engine's window logic.
+
+## Dead-leg pressures
+
+Derivations (hand arithmetic):
+
+- Relaxation. A segment isolated at time t_c with head H_0 relaxes to the head across its closed valve, H_target, as H(t) = H_target + (H_0 - H_target) exp(-(t - t_c)/60 s). Here XV-R000 closes on a 300 m3/h receipt into TK-101 (9 m): the segment E001 + E002 is cut off with a head a few metres above the tank and relaxes to the tank head, which the open XV-R101 gives to the header beyond the valve. The target is constant (no flow after the closure), so the closed form is exact for the model.
+- Standby branch. With pump A delivering, pump B's discharge-side segment sits behind a closed XV-PBI and takes the head of the suction tee: its pressure is rho g (H_tee - z).
+
+Independence: the closed form is independent of the code; heads are read from written rows.
