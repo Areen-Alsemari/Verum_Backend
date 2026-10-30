@@ -1,24 +1,10 @@
-"""Loader and structural validator for ``topology_contract.json``.
+"""Loader and structural validator for the topology contract.
 
-Inputs: the topology contract (28 pipe edges, 11 routes, three tanks, two
-pumps).
-
-Outputs: an immutable ``Topology`` with typed ``Edge`` records.
-
-Key assumptions:
-    * The edge list is the physical graph. Route lengths are checksums over the
-      edges that share a ``route_id``, not additional pipes. The total pipe
-      length is therefore the sum over distinct edges (985 m); it includes both
-      alternative pump branches and is not the length of one flow path.
-    * Edges that share a nominal size must share an inner diameter; the loader
-      does not hold a diameter table of its own.
-    * Receipt and suction headers are distinct nodes and stay distinct.
-    * The expected counts (28 edges, 11 routes) come from the contract's own
-      ``edge_count`` and ``route_count`` and are cross-checked against the
-      edge list, so a truncated list cannot pass with a matching header.
-
-Source: ``topology_contract.json``; ``revised/01_facility_tanks_topology.md``
-sections 7.1 and 7.2; ``VERUM_INTEGRATION_README.md`` section B.
+The edge list is the physical graph. Route lengths are checksums over the edges that share a route,
+not additional pipes, so the total pipe length (985 m) is the sum over distinct edges and is not the
+length of one flow path. Edges with a common nominal size must share an inner diameter, and the
+declared edge and route counts are cross-checked against the lists so that a truncated list cannot
+pass.
 """
 
 from __future__ import annotations
@@ -168,7 +154,7 @@ def parse_topology(contract: dict[str, Any]) -> Topology:
 
 
 def load_topology(directory: Path | None = None) -> Topology:
-    """Load and validate the topology contract from ``config/``."""
+    """Load and validate the topology contract."""
     path = (directory or config_dir()) / FILENAME
     try:
         decoded = json.loads(path.read_text(encoding="utf-8"))

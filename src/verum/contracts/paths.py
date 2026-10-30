@@ -1,14 +1,7 @@
 """Locations of the contract and schema directories in a source checkout.
 
-Inputs: none.
-
-Outputs: ``Path`` objects for ``config/`` and ``schemas/``.
-Key assumptions: the package is used from a source checkout (editable install),
-so the repository root is three levels above this file. A different location
-can be supplied to every loader through its ``directory`` argument.
-
-Source: ``revised/05_simulation_validation_dataset.md`` section 13.3
-(repository layout).
+The package is used from a source checkout, so the repository root is three levels above this file.
+Every loader accepts another directory through its own argument.
 """
 
 from __future__ import annotations

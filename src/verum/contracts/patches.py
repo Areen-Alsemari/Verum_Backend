@@ -1,21 +1,9 @@
 """Apply recorded corrections to a reference contract.
 
-Inputs: a decoded reference contract and a patch file of the form
-``{"file": <name>, "entries": [{"path", "old", "new", "reason"}, ...]}``.
-Outputs: a corrected copy of the contract; the reference is never modified.
-Key assumptions:
-    * ``path`` is a JSON Pointer (RFC 6901) to an existing key or list index.
-    * Every entry states the value it expects to replace. A mismatch is an
-      error, so a patch cannot be applied to the wrong version of a contract.
-    * Every entry carries a non-empty reason; a correction without a stated
-      reason is rejected.
-    * Adding and removing a key use two markers instead of extra fields: an
-      ``old`` of ``{"$absent": true}`` requires the key to be missing (the entry
-      adds it), and a ``new`` of ``{"$remove": true}`` deletes the key.
-
-Source: ``CONTRIBUTING.md`` (inputs and configuration);
-``VERUM_INTEGRATION_README.md`` section D (binding clarification of the
-machine-readable contracts).
+A patch is a list of entries, each with a JSON Pointer path, the old value, the new value and a
+reason. Every entry must state the value it expects to replace, so a patch cannot be applied to the
+wrong version of a contract, and every entry needs a non-empty reason. Adding and removing a key use
+the markers `$absent` and `$remove`. The reference itself is never modified.
 """
 
 from __future__ import annotations
@@ -121,7 +109,7 @@ def render_like(reference: bytes, document: dict[str, Any]) -> bytes:
 
 
 def load_patch_file(name: str, directory: Path | None = None) -> PatchFile:
-    """Load ``config/patches/<name>`` (for example ``canonical_sensor_contract.json``)."""
+    """Load a patch file by name from the configuration patch directory."""
     path = (directory or config_dir()) / "patches" / name
     try:
         return parse_patch_file(json.loads(path.read_text(encoding="utf-8")))

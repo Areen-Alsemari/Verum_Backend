@@ -1,21 +1,9 @@
 """Loading and checking documents against the VERUM JSON Schemas.
 
-Inputs: schema files in ``schemas/`` (Draft 2020-12) and candidate documents.
-
-Outputs: validators, and ``validate`` which raises ``ContractError`` on the
-first group of violations.
-Key assumptions:
-    * The six audited schemas are ``SCHEMA_NAMES``; the hidden-dataset schemas
-      of the engine are ``PROPOSED_SCHEMA_NAMES`` (version 0.7.0, marked
-      ``x-status: backend-proposed`` for review by the schema owner).
-    * ``fault_truth`` refers to ``urn:verum:paramvalue:0.4.0``; the registry
-      built here resolves that reference locally, never over the network.
-    * Format assertions (for example ``date-time``) are enabled; a schema that
-      merely annotates formats would accept malformed timestamps.
-    * A schema validating a document says nothing about physical plausibility.
-
-Source: ``revised/05_simulation_validation_dataset.md`` section 7.5 and
-section 8.9; ``tests/schema`` holds the positive and negative cases.
+The audited schemas and the hidden-dataset schemas proposed by the backend are listed by name.
+References between schemas resolve locally and never over the network. Format assertions such as
+date-time are enabled, because a schema that only annotates formats would accept malformed
+timestamps. A document that passes a schema is not thereby physically plausible.
 """
 
 from __future__ import annotations

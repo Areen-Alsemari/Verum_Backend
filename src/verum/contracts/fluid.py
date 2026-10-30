@@ -1,21 +1,9 @@
-"""Loader for ``fluid_contract.json`` into parameter records.
+"""Loader for the fluid contract.
 
-Inputs: the fluid contract.
-
-Outputs: an immutable ``FluidContract`` whose
-numeric entries are ``ParamValue`` records.
-Key assumptions:
-    * The contract states ``model_status = provisional_simulation``; its
-      constants are therefore ``provisional`` with the ``SIM`` tag, and the
-      provenance identifier is the contract's ``property_version``.
-    * The vapor-pressure reference constants come from a generic published
-      correlation, not from a PG95 assay. They are loaded as ``provisional``
-      with the ``REF`` tag so that they are never mistaken for resolved
-      PG95 properties.
-    * The vapor-pressure equation is kept as text and is not evaluated here;
-      evaluating it belongs to the phase screen, which is not part of Phase 0.
-
-Source: ``fluid_contract.json``; ``revised/02_hydraulic_model.md`` section 1.1.
+The contract states a provisional simulation status, so its constants load as provisional with the
+simulation evidence tag. The vapor-pressure reference constants come from a generic published
+correlation and not from an assay of the product, and are tagged so that they are never mistaken for
+resolved product properties. The vapor-pressure equation is kept as text and is evaluated elsewhere.
 """
 
 from __future__ import annotations
@@ -88,7 +76,7 @@ def parse_fluid_contract(contract: dict[str, Any]) -> FluidContract:
 
 
 def load_fluid_contract(directory: Path | None = None) -> FluidContract:
-    """Load and validate the fluid contract from ``config/``."""
+    """Load and validate the fluid contract."""
     path = (directory or config_dir()) / FILENAME
     try:
         decoded = json.loads(path.read_text(encoding="utf-8"))

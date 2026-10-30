@@ -1,25 +1,9 @@
-"""Loader and validator for ``canonical_sensor_contract.json``.
+"""Loader and validator for the canonical sensor contract.
 
-Inputs: the sensor contract (36 declared tags) and the validated topology.
-
-Outputs: an immutable ``SensorContract`` whose entries carry a typed
-``MeasuredVariableRef`` and an emit/withheld status.
-Key assumptions:
-    * The contract maps a tag to a hidden-state quantity only. Instrument
-      dynamics, noise and quantisation are separate models (a later phase).
-    * Every reference is checked against a closed vocabulary of record types
-      and fields. The vocabulary is the contract's own typed-state definition;
-      unknown record types or fields are rejected rather than passed through.
-    * Withheld tags carry a null reference and are never emitted: a declared tag
-      is not permission to invent data, and a null reference leaves no field to
-      convert from. An emitted tag must carry a reference.
-    * Names that older documents used (``valve_state.position_frac``, a bare
-      ``pressure`` field, a tank level behind a high-high switch) are absent
-      from the vocabulary, so a reintroduced stale mapping fails to load.
-
-Source: ``canonical_sensor_contract.json``;
-``revised/05_simulation_validation_dataset.md`` section 7.4.8 and the typed
-instrument input states appendix; ``VERUM_INTEGRATION_README.md`` section B.
+The contract maps each tag to a quantity of the hidden state; instrument dynamics, noise and
+quantisation belong to the sensor models. Every reference is checked against a closed vocabulary of
+record types and fields, so a reintroduced stale mapping fails to load. Withheld tags carry no
+reference and are never emitted, and an emitted tag must carry one.
 """
 
 from __future__ import annotations
@@ -162,7 +146,7 @@ def parse_sensor_contract(contract: dict[str, Any], topology: Topology) -> Senso
 
 
 def load_sensor_contract(topology: Topology, directory: Path | None = None) -> SensorContract:
-    """Load and validate the sensor contract from ``config/``."""
+    """Load and validate the sensor contract."""
     path = (directory or config_dir()) / FILENAME
     try:
         decoded = json.loads(path.read_text(encoding="utf-8"))

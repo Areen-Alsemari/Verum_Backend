@@ -1,8 +1,7 @@
 """Loaders and validators for the VERUM schemas and machine-readable contracts.
 
-Each loader reads a file from ``config/`` or ``schemas/``, validates it and
-returns an immutable typed object, or raises ``ContractError``.
-Source: ``VERUM_INTEGRATION_README.md`` section G (how to use the package).
+Each loader reads a file, validates it and returns an immutable typed object, or raises the contract
+error.
 """
 
 from verum.contracts.errors import ContractError

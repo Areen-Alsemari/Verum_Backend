@@ -1,21 +1,9 @@
 """Detector for references that earlier documents used and the audit removed.
 
-Inputs: the decoded topology, sensor and release-policy contracts.
-
-Outputs: a list of findings; an empty list means none of the removed
-references is present. ``assert_no_stale_references`` raises on any finding.
-Key assumptions:
-    * Only the machine-readable contracts are scanned. The prose documents still
-      mention the removed items in their history sections.
-    * The excluded assets are legitimately *named* in exclusion lists, so the
-      scan looks at where an item is used (a sensor tag, a graph node, an
-      element reference) and not at every string.
-    * The expected edge count is the audited value, stated here independently
-      of the contract header so that a header and list edited together are
-      still caught.
-
-Source: ``VERUM_INTEGRATION_README.md`` section B;
-``revised/02_hydraulic_model.md`` section 8 (gate G0).
+Only the machine-readable contracts are scanned, and the scan looks at where an item is used (a
+sensor tag, a graph node, an element reference) and not at every string, because excluded assets are
+legitimately named in exclusion lists. The expected edge count is stated here independently of the
+contract header, so a header and list edited together are still caught.
 """
 
 from __future__ import annotations

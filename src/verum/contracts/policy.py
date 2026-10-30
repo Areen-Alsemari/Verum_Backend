@@ -1,17 +1,8 @@
-"""Loader for ``dataset_release_policy.json``.
+"""Loader for the dataset release policy.
 
-Inputs: the release policy.
-
-Outputs: an immutable ``ReleasePolicy``.
-Key assumptions:
-    * The policy fails closed. ``production_generation_enabled`` must be a JSON
-      boolean; any other type (including the string ``"false"``) is an error
-      rather than a truthy value.
-    * A missing or unreadable policy file is an error, never a permissive
-      default.
-
-Source: ``dataset_release_policy.json``;
-``VERUM_INTEGRATION_README.md`` section E.
+The policy fails closed. The production switch must be a JSON boolean, so the string "false" is an
+error and not a truthy value, and a missing or unreadable policy file is an error and never a
+permissive default.
 """
 
 from __future__ import annotations
@@ -63,7 +54,7 @@ def parse_policy(raw: dict[str, Any]) -> ReleasePolicy:
 
 
 def load_policy(directory: Path | None = None) -> ReleasePolicy:
-    """Load and validate the release policy from ``config/``."""
+    """Load and validate the release policy."""
     path = (directory or config_dir()) / FILENAME
     try:
         decoded = json.loads(path.read_text(encoding="utf-8"))
