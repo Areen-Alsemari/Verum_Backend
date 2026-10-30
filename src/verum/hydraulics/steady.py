@@ -2,8 +2,7 @@
 
 - Unknowns are node total heads, with tanks as constant-head nodes. Only edges on a flow path
   between terminals are solved.
-- The pump is split into an inlet and an outlet node, and a pump that must add its shutoff head
-  carries no flow.
+- A pump that must add its shutoff head carries no flow.
 - Static pressure at a tap is rho g (H - z) - rho v^2 / 2, in Pa gauge.
 - A pump flow outside the curve is rejected, and phase and NPSH failures are reported and never
   clipped.
