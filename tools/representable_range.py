@@ -1,21 +1,12 @@
 """Representable severity range of every fault type and eligible asset, with the gate that ends it.
 
-Inputs: the plant model, the fault types of ``verum.faults`` and the lineups of the scenarios.
-Outputs: ``local/results/representable_range.json`` and ``representable_range.md``. Run as
-``python tools/representable_range.py {run|report}``.
-Method: for each (fault type, asset, lineup) the fault is applied at the least severe and at the
-most severe end of its range (decisions D60 to D64), onset 600 s, ramp 30 s, observed for 1800 s
-after the ramp; if the most severe end is rejected by an engine gate and the least severe end is
-not, the largest passing severity is found by bisection (10 halvings, in the logarithm for a leak
-area). The gate that rejects, its parameter and its time are recorded. A rejected candidate is
-never labelled as healthy (decision D66).
-Assumptions: severity runs from healthy to the extreme of the range: leak area up, closure fraction
-of a restriction (1 - ceiling) up, head loss fraction (1 - head scale) up, and for misrouting (b)
-the stuck opening down; the least severe end is the first point tried and the range is monotone in
-severity (a run that passes at a severity also passes at every smaller one; the bisection assumes
-this and the end points show whether it holds). Restriction mode does not change the hydraulics
-(decision D74), so one mode is run. Sensor faults act only in the sensor chain and have no gate.
-Source: ``docs/design_decisions.md`` D60 to D66, D74 to D76; serves the Phase 6b report.
+For each fault type, asset and lineup the fault is applied at the least and the most severe end of
+its range. If only the most severe end is rejected by an engine gate, the largest passing severity
+is found by bisection, assuming the range is monotone in severity, and the gate, its parameter and
+its time are recorded. A rejected candidate is never labelled as healthy. Sensor faults act only in
+the sensor chain and have no gate.
+
+See D60 to D66 and D74 to D76.
 """
 
 from __future__ import annotations

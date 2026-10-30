@@ -1,17 +1,11 @@
 """Pumping-minimum tables per atmosphere and volatility class, and the summary tables of the report.
 
-Inputs: the plant model. Outputs: ``config/pumping_minimum_levels_<atmosphere>_<class>_fd0p8.json``
-(only with ``--write``), ``local/results/strata_tables.md`` and a printed comparison of the
-computed tables with those in ``config/``. Run as ``python tools/strata_tables.py [--write]
-[--profile v2]``; with ``--profile v2`` the factor is the worst case of decision D73 (the lower
-bound in ``config/sim.json``), the files are ``..._fd0p6502.json`` (new files, decision D51), and
-the output is ``local/results/strata_tables_v2.md`` with the change against the v1 tables.
-Assumptions: delivery from one tank with pump A at the worst-case downstream factor 0.8; a cell is
-the lowest tank level in 1.8 to 12 m that passes the phase and NPSH screen, found by bisection to
-1e-5 m, and 'never' (an unresolved record) if no level passes; reference initial levels 9, 7 and 5 m
-for TK-101, TK-102 and TK-103.
-Source: ``docs/design_decisions.md`` D7, D24, D46, D51, D52 (grid and baseline), D73; serves the
-tables of the Phase 5b and Phase 6b reports.
+Delivery is from one tank with pump A at the worst-case downstream factor. A cell is the lowest tank
+level between 1.8 and 12 m that passes the phase and NPSH screen, found by bisection to 1e-5 m, or
+unresolved if none does. With the v2 profile the factor is the lower bound from the configuration
+and the tables are new files with a comparison against the v1 tables.
+
+See D7, D24, D46, D51, D52 and D73.
 """
 
 from __future__ import annotations

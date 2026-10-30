@@ -1,16 +1,11 @@
 """Receipt set-point steps: inertial head of the rigid-column engine against the transient engine.
 
-Inputs: the shipped scenarios S0-G (step down 600 to 300 m3/h at 1200 s) and S0-B (start-up, 0 to
-600 m3/h at 0 s), and a step up 300 to 600 m3/h at 100 s built from S0-G. Outputs:
-``local/results/t4_dip.json`` and a printed table, per case and per instant after the step, of
-the observed PT-001 (start of E002), the hidden end-of-E002 head, the flow, dQ/dt, the hand value
-Lambda_down |dQ/dt| and the mean of the transient-engine pressure over a window of 2.0 s.
-Assumptions: the set-point law is first order with the receipt controller time constant, so
-dQ/dt = (Q_set - Q) / tau_c at every grid row (cap not binding); the transient engine starts from
-the tank level of the rigid run at the step; the window of 2.0 s removes the 1.0 s oscillation of
-the network response (its spectrum is printed for the step down).
-Source: ``docs/design_decisions.md`` D22 and D36 version 2; serves the T4 comparison of
-``docs/transient_engine.md`` and decision D53 (receipt set-point factor).
+The cases are a step down from 600 to 300 m3/h, a start-up from 0 to 600 m3/h, and a step up from
+300 to 600 m3/h. The set-point law is first order, so dQ/dt = (Q_set - Q) / tau_c with the cap not
+binding. The transient pressure is averaged over a window of 2.0 s to remove the 1.0 s oscillation
+of the network response, which the rigid column does not represent.
+
+See D22, D36 and D53.
 """
 
 from __future__ import annotations
@@ -93,7 +88,8 @@ def moc_series(
 
 def oscillation_amplitude(t: np.ndarray, p: np.ndarray) -> dict[str, float]:
     """Largest departure (bar) of the transient pressure from its 2 s running mean, by interval
-    after the step: the elastic oscillation that the rigid column does not represent."""
+    after the step.
+    """
     mean = np.array([p[(t >= x - WINDOW_S / 2) & (t <= x + WINDOW_S / 2)].mean() for x in t])
     out = {}
     for lo, hi in ((1.0, 2.0), (2.0, 5.0), (5.0, 10.0), (10.0, 20.0), (20.0, 30.0)):

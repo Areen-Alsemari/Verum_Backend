@@ -1,15 +1,13 @@
-"""Scenarios T1 to T3 and the phase_invalid location: transient against rigid-column engine.
+"""Transient scenarios T1 to T3 and the invalid-window location: transient against rigid-column
+engine.
 
-Inputs: the plant model and the shipped configuration. Outputs: ``local/results/t12.json`` (T1
-isolation and T2 receipt valve strokes), ``local/results/t3.json`` (T3 delivery valve and pump
-stop) and ``local/results/phase_location.json`` (first point at the vapor pressure in T1 and T2).
-Run as ``python tools/t_scenarios.py t12``, ``t3`` or ``location``.
-Assumptions: both engines start from the same lineup, levels and receipt flow; the rigid-column
-engine runs a short scenario with the same valve commands; pressures are gauge, in bar, at the start
-of E002 (the PT-001 tap, ``pt001``), at the end of E002 (``tap``) and at the receipt header
-(``hdr``). The transient engine has no cavitation model, so values are quoted only up to the first
-``phase_invalid`` window (decision D55) and the rigid-column value is read at the same instant.
-Source: ``docs/design_decisions.md`` D22, D45, D53, D55; serves ``docs/transient_engine.md``.
+Both engines start from the same lineup, levels and receipt flow, and the rigid-column engine runs a
+short scenario with the same valve commands. Pressures are gauge, in bar, at the start of E002 (the
+PT-001 tap), at its end, and at the receipt header. The transient engine has no cavitation model, so
+values are quoted only up to the first invalid window and the rigid-column value is read at the same
+instant.
+
+See D22, D45, D53 and D55.
 """
 
 from __future__ import annotations

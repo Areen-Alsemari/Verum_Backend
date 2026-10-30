@@ -1,17 +1,13 @@
-"""The sensitivity sweeps of decisions D38, D42, D50, D53 and D58 as one study.
+"""The sensitivity sweeps of the rigid-column model as one study.
 
-Inputs: the plant model and the shipped scenarios. Outputs, by sweep name
-(``python tools/d42_study.py {d22|d53|d58|d23|wave|d50}``), in ``local/results/``:
-``d42_d22.json`` (set-point factor 5, 10, 20), ``d42_d53.json`` (valve-stroke factor 10, 20, 25,
-30, 50, 55), ``d42_d58.json`` (flow fraction 0.05, 0.10, 0.20 below which a stroke is not
-judged), ``d42_d23.json`` (demand process), ``d42_wave.json`` (wave-speed restraint and bulk
-modulus on the ESD closure) and ``d42_d50.json`` (loss multiplier, meter K, pump steepness, NPSH3
-coefficient). ``tools/d42_report.py`` writes the report from them.
-Assumptions: each rigid-column run changes one configuration parameter of the shipped scenario; the
-transient runs use the ESD isolation T1 of ``tools/t_scenarios.py``; the pump-curve sweep keeps the
-duty point (300 m3/h, 42 m) by recalibrating the boundary coefficient; a sweep point outside the
-pump curve is recorded as an error and not dropped.
-Source: ``docs/design_decisions.md`` D22, D23, D38, D42, D43, D50, D53, D58.
+Each sweep changes one configuration parameter of a shipped scenario: the set-point and valve-stroke
+window factors, the flow fraction below which a stroke is not judged, the demand process, the
+wave-speed restraint and bulk modulus, and the loss multiplier, meter K, pump steepness and NPSH3
+coefficient. The transient runs use the emergency-isolation scenario, and the pump-curve sweep keeps
+the duty point by recalibrating the boundary coefficient. A sweep point outside the pump curve is
+recorded as an error and not dropped. Pick a sweep by name on the command line.
+
+See D42.
 """
 
 from __future__ import annotations

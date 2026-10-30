@@ -1,14 +1,11 @@
-"""Report of the D42 sensitivity study: ``local/results/d42_study.md``.
+"""Report of the sensitivity study: one section per sweep.
 
-Inputs: ``local/results/d42_d22.json``, ``d42_d53.json``, ``d42_d58.json``, ``d42_d23.json``,
-``d42_wave.json``, ``d42_d50.json`` and ``t3.json``, written by ``tools/d42_study.py`` and
-``tools/t_scenarios.py``.
-Outputs: the markdown report, one section per sweep with what was varied, what was measured and
-which results are stable or depend on the selection.
-Assumptions: the commentary under each table was written for the results of Phase 5 and is checked
-against the regenerated tables by reading them; the section on the window factors is computed from
-the data. Nothing here is a measurement (decision D48).
-Source: ``docs/design_decisions.md`` D22, D23, D38, D39, D42, D43, D50, D53.
+Each section states what was varied, what was measured, and which results are stable or depend on
+the selection. The commentary under each table was written for an earlier run and is checked against
+the regenerated tables by reading them, while the section on the window factors is computed from the
+data. Nothing here is a measurement.
+
+See D42 and D48.
 """
 
 from __future__ import annotations

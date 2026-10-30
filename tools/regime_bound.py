@@ -1,14 +1,11 @@
 """Pump-domain margin over the downstream factor range of profile v2 and its lower bound.
 
-Inputs: the plant model. Outputs: ``local/results/regime_bound.md`` and ``regime_bound.json``, and
-a printed lower bound of the downstream factor. Run as ``python tools/regime_bound.py``.
-Assumptions: delivery from one tank with one duty pump at the reference_fittings profile (the
-profile of episodes); the pump flow is the steady flow at the factor and tank level; the margin
-is the pump-domain limit Q/s = 350 m3/h minus the flow; the bound is the smallest factor at or
-above 0.6 whose largest flow over every stratum, temperature, tank, pump and level in 1.8 to
-12 m is at most the limit minus 5 m3/h (decision D73); the minimum stable flow is 90 m3/h
-(decision D49), and the largest factor that keeps it is reported per level.
-Source: ``docs/design_decisions.md`` D49, D73; serves the Phase 6b report.
+The margin is the pump-domain limit Q/s = 350 m3/h minus the flow. The bound is the smallest factor
+at or above 0.6 for which the largest flow over every stratum, temperature, tank, pump and level is
+at most the limit minus 5 m3/h. The minimum stable flow is 90 m3/h, and the largest factor that
+keeps it is reported per level.
+
+See D49 and D73.
 """
 
 from __future__ import annotations

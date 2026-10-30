@@ -1,12 +1,10 @@
 """Which shipped scenarios the engine rejects when the fluid temperature is 40 C.
 
-Inputs: the shipped scenarios (``config/scenarios``). Outputs:
-``local/results/rejection_at_40c.json`` and a printed table of the outcome of each scenario as
-shipped and at 40 C: completed, or the gate,
-time and cause of the rejection.
-Assumptions: only the temperature of the scenario changes; the volatility class, atmosphere stratum,
-levels, schedule and seed are those of the file; no scenario file is edited.
-Source: ``docs/design_decisions.md`` D7, D24, D35, D46; serves the tables of the Phase 5b report.
+Only the temperature changes, and the volatility class, atmosphere stratum, levels, schedule and
+seed stay as shipped. The table gives, for each scenario as shipped and at 40 C, whether it
+completed or the gate, time and cause of the rejection.
+
+See D7, D24, D35 and D46.
 """
 
 from __future__ import annotations

@@ -1,12 +1,10 @@
 """Pumping-minimum table for an atmospheric pressure of 94300 Pa, compared with sea level.
 
-Inputs: the plant model and ``config/pumping_minimum_levels.json`` (sea level). Outputs:
-``config/pumping_minimum_levels_site_pressure.json`` (rewritten in place),
-``local/results/site_pressure_study.json`` and ``.md`` with the comparison.
-Assumptions: the pressure is a standard-atmosphere estimate for a site near 600 m elevation, with
-the elevation from memory and to be confirmed by the team; a sensitivity file that never
-replaces the sea-level table; same grid and bisection as ``tools/pumping_minimum_study.py``.
-Source: ``docs/design_decisions.md`` D7 version 2.0, D24.
+The pressure is a standard-atmosphere estimate for a site near 600 m elevation, with the elevation
+to be confirmed by the team. The table is a sensitivity file that never replaces the sea-level
+table, and it uses the same grid and bisection as the pumping-minimum study.
+
+See D7 and D24.
 """
 
 from __future__ import annotations

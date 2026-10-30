@@ -1,13 +1,11 @@
-"""Report of the scenarios T1 to T4: ``local/results/t_scenarios.md``.
+"""Report of the transient scenarios T1 to T4.
 
-Inputs: ``local/results/t12.json``, ``t3.json``, ``phase_location.json`` and ``t4_dip.json``,
-written by ``tools/t_scenarios.py {t12|t3|location}`` and ``tools/t4_dip.py``. Outputs: the
-markdown report.
-Assumptions: peaks are quoted for the valid interval only (command to the start of the first
-``phase_invalid`` window of the transient engine, decision D55), with the rigid-column peak over the
-same interval; the columns at the instant of closure are kept and labelled unusable because a window
-has opened before it.
-Source: ``docs/design_decisions.md`` D22, D45, D53, D55; ``docs/transient_engine.md``.
+Peaks are quoted for the valid interval only, from the command to the start of the first invalid
+window of the transient engine, together with the rigid-column peak over the same interval. The
+columns at the instant of closure are kept and labelled unusable because a window has opened before
+it.
+
+See D22, D45, D53 and D55.
 """
 
 from __future__ import annotations

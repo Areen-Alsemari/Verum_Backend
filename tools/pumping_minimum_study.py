@@ -1,14 +1,12 @@
 """Operating points, loss-multiplier sensitivity and pumping-minimum levels at the reference class.
 
-Inputs: the plant model. Outputs: ``config/pumping_minimum_levels.json`` (the derived levels as
-configured values, rewritten in place), ``local/results/phase2_studies.json`` and printed markdown
-tables for the report.
-Assumptions: delivery from one tank with pump A at the profile value of the boundary coefficient
-(not recalibrated); the reference property class and sea-level atmosphere; a cell is the lowest tank
-level in 1.8 to 12 m that passes the phase and NPSH screen, found by bisection to 1e-5 m, and
-'never' (an unresolved record) if no level passes; the monotonicity of the screen in the level is
-checked on a 0.25 m grid.
-Source: ``docs/design_decisions.md`` D2 version 3.0, D7 version 2.0, D11, D15, D35.
+Delivery is from one tank with pump A at the profile value of the boundary coefficient, with the
+reference property class and sea-level atmosphere. A level is the lowest tank level between 1.8 and
+12 m that passes the phase and NPSH screen, found by bisection to 1e-5 m, and is recorded as
+unresolved if none passes. The monotonicity of the screen in the level is checked on a 0.25 m grid.
+The derived levels are written to the configuration.
+
+See D2, D7, D11, D15 and D35.
 """
 
 from __future__ import annotations

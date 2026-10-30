@@ -1,25 +1,13 @@
 """Observability audit of the single faults: what each fault changes in the emitted tags.
 
-Inputs: the plant model and the fault types of ``verum.faults``. Outputs:
-``local/results/fault_audit_baseline.json`` and ``fault_audit_runs.json`` (every run; a partial
-rerun ``faults <kind> ...`` writes ``fault_audit_runs_<kinds>.json``) and, from the report stage
-(``python tools/fault_audit_report.py``), ``fault_audit.md`` (the tables), ``fault_audit.json`` and
-``fault_audit_summary.md`` (the table ``docs/fault_models.md`` quotes). Run as
-``python tools/fault_audit.py {baseline|faults}``.
-Grid: each fault type, 8 log-spaced severities across its range, scenarios S0-A (delivery from
-TK-101 at 9 m), S0-C (concurrent receipt and delivery) and S0-B (receipt) as applicable, three
-assets or locations per type, onset 900 s, 1800 s observed after the onset, coastal, 25 C,
-reference fittings, hydraulic ramp 300 s, with the healthy twin of the same seed (demand process
-off).
-Assumptions: the signal is the noise-free sampled series of each emitted tag averaged over 60 s
-(decision D68); the thresholds are 3 times the noise standard deviation of the tag and 3 times the
-healthy-variability standard deviation measured over 20 seeds with the demand process on (the
-cross-seed standard deviation of the 60 s mean, averaged over the observed window); a candidate
-that violates a gate is recorded as rejected and is not an observation (decision D66). The leak
-discharge coefficient only scales the area: Q = Cd A sqrt(2 p / rho) depends on the product, so the
-detectable area at another Cd is the area at 0.62 times 0.62 / Cd (a unit test checks the identity).
-Severity ranges are those of decisions D60 to D64 and are not adjusted.
-Source: ``docs/design_decisions.md`` D60 to D68; ``docs/fault_models.md``.
+Each fault type runs at eight log-spaced severities across its range, on three assets or locations,
+against a healthy twin of the same seed. The signal is the noise-free sampled series of each tag
+averaged over 60 s, and a change counts when it exceeds three times the tag noise and three times
+the healthy variability measured over 20 seeds. A candidate that violates a gate is recorded as
+rejected and is not an observation. The leak discharge coefficient only scales the area, since the
+flow depends on their product.
+
+See D60 to D68.
 """
 
 from __future__ import annotations

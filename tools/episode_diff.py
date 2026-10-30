@@ -1,13 +1,9 @@
 """Run every shipped scenario into a directory, or compare two such directories.
 
-Inputs: ``run <out_dir>`` runs the scenarios; ``diff <dir_a> <dir_b>`` compares the written
-hydraulic-state and observation rows of two runs. Outputs: a printed table with, per scenario,
-the number of changed rows and the largest absolute change of each numeric field that moved.
-Assumptions: the two directories hold episodes of the same scenarios with the same seeds, so
-the rows pair by dataset, record type, element, time and side; rows present in only one run are
-counted separately.
-Source: ``CONTRIBUTING.md`` (tests and phase closure); serves the Phase 5b step 1 list of
-scenarios whose observations change.
+The comparison pairs the written hydraulic-state and observation rows by dataset, record type,
+element, time and side, and prints for each scenario the number of changed rows and the largest
+absolute change of each numeric field that moved. Rows present in only one run are counted
+separately. The two directories must hold the same scenarios with the same seeds.
 """
 
 from __future__ import annotations

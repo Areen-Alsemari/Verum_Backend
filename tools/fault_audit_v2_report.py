@@ -1,27 +1,13 @@
 """Agent-side audit, analysis stage: residual features, thresholds, margins, classes and tables.
 
-Inputs: ``local/results/audit_v2_runs.jsonl`` from ``tools/fault_audit_v2.py`` and the Phase 6a
-results ``fault_audit.json``. Outputs: ``local/results/fault_audit_v2.json`` and
-``fault_audit_v2.md`` (all tables), ``local/results/fault_audit_v2_summary.md`` (the tables the
-fault-model document quotes) and, with ``--write-classes``, ``config/severity_classes.json``. Run as
-``python tools/fault_audit_v2_report.py [--write-classes]``.
-Features (decision D77), from the 60 s window means of the observed tags and design data only:
-(1) mass balance FT-001 - FT-201 - sum over tanks of area x level slope; (2) pump consistency
-PT-202A - PT-201 - rho g H(FT-201); (3) delivery law PT-203 - (2 barg + rho g c (FT-201/300)^2);
-(4) FT-201 against the design delivery flow for the observed level; (5) PT-001 against the design
-receipt pressure for FT-001 and the observed level; (6) each continuous tag minus its previous
-window mean (a one-step persistence forecast); and the discrete features, a change after the onset
-of a valve contact or of a pump run status.
-Nuisance: five draws of the design model (pump head scale uniform in 0.97 to 1.03, fitting K
-multiplier log-uniform in 0.5 to 2, boundary coefficient multiplier log-uniform in 0.8 to 1.25),
-from the named stream ``audit_nuisance``. The threshold of a feature is three times its standard
-deviation over the healthy runs (20 seeds x 5 draws x windows 4 to 45) of the profile and lineup,
-about the mean of the same sample; the margin of a feature in a run is the largest absolute
-deviation from that mean over the windows after the onset, in units of the threshold. The margin of
-a run under a draw is the largest over features; the margin of the run is the smallest over the five
-draws (an agent whose design is wrong in the worst way), and a discrete change is a margin of 3 or
-more at once. Classes (decision D78): invisible below 1, marginal from 1 to below 3, clear from 3.
-Source: ``docs/design_decisions.md`` D68, D74 to D78; serves the Phase 6b report.
+Features are computed from the 60 s window means and design data only: mass balance, pump
+consistency, delivery law, flow and receipt-pressure checks against design values, and each tag
+against its previous window. The threshold of a feature is three times its standard deviation over
+healthy runs with nuisance draws of the design model. The margin of a run is the smallest over the
+draws of the largest margin over features. Classes are invisible below 1, marginal from 1 to below
+3, and clear from 3.
+
+See D77 and D78.
 """
 
 from __future__ import annotations

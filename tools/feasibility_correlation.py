@@ -1,13 +1,11 @@
 """Correlation between fluid temperature and initial tank level implied by the feasible band.
 
-Inputs: the stored pumping-minimum tables of the baseline combination (volatility class RVP_9_0,
-NPSH3 4 m, reference_fittings, f_d 0.8) for each atmosphere stratum. Outputs: a printed table, per
-atmosphere and tank, of the minimum levels at 25, 35, 40 and 45 C, the slope of the minimum level
-with temperature and the Pearson correlation of temperature and initial level.
-Assumptions: decision D35, the temperature is drawn equally likely from the four strata and the
-initial level uniformly from the feasible band between the pumping minimum of that temperature and
-12 m, independently otherwise; the correlation is therefore a consequence of the band alone.
-Source: ``docs/design_decisions.md`` D35, D51; serves the dataset card.
+The temperature is drawn with equal probability from the four strata, and the initial level
+uniformly from the band between the pumping minimum of that temperature and 12 m. The correlation is
+therefore a consequence of the band alone. The table gives, per atmosphere and tank, the minimum
+levels at 25, 35, 40 and 45 C, their slope with temperature and the Pearson correlation.
+
+See D35 and D51.
 """
 
 from __future__ import annotations

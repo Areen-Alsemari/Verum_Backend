@@ -1,12 +1,11 @@
-"""Published-experiment comparison table for rungs R12 and R13 (Jensen et al. 2018).
+"""Published-experiment comparison table for the experiment rungs of the verification ladder.
 
-Inputs: ``tests/data/jensen_2018_experiments.json`` and the test-only valve of
-``tests/_experiment_cases.py``. Outputs: ``local/results/experiments.json`` and a printed table of
-the engine, the paper's quasi-steady model and the measurement for every checked quantity, with the
-deviations in percent; the first ``phase_invalid`` window of each run.
-Assumptions: as in ``tests/analytic/test_transient_experiments.py`` (task-statement numbers, not
-verified against the paper; fitted closure exponent; Haaland friction in place of Colebrook).
-Source: ``docs/design_decisions.md`` D56, D57.
+It prints the engine, the paper's quasi-steady model and the measurement for every checked quantity,
+with the deviations in percent, and the first invalid window of each run. The assumptions are those
+of the experiment tests: the numbers are taken from the task statement and not verified against the
+paper, the closure exponent is fitted, and Haaland friction replaces Colebrook.
+
+See D56 and D57.
 """
 
 from __future__ import annotations

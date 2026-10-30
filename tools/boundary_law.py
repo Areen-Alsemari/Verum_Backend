@@ -1,11 +1,11 @@
-"""Delivery boundary-law coefficient c per fitting profile (study 1 of decision D2 version 3.0).
+"""Delivery boundary-law coefficient per fitting profile.
 
-Inputs: the plant model. Outputs: the ``parameters`` block of ``config/delivery_boundary.json``
-(rewritten in place) and a printed line per profile.
-Assumptions: for each profile, c is the value for which TK-102 at 7 m, pump A, 25 C and the
-reference property class runs at 300 m3/h (42 m of head on the fixed-speed curve); a flow outside
-the pump curve counts as 1000 m3/h so that the root find stays bracketed.
-Source: ``docs/design_decisions.md`` D2 version 3.0, D15.
+For each profile the coefficient is the value at which tank TK-102 at 7 m, pump A, 25 C and the
+reference property class run at 300 m3/h (42 m of head on the fixed-speed curve). A flow outside the
+pump curve counts as 1000 m3/h so that the root find stays bracketed. The result is written into the
+delivery boundary configuration.
+
+See D2 and D15.
 """
 
 from __future__ import annotations

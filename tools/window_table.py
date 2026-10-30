@@ -1,11 +1,10 @@
 """Validity windows and dataset tier of each shipped scenario, from stored episode directories.
 
-Inputs: one or two directories written by ``tools/episode_diff.py run``. Outputs: a printed table
-per scenario of the tier, the number of windows by kind and the time they cover; with two
-directories, the tier changes between them. Run as ``python tools/window_table.py <dir> [<dir2>]``.
-Assumptions: the episode record (``episode.json``) is the source of the windows and the tier
-(decisions D25 and D37); a rejected scenario has no data and is listed as rejected.
-Source: ``docs/design_decisions.md`` D25, D37, D53, D54; serves the Phase 5b report.
+The table gives, per scenario, the tier, the number of windows by kind and the time they cover, and
+with two directories the tier changes between them. The episode record is the source, and a rejected
+scenario has no data and is listed as rejected.
+
+See D25 and D37.
 """
 
 from __future__ import annotations

@@ -1,22 +1,11 @@
 """Agent-side audit, collection stage: 60 s window means of the observed tags, per run.
 
-Inputs: the plant model, the fault grid of the Phase 6a audit (``tools/fault_audit.py``) and the
-profiles v1 and v2. Outputs: ``local/results/audit_v2_runs.jsonl``, one line per run, with the
-window means of every continuous tag (the noisy observation rows an agent receives), the event
-rows (valve contacts, pump run status) and, for a healthy run of the first seed, the same for every
-sensor fault case. Run as ``python tools/fault_audit_v2.py [profile ...]``; a rerun skips the labels
-already in the file. The analysis is ``tools/fault_audit_v2_report.py``.
-Grid: the Phase 6a grid under each profile: 8 log-spaced severities, scenarios S0-A, S0-C and S0-B,
-three assets per type, onset 900 s, 1800 s observed, ramp 300 s, coastal, 25 C, reference fittings;
-restrictions in both modes (decision D74); misrouting (b) on the parallel receipt valves
-``XV-R101`` and ``XV-R102`` of the lineup ``RECEIVE_101_102`` (decision D75) in place of the serial
-valves of Phase 6a. Healthy runs: 20 seeds for each profile and each of the four lineups (the
-fourth is S0-B with ``RECEIVE_101_102``).
-Assumptions: profile v1 is the shipped scenario with the demand process on, profile v2 is its copy
-S0-x-v2; the window k covers the time (60 (k - 1), 60 k] s; no value is imputed (a window without a
-reading is NaN); a sensor fault acts on the readings of the healthy run of the first seed in the
-sensor chain only, as in Phase 6a.
-Source: ``docs/design_decisions.md`` D68, D73 to D78; serves the Phase 6b report.
+It repeats the fault grid of the first audit under healthy-variability profiles v1 and v2, with
+restrictions in both modes and misrouting (b) on the parallel receipt valves. Each run records the
+window means of every continuous tag as an agent receives them, and the event rows. No value is
+imputed, so a window without a reading is NaN. A rerun skips the labels already stored.
+
+See D68 and D73 to D78.
 """
 
 from __future__ import annotations

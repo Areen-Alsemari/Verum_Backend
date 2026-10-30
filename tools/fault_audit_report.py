@@ -1,17 +1,12 @@
-"""Tables of the fault observability audit, from the runs of ``tools/fault_audit.py``.
+"""Tables of the fault observability audit, from the audit runs.
 
-Inputs: ``local/results/fault_audit_baseline.json`` (healthy twins and 20 healthy seeds with the
-demand process on) and ``fault_audit_runs.json`` (the fault runs). Outputs:
-``local/results/fault_audit.md`` and ``fault_audit.json``.
-Assumptions: as in ``tools/fault_audit.py`` (decision D68). Per run and tag the change is the
-difference of the 60 s means of the noise-free sampled series between the fault run and its healthy
-twin; it is judged against 3 sigma of the noise of the tag and 3 sigma of the healthy variability
-(the cross-seed standard deviation of the 60 s mean, averaged over the observed window). A fault
-has no observable consequence in a run if no continuous tag exceeds either threshold and no event
-tag differs from the twin. The signature of a run is the vector over the continuous tags of the
-mean change over the last 300 s in units of the noise standard deviation; two signatures are
-confusable if the cosine of the angle between them exceeds 0.95 and both have a tag above 3 sigma.
-Source: ``docs/design_decisions.md`` D66 to D68; ``docs/fault_models.md``.
+Per run and tag the change is the difference of the 60 s means of the noise-free series between the
+fault run and its healthy twin, judged against three sigma of the tag noise and of the healthy
+variability. A fault has no observable consequence in a run if no continuous tag exceeds either
+threshold and no event tag differs. Two run signatures are confusable if the cosine of the angle
+between them exceeds 0.95 and both have a tag above three sigma.
+
+See D66 to D68.
 """
 
 from __future__ import annotations

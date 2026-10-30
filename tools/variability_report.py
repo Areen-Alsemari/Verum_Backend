@@ -1,17 +1,10 @@
 """Healthy variability of the emitted tags under profiles v1 and v2, over 20 seeds.
 
-Inputs: the plant model and the scenarios S0-A, S0-B and S0-C. Outputs:
-``local/results/variability_runs.json`` (the 60 s means of the noise-free sampled series of every
-continuous tag, and the regimes, per run) and, from the report stage, ``variability.md``. Run as
-``python tools/variability_report.py {run|report}``.
-Assumptions: each run lasts 2700 s as in the observability audit (``tools/fault_audit.py``); the
-v1 runs are the shipped scenarios with the demand process on (the profile of the Phase 6a
-baseline) and the v2 runs are the copies S0-A-v2, S0-B-v2 and S0-C-v2, each with seeds shifted by
-0 to 19; the measure is the cross-seed standard deviation of the 60 s mean, averaged over the
-window from 900 s to 2700 s (decision D68), so it includes the differences between regimes of
-different seeds; the within-run spread (standard deviation over time of the 60 s mean about the run
-mean, averaged over seeds) is reported next to it.
-Source: ``docs/design_decisions.md`` D68, D73; serves the Phase 6b report.
+Each run lasts 2700 s. The measure is the cross-seed standard deviation of the 60 s mean of the
+noise-free series, averaged over the window from 900 s to 2700 s, so it includes the differences
+between regimes of different seeds. The within-run spread is reported next to it.
+
+See D68 and D73.
 """
 
 from __future__ import annotations
