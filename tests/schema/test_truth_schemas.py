@@ -192,6 +192,21 @@ EPISODE: Doc = {
     ],
     "pipe_inventory_constant": True,
     "status": "completed",
+    "fault_instance_ids": [],
+}
+FAULT_SPEC: Doc = {
+    "schema_version": "0.7.0",
+    "hidden": True,
+    "dataset": "fault_spec",
+    "fault_type": "PIPE_LEAK",
+    "variant": "orifice",
+    "asset_id": "E-PA3",
+    "onset_s": 900.0,
+    "ramp_s": 300.0,
+    "magnitude": 5e-4,
+    "position": 0.5,
+    "discharge_coefficient": 0.62,
+    "peak_severity": 1.0,
 }
 REJECTED: Doc = {
     **BASE,
@@ -261,6 +276,7 @@ POSITIVE: list[tuple[str, str, Doc]] = [
     ),
     ("events", "event", EVENT),
     ("episode", "episode", EPISODE),
+    ("fault_spec", "leak", FAULT_SPEC),
     ("simulation_rejected", "rejected", REJECTED),
 ]
 NEGATIVE: list[tuple[str, str, Doc]] = [
@@ -356,6 +372,11 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
     ("episode", "pipe inventory not constant", _edit(EPISODE, "pipe_inventory_constant", False)),
     ("episode", "unreleased tier", _edit(EPISODE, "dataset_tier", "production_candidate")),
     ("episode", "unknown status", _edit(EPISODE, "status", "running")),
+    ("episode", "fault ids absent", _edit(EPISODE, "fault_instance_ids", _DROP)),
+    ("fault_spec", "unknown variant", _edit(FAULT_SPEC, "variant", "pinhole")),
+    ("fault_spec", "unknown field", {**FAULT_SPEC, "severity_label": "high"}),
+    ("fault_spec", "severity above one", _edit(FAULT_SPEC, "peak_severity", 1.5)),
+    ("fault_spec", "ramp of zero", _edit(FAULT_SPEC, "ramp_s", 0.0)),
     ("simulation_rejected", "unknown gate", _edit(REJECTED, "gate", "SG9")),
     ("simulation_rejected", "empty parameter", _edit(REJECTED, "parameter", "")),
     ("simulation_rejected", "no gate", _edit(REJECTED, "gate", _DROP)),

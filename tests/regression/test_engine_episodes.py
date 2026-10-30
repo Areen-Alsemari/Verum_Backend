@@ -37,6 +37,7 @@ from verum.truth import ListSink
 
 TIMELINE = esd_timeline()
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-inland"]
+OPTIONAL_DATASETS = ("events", "validity_windows", "fault_truth")  # empty in a healthy episode
 FLAGGED = ("S0u-D", "S0u-E")  # episodes with a validity window (decisions D53 and D54)
 AREA = 706.858347
 
@@ -53,7 +54,7 @@ def test_every_written_row_validates_against_its_schema(
     series: dict[str, Series], sid: str
 ) -> None:
     s = series[sid]
-    optional = {"events", "validity_windows"}  # healthy episodes may have none
+    optional = set(OPTIONAL_DATASETS)  # healthy episodes may have none
     assert (
         all(count > 0 for dataset, count in s.rows.items() if dataset not in optional)
         and s.rows["hydraulic_state"] > 100_000
@@ -73,7 +74,7 @@ def test_manifest_lists_every_file_with_its_hash(
     assert set(listed) == files == {
         "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",
         "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
-        "observations.jsonl.gz", "observation_audit.jsonl.gz",
+        "observations.jsonl.gz", "observation_audit.jsonl.gz", "fault_truth.jsonl.gz",
         "episode.json", "provenance.json",
     }  # fmt: skip
     for name, digest in listed.items():
@@ -576,7 +577,7 @@ def test_restart_from_a_checkpoint_reproduces_the_continuous_run_bit_for_bit(
     outcome_b = b.run()
     for dataset in sink_a.rows:
         assert sink_a.rows[dataset][mark[dataset] :] == sink_b.rows[dataset], dataset
-        assert len(sink_b.rows[dataset]) > 0 or dataset in ("events", "validity_windows")
+        assert len(sink_b.rows[dataset]) > 0 or dataset in OPTIONAL_DATASETS
     assert (
         outcome_a.final_volumes == outcome_b.final_volumes and outcome_a.ledger == outcome_b.ledger
     )
