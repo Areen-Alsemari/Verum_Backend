@@ -1,30 +1,11 @@
-"""Valve restriction, pump head degradation and misrouting (decisions D61, D62, D64).
+"""Valve restriction, pump head degradation and misrouting.
 
-Inputs: steady solves with a valve opening, a scaled pump curve and a forced lineup, and short
-engine runs of the delivery scenario. Outputs: pass/fail.
+Steady solves with a restricted valve, a scaled pump curve and a forced lineup are compared with a
+separate series-path reference, and short engine runs check the ramps and the open contact. The
+valve-law values and the reference solves are derived in the "Valve restriction, pump degradation
+and misrouting" section of the verification notes.
 
-Derivations (hand arithmetic):
-    * Valve loss (D19, D4): K(alpha) = 0.1 (1/Kv_fraction)^2 with Kv_fraction = 50^(alpha - 1)
-      above alpha_c = 0.05 and 0.4 x 50^-0.95 = 0.009728 at alpha = 0.02. Hence K(0.5) = 0.1 x 50 =
-      5.0, K(0.9) = 0.1 x 50^0.2 = 0.2187, K(0.15) = 0.1 x 50^1.7 = 77.3 and K(0.02) = 1056.7.
-    * Pump: H(Q) = h (54 - 12 (Q/300)^2) for a head scale h. The delivery of TK-102 at 7 m with the
-      reference fittings has the series path of ``_reference_hydraulics`` (segments counted by
-      hand there) and the boundary law with c = 10.0609 m; the operating flow is the root of
-      pump head - required head, found by ``brentq`` in the reference module's functions.
-    * Misrouting (a): XV-R101 and XV-R102 open with 600 m3/h received and TK-101 at 9 m, TK-102 at
-      7 m: the split is the root of the two branch equations in the reference module.
-    * Misrouting (b): the pump branch valve XV-PAO at alpha 0.02 adds K(0.02) = 1056.7 at the DN200
-      pump branch; the reference path gets a segment with that coefficient and no length.
-    * The valve contact (D31) asserts at 0.98 and releases below 0.97: a ceiling of 0.5 reached
-      linearly over 30 s from 300 s releases the contact at 300 + 30 x (1 - 0.97) / 0.5 = 301.8 s.
-Independence: the reference module solves the series path by a scalar root find and does not
-import the package; the valve law values are hand arithmetic.
-
-    * Restriction modes (D74): in both modes the loss is K(0.5) = 5.0 (the valve adds 4.9 to the
-      open-valve loss); a visible restriction releases the open contact at 301.8 s, an obstruction
-      leaves it asserted.
-
-Source: ``docs/design_decisions.md`` D19, D31, D61, D62, D64, D74; ``docs/fault_models.md``.
+See D61, D62, D64 and D74.
 """
 
 from __future__ import annotations
@@ -84,16 +65,26 @@ def reference_flow(scale: float, extra_k: float = 0.0) -> float:
 def test_the_loss_at_a_stuck_opening_is_the_d19_hand_value(
     model: HydraulicModel, alpha: float, k: float
 ) -> None:
+    """The loss coefficient of a valve at a stuck opening equals the hand value of the valve law.
+    Independent: yes, because the value is hand arithmetic.
+    """
     assert model.valve_extra_k(alpha) + 0.1 == pytest.approx(k, rel=1e-3)
 
 
 def test_the_delivery_flow_falls_monotonically_with_the_opening(model: HydraulicModel) -> None:
+    """The delivery flow falls as the valve opening is reduced, and is 300 m3/h when fully open.
+    Independent: yes, because only the direction and the design flow are checked.
+    """
     flows = [delivery_flow(model, {"XV-S102": a}) for a in (1.0, 0.9, 0.7, 0.5, 0.3, 0.15)]
     assert all(b < a for a, b in zip(flows, flows[1:], strict=False))
     assert flows[0] == pytest.approx(300.0, abs=0.05)
 
 
 def test_the_restricted_valve_loss_and_contact_in_an_engine_run(model: HydraulicModel) -> None:
+    """In an engine run a restricted valve shows the ceiling opening, its loss coefficient, and the
+    release of the open contact at the hand-computed time. Independent: yes, because the times and
+    loss follow from the valve law by hand.
+    """
     spec = FaultSpec(
         "VALVE_RESTRICTION",
         "restriction",
@@ -148,8 +139,10 @@ def _restricted_delivery(model: HydraulicModel, mode: str | None) -> tuple[Any, 
 def test_both_restriction_modes_reduce_the_flow_by_the_d19_hand_value(
     model: HydraulicModel, mode: str
 ) -> None:
-    """Decision D74: the loss follows the ceiling in both modes. Hand: K(0.5) = 0.1 x 50 = 5.0,
-    so the valve adds 5.0 - 0.1 = 4.9 to the open-valve loss, solved by the reference path."""
+    """Both restriction modes reduce the delivery flow as the loss of the ceiling opening does,
+    because the loss follows the ceiling in both. Independent: yes, because the reference solves the
+    series path with a separate root find.
+    """
     _, flow, level = _restricted_delivery(model, mode)
     # The tank has fallen from 7 m to the level of the row, so the reference is solved there.
     segments = [*ref.tank2_reference_fittings_segments(), (ref.D200, 0.0, 4.9)]
@@ -166,6 +159,9 @@ def test_both_restriction_modes_reduce_the_flow_by_the_d19_hand_value(
 def test_the_contact_reads_open_for_an_obstruction_and_not_open_for_a_visible_restriction(
     model: HydraulicModel,
 ) -> None:
+    """An obstruction leaves the open contact asserted while a visible restriction releases it.
+    Independent: yes, because the expected contact states follow from the contact thresholds.
+    """
     def contact(mode: str) -> list[tuple[float, int]]:
         e, _, _ = _restricted_delivery(model, mode)
         rows: Any = e.sink.rows["hydraulic_state"]
@@ -190,6 +186,9 @@ def test_the_contact_reads_open_for_an_obstruction_and_not_open_for_a_visible_re
 
 
 def test_a_restriction_without_a_mode_is_refused_when_injected(model: HydraulicModel) -> None:
+    """A restriction that names no mode is refused when it is injected. Independent: yes, because
+    the expected outcome is the refusal rule.
+    """
     with pytest.raises(ContractError, match="mode"):
         _restricted_delivery(model, None)
 
@@ -198,15 +197,25 @@ def test_a_restriction_without_a_mode_is_refused_when_injected(model: HydraulicM
 def test_the_operating_point_with_a_scaled_curve_is_the_closed_form_series_solve(
     model: HydraulicModel, scale: float
 ) -> None:
+    """The delivery flow with a scaled pump curve equals the root of the series-path equation.
+    Independent: yes, because the reference module solves the path by a scalar root find without
+    importing the package.
+    """
     assert delivery_flow(model, scale=scale) == pytest.approx(reference_flow(scale), rel=2e-4)
 
 
 def test_the_delivery_flow_falls_monotonically_with_the_head_scale(model: HydraulicModel) -> None:
+    """The delivery flow falls as the pump head scale is reduced. Independent: yes, because only the
+    direction is checked.
+    """
     flows = [delivery_flow(model, scale=s) for s in (1.0, 0.98, 0.9, 0.8, 0.7)]
     assert all(b < a for a, b in zip(flows, flows[1:], strict=False))
 
 
 def test_the_pump_ramp_in_an_engine_run_follows_the_scaled_curve(model: HydraulicModel) -> None:
+    """During an engine run the delivery flow follows the scaled pump curve while the head scale
+    ramps. Independent: yes, because the expected flow is solved by the reference module.
+    """
     spec = FaultSpec("PUMP_HEAD_DEGRADATION", "head_scale", "P-101A", 200.0, 30.0, 0.8)
     e, outcome = fc.run(
         model, "S0-A", 400.0, FaultSet((spec,)), initial_mode="DELIVER_102_A",
@@ -238,6 +247,9 @@ def test_the_pump_ramp_in_an_engine_run_follows_the_scaled_curve(model: Hydrauli
 def test_misrouting_a_two_receipt_branches_split_as_the_reference_roots(
     model: HydraulicModel,
 ) -> None:
+    """With both receipt branches forced open the flow splits as the roots of the two branch
+    equations. Independent: yes, because the split is solved by the reference module.
+    """
     levels = {"TK-101": 9.0, "TK-102": 7.0, "TK-103": 5.0}
     lineup = Lineup.of({"XV-R000", "XV-R101", "XV-R102"}, set())
     r = model.solve(
@@ -258,6 +270,10 @@ def test_misrouting_a_two_receipt_branches_split_as_the_reference_roots(
 def test_misrouting_b_a_stuck_pump_branch_valve_matches_the_reference_loss(
     model: HydraulicModel,
 ) -> None:
+    """A pump branch valve stuck nearly closed adds the hand-computed loss coefficient and gives the
+    reference flow. Independent: yes, because the coefficient is hand arithmetic and the flow comes
+    from the reference module.
+    """
     k_stuck = 0.1 / (0.4 * 50.0**-0.95) ** 2
     assert k_stuck == pytest.approx(1056.7, rel=1e-3)
     got = delivery_flow(model, {"XV-PAO": 0.02})
@@ -265,7 +281,10 @@ def test_misrouting_b_a_stuck_pump_branch_valve_matches_the_reference_loss(
 
 
 def test_a_head_degradation_of_the_stopped_pump_changes_nothing(model: HydraulicModel) -> None:
-    """P-101B does not run in S0-A, so a fault on it leaves every truth row unchanged."""
+    """A head fault on the stopped pump leaves every truth row unchanged, while the same fault on
+    the running pump changes them. Independent: yes, because the comparison is between a healthy and
+    a faulted run.
+    """
     spec = FaultSpec("PUMP_HEAD_DEGRADATION", "head_scale", "P-101B", 100.0, 30.0, 0.7)
     healthy, _ = fc.run(model, "S0-A", 400.0)
     faulted, outcome = fc.run(model, "S0-A", 400.0, FaultSet((spec,)))

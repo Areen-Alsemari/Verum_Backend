@@ -1,29 +1,11 @@
-"""Pipe leak (decision D60): the orifice law, mass conservation, rejection and the transient check.
+"""Pipe leak: the orifice law, mass conservation, rejection and the transient check.
 
-Inputs: steady solves of the delivery lineup from TK-101 (9 m), short engine runs with a leak, and
-the transient engine with a leak sink. Outputs: pass/fail.
+The leak flow is compared with the hand-evaluated orifice formula, the tank and node balances are
+checked with a suction-side and a delivery-side leak, and a leak ramped over 300 s is compared with
+the transient engine. The derivations and the tolerance are in the "Pipe leak" section of the
+verification notes.
 
-Derivations (hand arithmetic):
-    * Orifice: Q = Cd A sqrt(2 p / rho). With Cd 0.62, A 1e-3 m2, p 200 kPa, rho 750 kg/m3:
-      sqrt(2 x 200000 / 750) = 23.094 m/s, Q = 0.62 x 1e-3 x 23.094 = 0.014318 m3/s.
-    * The steady-network cases read the solved gauge pressure at the leak (the quantity of D60,
-      rho g (H - z)) and evaluate the formula on it, so the expected flow is independent of the
-      orifice implementation but uses the pressure of the solve.
-    * Doubling the area at fixed pressure doubles the flow (the law is linear in A).
-    * Mass: in the steady solve the tank gives up the pump flow plus a suction-side leak; the
-      engine ledger is received - delivered - spilled - change of tank inventory.
-    * Rigid column against the transient engine: the transient engine holds the tank level
-      constant and puts the sink at the junction RECEIPT_HEADER (the end of E003), the rigid-column
-      leak is at 0.95 of E003, 5.25 m upstream. The pressure at the two points differs by the
-      friction of 5.25 m of DN300 at about 2.3 m/s (f 0.0155: 0.0155 x 5.25 / 0.30318 x
-      2.31^2 / 19.61 = 0.073 m, 0.56 % of a head of 13 m), which changes the leak flow by half of
-      that, 0.3 %. The inertial head the rigid column misreads during the ramp is at most
-      Lambda dQ_L/dt = 311 s2/m2 x (0.006 m3/s / 300 s) = 0.006 m, 0.05 %. The tolerance is
-      therefore 1 percent of the final leak flow plus the noise of the 10 s mean (0.5 %).
-Independence: the formula and the tolerance are hand values; the transient engine is a separate
-model of the same equations, not independent validation of the facility.
-
-Source: ``docs/design_decisions.md`` D10 and D60; ``docs/fault_models.md``.
+See D10 and D60.
 """
 
 from __future__ import annotations
@@ -59,6 +41,9 @@ def solve(model: HydraulicModel, leaks: list[LeakInput]) -> Any:
 
 
 def test_the_orifice_law_at_a_fixed_pressure_by_hand() -> None:
+    """The orifice law gives the hand-computed flow at 200 kPa. Independent: yes, because the
+    expected value is hand arithmetic.
+    """
     law = OrificeLaw(CD * 1.0e-3 * math.sqrt(2.0 * G))
     q = law.flow(200000.0 / (RHO * G))
     assert q == pytest.approx(0.014318, abs=2e-6)
@@ -66,6 +51,9 @@ def test_the_orifice_law_at_a_fixed_pressure_by_hand() -> None:
 
 
 def test_doubling_the_area_doubles_the_flow_at_fixed_pressure() -> None:
+    """Doubling the area doubles the flow at a fixed head, and the flow is zero at zero or negative
+    head. Independent: yes, because the law is linear in the area by construction of the formula.
+    """
     delta = 25.0
     one, two = OrificeLaw(0.6 * 5e-4), OrificeLaw(0.6 * 1e-3)
     assert two.flow(delta) == pytest.approx(2.0 * one.flow(delta), rel=1e-14)
@@ -76,6 +64,10 @@ def test_doubling_the_area_doubles_the_flow_at_fixed_pressure() -> None:
 def test_the_solved_leak_flow_is_the_orifice_flow_at_the_solved_pressure(
     model: HydraulicModel, edge: str, area: float
 ) -> None:
+    """The leak flow of the network solve equals the orifice formula at the pressure the solve
+    found. Independent: no, because the pressure comes from the solve and only the formula is
+    independent.
+    """
     r = solve(model, [LeakInput(edge, 0.5, area, CD)])
     p = r.leak_pressures_pa_gauge[edge]
     assert p > 10000.0
@@ -86,8 +78,9 @@ def test_the_solved_leak_flow_is_the_orifice_flow_at_the_solved_pressure(
 def test_the_leak_depends_only_on_the_product_of_the_coefficient_and_the_area(
     model: HydraulicModel, cd: float
 ) -> None:
-    """Hand: Q = Cd A sqrt(2 p / rho), so (Cd, A) and (0.62, A Cd / 0.62) are the same leak. This is
-    why the audit gets the effect of Cd on the detectable area by scaling it."""
+    """Two leaks with the same product of discharge coefficient and area give the same flows.
+    Independent: yes, because the identity follows from the formula.
+    """
     area = 3e-4
     a = solve(model, [LeakInput("E-PA3", 0.5, area, cd)])
     b = solve(model, [LeakInput("E-PA3", 0.5, area * cd / 0.62, 0.62)])
@@ -98,6 +91,10 @@ def test_the_leak_depends_only_on_the_product_of_the_coefficient_and_the_area(
 def test_the_tank_gives_up_the_pump_flow_plus_a_suction_leak_and_nodes_balance(
     model: HydraulicModel,
 ) -> None:
+    """The tank gives up the pump flow plus a suction-side leak, and the pump flow equals the
+    boundary flow plus a delivery-side leak. Independent: yes, because the balances are conservation
+    statements.
+    """
     r = solve(model, [LeakInput("E-S101a", 0.5, 4e-4, CD)])
     leak = r.leak_flows_m3s["E-S101a"]
     assert -r.tank_net_inflow_m3s["TK-101"] == pytest.approx(
@@ -112,6 +109,10 @@ def test_the_tank_gives_up_the_pump_flow_plus_a_suction_leak_and_nodes_balance(
 def test_the_engine_ledger_closes_with_the_spill_and_detects_a_double_subtraction(
     model: HydraulicModel,
 ) -> None:
+    """The engine ledger closes with the spilled mass and fails when the spill is subtracted twice.
+    Independent: yes, because the spilled mass is a hand estimate and the double subtraction is
+    injected.
+    """
     e, outcome = fc.run(model, "S0-A", 1000.0, fc.leak("E-PA3", 5e-4, 300.0, 30.0))
     assert outcome.rejection is None and outcome.ledger["closed"]
     spilled = e.state.cum_spilled_m3 * model.rho
@@ -123,6 +124,9 @@ def test_the_engine_ledger_closes_with_the_spill_and_detects_a_double_subtractio
 
 
 def test_a_leak_below_the_minimum_gauge_pressure_is_rejected(model: HydraulicModel) -> None:
+    """A leak at less than 10 kPa gauge is rejected by the fault gate. Independent: yes, because the
+    limit is the stated rule.
+    """
     e, outcome = fc.run(model, "S0-A", 400.0, fc.leak("E-PA3", 5e-4, 300.0, 30.0))
     assert outcome.rejection is None
     result = e.state.current
@@ -137,6 +141,9 @@ def test_a_leak_below_the_minimum_gauge_pressure_is_rejected(model: HydraulicMod
 
 
 def test_a_leak_on_an_edge_without_a_determined_pressure_is_rejected(model: HydraulicModel) -> None:
+    """A leak on an edge that carries no determined pressure is rejected by the fault gate.
+    Independent: yes, because the expected outcome is the rejection rule.
+    """
     _, outcome = fc.run(model, "S0-A", 400.0, fc.leak("E-R102a", 5e-4, 300.0, 30.0))
     assert outcome.rejection is not None and outcome.rejection["gate"] == "SGF"
     assert "no determined pressure" in outcome.rejection["detail"]
@@ -144,8 +151,10 @@ def test_a_leak_on_an_edge_without_a_determined_pressure_is_rejected(model: Hydr
 
 @pytest.mark.slow
 def test_a_leak_ramped_over_300_s_agrees_with_the_transient_engine(model: HydraulicModel) -> None:
-    """Receipt of 600 m3/h into TK-101; leak A 5e-4 m2 on E003 at 0.95, ramp 300 s from 100 s.
-    Compared: the leak flow (10 s means) at 200, 300 and 450 s and the flow after the leak."""
+    """A leak ramped over 300 s gives the same leak flow in the rigid-column engine and in the
+    transient engine within the hand-derived tolerance. Independent: no, because the transient
+    engine is a separate model of the same equations and not independent validation.
+    """
     onset, ramp, area = 100.0, 300.0, 5e-4
     e, outcome = fc.run(
         model, "S0-B", 460.0, fc.leak("E003", area, onset, ramp, 0.95),

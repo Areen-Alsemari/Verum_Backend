@@ -1,20 +1,10 @@
-"""The downstream demand factor: Ornstein-Uhlenbeck statistics, reproducibility, bounds.
+"""The downstream demand factor: Ornstein-Uhlenbeck statistics, reproducibility and bounds.
 
-Inputs: ``DemandProcess`` built from named streams, and the S0-F episode. Outputs: pass/fail.
-Key assumptions:
-    * Specified values (decision D23): standard deviation of log f_d 0.05, correlation time
-      1800 s, clip to [0.8, 1.25], stream ``demand``, grid of one second.
-    * Sampling error. For a stationary OU series of length T the sample mean has standard
-      deviation sigma sqrt(2 tau / T), and the sample variance has relative standard
-      deviation sqrt(2 tau / T); with T = 8e6 s and tau = 1800 s these are 1.06e-3 and
-      0.0212. Tolerances are four standard deviations. The autocorrelation at lag k must be
-      exp(-k/tau); its sampling variance for an AR(1) series is (Bartlett)
-      [(1 + phi^2)(1 - phi^(2k))/(1 - phi^2) - 2 k phi^(2k)] / N, phi = exp(-1/tau), which is
-      0.0142 squared at k = 900 s and N = 8e6.
-Independence: the targets are the specified values and the sampling-error formulas above
-(hand derivation), not outputs of the code under test.
+The factor is checked against its specified standard deviation, correlation time, clip range and
+named stream, with sampling-error tolerances of four standard deviations. The targets and tolerances
+are derived by hand in the "Demand process" section of the verification notes.
 
-Source: ``docs/design_decisions.md`` D23.
+See D23.
 """
 
 from __future__ import annotations
@@ -42,6 +32,10 @@ def long_log() -> np.ndarray:
 
 
 def test_mean_and_variance_match_the_specified_values(long_log: np.ndarray) -> None:
+    """The sample mean and variance of the log factor match the specified values within four
+    sampling standard deviations. Independent: yes, because the targets are the specified values and
+    a hand-derived sampling error.
+    """
     sampling_sd = SIGMA * math.sqrt(2.0 * TAU / LONG)
     assert sampling_sd == pytest.approx(1.06e-3, rel=0.01)
     assert abs(float(long_log.mean())) < 4.0 * sampling_sd
@@ -50,6 +44,10 @@ def test_mean_and_variance_match_the_specified_values(long_log: np.ndarray) -> N
 
 
 def test_the_autocorrelation_decays_with_the_correlation_time(long_log: np.ndarray) -> None:
+    """The autocorrelation at lags of half, one and two correlation times equals exp(-lag/tau)
+    within the Bartlett sampling error. Independent: yes, because the target is a closed-form
+    expression.
+    """
     x = long_log - long_log.mean()
     for lag_s, expected in ((900, math.exp(-0.5)), (1800, math.exp(-1.0)), (3600, math.exp(-2.0))):
         r = float(np.dot(x[:-lag_s], x[lag_s:]) / np.dot(x, x))
@@ -61,12 +59,18 @@ def test_the_autocorrelation_decays_with_the_correlation_time(long_log: np.ndarr
 
 
 def test_the_same_seed_reproduces_and_another_seed_differs() -> None:
+    """The same seed gives the same path and a different seed gives a different one. Independent:
+    yes, because only equality of outputs is compared.
+    """
     a, b = _process(7), _process(7)
     assert np.array_equal(a.log_path, b.log_path)
     assert not np.array_equal(a.log_path, _process(8).log_path)
 
 
 def test_an_extra_stream_does_not_change_the_process() -> None:
+    """Drawing from other named streams first leaves the demand path unchanged. Independent: yes,
+    because the path is compared with one built without the other draws.
+    """
     plain = _process(7).log_path
     streams = RandomStreams(7)
     streams.stream("sensor_noise").standard_normal(1000)  # a draw on another stream first
@@ -76,6 +80,10 @@ def test_an_extra_stream_does_not_change_the_process() -> None:
 
 
 def test_the_factor_is_clipped_and_linear_in_the_logarithm_between_grid_points() -> None:
+    """The factor stays within its clip range, reaches both clips for a large sigma, and its
+    logarithm is linear between grid points. Independent: yes, because the expected values follow
+    from the stored grid points.
+    """
     wide = DemandProcess(True, RandomStreams(3), 20000.0, 0.5, TAU, F_MIN, F_MAX)
     values = [wide.factor(float(t)) for t in range(0, 20000, 7)]
     assert min(values) >= F_MIN and max(values) <= F_MAX
@@ -87,6 +95,9 @@ def test_the_factor_is_clipped_and_linear_in_the_logarithm_between_grid_points()
 
 
 def test_a_disabled_process_is_exactly_one_and_draws_nothing() -> None:
+    """A disabled process gives exactly one and touches no random stream. Independent: yes, because
+    the expected value is the constant one.
+    """
     streams = RandomStreams(7)
     p = DemandProcess(False, streams, 3600.0, SIGMA, TAU, F_MIN, F_MAX)
     assert p.factor(0.0) == p.factor(1234.5) == 1.0 and p.unclipped_log(99.0) == 0.0
@@ -94,6 +105,10 @@ def test_a_disabled_process_is_exactly_one_and_draws_nothing() -> None:
 
 
 def test_s0f_stores_the_factor_in_the_hidden_boundary_state(series: dict[str, Series]) -> None:
+    """The scenario with the demand process writes the factor, its logarithm and the scaled
+    boundary-law coefficient into the hidden boundary rows. Independent: no, because the factor is
+    recomputed with the same process class.
+    """
     s = series["S0-F"]
     process = _process(s.episode["seed"], 3600.0)
     rows = [r for r in s.boundary if r["side"] is None]
@@ -111,6 +126,9 @@ def test_s0f_stores_the_factor_in_the_hidden_boundary_state(series: dict[str, Se
 
 
 def test_other_scenarios_keep_the_factor_at_one(series: dict[str, Series]) -> None:
+    """Scenarios without a demand process keep the factor at one in every boundary row. Independent:
+    yes, because the expected value is the constant one.
+    """
     for sid in ("S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-G"):
         assert {r["downstream_factor"] for r in series[sid].boundary} == {1.0}, sid
         assert all(r["demand_process"] is False for r in series[sid].boundary)
@@ -119,15 +137,10 @@ def test_other_scenarios_keep_the_factor_at_one(series: dict[str, Series]) -> No
 def test_s0f_delivery_flow_responds_to_the_factor_with_the_hand_slope(
     series: dict[str, Series],
 ) -> None:
-    """The flow depends on f_d and on the falling tank level; separate them by least squares.
-
-    Hand derivation: at the duty point the head balance is pump(Q) = static + loss(Q) +
-    c f_d (Q/300)^2, so dQ/df = -c (Q/300)^2 / S with S the slope of loss + law - pump with
-    respect to Q (central difference of the reference module, TK-102 reference fittings).
-    The level coefficient is +1/S per metre. A plain correlation with f_d alone is only about
-    -0.8 because the level falls 0.44 m in the hour, a trend of the same size as the
-    factor's effect (2 m3/h); the regression on both removes it.
-    Independent: the slope uses the separate reference implementation of the friction law.
+    """The delivery flow responds to the factor with the slope derived by hand, after the falling
+    tank level is removed by regression. The derivation is in the "Demand process" section of the
+    verification notes. Independent: yes, because the slope uses the separate reference
+    implementation of the friction law.
     """
     import _reference_hydraulics as ref
 

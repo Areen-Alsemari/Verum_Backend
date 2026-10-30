@@ -1,26 +1,11 @@
 """Engine accuracy: receipt rise, trajectories, step halving and the crossing time.
 
-Inputs: the written scenarios (S0-A, S0-B, S0-C, REJ-2), the hydraulic model and
-independent integrations with ``scipy.integrate.solve_ivp``. Outputs: pass/fail.
+The level rise of the receipt scenario is compared with a closed form, and the delivery and combined
+scenarios with an adaptive integration of the same steady flow function. The accuracy target is
+2.5e-5 m of level (D17). The closed-form values and the integration references are derived in the
+"Engine accuracy" section of the verification notes.
 
-Derivations (hand arithmetic):
-    * S0-B. The receipt flow starts at 0 and follows q(t) = Q (1 - exp(-t/tau)),
-      Q = 600 m3/h, tau = 2 s. The volume received in time T is
-      Q T - Q tau (1 - exp(-T/tau)), so after 3600 s it is 600 m3 - 0.33333 m3 (the
-      transient deficit Q tau = 600/3600 x 2). With A = 706.858 m2 on the floating branch,
-      the level rise is (600 - 0.33333)/706.858 = 0.848826 - 0.000472 = 0.848354 m. The
-      Phase 3 engine added the trapezoid error of the Heun stage average, (dt^2/12) q'(0) / A =
-      1.0e-5 m at dt = 1 s; the implicit integration of Phase 3b removes it.
-    * Accuracy target (decision D17): level error <= 0.025 mm = 2.5e-5 m.
-    * REJ-2. From 6.46 m to the stored minimum 6.278 m (coastal, RVP_9_0, f_d = 0.8) the level
-      falls 0.182 m, i.e. 128.6 m3; at about 301 m3/h (0.0836 m3/s) that takes about 1539 s.
-Independence: the S0-B reference is a closed-form expression (independent). The S0-A,
-S0-C and REJ-2 references integrate the same steady flow function (the production
-hydraulic model) with an adaptive RK45 scheme, so they are independent in the time
-integration only, not in the hydraulics. The step-halving study uses the S0-B closed
-form for the order, and the RK45 reference for S0-A.
-
-Source: decisions D3, D17; ``revised/01_facility_tanks_topology.md`` section 5 (E6).
+See D3 and D17.
 """
 
 from __future__ import annotations
@@ -79,6 +64,10 @@ def _lineup(mode_name: str, model: HydraulicModel) -> Lineup:
 def test_s0b_level_rise_with_the_receipt_ramp_correction(
     series: dict[str, Series], geometry: TankGeometry
 ) -> None:
+    """The level rise after an hour of receipt equals the constant-flow rise less the deficit of the
+    2 s first-order ramp, within the target. Independent: yes, because the reference is a
+    closed-form expression.
+    """
     start = geometry.volume_m3(9.0, RHO)
     end = _volumes_at(series["S0-B"], "TK-101", [3600.0])[0]
     area = geometry.area_m2
@@ -94,6 +83,9 @@ def test_s0b_level_rise_with_the_receipt_ramp_correction(
 
 
 def test_s0b_receipt_flow_follows_the_first_order_response(series: dict[str, Series]) -> None:
+    """The receipt flow follows Q (1 - exp(-t/tau)) with tau = 2 s and ends at the set-point.
+    Independent: yes, because the reference is a closed-form expression.
+    """
     flows = {t: q for t, side, q in series["S0-B"].edge["E001"] if side != "pre_event"}
     for t in (0.0, 1.0, 2.0, 4.0, 10.0):
         expected = (600.0 / 3600.0) * (1.0 - math.exp(-t / 2.0))
@@ -107,6 +99,10 @@ def test_s0b_receipt_flow_follows_the_first_order_response(series: dict[str, Ser
 def test_s0a_trajectory_matches_an_adaptive_integration(
     model: HydraulicModel, series: dict[str, Series], geometry: TankGeometry
 ) -> None:
+    """The delivery level trajectory matches an adaptive integration of the steady tank flow.
+    Independent: no, because the reference uses the same hydraulic model and differs only in the
+    time integration.
+    """
     lineup = _lineup("DELIVER_101_A", model)
 
     def rhs(_t: float, y: Any) -> list[float]:
@@ -139,6 +135,10 @@ def test_s0a_trajectory_matches_an_adaptive_integration(
 def test_s0c_trajectories_match_an_adaptive_integration(
     model: HydraulicModel, series: dict[str, Series], geometry: TankGeometry
 ) -> None:
+    """The levels of the receiving and delivering tanks match an adaptive integration of the steady
+    flows. Independent: no, because the reference uses the same hydraulic model and differs only in
+    the time integration.
+    """
     lineup = _lineup("RECEIVE_101_DELIVER_102_A", model)
 
     def rhs(t: float, y: Any) -> list[float]:
@@ -227,12 +227,9 @@ def halving(model: HydraulicModel, geometry: TankGeometry) -> dict[float, dict[s
 def test_s0b_error_is_independent_of_the_step_and_far_below_the_target(
     halving: dict[float, dict[str, float]],
 ) -> None:
-    """The receipt flow ODE is integrated implicitly to a tolerance, not on the step grid.
-
-    Independent (closed form of S0-B). The Phase 3 engine had the Heun trapezoid error
-    (dt^2/12) q'(0) / A = 1.0e-5 m at dt = 1 s and second-order convergence; the present
-    integrator carries no step-size error, so the error sits at the integrator tolerance for
-    every grid step and the 2.5e-5 m target is met with a margin of more than four orders.
+    """The receipt flow is integrated to a tolerance and not on the step grid, so the level error is
+    the same for every grid step and far below the target. Independent: yes, because the reference
+    is the closed form of the receipt scenario.
     """
     errors = {dt: abs(v["S0-B"]) for dt, v in halving.items()}
     assert all(e < 1e-9 for e in errors.values()), errors
@@ -242,6 +239,9 @@ def test_s0b_error_is_independent_of_the_step_and_far_below_the_target(
 def test_s0b_error_is_far_below_the_old_hand_trapezoid_estimate(
     halving: dict[float, dict[str, float]],
 ) -> None:
+    """The error stays far below the trapezoid estimate that the earlier explicit scheme had.
+    Independent: yes, because the estimate is a hand formula.
+    """
     for dt, row in halving.items():
         estimate = (dt**2 / 12.0) * (600.0 / 3600.0 / 2.0) / 706.858347
         assert abs(row["S0-B"]) < 1e-3 * estimate, dt
@@ -250,11 +250,9 @@ def test_s0b_error_is_far_below_the_old_hand_trapezoid_estimate(
 def test_s0a_meets_the_target_at_every_step_and_does_not_depend_on_it(
     halving: dict[float, dict[str, float]],
 ) -> None:
-    """Not independent in the hydraulics: the reference integrates the steady solver.
-
-    The engine differs from the quasi-steady reference by the inertial lag of the delivery
-    column, hand-derived in ``test_path_dynamics`` (about 1.1e-6 m over the hour), so the
-    bound is 2e-6 m, and the spread over the grid steps is at the integrator tolerance.
+    """The delivery scenario meets the target for every grid step, and the spread over the steps is
+    at the integrator tolerance. Independent: no, because the reference integrates the steady solver
+    and the engine differs from it by a hand-derived inertial lag.
     """
     errors = [row["S0-A"] for row in halving.values()]
     assert all(abs(e) <= TARGET for e in errors)
@@ -270,6 +268,9 @@ def test_rej2_crossing_time_matches_an_independent_integration(
     episodes: dict[str, EpisodeResult],
     geometry: TankGeometry,
 ) -> None:
+    """The time at which the rejection scenario reaches the pumping minimum matches an adaptive
+    integration. Independent: no, because the integration uses the same steady flow function.
+    """
     rejection = episodes["REJ-2"].outcome.rejection
     assert rejection is not None
     minimum = pumping_minimum_level(
