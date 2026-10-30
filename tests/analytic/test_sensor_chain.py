@@ -1,27 +1,12 @@
-"""Sensor chain on synthetic truth: lag, window mean, event samples, noise, dropout, clipping.
+"""Sensor chain on synthetic truth: lag, window mean, event samples, noise, dropout and clipping.
 
-Inputs: node arrays built by the tests and the shipped sensor specifications. Outputs:
-pass/fail.
+Synthetic node arrays are passed through the chain and compared with closed forms for the lag, the
+window mean and the event samples, and with binomial and normal sampling bounds for the noise and
+dropout. Pressure readings are referenced to the site atmosphere, so only the absolute-referenced
+readings differ between strata. The derivations are in the "Sensor chain" section of the
+verification notes.
 
-Derivations (hand arithmetic):
-    * Lag step response. A unit step at t0 into a first-order lag of constant tau gives
-      y = 1 - exp(-(t - t0)/tau). A ramp x = t gives y = t - tau (1 - exp(-t/tau)).
-    * Window mean on a ramp. The mean of x = t over [t - W, t] is t - W/2.
-    * Event sample. A sample at an event time reads the post-event value; a sample just
-      before reads the pre-event value; the lag state is continuous across the event.
-    * Noise. A reading is truth + noise, quantised to a step of span/65535. Its mean is the
-      truth and its variance sigma^2 + step^2/12 (the quantisation noise is not negligible
-      only for the level, where the step 0.27 mm is close to sigma 0.25 mm). The sample mean
-      has standard deviation sqrt(var/N), the sample standard deviation sqrt(var/(2N)).
-    * Dropout. The count of lost samples is binomial(N, 0.0005).
-    * Atmosphere. All pressure transmitters are referenced to the site atmosphere, so the
-      same absolute pressure reads (101325 - 94300)/1e5 = 0.07025 bar higher in the
-      coastal stratum than in the inland one; level, flow and temperature do not depend
-      on the stratum.
-Independence: the closed forms and binomial/normal sampling bounds are hand derived; the
-random draws come from the code under test.
-
-Source: ``docs/design_decisions.md`` D27 to D32.
+See D27 to D32.
 """
 
 from __future__ import annotations
@@ -43,6 +28,9 @@ def nodes(t: list[float], x: list[float], jump: list[bool] | None = None) -> cha
 
 
 def test_lag_step_response_matches_the_closed_form() -> None:
+    """A unit step through the first-order lag gives 1 - exp(-(t - t0)/tau). Independent: yes,
+    because the reference is a closed form.
+    """
     n = nodes([0.0, 10.0, 10.0, 40.0], [0.0, 0.0, 1.0, 1.0], [False, False, True, False])
     y = chain.lag_response(n, 2.0)
     for t in (10.0, 11.0, 12.0, 14.0, 20.0, 40.0):
@@ -52,6 +40,9 @@ def test_lag_step_response_matches_the_closed_form() -> None:
 
 
 def test_lag_ramp_response_matches_the_closed_form() -> None:
+    """A ramp through the first-order lag gives t - tau (1 - exp(-t/tau)). Independent: yes, because
+    the reference is a closed form.
+    """
     ts = [float(k) for k in range(0, 21)]
     n = nodes(ts, ts)
     y = chain.lag_response(n, 3.0)
@@ -62,6 +53,9 @@ def test_lag_ramp_response_matches_the_closed_form() -> None:
 
 
 def test_window_mean_of_a_ramp_is_the_ramp_at_the_window_centre() -> None:
+    """The trailing window mean of a ramp is the ramp value at the centre of the window.
+    Independent: yes, because the reference is a closed form.
+    """
     ts = [float(k) for k in range(0, 101)]
     n = nodes(ts, ts)
     y = chain.lag_response(n, 0.0)
@@ -71,6 +65,10 @@ def test_window_mean_of_a_ramp_is_the_ramp_at_the_window_centre() -> None:
 
 
 def test_a_sample_at_an_event_time_reads_the_post_event_state() -> None:
+    """A sample at an event time reads the post-event value, a sample just before reads the
+    pre-event value, and the lag state is continuous across the event. Independent: yes, because the
+    expected values follow from the event rule.
+    """
     n = nodes([0.0, 5.0, 5.0, 10.0], [0.0, 0.0, 1.0, 1.0], [False, False, True, False])
     y = chain.lag_response(n, 0.0)
     assert chain.value_at(n, y, 0.0, 4.999) == pytest.approx(0.0)
@@ -82,6 +80,9 @@ def test_a_sample_at_an_event_time_reads_the_post_event_state() -> None:
 
 
 def test_the_sample_phase_is_a_hash_of_the_tag_inside_its_interval() -> None:
+    """The sample phase of a tag lies inside its interval, differs between tags and is reproducible.
+    Independent: yes, because only the range and uniqueness are checked.
+    """
     phases = {tag: chain.sample_phase(tag, 5.0) for tag in ("LT-101", "LT-102", "LT-103", "TT-001")}
     assert all(0.0 <= p < 5.0 for p in phases.values()) and len(set(phases.values())) == 4
     assert chain.sample_phase("LT-101", 5.0) == phases["LT-101"]
@@ -110,6 +111,10 @@ def _run(
 def test_noise_has_zero_mean_and_the_specified_deviation(
     tag: str, truth: float, sigma_label: str
 ) -> None:
+    """Over many samples the reading has the truth as its mean and the specified deviation plus
+    quantisation, within sampling bounds. Independent: yes, because the bounds are hand derived,
+    although the random draws come from the code under test.
+    """
     spec = CFG.tags[tag]
     assert spec.interval_s
     rows = _run(tag, truth, 40000.0 * spec.interval_s)
@@ -126,6 +131,10 @@ def test_noise_has_zero_mean_and_the_specified_deviation(
 
 
 def test_dropout_rate_is_binomial_and_does_not_depend_on_the_truth() -> None:
+    """The number of lost samples is consistent with a binomial law, and the lost indices do not
+    depend on the truth values. Independent: yes, because the bounds are hand derived, although the
+    draws come from the code under test.
+    """
     n = 400000
     a = _run("PT-001", 5.0, float(n))
     b = _run("PT-001", [0.0, 9.0], float(n))  # a ramp instead of a constant
@@ -139,6 +148,10 @@ def test_dropout_rate_is_binomial_and_does_not_depend_on_the_truth() -> None:
 
 
 def test_clipping_flags_a_real_overrange_but_not_noise_at_zero() -> None:
+    """A reading far above the range is clipped and flagged suspect, while noise below zero at a
+    zero truth is clipped without a flag. Independent: yes, because the expectations follow from the
+    clipping rule.
+    """
     over = _run("PT-001", 15.0, 600.0)  # 15 barg against a 10 barg range
     measured = [r for r in over if r["value"] is not None]
     assert all(r["value"] == 10.0 and r["quality_flag"] == "suspect" for r in measured)
@@ -153,6 +166,9 @@ def test_clipping_flags_a_real_overrange_but_not_noise_at_zero() -> None:
 
 
 def test_a_negative_gauge_value_in_the_inland_stratum_is_not_clipped() -> None:
+    """A slightly negative gauge pressure in the inland stratum is within the transmitter range and
+    is not clipped. Independent: yes, because the gauge value is hand arithmetic.
+    """
     abs_pa, inland = 90000.0, 94300.0
     gauge = adapter._convert("pressure_pa_abs", abs_pa, inland)
     assert gauge == pytest.approx(-0.043)
@@ -167,6 +183,9 @@ def test_a_negative_gauge_value_in_the_inland_stratum_is_not_clipped() -> None:
 
 
 def test_the_strata_differ_only_in_absolute_referenced_pressure_readings() -> None:
+    """The two atmosphere strata differ by 0.07025 bar in pressure readings and not at all in level,
+    flow or temperature. Independent: yes, because the difference is hand arithmetic.
+    """
     sea, high = 101325.0, 94300.0
     p = 250000.0
     high_gauge = adapter._convert("pressure_pa_abs", p, high)
@@ -179,6 +198,9 @@ def test_the_strata_differ_only_in_absolute_referenced_pressure_readings() -> No
 
 
 def test_an_extra_tag_does_not_change_the_draws_of_another() -> None:
+    """Drawing from the streams of other tags first leaves the readings of a tag unchanged.
+    Independent: yes, because the readings are compared with a run without the other draws.
+    """
     alone = _run("LT-101", 9.0, 600.0, seed=5)
     streams = RandomStreams(5)
     for other in ("LT-102", "FT-001", "PT-001"):
@@ -193,6 +215,10 @@ def test_an_extra_tag_does_not_change_the_draws_of_another() -> None:
 
 
 def test_the_valve_contact_has_hysteresis_and_the_initial_state() -> None:
+    """The valve open contact asserts at an opening of 0.98, releases below 0.97 and starts in the
+    state of the first sample. Independent: yes, because the thresholds are the stated contact
+    values.
+    """
     def series(alphas: list[float]) -> list[tuple[float, str | None, dict[str, float]]]:
         return [(float(i), None, {"position_frac": a}) for i, a in enumerate(alphas)]
 

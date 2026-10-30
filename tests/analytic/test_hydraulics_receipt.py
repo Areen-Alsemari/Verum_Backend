@@ -1,25 +1,11 @@
 """Receipt splits, signed branch flow, supply cap and boundary rules.
 
-Inputs: ``HydraulicModel`` and the scalar-root-find reference in
-``_reference_hydraulics``. Outputs: pass/fail.
+The flow split among open receipt inlets, the source pressure, the supply cap and the
+over-constraint rule are compared with documented values and with a reference module that finds the
+common source head by a scalar root find. Pressures here are head-based gauge values. The
+derivations are in the "Receipt hydraulics" section of the verification notes.
 
-Derivations:
-    * Single inlet i: the source head (above its 1.0 m datum) is
-      h_i - 1 + loss(600 m3/h, DN300, 150 m) + loss(600 m3/h, DN200, branch
-      length); the source pressure is rho g times that head. Document values:
-      1.050 / 1.154 / 1.258 barg at 9 / 7 / 5 m.
-    * Several open inlets: one common source head satisfies every branch law;
-      the branch flows sum to 600 m3/h. The reference finds it by brentq. A
-      branch whose tank is above the common head carries negative flow (flow
-      leaves the tank); the document gives -48.63 / 296.10 / 352.53 m3/h at
-      0.724 barg for three open inlets.
-    * Pressures here are head-based gauge values (rho g (H - z)), as in the
-      audited document, not static pressures.
-Independence: the document values come from the audit's script; the reference
-code is a different method (scalar root finds) from the Newton solve. The
-friction law is the same law (decision D14).
-
-Source: ``revised/02_hydraulic_model.md`` section 3.3; decision D3.
+See D3.
 """
 
 from __future__ import annotations
@@ -54,6 +40,10 @@ CASES = [
 def test_receipt_splits_match_document_and_reference(
     model: HydraulicModel, opened: tuple[str, ...], split: list[float], pressure_bar: float
 ) -> None:
+    """The flows into the tanks and the source pressure match the documented split and the reference
+    root find for each choice of open inlets. Independent: yes, because the reference uses a scalar
+    root find and not the Newton solve, though the friction law is the same.
+    """
     result = model.solve(receipt_case(opened))
     flows = [result.tank_net_inflow_m3s[t] * 3600 for t in TANKS]
     reference, reference_bar = ref.receipt_flows(INITIAL_LEVELS, list(opened))
@@ -68,6 +58,10 @@ def test_receipt_splits_match_document_and_reference(
 
 
 def test_three_inlet_backflow_is_negative_and_never_clipped(model: HydraulicModel) -> None:
+    """With three inlets open the highest tank gives flow back, which is reported as negative and
+    never clipped, and its two branches carry equal flow. Independent: yes, because the values come
+    from the audited document.
+    """
     result = model.solve(receipt_case(TANKS))
     assert result.tank_net_inflow_m3s["TK-101"] * 3600 == pytest.approx(-48.63, abs=0.01)
     assert result.edge_flows_m3s["E-R101a"] < 0 and result.edge_flows_m3s["E-R101b"] < 0
@@ -81,12 +75,18 @@ def test_three_inlet_backflow_is_negative_and_never_clipped(model: HydraulicMode
 def test_receipt_only_cases_have_no_delivery_flow(
     model: HydraulicModel, opened: tuple[str, ...]
 ) -> None:
+    """A receipt-only lineup has no pump and no flow on the delivery edges. Independent: yes,
+    because the expected value is zero.
+    """
     result = model.solve(receipt_case(opened))
     assert result.pump is None
     assert all(result.edge_flows_m3s[e] == 0.0 for e in ("E-SH", "E-D1", "E-D2", "E-PA2", "E-PB2"))
 
 
 def test_receipt_total_is_the_configured_600(model: HydraulicModel) -> None:
+    """The receipt total is the configured 600 m3/h unless another flow is imposed. Independent:
+    yes, because the expected values are the configured and imposed flows.
+    """
     assert model.solve(receipt_case(("TK-102",))).receipt_flow_m3h == pytest.approx(600.0, abs=1e-6)
     result = model.solve(receipt_case(("TK-102",), receipt=ReceiptBoundary(flow_m3h=450.0)))
     assert result.receipt_flow_m3h == pytest.approx(450.0, abs=1e-6)
@@ -101,6 +101,9 @@ def _with_cap(model: HydraulicModel, cap_pa: float) -> HydraulicModel:
 
 
 def test_the_supply_cap_clips_the_flow_and_is_reported(model: HydraulicModel) -> None:
+    """A supply cap below the required pressure is imposed, the flow is reduced and the clipping is
+    reported. Independent: yes, because the required pressure is the documented 1.258 barg.
+    """
     capped = _with_cap(model, 1.0e5)  # TK-103 needs 1.258 barg for 600 m3/h
     result = capped.solve(receipt_case(("TK-103",)))
     assert result.receipt_clipped
@@ -113,15 +116,25 @@ def test_the_supply_cap_clips_the_flow_and_is_reported(model: HydraulicModel) ->
 
 
 def test_a_cap_above_the_requirement_does_not_clip(model: HydraulicModel) -> None:
+    """A cap above the required pressure leaves the flow at 600 m3/h. Independent: yes, because the
+    required pressure is the documented value.
+    """
     result = _with_cap(model, 1.3e5).solve(receipt_case(("TK-103",)))
     assert not result.receipt_clipped and result.receipt_flow_m3h == pytest.approx(600.0, abs=1e-6)
 
 
 def test_the_configured_cap_is_10_barg(model: HydraulicModel) -> None:
+    """The configured receipt pressure cap is 10 barg. Independent: yes, because the expected value
+    is the stated constant.
+    """
     assert model.config["receipt_pressure_cap_pa_gauge"] == 1.0e6
 
 
 def test_imposed_source_pressure_solves_the_flow(model: HydraulicModel) -> None:
+    """Imposing the source pressure solves the flow, which equals the flow that produced that
+    pressure in the reference module. Independent: yes, because the pressure comes from the
+    reference module.
+    """
     pressure = ref.source_pressure_for_single_inlet("TK-102", 7.0, 450 / 3600)
     result = model.solve(
         receipt_case(("TK-102",), receipt=ReceiptBoundary(pressure_pa_gauge=pressure))
@@ -131,12 +144,18 @@ def test_imposed_source_pressure_solves_the_flow(model: HydraulicModel) -> None:
 
 
 def test_flow_and_pressure_together_are_over_constrained(model: HydraulicModel) -> None:
+    """Imposing both the receipt flow and the source pressure is rejected as over-constrained.
+    Independent: yes, because the expected outcome is the boundary rule.
+    """
     both = ReceiptBoundary(flow_m3h=600.0, pressure_pa_gauge=2.0e5)
     with pytest.raises(OverConstrained, match="receipt"):
         model.solve(receipt_case(("TK-101",), receipt=both))
 
 
 def test_receipt_into_a_tank_changes_nothing_on_the_other_tanks(model: HydraulicModel) -> None:
+    """Receipt into one tank leaves the other tanks with no net flow. Independent: yes, because the
+    expected value is zero.
+    """
     result = model.solve(receipt_case(("TK-101",)))
     assert (
         result.tank_net_inflow_m3s["TK-102"] == 0.0 and result.tank_net_inflow_m3s["TK-103"] == 0.0

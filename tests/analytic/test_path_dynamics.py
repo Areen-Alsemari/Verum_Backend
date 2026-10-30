@@ -1,30 +1,11 @@
-"""Rigid-column path dynamics: inertance, step responses, slow limit, surge and decay.
+"""Rigid-column path dynamics: inertance, step responses, the slow limit, surge and decay.
 
-Inputs: the lumped paths and the engine run on short custom scenarios, and the written
-episodes S0-A and S0u-E. Outputs: pass/fail.
+The lumped paths and short engine runs are compared with hand derivations of the inertance, the
+linearised step response, the first-order receipt response, the lag of a column behind a moving
+equilibrium, the surge head, the capped flow and the decay of the flow in the emergency closure. The
+derivations are in the "Rigid-column path dynamics" section of the verification notes.
 
-Derivations (hand arithmetic):
-    * Inertance. The receipt path to TK-101 is 150 m of DN300 (A = 0.0721936 m2) and 45 m of
-      DN200 (A = 0.0322811 m2): sum L/A = 2077.7 + 1394.0 = 3471.7 1/m, I = sum L/(g A) =
-      354.0 s2/m2.
-    * Surge. Along the flow the head drops by the loss plus (L/(g A)) dQ/dt, so at the source
-      the head exceeds the quasi-steady head by I dQ/dt. In S0-B Q(t) = (600/3600)(1 - exp(-t/2)),
-      so dQ/dt(1 s) = (600/3600)/2 exp(-1/2) = 0.050544 m3/s2 and the surge is 17.9 m.
-    * Cap. The supply cap of 10 barg is a head of 1 m + 1e6/(750 x 9.80665) = 136.96 m at the
-      source. Under the cap dQ/dt = (H_cap - H_source(Q))/I, so the source head is the cap and
-      the offset to the quasi-steady head is I |dQ/dt|.
-    * Delivery step response. For a small departure from the duty point the column relaxes
-      with rate k = (d/dQ)[loss + c (Q/300)^2 - pump head] / I.
-    * Lag. A column that follows a slowly moving equilibrium lags it by tau dQ_eq/dt, with
-      tau = 1/k; the volume it delivers over the hour then differs from the quasi-steady
-      volume by tau (Q_eq(end) - Q_eq(0)).
-Independence: the closed forms, the hand inertance and the cap head are independent of the
-code under test. The reference losses come from ``_reference_hydraulics`` (a separate
-implementation of the same friction law, so the law itself is not independently tested).
-The quasi-steady reference heads come from the steady solver (the same formulas as the
-engine's lumped path; this is stated in each such test).
-
-Source: ``docs/design_decisions.md`` D22 and D26.
+See D22 and D26.
 """
 
 from __future__ import annotations
@@ -77,6 +58,9 @@ def _rows(engine: Engine, kind: str, element: str) -> dict[float, dict[str, Any]
 
 
 def test_the_hand_inertance_of_the_receipt_path(model: HydraulicModel) -> None:
+    """The inertance of the receipt path to tank TK-101 is 354 s2/m2, from the hand sum of length
+    over area. Independent: yes, because the value is hand arithmetic.
+    """
     assert (150.0 / A300 + 45.0 / A200) == pytest.approx(3471.7, abs=0.1)
     assert INERTANCE == pytest.approx(354.0, abs=0.1)
     from verum.sim.path import receipt_path
@@ -87,11 +71,9 @@ def test_the_hand_inertance_of_the_receipt_path(model: HydraulicModel) -> None:
 
 
 def test_delivery_step_response_follows_the_linearised_closed_form(model: HydraulicModel) -> None:
-    """A 1 % flow departure from the duty point relaxes as exp(-k t), k from hand derivatives.
-
-    Independent for the closed form and the loss derivative (reference module, central
-    difference); the duty point comes from the reference root find. The inertance of the TK-102
-    delivery path is (90 + 20 + 250) m of DN200 plus 35 m of DN250, over g.
+    """A 1 percent departure of the delivery flow from the duty point relaxes as exp(-k t) with the
+    rate k from the hand derivatives. Independent: yes, because the closed form and the loss
+    derivative come from the reference module.
     """
     scenario = dataclasses.replace(load_scenario("S0-A"), initial_mode="DELIVER_102_A")
     scenario = dataclasses.replace(scenario, duration_s=40.0, healthy_envelope=False)
@@ -126,7 +108,9 @@ def test_delivery_step_response_follows_the_linearised_closed_form(model: Hydrau
 def test_the_uncapped_receipt_response_keeps_the_controller_time_constant(
     series: dict[str, Series],
 ) -> None:
-    """Independent closed form: Q(t) = 300 + 300 exp(-(t - 1200)/2) m3/h after the S0-G step."""
+    """After a receipt set-point step the flow follows 300 + 300 exp(-t/2) m3/h. Independent: yes,
+    because the reference is a closed form.
+    """
     s = series["S0-G"]
     flows = {t: q for t, side, q in s.edge["E001"] if side != "pre_event"}
     assert flows[1200.0] * 3600 == pytest.approx(600.0, rel=1e-9)
@@ -138,11 +122,9 @@ def test_the_uncapped_receipt_response_keeps_the_controller_time_constant(
 
 @pytest.mark.slow
 def test_the_slow_limit_matches_the_phase_3_quasi_steady_flow(model: HydraulicModel) -> None:
-    """A 600 s ramp of the set-point: the flow follows the Phase 3 first-order response.
-
-    Independent: the reference solves dq/dt = (q_set(t) - q)/tau with the staircase set-point
-    exactly, piece by piece (closed form of each piece). The Phase 3 engine integrated the
-    same first-order response; the new engine must reproduce its volume within the D17 target.
+    """A 600 s ramp of the set-point gives the flow of the first-order response solved piece by
+    piece, and the volume matches within the accuracy target. Independent: yes, because the
+    reference solves each staircase piece in closed form.
     """
     steps = 600
     schedule = [
@@ -173,13 +155,9 @@ def test_the_slow_limit_matches_the_phase_3_quasi_steady_flow(model: HydraulicMo
 def test_the_s0a_volume_differs_from_the_quasi_steady_one_by_the_hand_lag(
     series: dict[str, Series],
 ) -> None:
-    """The delivery column lags the slowly falling duty flow by tau dQ_eq/dt (hand derivation).
-
-    Integrated over the hour the lag is tau (Q_eq(end) - Q_eq(0)) with tau = 1/k. With the
-    TK-101 path inertance 1112.6 s2/m2 and the loss-plus-pump slope at the duty point,
-    k = 0.7257 1/s, tau = 1.378 s, and the flow falls by 0.00049 m3/s over the hour, so the
-    quasi-steady volume exceeds the engine's by about 6.7e-4 m3 (1.0e-6 m of level). The
-    engine's pump flow rows give Q_eq(0) and Q_eq(end).
+    """The delivered volume differs from the quasi-steady volume by the lag of the column behind the
+    falling duty flow, about 1.07e-6 m of level. Independent: yes, because the lag is a hand
+    derivation.
     """
     s = series["S0-A"]
     flows = [(t, q) for t, side, _st, q, _ph, _m in s.pump["P-101A"] if side != "pre_event"]
@@ -209,13 +187,9 @@ def _quasi_steady_head(
 def test_pt001_surge_head_is_the_downstream_inertance_times_the_flow_rate(
     model: HydraulicModel, series: dict[str, Series]
 ) -> None:
-    """S0-B ramp, with the tap anchored by decision D36: head(PT-001) - (quasi-steady source
-    head - loss_up) = (I - Lambda_up) dQ/dt, the inertance of the column from the tap to the tank
-    (290.5 s2/m2 by hand: 354.0 - 63.56), with dQ/dt from the closed form.
-
-    The quasi-steady source head is a steady solve at the logged flow and level (same formulas
-    as the engine's lumped path, so this checks the offsets, not the loss law); loss_up is the
-    hand loss of E001 and E002 from the separate reference implementation.
+    """During the receipt ramp the PT-001 head exceeds the quasi-steady head by the inertance from
+    the tap to the tank times dQ/dt. Independent: no, because the quasi-steady head comes from the
+    steady solver, so this checks the offsets and not the loss law.
     """
     s = series["S0-B"]
     head = {t: h for t, side, h in s.head["PIPELINE_RECEIPT_BOUNDARY"] if side != "pre_event"}
@@ -240,10 +214,9 @@ def _loss_up(q: float) -> float:
 def test_pt001_under_the_cap_is_the_cap_less_the_upstream_loss_plus_the_upstream_inertia(
     model: HydraulicModel,
 ) -> None:
-    """Slow closure (2000 s stroke) of XV-R000 at 600 m3/h: under the cap the source head is the
-    cap head 136.96 m and the tap (D36) reads the cap less loss_up plus Lambda_up |dQ/dt|;
-    relative to the quasi-steady tap the offset is (I - Lambda_up) dQ/dt. dQ/dt is taken from
-    the logged flow by a central difference over two seconds.
+    """During a slow closure under the cap the PT-001 head is the cap head less the upstream loss
+    plus the upstream inertia term. Independent: no, because the quasi-steady tap comes from the
+    steady solver, so this checks the offsets and not the loss law.
     """
     cfg0 = load_sim_config()
     cfg = dataclasses.replace(
@@ -288,16 +261,9 @@ def test_pt001_under_the_cap_is_the_cap_less_the_upstream_loss_plus_the_upstream
 def test_the_esd_decay_time_lies_between_the_hand_bounds(
     episodes: dict[str, EpisodeResult], series: dict[str, Series]
 ) -> None:
-    """Hand bounds on the decay of the flow (90 % to 10 %) in the 10 s closure under the cap.
-
-    The cap binds when the valve loss at 600 m3/h reaches the head budget, alpha* = 0.03165
-    (hand: K = 421.8 from the budget 136.96 - 13 - 9.37 m over v^2/2g = 0.27175 m, Kv ratio
-    sqrt(0.1/421.8) = 0.015398, linear branch alpha = ratio x 0.05 / 50^-0.95). Until then the
-    flow is 600 m3/h; afterwards it cannot fall below the cap-limited flow 600 alpha/alpha*
-    (the column lags the equilibrium from above). The 90 % flow therefore occurs no earlier
-    than alpha = 0.9 alpha* = 0.02849, 9.715 s into the stroke, and the valve is closed at
-    9.99 s, so the decay time is at most 0.275 s. The collapse is faster than 10 wave round
-    trips of the path (3.6 s), which is why it is a validity window.
+    """The flow collapse in the 10 s emergency closure lasts at most 0.275 s, which is shorter than
+    ten wave round trips and therefore opens a validity window. Independent: yes, because the bounds
+    are hand arithmetic.
     """
     windows = [w for w in series["S0u-E"].windows if w["kind"] == "flow_collapse"]
     assert len(windows) == 1

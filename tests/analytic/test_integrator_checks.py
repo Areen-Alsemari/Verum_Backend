@@ -1,20 +1,11 @@
-"""Integrator checks: tolerance halving and an independent stiff solver (LSODA).
+"""Integrator checks: tolerance halving and an independent stiff solver.
 
-Inputs: the S0u-E scenario run on the engine, and the rigid-column right-hand side of its
-ESD closure integrated by two different methods. Outputs: pass/fail.
-Key assumptions:
-    * (a) Halving the Radau tolerances (relative and absolute) must change the final tank
-      level by less than the accuracy target of decision D17 (2.5e-5 m); in practice the
-      change is orders of magnitude smaller.
-    * (b) The same right-hand side of the closure (10 s stroke of XV-R000 ordered at the
-      isolation request of S0u-E, flow 600 m3/h, cap 10 barg) is integrated over the whole
-      stroke with
-      LSODA (Adams/BDF with automatic stiffness switching, a different method from Radau)
-      and compared in flow along the collapse and in the delivered volume.
-Independence: the integration methods are independent of each other; the right-hand side is
-the same function (the check concerns the numerics, not the model).
+Halving the tolerances of the implicit integrator must change the final tank levels by less than the
+accuracy target. The right-hand side of the emergency closure is also integrated with a different
+method (LSODA) and compared in flow along the collapse and in the delivered volume. The two checks
+concern the numerics and not the model.
 
-Source: ``docs/design_decisions.md`` D17 and D22.
+See D17 and D22.
 """
 
 from __future__ import annotations
@@ -61,6 +52,10 @@ def _engine(model: HydraulicModel, scale: float = 1.0) -> Engine:
 def test_halving_the_radau_tolerances_changes_the_levels_by_less_than_the_target(
     model: HydraulicModel,
 ) -> None:
+    """Halving the Radau tolerances changes the final tank levels by less than the 2.5e-5 m accuracy
+    target. Independent: yes, because the comparison is between two runs of the same model at
+    different tolerances.
+    """
     base, halved = _engine(model).run(), _engine(model, 0.5).run()
     assert base.rejection is None and halved.rejection is None
     geometry = _engine(model).geometry
@@ -79,6 +74,10 @@ def test_halving_the_radau_tolerances_changes_the_levels_by_less_than_the_target
 
 @pytest.mark.slow
 def test_lsoda_and_radau_agree_on_the_esd_closure_flow_and_volume(model: HydraulicModel) -> None:
+    """LSODA and Radau agree on the flow and the delivered volume over the 10 s closure stroke.
+    Independent: yes, because the two integration methods are independent, though the right-hand
+    side is shared.
+    """
     engine = _engine(model)
     timeline = esd_timeline()
     engine.run(until=timeline["request"])  # the closure is ordered at this instant

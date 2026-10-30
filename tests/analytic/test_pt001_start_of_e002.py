@@ -1,23 +1,11 @@
-"""Observed PT-001 at the start of E002 and the hidden end-of-E002 value (decision D36 v2).
+"""Observed PT-001 at the start of the second receipt edge, and the hidden value at its end.
 
-Inputs: the written episodes S0-B, S0-G, S0u-D, S0u-E and a slow-closure run. Outputs:
-pass/fail.
+The observed head is the source head less the loss of the first edge and its inertia term, and the
+hidden node value also carries the second edge. The same rate of change must hold along both edges
+in every row. The derivations are in the "PT-001 at the start of E002" section of the verification
+notes.
 
-Derivations (hand arithmetic):
-    * Lambda_up for E001 only: 30 m of DN300 (bore 0.30318 m, area 0.0721923 m2):
-      30 / (9.80665 x 0.0721923) = 42.37 s2/m2. With E002 (15 m) it is 63.56 s2/m2.
-    * Observed PT-001 (start of E002): H_source - loss(E001) - Lambda_E001 dQ/dt. E001 has no
-      local loss, so loss(E001) is the friction of 30 m of DN300.
-    * Open flow state: dQ/dt = 0. Capped and decelerating: H_source is the cap head 136.96 m
-      and the head is the cap - loss(E001) + Lambda_E001 |dQ/dt|.
-    * Hidden node value at the end of E002: H_source - loss(E001, E002) - Lambda_(E001+E002)
-      dQ/dt, labelled ``end_of_E002_lambda_E001_E002`` in the node row.
-    * Identity: with the same dQ/dt along the column, (H_from - H_to - loss)/Lambda is the same
-      number for E001 and E002 at every row.
-Independence: Lambda and the losses are hand values (the losses from the separate reference
-implementation of the friction law); the identity compares written quantities.
-
-Source: ``docs/design_decisions.md`` D36 version 2.
+See D36.
 """
 
 from __future__ import annotations
@@ -50,6 +38,9 @@ def head(p_abs: float, q: float) -> float:
 
 
 def test_lambda_for_e001_by_hand() -> None:
+    """The inertance of the first receipt edge is 42.37 s2/m2 and of both edges 63.56 s2/m2.
+    Independent: yes, because the values are hand arithmetic.
+    """
     assert LAMBDA_E001 == pytest.approx(42.37, abs=0.01)
     assert LAMBDA_E001 + LAMBDA_E002 == pytest.approx(63.56, abs=0.01)
 
@@ -57,6 +48,10 @@ def test_lambda_for_e001_by_hand() -> None:
 def test_open_flow_observed_head_is_the_source_head_less_the_loss_of_e001(
     series: dict[str, Series],
 ) -> None:
+    """In steady receipt flow the observed head is the source head less the friction loss of the
+    first edge. Independent: yes, because the loss comes from the separate reference implementation
+    of the friction law.
+    """
     s = series["S0-G"]
     q = {t: v for t, side, v in s.edge["E001"] if side is None}
     e001 = {t: p for t, side, p, _to in s.edge_p["E001"] if side is None}
@@ -68,6 +63,9 @@ def test_open_flow_observed_head_is_the_source_head_less_the_loss_of_e001(
 
 
 def test_the_hidden_node_value_keeps_both_edges_and_is_labelled(series: dict[str, Series]) -> None:
+    """The hidden node value at the end of the second edge accounts for both edges and carries its
+    label. Independent: yes, because the expected value is built from the reference losses.
+    """
     s = series["S0-G"]
     q = {t: v for t, side, v in s.edge["E001"] if side is None}
     tap = {t: h for t, side, h in s.head["PIPELINE_RECEIPT_BOUNDARY"] if side is None}
@@ -91,6 +89,10 @@ def test_the_hidden_node_value_keeps_both_edges_and_is_labelled(series: dict[str
 def test_capped_decelerating_observed_head_is_the_cap_less_loss_plus_the_e001_inertia(
     model: HydraulicModel,
 ) -> None:
+    """During a slow closure under the cap the observed head is the cap head less the loss of the
+    first edge plus its inertia term. Independent: yes, because the cap head and the inertance are
+    hand values.
+    """
     cfg0 = load_sim_config()
     cfg = dataclasses.replace(
         cfg0,
@@ -127,6 +129,10 @@ def test_capped_decelerating_observed_head_is_the_cap_less_loss_plus_the_e001_in
 def test_the_same_rate_of_change_holds_along_e001_and_e002_at_every_row(
     series: dict[str, Series],
 ) -> None:
+    """The rate of change of flow implied by the head drops of the two edges is the same in every
+    row. Independent: no, because the identity compares written quantities and does not test the
+    loss law.
+    """
     checked = 0
     for sid in ("S0-B", "S0-G", "S0u-D", "S0u-E"):
         s = series[sid]

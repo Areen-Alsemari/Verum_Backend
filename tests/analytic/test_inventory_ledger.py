@@ -1,25 +1,11 @@
-"""Inventory ledger: closure, receipt and delivery cases, leak counted once.
+"""Inventory ledger: closure, receipt and delivery cases, and a leak counted once.
 
-Inputs: prescribed flows (no hydraulics), the tank geometry and the fluid
-contract density. Outputs: pass/fail.
+Prescribed flows drive the ledgers without hydraulics. The inventory and level changes are derived
+by hand, injected errors (a double subtraction, an unbalanced step) must be detected, and a property
+test checks the closure residual against the round-off bound. The values are in the "Inventory
+ledger" section of the verification notes.
 
-Derivation of the expected values (independent of the ledger code), with
-rho = 750 kg/m3, A = 706.858347 m2:
-    600 m3/h for 1 h  : 600 m3 = 450000 kg; level rise 600 / A = 0.848826 m
-    600 in, 300 out   : net 300 m3 = 225000 kg; level rise 300 / A = 0.424413 m
-    leak of 5 m3      : 3750 kg leave the network once; the tank gains
-                        450000 - 3750 = 446250 kg
-    round-off bound   : (n - 1) 2^-53 sum|x|, e.g. terms [1, 2, -3] give
-                        2 * 2^-53 * 6 = 12 * 2^-53
-Same-formula note: the closure residual is computed from the same cumulative
-sums the ledger keeps, so for exactly representable flows it equals zero by
-construction. The tests that carry information are the externally derived
-inventory and level changes, the detection of an injected double subtraction
-or an unbalanced step, and the property test over arbitrary flows that checks
-the residual against the stated bound.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 5 (E5, E5T, E6) and
-section 8.
+See D6.
 """
 
 from __future__ import annotations
@@ -50,10 +36,16 @@ def _network(geometry: TankGeometry) -> NetworkLedger:
 
 
 def test_density_comes_from_the_fluid_contract() -> None:
+    """The density used by the ledger tests is the contract value of 750 kg/m3. Independent: yes,
+    because the expected value is the contract constant.
+    """
     assert RHO == 750.0
 
 
 def test_closed_system_stays_closed(geometry: TankGeometry) -> None:
+    """A system with no flows keeps its levels and has a zero residual. Independent: yes, because
+    the expected value is zero.
+    """
     ledger = _network(geometry)
     before = ledger.levels_m(geometry, RHO)
     for _ in range(3600):
@@ -64,6 +56,9 @@ def test_closed_system_stays_closed(geometry: TankGeometry) -> None:
 
 
 def test_receipt_of_600_m3_in_one_hour(geometry: TankGeometry) -> None:
+    """A receipt of 600 m3 in one hour adds 450000 kg and raises the level by 0.848826 m.
+    Independent: yes, because the values are hand arithmetic.
+    """
     ledger = _network(geometry)
     per_step = RHO * 600 / 3600  # 125 kg per second
     for _ in range(3600):
@@ -77,6 +72,9 @@ def test_receipt_of_600_m3_in_one_hour(geometry: TankGeometry) -> None:
 
 
 def test_concurrent_600_in_and_300_out(geometry: TankGeometry) -> None:
+    """Receiving 600 m3/h while delivering 300 m3/h leaves a net 225000 kg and a level rise of
+    0.424413 m. Independent: yes, because the values are hand arithmetic.
+    """
     ledger = _network(geometry)
     q_in, q_out = RHO * 600 / 3600, RHO * 300 / 3600
     for _ in range(3600):
@@ -90,6 +88,9 @@ def test_concurrent_600_in_and_300_out(geometry: TankGeometry) -> None:
 
 
 def test_leak_mass_leaves_the_network_once(geometry: TankGeometry) -> None:
+    """A leak of 5 m3 removes 3750 kg from the network once. Independent: yes, because the values
+    are hand arithmetic.
+    """
     ledger = _network(geometry)
     leak_per_step = RHO * 5 / 3600  # 5 m3 over the hour, 3750 kg
     received = RHO * 600 / 3600
@@ -110,6 +111,9 @@ def test_leak_mass_leaves_the_network_once(geometry: TankGeometry) -> None:
 
 
 def test_subtracting_the_leak_twice_is_detected(geometry: TankGeometry) -> None:
+    """A leak that is removed from the tank inflow twice makes the closure fail. Independent: yes,
+    because the error is injected and the expectation is a failed closure.
+    """
     ledger = _network(geometry)
     leak_per_step = RHO * 5 / 3600
     received = RHO * 600 / 3600
@@ -129,6 +133,9 @@ def test_subtracting_the_leak_twice_is_detected(geometry: TankGeometry) -> None:
 def test_a_pipe_leak_and_a_tank_leak_are_two_sinks_that_each_leave_once(
     geometry: TankGeometry,
 ) -> None:
+    """A pipe leak and a tank leak are two sinks that each leave the network once. Independent: yes,
+    because the totals are hand arithmetic.
+    """
     ledger = _network(geometry)
     leak_per_step = RHO * 5 / 3600
     received = RHO * 600 / 3600
@@ -144,6 +151,9 @@ def test_a_pipe_leak_and_a_tank_leak_are_two_sinks_that_each_leave_once(
 
 
 def test_a_leak_at_the_tank_is_counted_in_the_spill_total(geometry: TankGeometry) -> None:
+    """A leak at a tank is counted in the spill total, so 10 kg lost in a pipe and 4 kg at a tank
+    give 14 kg. Independent: yes, because the values are hand arithmetic.
+    """
     ledger = _network(geometry)
     ledger.step(100.0, 0.0, {"TK-101": TankFlows(mass_in_kg=100.0 - 10.0)}, pipe_spill_kg=10.0)
     ledger.step(0.0, 0.0, {"TK-102": TankFlows(leak_kg=4.0)})
@@ -158,6 +168,9 @@ def test_a_leak_at_the_tank_is_counted_in_the_spill_total(geometry: TankGeometry
 def test_liquid_only_and_total_product_definitions_differ_by_phase_change(
     geometry: TankGeometry,
 ) -> None:
+    """Evaporation moves mass from liquid to vapor, so the liquid-only inventory falls and the total
+    product is unchanged. Independent: yes, because the values are hand arithmetic.
+    """
     ledger = _network(geometry)
     ledger.step(0.0, 0.0, {"TK-101": TankFlows(evaporation_kg=1000.0)})
     tank = ledger.tanks["TK-101"]
@@ -175,6 +188,9 @@ def test_liquid_only_and_total_product_definitions_differ_by_phase_change(
 
 
 def test_evaporation_is_not_subtracted_twice_from_the_total(geometry: TankGeometry) -> None:
+    """The total-product ledger does not subtract evaporation, and a naive double subtraction would
+    be off by the evaporated mass. Independent: yes, because the wrong value is computed by hand.
+    """
     ledger = _network(geometry)
     ledger.step(0.0, 0.0, {"TK-101": TankFlows(evaporation_kg=1000.0)})
     t = ledger.tanks["TK-101"]
@@ -184,6 +200,9 @@ def test_evaporation_is_not_subtracted_twice_from_the_total(geometry: TankGeomet
 
 
 def test_unbalanced_prescribed_flows_are_detected(geometry: TankGeometry) -> None:
+    """Flows that do not balance make the closure fail with the residual of 5 kg. Independent: yes,
+    because the residual is the injected imbalance.
+    """
     ledger = _network(geometry)
     ledger.step(125.0, 0.0, {"TK-101": TankFlows(mass_in_kg=120.0)})
     assert not ledger.liquid_closure().closed
@@ -191,6 +210,9 @@ def test_unbalanced_prescribed_flows_are_detected(geometry: TankGeometry) -> Non
 
 
 def test_closure_tolerance_formula() -> None:
+    """The closure tolerance equals (n - 1) 2^-53 times the sum of the absolute terms. Independent:
+    yes, because the expected values are hand arithmetic.
+    """
     assert closure_tolerance([1.0, 2.0, -3.0]) == pytest.approx(12 * 2.0**-53, rel=1e-15)
     assert closure_tolerance([5.0]) == 0.0
     assert closure_tolerance([]) == 0.0
@@ -198,6 +220,9 @@ def test_closure_tolerance_formula() -> None:
 
 
 def test_tolerance_is_computed_per_run_and_grows_with_the_run(geometry: TankGeometry) -> None:
+    """The tolerance is computed for each run and grows with the number of terms. Independent: yes,
+    because only the ordering is checked.
+    """
     short, long = _network(geometry), _network(geometry)
     for steps, ledger in ((10, short), (1000, long)):
         for _ in range(steps):
@@ -206,6 +231,9 @@ def test_tolerance_is_computed_per_run_and_grows_with_the_run(geometry: TankGeom
 
 
 def test_tolerance_is_small_enough_to_detect_a_gram(geometry: TankGeometry) -> None:
+    """After an hour of steps the tolerance is below a gram, so an added gram is detected.
+    Independent: yes, because the added mass is injected.
+    """
     ledger = _network(geometry)
     for _ in range(3600):
         ledger.step(125.0, 0.0, {"TK-101": TankFlows(mass_in_kg=125.0)})
@@ -230,6 +258,9 @@ def test_tolerance_is_small_enough_to_detect_a_gram(geometry: TankGeometry) -> N
 def test_residual_stays_within_the_bound_for_arbitrary_flows(
     flows: list[tuple[float, float, float, float]],
 ) -> None:
+    """For arbitrary non-negative flows the closure residual stays within the round-off bound.
+    Independent: yes, because the bound is the stated rule and the flows are random.
+    """
     ledger = NetworkLedger({"TK-101": TankLedger("TK-101", 1.0e6)})
     for q_in, q_out, spill, evap in flows:
         ledger.step(
@@ -255,11 +286,17 @@ def test_residual_stays_within_the_bound_for_arbitrary_flows(
     ],
 )
 def test_negative_or_non_finite_flows_are_rejected(flows: dict[str, float]) -> None:
+    """Negative or non-finite flows are rejected. Independent: yes, because the expected outcome is
+    the validation rule.
+    """
     with pytest.raises(LedgerError):
         TankFlows(**flows)
 
 
 def test_a_step_cannot_make_an_inventory_negative() -> None:
+    """A step that would make a liquid or vapor inventory negative is rejected and changes nothing.
+    Independent: yes, because the expected outcome is the validation rule.
+    """
     tank = TankLedger("TK-101", 100.0)
     with pytest.raises(LedgerError):
         tank.apply(TankFlows(mass_out_kg=101.0))
@@ -269,6 +306,9 @@ def test_a_step_cannot_make_an_inventory_negative() -> None:
 
 
 def test_unknown_tank_and_negative_boundary_masses_are_rejected(geometry: TankGeometry) -> None:
+    """An unknown tank or a negative boundary mass is rejected. Independent: yes, because the
+    expected outcome is the validation rule.
+    """
     ledger = _network(geometry)
     with pytest.raises(LedgerError):
         ledger.step(0.0, 0.0, {"TK-999": TankFlows()})

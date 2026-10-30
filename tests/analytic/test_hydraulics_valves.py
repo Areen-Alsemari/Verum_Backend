@@ -1,16 +1,10 @@
 """A partly closed valve in the steady network.
 
-Inputs: ``HydraulicModel`` with ``valve_positions``. Outputs: pass/fail.
+A half-open receipt valve raises the source pressure by the extra loss of the valve, a closed valve
+removes the path, and a nearly closed valve makes the supply cap bind. The hand value of the
+pressure rise is derived in the "Partly closed valve" section of the verification notes.
 
-Derivation (hand arithmetic, independent of the code): with XV-R101 half open the loss
-coefficient of the valve is K(0.5) = 0.1 x 50 = 5.0 instead of the profile's 0.1. The valve
-sits on the DN200 edge E-R101b, so at 600 m3/h (v = 0.16667 / 0.032283 = 5.163 m/s) the head
-at the source rises by (5.0 - 0.1) v^2 / (2 g) = 4.9 x 1.3589 = 6.659 m and the head-based
-source pressure by rho g x 6.659 = 48.98 kPa. Friction is unchanged. A closed valve (alpha
-at or below the threshold) removes the path; the cap clips the flow when the source pressure
-would exceed 10 barg.
-
-Source: decisions D4 (version 2.0) and D19.
+See D4 and D19.
 """
 
 from __future__ import annotations
@@ -35,6 +29,9 @@ def _case(model: HydraulicModel, alpha: float | None, flow: float = 600.0) -> St
 def test_half_open_valve_raises_the_source_pressure_by_the_hand_value(
     model: HydraulicModel,
 ) -> None:
+    """A half-open valve raises the source pressure by (K(0.5) - K_open) v^2 / (2 g) of head, about
+    49 kPa. Independent: yes, because the value is hand arithmetic.
+    """
     open_p = model.solve(_case(model, None)).source_pressure_pa_gauge
     half_p = model.solve(_case(model, 0.5)).source_pressure_pa_gauge
     assert open_p is not None and half_p is not None
@@ -45,6 +42,9 @@ def test_half_open_valve_raises_the_source_pressure_by_the_hand_value(
 
 
 def test_fully_open_position_equals_no_position(model: HydraulicModel) -> None:
+    """A valve position of 1.0 gives exactly the same result as no position. Independent: yes,
+    because the expected outcome is equality.
+    """
     a = model.solve(_case(model, None)).source_pressure_pa_gauge
     b = model.solve(_case(model, 1.0)).source_pressure_pa_gauge
     assert a == b
@@ -53,6 +53,9 @@ def test_fully_open_position_equals_no_position(model: HydraulicModel) -> None:
 def test_throttling_raises_the_pressure_monotonically_as_the_valve_closes(
     model: HydraulicModel,
 ) -> None:
+    """The source pressure rises monotonically as the valve closes. Independent: yes, because only
+    the direction is checked.
+    """
     pressures = [
         model.solve(_case(model, a)).source_pressure_pa_gauge
         for a in (1.0, 0.8, 0.6, 0.4, 0.2, 0.1)
@@ -63,6 +66,9 @@ def test_throttling_raises_the_pressure_monotonically_as_the_valve_closes(
 
 
 def test_a_nearly_closed_valve_is_cap_limited(model: HydraulicModel) -> None:
+    """A nearly closed valve makes the source pressure reach the 10 barg cap and the flow fall below
+    600 m3/h. Independent: yes, because the cap is the stated constant.
+    """
     result = model.solve(_case(model, 0.01))
     assert result.receipt_clipped and result.source_pressure_pa_gauge == pytest.approx(
         1.0e6, rel=1e-9
@@ -71,6 +77,9 @@ def test_a_nearly_closed_valve_is_cap_limited(model: HydraulicModel) -> None:
 
 
 def test_a_closed_valve_removes_the_receipt_path(model: HydraulicModel) -> None:
+    """A closed tank inlet valve leaves no path to any tank. Independent: yes, because the expected
+    outcome follows from the lineup.
+    """
     lineup = Lineup.of({"XV-R000"})  # the tank inlet valve is closed: no path to any tank
     result = model.solve(
         SteadyInputs(

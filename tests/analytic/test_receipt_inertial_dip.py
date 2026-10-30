@@ -1,39 +1,12 @@
-"""Inertial head of the receipt column after a set-point step: hand values and transient engine.
+"""Inertial head of the receipt column after a set-point step: hand values and the transient engine.
 
-Inputs: the written episodes S0-G (set-point step down 600 to 300 m3/h at 1200 s) and S0-B
-(start-up, 0 to 600 m3/h at 0 s), and a short run with a step up (300 to 600 m3/h at 100 s).
-Outputs: pass/fail.
+A set-point step makes the head at the PT-001 tap jump by the inertance of the downstream column
+times dQ/dt, and the rigid-column engine is compared in the mean with the transient engine, which
+resolves the elastic oscillation. The comparison is between two models of the same equations and is
+not validation against measurement. The derivations and the choice of window are in the "Receipt
+inertial dip" section of the verification notes.
 
-Derivations (hand arithmetic; bore 0.30318 m has area 0.0721923 m2 and bore 0.20274 m has area
-0.0322828 m2):
-    * Lambda = sum L/(g A) over the edges downstream of the start of E002 (the PT-001 tap):
-      E002 + E003 = 120 m of DN300: 120 / (9.80665 x 0.0721923) = 169.50 s2/m2; E-R101a +
-      E-R101b = 45 m of DN200: 45 / (9.80665 x 0.0322828) = 142.14 s2/m2; sum 311.64 s2/m2.
-      Beyond the end of E002 (the hidden tap node): 105 m of DN300 + 45 m of DN200 = 290.45 s2/m2.
-    * The receipt controller is first order with time constant tau = 2 s (configuration):
-      dQ/dt = (Q_set - Q) / tau. A step from 600 to 300 m3/h gives dQ/dt = -150 m3/h/s =
-      -0.0416667 m3/s2 at the command; the head at the start of E002 falls at once by
-      Lambda dQ/dt = 311.64 x 0.0416667 = 12.985 m, which is 12.985 x 750 x 9.80665 = 95.5 kPa.
-    * The head at the start of E002 is H = Z + h_tank + sum loss(Q) + Lambda dQ/dt over the
-      downstream edges (the receipt column is anchored at the tank). Z is a constant that is fixed
-      from the row before the step, where dQ/dt = 0, so only the dependence on Q and dQ/dt is
-      tested.
-    * For each of E001 and E002, (H_from - H_to - loss(Q)) / Lambda_edge equals dQ/dt (the same
-      identity as in ``test_pt001_start_of_e002``).
-Independence: Lambda and the losses are hand values (the losses from the separate reference
-implementation of the friction law, with the fitting coefficients of the configuration); the
-rate of change comes from the first-order law and the written flows. The transient-engine
-comparison is a separate calculation (elastic waves, method of characteristics); its
-pressure oscillates about the rigid-column value, mainly at 1.0 s (and 0.41 s), which are periods
-of the whole network (the closed branches at the header), not of the receipt path alone: a first
-window of 4 L / a of the path (0.72 s) was a wrong premise, because it does not remove them. The
-comparison therefore uses the mean over a window of 2.0 s (twice the longest period, so it also
-removes the second harmonic), centred on the instant, and the tolerance is 10 percent of the dip
-magnitude Lambda |dQ/dt| at that instant.
-This is a comparison of two models of the same equations in their common range, not
-validation against measurement.
-
-Source: ``docs/design_decisions.md`` D22 and D36 version 2; ``docs/transient_engine.md``.
+See D22 and D36.
 """
 
 from __future__ import annotations
@@ -135,18 +108,29 @@ def check_event_rows(c: Case, qdot_before: float, qdot_after: float) -> None:
 
 
 def test_lambda_down_by_hand() -> None:
+    """The inertance downstream of the tap is 311.64 s2/m2 and a step of 150 m3/h/s gives a dip of
+    95.5 kPa. Independent: yes, because the values are hand arithmetic.
+    """
     assert LAMBDA_DOWN == pytest.approx(311.64, abs=0.01)
     assert LAMBDA_TAP == pytest.approx(290.45, abs=0.01)
     assert LAMBDA_DOWN * 150.0 / 3600.0 * RHO * G == pytest.approx(95.5e3, rel=2e-3)
 
 
 def test_step_down_dip_and_the_jump_at_the_command(series: dict[str, Series]) -> None:
+    """After a set-point step down the head dips at the command as the hand value and the flow rate
+    follows the first-order law. Independent: yes, because the inertance and the rate come from hand
+    values and the controller law.
+    """
     c = Case(series["S0-G"], 1200.0, 300.0, (1199.0, None))
     check_grid_rows(c)
     check_event_rows(c, 0.0, -150.0 / 3600.0)
 
 
 def test_start_up_rise_and_the_jump_at_the_command(series: dict[str, Series]) -> None:
+    """At start-up the head jumps at the command as the hand value for a rate of Q_set / tau.
+    Independent: yes, because the inertance and the rate come from hand values and the controller
+    law.
+    """
     c = Case(series["S0-B"], 0.0, 600.0, (0.0, "pre_event"))
     check_grid_rows(c)
     check_event_rows(c, 0.0, 600.0 / TAU / 3600.0)
@@ -169,6 +153,9 @@ def step_up(tmp_path_factory: pytest.TempPathFactory, model: HydraulicModel) -> 
 
 
 def test_step_up_rise_and_the_jump_at_the_command(step_up: Series) -> None:
+    """After a set-point step up the head rises at the command as the hand value. Independent: yes,
+    because the inertance and the rate come from hand values and the controller law.
+    """
     c = Case(step_up, 100.0, 600.0, (99.0, None))
     check_grid_rows(c)
     check_event_rows(c, 0.0, 300.0 / TAU / 3600.0)
@@ -216,6 +203,10 @@ def test_rigid_column_agrees_with_the_transient_engine_in_the_mean(
     to: float,
     side_level: str,
 ) -> None:
+    """The rigid-column pressure after a step agrees with the mean of the transient-engine pressure
+    over a 2 s window within 10 percent of the dip. Independent: no, because the transient engine is
+    a separate model of the same equations and not validation against measurement.
+    """
     s = series[key]
     level = next(
         lv for t, side, lv, _v, _f in s.tank["TK-101"] if t == t_step and side == side_level
@@ -243,6 +234,10 @@ def test_rigid_column_agrees_with_the_transient_engine_in_the_mean(
 def test_rigid_column_agrees_with_the_transient_engine_for_a_step_up(
     step_up: Series, model: HydraulicModel
 ) -> None:
+    """For a step up the rigid-column pressure agrees with the windowed mean of the transient engine
+    within 10 percent of the dip. Independent: no, because the transient engine is a separate model
+    of the same equations and not validation against measurement.
+    """
     level = next(
         lv for t, side, lv, _v, _f in step_up.tank["TK-101"] if t == 100.0 and side == "pre_event"
     )
