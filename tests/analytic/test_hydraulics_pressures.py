@@ -1,27 +1,9 @@
 """Static pressures, pressure basis and the NPSH reference values.
 
-Inputs: ``HydraulicModel`` and literal document values. Outputs: pass/fail.
-
-Derivations:
-    * Static pressure at a tap: p = rho g (H - z) - rho v^2 / 2, with the
-      velocity of the tap's reference edge. At the pump suction tee the
-      reference edge is the DN250 header, A = pi 0.25446^2 / 4 = 0.050853 m2;
-      at 300 m3/h v = 1.6388 m/s and v^2/(2g) = 0.13691 m (document: 0.136908).
-    * PT-201 at 300 m3/h and 1.8 m, pipe-only: head at the tee is
-      1.8 - losses(tank branch, header); the document values are
-      -0.046 / -0.102 / -0.157 barg for TK-101 / 102 / 103.
-    * Across the pump (same bore, same elevation, same velocity) the static
-      pressure rises by exactly rho g times the head rise.
-    * NPSHa at TK-102, 7 m, 25 C, 300 m3/h: (101325 - 49199)/(rho g) + (7 - 0.5)
-      - losses = 10.79 m (document section 4). The solved flow of that case is
-      300.0 m3/h, so the document's fixed 300 m3/h applies.
-    * Vapor pressures of the reference correlation: 35.065 / 49.199 / 67.530 /
-      90.863 kPa at 15 / 25 / 35 / 45 C (document section 1.1).
-Independence: the document values are from the audit; the identities are hand
-arithmetic. The tap formula is the one the package implements (stated in the
-task), so the check on it is the identities and the document numbers.
-
-Source: ``revised/02_hydraulic_model.md`` sections 1.1 and 4.
+The static pressure at a tap is checked against the documented values and the identity p = rho g (H
+- z) - rho v^2 / 2, the pressure rise across the pump against rho g times the head rise, and the
+available NPSH and vapor pressures against the documented figures. The derivations are in the
+"Static pressures and NPSH" section of the verification notes.
 """
 
 from __future__ import annotations
@@ -63,6 +45,10 @@ def _at_300(model: HydraulicModel, tank: str, level: float):  # type: ignore[no-
 def test_pt201_static_pressure_at_1_8_m_and_300_m3h(
     model: HydraulicModel, tank: str, document_bar: float
 ) -> None:
+    """The PT-201 pressure at 1.8 m and 300 m3/h equals the documented value for each tank, and
+    follows the tap formula. Independent: yes, because the documented values come from the audit and
+    the formula is checked as an identity.
+    """
     result = _at_300(model, tank, 1.8)
     tee = result.tap_pressures_pa_gauge["PUMP_SUCTION_TEE"]
     assert tee / 1e5 == pytest.approx(document_bar, abs=0.0006)
@@ -75,6 +61,9 @@ def test_pt201_static_pressure_at_1_8_m_and_300_m3h(
 
 
 def test_pressure_rise_across_the_pump_is_rho_g_times_the_head_rise(model: HydraulicModel) -> None:
+    """The static pressure rise across the pump equals rho g times its head rise. Independent: yes,
+    because the identity follows from equal bore and elevation.
+    """
     result = model.solve(delivery_case("TK-102", 7.0))
     assert result.pump is not None
     inlet = result.edge_end_pressures_pa_gauge["E-PA1"][1]
@@ -83,6 +72,9 @@ def test_pressure_rise_across_the_pump_is_rho_g_times_the_head_rise(model: Hydra
 
 
 def test_still_fluid_has_the_hydrostatic_pressure_of_its_tank(model: HydraulicModel) -> None:
+    """Fluid at rest has the hydrostatic pressure of its tank in every connected edge. Independent:
+    yes, because the expected value is rho g h.
+    """
     inputs = SteadyInputs(Lineup.of({"XV-S101"}), {"TK-101": 9.0}, SCENARIO, 25.0)
     result = model.solve(inputs)
     assert result.active_edges == frozenset()
@@ -99,17 +91,27 @@ def test_still_fluid_has_the_hydrostatic_pressure_of_its_tank(model: HydraulicMo
 def test_npsha_at_25_c_matches_the_document(
     model: HydraulicModel, tank: str, level: float, document: float
 ) -> None:
+    """The available NPSH at 25 C equals the documented value for each tank at 300 m3/h.
+    Independent: yes, because the values come from the audited document.
+    """
     result = model.solve(delivery_case(tank, level))
     assert result.pump is not None and result.pump.flow_m3h == pytest.approx(300.0, abs=0.05)
     assert result.phase.npsha_m == pytest.approx(document, abs=0.01)
 
 
 def test_npsha_at_45_c_matches_the_document(model: HydraulicModel) -> None:
+    """The available NPSH at 45 C and 7 m equals the documented 5.13 m. Independent: yes, because
+    the value comes from the audited document.
+    """
     result = model.solve(delivery_case("TK-102", 7.0, temperature_c=45.0))
     assert result.phase.npsha_m == pytest.approx(5.13, abs=0.01)
 
 
 def test_npsha_is_computed_from_the_pump_inlet_head(model: HydraulicModel) -> None:
+    """The available NPSH follows from the pump inlet head, the vapor pressure and the atmosphere,
+    and NPSH3 scales with the square of the flow. Independent: no, because the expression is the
+    definition used in the package.
+    """
     result = model.solve(delivery_case("TK-103", 5.0))
     assert result.pump is not None and result.phase.npsha_m is not None
     inlet = result.node_heads_m["P-101A:in"]
@@ -128,11 +130,17 @@ def test_npsha_is_computed_from_the_pump_inlet_head(model: HydraulicModel) -> No
 def test_vapor_pressure_of_the_reference_scenario(
     model: HydraulicModel, celsius: float, kpa: float
 ) -> None:
+    """The vapor pressure of the reference scenario at 15, 25, 35 and 45 C equals the documented
+    values. Independent: yes, because the values come from the audited document.
+    """
     value = vapor_pressure_pa(SCENARIO, celsius, model.config, model.fluid)
     assert value / 1000 == pytest.approx(kpa, abs=0.002)
 
 
 def test_temperature_strata_are_25_35_45(model: HydraulicModel) -> None:
+    """The temperature strata are 25, 35 and 45 C. Independent: yes, because the expected values are
+    the stated strata.
+    """
     assert [model.config.temperature_c(k) for k in ("25", "35", "45")] == [25.0, 35.0, 45.0]
 
 
@@ -142,5 +150,8 @@ def test_temperature_strata_are_25_35_45(model: HydraulicModel) -> None:
 def test_without_a_known_scenario_vapor_pressure_is_refused(
     model: HydraulicModel, scenario: str | None
 ) -> None:
+    """A vapor pressure without a known scenario name is refused. Independent: yes, because the
+    expected outcome is the rule that no default scenario exists.
+    """
     with pytest.raises(PropertyScenarioRequired):
         vapor_pressure_pa(scenario, 25.0, model.config, model.fluid)

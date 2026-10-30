@@ -1,21 +1,11 @@
-"""Property tests of the steady solve (hypothesis).
+"""Property tests of the steady solve, using random levels, lineups and loss multipliers.
 
-Inputs: random tank levels in the normal envelope (1.8 to 12 m), random lineups
-from the sixteen modes and random K multipliers. Outputs: pass/fail.
-Properties checked:
-    * the operating flow is non-decreasing in the tank level;
-    * with the pipe-only profile every K multiplier gives identical results
-      (all K are zero), and with the reference fittings the flow does not
-      increase with the multiplier;
-    * pump A and pump B branches are mirror images, so they give identical
-      flows for every level and multiplier;
-    * for every sixteen-mode lineup and random levels, node mass is conserved
-      and the result passes its own gates.
-Independence: these are invariants, not value checks, so they do not depend on
-a reference calculation. The conservation check is recomputed here from the edge
-flows with separate code.
+The checks are invariants and not value checks: the operating flow does not fall as the tank level
+rises, the multiplier has no effect with the pipe-only profile and does not raise the flow with the
+reference fittings, the two pump branches are mirror images, and every lineup conserves mass and
+passes its own gates.
 
-Source: ``revised/02_hydraulic_model.md`` sections 3 and 8; decision D15.
+See D15.
 """
 
 from __future__ import annotations
@@ -46,6 +36,9 @@ def _flow(model: HydraulicModel, tank: str, level: float, **kw: object) -> float
 def test_flow_does_not_decrease_when_the_tank_level_rises(
     model: HydraulicModel, tank: str, a: float, b: float, profile: str
 ) -> None:
+    """The operating flow does not decrease when the tank level rises. Independent: yes, because the
+    property is an invariant and needs no reference value.
+    """
     low, high = sorted((a, b))
     assert (
         _flow(model, tank, low, profile=profile) <= _flow(model, tank, high, profile=profile) + 1e-9
@@ -57,6 +50,9 @@ def test_flow_does_not_decrease_when_the_tank_level_rises(
 def test_multiplier_has_no_effect_on_the_pipe_only_profile(
     model: HydraulicModel, tank: str, level: float, multiplier: float
 ) -> None:
+    """The loss multiplier changes nothing with the pipe-only profile, where every fitting
+    coefficient is zero. Independent: yes, because the property is an invariant.
+    """
     base = _flow(model, tank, level, profile="pipe_only")
     assert _flow(model, tank, level, profile="pipe_only", multiplier=multiplier) == pytest.approx(
         base, rel=1e-9
@@ -68,6 +64,9 @@ def test_multiplier_has_no_effect_on_the_pipe_only_profile(
 def test_flow_does_not_increase_with_the_reference_fitting_multiplier(
     model: HydraulicModel, tank: str, level: float, m1: float, m2: float
 ) -> None:
+    """With the reference fittings the flow does not increase as the multiplier grows. Independent:
+    yes, because the property is an invariant.
+    """
     low, high = sorted((m1, m2))
     kw = dict(profile="reference_fittings", law=10.0)
     assert (
@@ -81,6 +80,9 @@ def test_flow_does_not_increase_with_the_reference_fitting_multiplier(
 def test_pump_a_and_pump_b_branches_are_symmetric(
     model: HydraulicModel, tank: str, level: float, multiplier: float, profile: str
 ) -> None:
+    """The pump A and pump B branches give the same flow for every level and multiplier.
+    Independent: yes, because the property is a symmetry of the network.
+    """
     a = _flow(model, tank, level, pump="A", profile=profile, multiplier=multiplier)
     b = _flow(model, tank, level, pump="B", profile=profile, multiplier=multiplier)
     assert a == pytest.approx(b, rel=1e-9)
@@ -105,6 +107,9 @@ def test_every_mode_conserves_mass_for_random_levels(
     levels: tuple[float, float, float],
     profile: str,
 ) -> None:
+    """Every lineup mode conserves mass at every node for random levels and passes its own gates.
+    Independent: yes, because the node balance is recomputed from the edge flows with separate code.
+    """
     mode = lineup_table.mode(data.draw(st.sampled_from(sorted(lineup_table.modes))))
     inputs = SteadyInputs(
         Lineup(mode.open_valves, mode.running_pumps),

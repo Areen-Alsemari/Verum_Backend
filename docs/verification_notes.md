@@ -60,3 +60,39 @@ Derivations (hand arithmetic):
 - Rigid column against the transient engine: the transient engine holds the tank level constant and puts the sink at the junction RECEIPT_HEADER (the end of E003), the rigid-column leak is at 0.95 of E003, 5.25 m upstream. The pressure at the two points differs by the friction of 5.25 m of DN300 at about 2.3 m/s (f 0.0155: 0.0155 x 5.25 / 0.30318 x 2.31^2 / 19.61 = 0.073 m, 0.56 % of a head of 13 m), which changes the leak flow by half of that, 0.3 %. The inertial head the rigid column misreads during the ramp is at most Lambda dQ_L/dt = 311 s2/m2 x (0.006 m3/s / 300 s) = 0.006 m, 0.05 %. The tolerance is therefore 1 percent of the final leak flow plus the noise of the 10 s mean (0.5 %).
 
 Independence: the formula and the tolerance are hand values; the transient engine is a separate model of the same equations, not independent validation of the facility.
+
+## Headroom screen and level envelope
+
+Derivation of the expected values (independent of the package code), with A = 225 pi = 706.858347058 m2, V_post = 20 m3, dh = 0.05 m, HH = 13 m, CH = 14 m (available headroom 1 m): rise(Q, t) = (Q t + V_post) / A + dh 600 m3/h, 1 h : (600 + 20) / A + 0.05 = 0.877121 + 0.05 = 0.927121 m margin 1 - 0.927121 = 0.072879 m 660 m3/h, 1 h : (660 + 20) / A + 0.05 = 1.012003 m -> required height 14.012003 m, fails 900 m3/h, 1 h : (900 + 20) / A + 0.05 = 1.351 m, fails 600 m3/h, 2 h : (1200 + 20) / A + 0.05 = 1.776 m, fails limiting flow for 1 h: Q = (0.95 A - 20) m3/h = 651.515 m3/h normal/high screen, 15 min at 600 m3/h: (150 + 20) / A + 0.05 = 0.290501 m receipt level rise: 600 m3 / A = 0.848826 m
+
+Same-formula note: the rise expression is the definition of screen E7 and is the same expression as in the implementation; the independent parts are the decimal arithmetic, the literal values from the audited document, and the pass/fail outcomes.
+
+## Delivery hydraulics
+
+Derivations (independent of the package, except where stated):
+
+- Closed-form series solve: the delivery path is one series line (tank, suction branch, DN250 header, pump branch, distribution main). The pump head equals the static difference plus the boundary law plus the summed Darcy losses; the operating flow is the root of that scalar equation (brentq). This is a different method from the node-head Newton solve.
+- Required pump head at 300 m3/h, pipe-only, fixed 2 barg boundary: H = 200000/(rho g) + (0.5 - h) + losses(300 m3/h); with 27.19 m of boundary head, 8.589 m of losses and h = 9 m this is 27.281 m (audited document); the speed ratio follows from 54 s^2 - 12 = H.
+- Reference-fittings TK-102 path: total K counted by hand (see `_reference_hydraulics.tank2_reference_fittings_segments`).
+- Document values quoted below come from the audited reference package. The D2 operating points (312.6, 300.0, 287.5 m3/h) come from the audited reference script with the D2 resistance added (decision record D2).
+
+Independence of the friction law: same law as the package (see `test_hydraulics_friction.py`).
+
+## Friction law
+
+Derivation of the expected values (hand arithmetic, DN200, 300 m3/h): Q = 300/3600 = 0.083333 m3/s; A = pi 0.20274^2 / 4 = 0.032283 m2; v = 2.5813 m/s; Re = 750 x 2.5813 x 0.20274 / 0.0005 = 7.85e5 (turbulent). eps/D = 4.5e-5/0.20274 = 2.2196e-4; (2.2196e-4/3.7)^1.11 = 2.055e-5; 6.9/Re = 8.79e-6; sum 2.934e-5; log10 = -4.5326; 1/sqrt(f) = 8.1587; f = 0.015023. Head loss over 250 m: 0.015023 x (250/0.20274) x (v^2/2g = 0.33964 m) = 6.292 m by hand, which the audited document gives as 6.296 m.
+
+Independence: the document figures (6.296, 0.279, 0.504, 1.875 m) were produced by the audit's script, and the hand arithmetic above is separate from the package. The friction law itself (D14) is the same law in the package, the document and `_reference_hydraulics`; the tests therefore do not check the law's physical validity, only its correct implementation.
+
+## Static pressures and NPSH
+
+Derivations:
+
+- Static pressure at a tap: p = rho g (H - z) - rho v^2 / 2, with the velocity of the tap's reference edge. At the pump suction tee the reference edge is the DN250 header, A = pi 0.25446^2 / 4 = 0.050853 m2; at 300 m3/h v = 1.6388 m/s and v^2/(2g) = 0.13691 m (document: 0.136908).
+- PT-201 at 300 m3/h and 1.8 m, pipe-only: head at the tee is 1.8 - losses(tank branch, header); the document values are -0.046 / -0.102 / -0.157 barg for TK-101 / 102 / 103.
+- Across the pump (same bore, same elevation, same velocity) the static pressure rises by exactly rho g times the head rise.
+- NPSHa at TK-102, 7 m, 25 C, 300 m3/h: (101325 - 49199)/(rho g) + (7 - 0.5)
+- losses = 10.79 m (document section 4). The solved flow of that case is 300.0 m3/h, so the document's fixed 300 m3/h applies.
+- Vapor pressures of the reference correlation: 35.065 / 49.199 / 67.530 / 90.863 kPa at 15 / 25 / 35 / 45 C (document section 1.1).
+
+Independence: the document values are from the audit; the identities are hand arithmetic. The tap formula is the one the package implements (stated in the task), so the check on it is the identities and the document numbers.

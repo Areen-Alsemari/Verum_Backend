@@ -1,27 +1,12 @@
-"""Delivery side: network against closed-form series solves, required head, D2 points.
+"""Delivery side: the network against closed-form series solves, required head and the operating
+points.
 
-Inputs: ``HydraulicModel`` and the independent series-path solver in
-``_reference_hydraulics``. Outputs: pass/fail.
+The delivery path is one series line, so its operating flow is the root of a scalar equation that a
+separate reference module solves without the network solver. Further tests check the documented
+operating points, the boundary-node pressure, the pump power and curve, and the sensitivity to the
+loss multiplier. The derivations are in the "Delivery hydraulics" section of the verification notes.
 
-Derivations (independent of the package, except where stated):
-    * Closed-form series solve: the delivery path is one series line (tank,
-      suction branch, DN250 header, pump branch, distribution main). The pump
-      head equals the static difference plus the boundary law plus the summed
-      Darcy losses; the operating flow is the root of that scalar equation
-      (brentq). This is a different method from the node-head Newton solve.
-    * Required pump head at 300 m3/h, pipe-only, fixed 2 barg boundary:
-      H = 200000/(rho g) + (0.5 - h) + losses(300 m3/h); with 27.19 m of
-      boundary head, 8.589 m of losses and h = 9 m this is 27.281 m (audited
-      document); the speed ratio follows from 54 s^2 - 12 = H.
-    * Reference-fittings TK-102 path: total K counted by hand (see
-      ``_reference_hydraulics.tank2_reference_fittings_segments``).
-    * Document values quoted below come from the audited reference package.
-      The D2 operating points (312.6, 300.0, 287.5 m3/h) come from the audited
-      reference script with the D2 resistance added (decision record D2).
-Independence of the friction law: same law as the package (see
-``test_hydraulics_friction.py``).
-
-Source: ``revised/02_hydraulic_model.md`` sections 3.1, 3.2; decision D2 (v3.0).
+See D2.
 """
 
 from __future__ import annotations
@@ -41,6 +26,9 @@ C_PIPE_ONLY = load_boundary_law_coefficient("pipe_only").value
 def test_network_flow_equals_the_closed_form_series_solve(
     model: HydraulicModel, tank: str, level: float, pump: str
 ) -> None:
+    """The pump flow and head rise of the network solve equal the root of the series-path equation.
+    Independent: yes, because the reference solves a scalar equation with a different method.
+    """
     result = model.solve(delivery_case(tank, level, pump=pump))
     expected = ref.operating_flow_m3h(level, C_PIPE_ONLY, ref.delivery_segments(tank))
     assert result.pump is not None
@@ -55,12 +43,18 @@ def test_network_flow_equals_the_closed_form_series_solve(
 def test_d2_operating_points_pipe_only(
     model: HydraulicModel, tank: str, level: float, document: float
 ) -> None:
+    """The pipe-only operating points match the documented flows of the delivery boundary decision.
+    Independent: yes, because the values come from the audited reference script.
+    """
     result = model.solve(delivery_case(tank, level))
     assert result.pump is not None
     assert result.pump.flow_m3h == pytest.approx(document, abs=0.1)
 
 
 def test_tk102_at_7_m_runs_at_300_with_42_m(model: HydraulicModel) -> None:
+    """Delivery from tank TK-102 at 7 m runs at 300 m3/h with 42 m of pump head. Independent: yes,
+    because the duty point is the stated design point.
+    """
     pump = model.solve(delivery_case("TK-102", 7.0)).pump
     assert pump is not None
     assert pump.flow_m3h == pytest.approx(300.0, abs=0.05)
@@ -68,11 +62,18 @@ def test_tk102_at_7_m_runs_at_300_with_42_m(model: HydraulicModel) -> None:
 
 
 def test_pipe_only_coefficient_is_11_96(model: HydraulicModel) -> None:
+    """The pipe-only boundary-law coefficient is 11.96 m. Independent: yes, because the expected
+    value is the documented constant.
+    """
     assert C_PIPE_ONLY == pytest.approx(11.96, abs=0.005)
 
 
 @pytest.mark.parametrize("pump", ["A", "B"])
 def test_reference_fittings_closed_form_for_tk102(model: HydraulicModel, pump: str) -> None:
+    """With the reference fittings the flow of tank TK-102 equals the closed-form series solve and
+    is 300 m3/h. Independent: yes, because the reference solves the path with a hand-counted loss
+    coefficient.
+    """
     c = load_boundary_law_coefficient("reference_fittings").value
     result = model.solve(delivery_case("TK-102", 7.0, profile="reference_fittings", pump=pump))
     expected = ref.operating_flow_m3h(7.0, c, ref.tank2_reference_fittings_segments())
@@ -82,6 +83,9 @@ def test_reference_fittings_closed_form_for_tk102(model: HydraulicModel, pump: s
 
 
 def test_reference_fittings_reduce_the_flow_at_equal_boundary_law(model: HydraulicModel) -> None:
+    """At an equal boundary law the reference fittings reduce the flow below the pipe-only value.
+    Independent: yes, because only the direction is checked.
+    """
     pipe = model.solve(delivery_case("TK-102", 7.0, law=C_PIPE_ONLY)).pump
     fit = model.solve(
         delivery_case("TK-102", 7.0, profile="reference_fittings", law=C_PIPE_ONLY)
@@ -119,6 +123,9 @@ def _speed_for_300(model: HydraulicModel, tank: str, level: float) -> float:
 def test_required_head_at_300_m3h_with_fixed_2_barg_boundary(
     model: HydraulicModel, tank: str, level: float
 ) -> None:
+    """At 300 m3/h against a fixed 2 barg boundary the required pump head equals the documented
+    value. Independent: yes, because the values come from the audited document.
+    """
     head, _, _ = REQUIRED[(tank, level)]
     s = _speed_for_300(model, tank, level)
     pump = VariableSpeedPump(s, enforce_domain=False)
@@ -134,6 +141,9 @@ def test_required_head_at_300_m3h_with_fixed_2_barg_boundary(
 def test_speed_ratios_and_reference_equivalent_flows(
     model: HydraulicModel, tank: str, level: float
 ) -> None:
+    """The pump speed ratios that give 300 m3/h and the equivalent flows at reference speed equal
+    the documented values. Independent: yes, because the values come from the audited document.
+    """
     _, ratio, equivalent = REQUIRED[(tank, level)]
     s = _speed_for_300(model, tank, level)
     assert s == pytest.approx(ratio, abs=0.0006)
@@ -141,6 +151,9 @@ def test_speed_ratios_and_reference_equivalent_flows(
 
 
 def test_tk101_k0_speed_is_rejected_because_q_over_s_exceeds_350(model: HydraulicModel) -> None:
+    """The zero-coefficient speed for tank TK-101 puts Q/s above 350 m3/h and is rejected as outside
+    the pump curve. Independent: yes, because the limit is the stated pump domain.
+    """
     s = _speed_for_300(model, "TK-101", 9.0)
     assert 300 / s > 350
     with pytest.raises(PumpOutsideCurve, match="outside the pump curve"):
@@ -149,6 +162,9 @@ def test_tk101_k0_speed_is_rejected_because_q_over_s_exceeds_350(model: Hydrauli
 
 @pytest.mark.parametrize("tank", ["TK-102", "TK-103"])
 def test_tk102_and_tk103_k0_speeds_are_accepted(model: HydraulicModel, tank: str) -> None:
+    """The zero-coefficient speeds for tanks TK-102 and TK-103 stay inside the pump curve.
+    Independent: yes, because the limit is the stated pump domain.
+    """
     s = _speed_for_300(model, tank, INITIAL_LEVELS[tank])
     point = model.solve(
         delivery_case(tank, INITIAL_LEVELS[tank], law=0.0, pump_element=VariableSpeedPump(s))
@@ -163,6 +179,9 @@ def test_tk102_and_tk103_k0_speeds_are_accepted(model: HydraulicModel, tank: str
 def test_boundary_node_head_and_pt203_pressure(
     model: HydraulicModel, tank: str, level: float
 ) -> None:
+    """The boundary node head and the PT-203 pressure equal 2 barg plus the boundary-law head.
+    Independent: yes, because the pressure is recomputed from the flow with the stated law.
+    """
     result = model.solve(delivery_case(tank, level))
     assert result.pump is not None
     q = result.pump.flow_m3h
@@ -180,6 +199,9 @@ def test_boundary_node_head_and_pt203_pressure(
 
 
 def test_pt203_varies_with_flow(model: HydraulicModel) -> None:
+    """The PT-203 pressure rises with the tank level and is about 2.855 barg at 7 m. Independent:
+    yes, because the value is a hand estimate.
+    """
     pressures = [
         model.solve(delivery_case("TK-102", h)).tap_pressures_pa_gauge["DISTRIBUTION_BOUNDARY"]
         for h in (3.0, 7.0, 12.0)
@@ -189,6 +211,9 @@ def test_pt203_varies_with_flow(model: HydraulicModel) -> None:
 
 
 def test_zero_coefficient_holds_the_boundary_node_at_the_reservoir(model: HydraulicModel) -> None:
+    """A boundary-law coefficient of zero holds the boundary node at the reservoir head.
+    Independent: yes, because the expected pressure is the stated 2 barg.
+    """
     result = model.solve(
         delivery_case("TK-102", 7.0, law=0.0, pump_element=VariableSpeedPump(0.882, False))
     )
@@ -201,6 +226,9 @@ def test_zero_coefficient_holds_the_boundary_node_at_the_reservoir(model: Hydrau
 
 
 def test_pump_power_uses_the_constant_efficiency(model: HydraulicModel) -> None:
+    """Hydraulic power is rho g Q H and shaft power is the hydraulic power divided by the constant
+    efficiency of 0.75. Independent: yes, because the power is recomputed by hand.
+    """
     pump = model.solve(delivery_case("TK-102", 7.0)).pump
     assert pump is not None
     q = pump.flow_m3h / 3600
@@ -210,6 +238,9 @@ def test_pump_power_uses_the_constant_efficiency(model: HydraulicModel) -> None:
 
 
 def test_pump_curve_values() -> None:
+    """The fixed-speed pump curve gives 54 m at shutoff and 42 m at 300 m3/h, and its domain ends at
+    350 m3/h. Independent: yes, because the values are the stated curve.
+    """
     from verum.hydraulics import FixedSpeedPump
 
     pump = FixedSpeedPump(54.0, 12.0, 300.0, 350.0, 0.75)
@@ -229,7 +260,9 @@ def test_pump_curve_values() -> None:
 def test_k_multiplier_sensitivity_matches_the_closed_form(
     model: HydraulicModel, multiplier: float
 ) -> None:
-    """Independent: the hand-counted K of the TK-102 path is scaled and solved (c fixed)."""
+    """Scaling the fitting loss coefficients changes the flow as the closed-form series solve does.
+    Independent: yes, because the hand-counted coefficients are scaled and solved separately.
+    """
     c = load_boundary_law_coefficient("reference_fittings").value
     segments = [
         (d, length, k * multiplier) for d, length, k in ref.tank2_reference_fittings_segments()
@@ -243,6 +276,9 @@ def test_k_multiplier_sensitivity_matches_the_closed_form(
 
 
 def test_k_multiplier_effect_on_tk102_is_a_few_percent(model: HydraulicModel) -> None:
+    """Halving or doubling the fitting losses changes the flow of tank TK-102 by a few percent only.
+    Independent: yes, because the bound is a hand estimate.
+    """
     flows = {
         m: model.solve(
             delivery_case("TK-102", 7.0, profile="reference_fittings", multiplier=m)
@@ -256,6 +292,9 @@ def test_k_multiplier_effect_on_tk102_is_a_few_percent(model: HydraulicModel) ->
 
 
 def test_the_two_profiles_have_equal_flow_at_the_calibration_point(model: HydraulicModel) -> None:
+    """The two fitting profiles give the same 300 m3/h at the calibration point. Independent: yes,
+    because the point is the calibration condition.
+    """
     a = model.solve(delivery_case("TK-102", 7.0, profile="pipe_only")).pump
     b = model.solve(delivery_case("TK-102", 7.0, profile="reference_fittings")).pump
     assert a is not None and b is not None
