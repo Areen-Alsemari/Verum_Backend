@@ -1,24 +1,13 @@
 """The sensor chain on arrays: lag, sampling or window mean, noise, quantisation, dropout.
 
-Inputs: a truth series in engineering units as nodes (time, value, jump flag), the tag
-specification and per-tag random generators. Outputs: sample times, values, quality and
-availability.
-Key assumptions:
-    * Fixed order: unit-converted truth -> transport delay (none unless given) -> first-order
-      lag -> sampling (instantaneous, or trailing window mean) -> bias and drift hooks
-      (zero) -> noise -> quantisation and clipping -> dropout -> quality.
-    * Event aware: the truth is piecewise linear between nodes; a node flagged ``jump`` is
-      the post-event value at the same time as its predecessor, and the chain never
-      interpolates across that pair. A sample at an event time reads the post-event state.
-    * The first-order lag is discretised exactly for piecewise-linear input: over a step of
-      length ``h`` from input ``x_a`` to ``x_b`` (slope ``s``),
-      ``y(h) = a y0 + (1 - a)(x_a - s tau) + s h``, ``a = exp(-h/tau)``. The state is carried
-      across steps and across jumps (a jump changes the input, not the state).
-    * Noise and dropout draw one value per scheduled sample from the tag's own generators,
-      whatever the outcome, so the draw order does not depend on earlier outcomes.
+The order is fixed: transport delay, first-order lag, sampling (instantaneous or trailing window
+mean), bias and drift hooks, noise, quantisation and clipping, dropout, quality. Truth is piecewise
+linear between nodes, and a node flagged as a jump carries the post-event value at the time of its
+predecessor, so the chain never interpolates across the pair. The lag is discretised exactly for
+piecewise-linear input and its state carries across jumps. Noise and dropout draw one value per
+scheduled sample whatever the outcome, so the draw order does not depend on earlier outcomes.
 
-Source: ``docs/design_decisions.md`` D28 to D32; the audited reference test (lag step
-response, window mean on a ramp, event sample at the event time).
+See D28 to D32.
 """
 
 from __future__ import annotations
@@ -95,11 +84,11 @@ def sample_phase(tag: str, interval_s: float) -> float:
 def quantise_clip(
     value: float, lo: float, hi: float, steps: int, sigma: float
 ) -> tuple[float, bool]:
-    """Round to ``(hi - lo)/steps`` and clip to the range (decision D29, version 1.1).
+    """Round to the quantisation step (D29) and clip to the range.
 
-    Returns the value and whether it is a real overrange: clipped by more than three noise
-    standard deviations. A value that is outside the range by noise only is clipped and not
-    flagged."""
+    Returns the value and whether it is a real overrange: clipped by more than three noise standard
+    deviations. A value outside the range by noise only is clipped and not flagged.
+    """
     if value < lo or value > hi:
         over = (lo - value) if value < lo else (value - hi)
         return (lo if value < lo else hi), over > 3.0 * sigma

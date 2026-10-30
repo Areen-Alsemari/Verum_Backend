@@ -1,18 +1,12 @@
 """Sensor specifications: the 30 emitted tags and the chain parameters.
 
-Inputs: ``config/sensor_specs.json`` (units, ranges, rates, lag and comms delay from table
-6.1.1 of the instrumentation document), ``config/sensors.json`` (noise, quantisation,
-dropout, contact thresholds, detector) and ``config/canonical_sensor_contract.json``.
-Outputs: ``SensorConfig`` with one ``TagSpec`` per emitted tag.
-Key assumptions:
-    * Every number is a ``ParamValue``; reading an unresolved one raises.
-    * Only tags with status ``emit`` in the contract have a specification; the six withheld
-      tags have none, so no row can be produced for them.
-    * The table and the contract are cross-checked on load: the mapping reference of each
-      tag must be the contract's.
+Units, ranges, rates, lag and communication delay come from the instrumentation table, and noise,
+quantisation, dropout, contact thresholds and detector settings from the sensor configuration. Every
+number is a parameter record. Only tags with status emit in the contract have a specification, so no
+row can be produced for the six withheld tags, and the table and the contract are cross-checked on
+load.
 
-Source: ``revised/04_instrumentation_inspection.md`` section 6.1.1;
-``docs/design_decisions.md`` D27 to D33.
+See D27 to D33.
 """
 
 from __future__ import annotations

@@ -1,31 +1,14 @@
 """The adapter between the hidden truth store and the sensor chain.
 
-Inputs: an episode directory written by the engine. Outputs: ``observations.jsonl.gz`` and
-``observation_audit.jsonl.gz`` in the same directory (the manifest is rewritten), and the
-rows in memory.
-Key assumptions:
-    * This is the only module of ``verum.sensors`` that imports from ``verum.truth`` (a
-      static test enforces it). It reads the hydraulic-state rows and the episode record and
-      hands plain arrays to ``chain``.
-    * Unit conversion happens first: m3/s to m3/h, absolute pressure to gauge with the
-      atmosphere of the episode stratum (decision D27), K to C.
-    * Every truth quantity is determined (decision D39 gives idle segments a pressure); an
-      undetermined value is an error, never a null row or a held value.
-    * Event tags (valve contacts, pump indicators, LSHH) are rows at t = 0 and at each
-      change. A valve open contact follows decision D31 (assert at alpha 0.98, release below
-      0.97, delay equal to the lag of the table); the position is ``contact_position_frac`` when
-      the row has it (an obstruction fault, decision D74) and ``position_frac`` otherwise.
-      An LSHH row is the detector output of the
-      engine (which already includes the detector delay of decision D33), seen after the
-      comms delay.
-    * The six withheld tags have no specification and therefore produce no row.
-    * Every continuous tag has its own random streams (noise, dropout) named after the tag.
-    * A hook (``SensorHook``) may change a sampled reading before noise and quantisation. It is
-      called for every scheduled sample, also a dropped one, in time order, so that a stateful
-      hook (a frozen reading) does not depend on the dropout draws. With ``clean`` set no noise,
-      dropout, quantisation or clipping is applied (the noise-free sampled series).
+It reads the hydraulic-state rows and the episode record of an episode directory, converts units
+(m3/s to m3/h, absolute pressure to gauge with the atmosphere of the episode stratum, K to C), and
+hands plain arrays to the chain. Every truth quantity must be determined, since an undetermined
+value is an error and never a null row or a held value. Event tags (valve contacts, pump indicators,
+high-high switch) are rows at t = 0 and at each change. A hook may change a sampled reading before
+noise and quantisation, and it is called for every scheduled sample in time order, so a stateful
+hook does not depend on the dropout draws. The six withheld tags produce no row.
 
-Source: ``docs/design_decisions.md`` D27 to D33.
+See D27 to D33 and D74.
 """
 
 from __future__ import annotations
