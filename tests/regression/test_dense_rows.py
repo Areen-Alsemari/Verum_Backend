@@ -50,7 +50,7 @@ def test_no_pair_of_rows_spans_more_than_a_tenth_of_a_second_in_the_window(
     series: dict[str, Series],
 ) -> None:
     s = series["S0u-E"]
-    (window,) = s.windows
+    window = next(w for w in s.windows if w["kind"] == "flow_collapse")
     times = sorted({t for t, side, _q in s.edge["E001"] if side != "pre_event"})
     inside = [t for t in times if window["t_start_s"] - 0.1 <= t <= window["t_end_s"] + 0.1]
     assert len(inside) >= 3

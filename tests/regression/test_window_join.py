@@ -1,6 +1,7 @@
 """Joining validity-window identifiers to observation rows by time (evaluation side).
 
-Inputs: the S0u-E episode (one flagged window) and small synthetic cases. Outputs: pass/fail.
+Inputs: the S0u-E episode (a collapse window and, since D54, a dead-leg window) and small
+synthetic cases. Outputs: pass/fail.
 Key assumptions:
     * The join sits in ``verum.evaluation``, not in ``verum.api``; the gateway imports
       nothing from the evaluation package, and the audited audit schema is not changed.
@@ -23,23 +24,26 @@ from verum.evaluation import attach_window_ids, load_windows
 from verum.sim.episode import EpisodeResult
 
 
-def test_the_s0ue_collapse_window_is_attached_to_the_samples_inside_it(
+def test_the_s0ue_windows_are_attached_to_the_samples_inside_them(
     episodes: dict[str, EpisodeResult],
 ) -> None:
     directory = episodes["S0u-E"].directory
     with gzip.open(directory / "observations.jsonl.gz", "rt") as handle:
         rows = [json.loads(line) for line in handle]
     windows = load_windows(directory)
-    assert len(windows) == 1
-    w = windows[0]
+    assert [w["kind"] for w in windows] == ["flow_collapse", "dead_leg_unvalidated"]
+    collapse = windows[0]
     joined = attach_window_ids(rows, windows)
-    inside = [r for r in joined if r["validity_window_ids"]]
-    expected = [r for r in rows if w["t_start_s"] <= r["t_sim_s"] <= w["t_end_s"]]
-    assert [r["t_sim_s"] for r in inside] == [r["t_sim_s"] for r in expected]
-    assert all(r["validity_window_ids"] == [w["window_id"]] for r in inside)
-    # The window lasts 0.19 s: the seven 1 s tags put about 1.3 rows inside it.
+    for r in joined:
+        expected = [
+            w["window_id"] for w in windows if w["t_start_s"] <= r["t_sim_s"] <= w["t_end_s"]
+        ]
+        assert r["validity_window_ids"] == expected
+    inside = [r for r in joined if collapse["window_id"] in r["validity_window_ids"]]
+    # The collapse lasts 0.19 s: the seven 1 s tags put about 1.3 rows inside it.
     assert len(joined) == len(rows) and len(inside) >= 1
-    assert all(not r["validity_window_ids"] for r in joined if r["t_sim_s"] < w["t_start_s"] - 1e-9)
+    first = collapse["t_start_s"] - 1e-9
+    assert all(not r["validity_window_ids"] for r in joined if r["t_sim_s"] < first)
     assert all("validity_window_ids" not in r for r in rows)  # the input is not modified
 
 

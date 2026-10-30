@@ -37,6 +37,7 @@ from verum.truth import ListSink
 
 TIMELINE = esd_timeline()
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-inland"]
+FLAGGED = ("S0u-D", "S0u-E")  # episodes with a validity window (decisions D53 and D54)
 AREA = 706.858347
 
 
@@ -84,8 +85,9 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
     doc = json.loads((episodes[sid].directory / "episode.json").read_text())
     validate("episode", doc)
     assert doc["status"] == "completed"
+    # S0u-E has a collapse and a dead-leg window; S0u-D has a stroke window at the factor 25 of D53.
     assert doc["dataset_tier"] == (
-        "restricted_benchmark" if sid == "S0u-E" else "analytic_verification"
+        "restricted_benchmark" if sid in FLAGGED else "analytic_verification"
     )
     assert doc["config_hash"] == config_hash() and doc["step_size_s"] == 1.0
     assert doc["pipe_inventory_constant"] is True and doc["fitting_profile"] == "reference_fittings"
@@ -673,14 +675,14 @@ def test_episode_directories_hold_no_observation_fields(series: dict[str, Series
 def test_tier_follows_the_flagged_windows_and_the_gate_still_blocks_production(
     episodes: dict[str, EpisodeResult],
 ) -> None:
-    """Decision D37: only the episode with a flagged window is restricted; the release gate
+    """Decision D37: only the episodes with a flagged window are restricted; the release gate
     refuses production_candidate while generation is disabled and allows the other tiers."""
     from verum.gates import ReleaseNotAllowed, assert_release_allowed
 
     for sid, result in episodes.items():
         doc = json.loads((result.directory / "episode.json").read_text())
         flagged = bool(doc["validity_windows"])
-        assert flagged is (sid == "S0u-E")
+        assert flagged is (sid in FLAGGED)
         assert doc["dataset_tier"] == (
             "restricted_benchmark" if flagged else "analytic_verification"
         )
