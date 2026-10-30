@@ -1,22 +1,16 @@
 """Series elements between two pipe ends: valve, pump, check valve, closed element.
 
-Inputs: for the two ends of an element the characteristic constants and conductances, and the
-element's law. Outputs: the flow through the element, positive from the first end to the second.
-Key assumptions:
-    * Valve (decisions D4 and D19): an extra resistance ``K2 = (K(alpha) - K_open)/(2 g A^2)``
-      so that the head drops by ``K2 Q|Q|``; a closed valve (alpha at or below the closed
-      threshold) is a zero-flow element on both sides.
-    * Pump (decision D44): a quasi-steady curve ``h = H0 - k (Q/Q_ref)^2`` between the inlet and
-      the outlet node, no inertia (decision D6). A stopped pump is a resistance with the same
-      quadratic coefficient and no shutoff head (a modelling choice, documented), so reverse flow
-      through it is possible until a check valve closes.
-    * Check valve (decision D44): open it is a plain series node; it closes a finite delay after
-      the flow first reverses, the reverse volume that passes meanwhile is accounted, and it
-      reopens when the upstream total head exceeds the downstream one.
-    * All flows follow from ``B_s Q + K2 Q|Q| = W + S`` with ``B_s = B_1 + B_2`` and
-      ``W = D_1 - D_2``; ``S`` is the pump shutoff head.
+- A valve adds a resistance K2 = (K(alpha) - K_open) / (2 g A^2), and a closed valve is a zero-flow
+  element.
+- A pump follows a quasi-steady curve h = H0 - k (Q / Q_ref)^2 with no inertia. A stopped pump is a
+  resistance with the same quadratic coefficient and no shutoff head, so reverse flow through it is
+  possible until a check valve closes.
+- A check valve closes a finite delay after the flow first reverses, accounts for the reverse volume
+  that passes meanwhile, and reopens when the upstream total head exceeds the downstream one.
 
-Source: ``docs/design_decisions.md`` D4, D6, D19 and D44.
+The flow is positive from the first end to the second.
+
+See D4, D6, D19 and D44.
 """
 
 from __future__ import annotations

@@ -1,21 +1,12 @@
-"""Reach grid and per-edge wave-speed adjustment (decision D43).
+"""Reach grid and per-edge wave-speed adjustment.
 
-Inputs: the edges (anything with an id, length and bore), the screening wave speeds by
-nominal size and the time step.
-Outputs: for each edge the number of reaches, the adjusted wave speed, the reach length and the
-adjustment in percent; the maximum adjustment.
-Key assumptions:
-    * One time step ``dt`` for all edges. Each edge has ``N = max(1, round(L / (a dt)))`` reaches
-      and its wave speed is adjusted to ``a' = L / (N dt)`` so that the Courant number is
-      exactly one on every edge. ``dt = 0.923 ms`` keeps the adjustment below 0.53 percent.
-    * The screening speeds are those of the audited package (1089.2, 1082.8 and 1078.2 m/s for
-      DN200, DN250 and DN300, restraint factor psi = 1, a screening value). A restraint factor
-      or a bulk modulus other than the reference scales them with the thin-wall relation
-      ``a = sqrt((K / rho) / (1 + (K / K0) psi c_i))``, where ``c_i`` is fixed by the screening
-      speed of the size at K0 = 1e9 Pa and psi = 1.
+One time step dt serves all edges. An edge has N = max(1, round(L / (a dt))) reaches and its wave
+speed is adjusted to a' = L / (N dt), so the Courant number is exactly one on every edge. With dt =
+0.923 ms the adjustment stays below 0.53 percent. The screening wave speeds are 1089.2, 1082.8 and
+1078.2 m/s for DN200, DN250 and DN300 with a restraint factor of 1. Another restraint factor or bulk
+modulus scales them with the thin-wall relation a = sqrt((K / rho) / (1 + (K / K0) psi c_i)).
 
-Source: ``docs/design_decisions.md`` D43; ``revised/05_simulation_validation_dataset.md``
-PAR-PIP-007 and section 4.2.
+See D43.
 """
 
 from __future__ import annotations
@@ -52,7 +43,7 @@ def dn_of(diameter_m: float) -> int:
 
 
 def load_wave_speeds(directory: Path | None = None) -> dict[int, float]:
-    """Screening wave speeds by nominal size from ``config/sim.json``."""
+    """Load the screening wave speeds by nominal size from the simulation configuration."""
     raw = json.loads(((directory or config_dir()) / "sim.json").read_text(encoding="utf-8"))
     p = raw["parameters"]
     return {200: p["wave_speed_dn200_m_s"]["value"], 250: p["wave_speed_dn250_m_s"]["value"],

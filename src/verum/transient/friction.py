@@ -1,12 +1,10 @@
-"""Vectorised Darcy friction factor (decision D14 law of the steady package).
+"""Vectorised Darcy friction factor, the same law as the steady package.
 
-Inputs: arrays of velocity, bore, density, viscosity and roughness. Outputs: the Darcy factor.
-Key assumptions: 64/Re below Re 2300, Haaland above 4000, a linear blend in Re between (the
-same law as ``verum.hydraulics.friction``; a test compares the two). A zero velocity gives the
-laminar-limit factor at a tiny Reynolds number so that no division by zero occurs; the loss it
-multiplies is zero.
+The factor is 64/Re below Re 2300, Haaland above 4000, with a linear blend between, and a test
+compares it with the steady version. A zero velocity gives the laminar-limit factor at a tiny
+Reynolds number so that no division by zero occurs, and the loss it multiplies is zero.
 
-Source: ``docs/design_decisions.md`` D14.
+See D14.
 """
 
 from __future__ import annotations

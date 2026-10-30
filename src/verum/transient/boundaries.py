@@ -1,19 +1,13 @@
-"""Boundary and junction relations at pipe ends (tank, reservoir, source, closed end, junction).
+"""Boundary and junction relations at pipe ends: tank, reservoir, source, closed end, junction.
 
-Inputs: for each pipe end the characteristic constants ``D_e = C_e + v_e^2/(2g)`` and the
-conductance ``g_e = 1/B_e``, where ``H_pz = C_e - B_e Qn`` is the compatibility relation of the
-end and ``Qn`` the flow that leaves the pipe into the node. Outputs: ``Qn`` of every end.
-Key assumptions:
-    * The node head is a total head; the piezometric head of an end is the node head less the
-      velocity head of the pipe, taken at the previous step (it is exact at steady state).
-    * Tank: constant head. Reservoir: constant head behind the boundary law
-      ``H_n = H_res + c f_d (Q/Q_ref)^2``. Source: the flow is imposed (first-order controller
-      with a 10 barg head cap at the node, decision D44). Closed end: ``Qn = 0``. Junction:
-      the flows sum to the external demand (zero, or the leak sink) and all ends share the
-      node head (decision D43).
-    * A junction with a leak sink takes ``Q_leak = k_leak sqrt(max(H_old - z, 0))`` explicitly.
+Each pipe end has the compatibility relation H_pz = C_e - B_e Qn, where Qn is the flow leaving the
+pipe into the node, and this module returns Qn for every end. The node head is a total head, and the
+piezometric head of an end is the node head less the velocity head of the pipe at the previous step.
+A tank holds constant head, a reservoir holds constant head behind its boundary law, and the source
+imposes flow through a first-order controller with a 10 barg head cap. At a junction the flows sum
+to the external demand, and all ends share the node head. A leak sink is taken explicitly.
 
-Source: ``docs/design_decisions.md`` D43 and D44.
+See D43 and D44.
 """
 
 from __future__ import annotations
@@ -46,10 +40,10 @@ def junction_heads(
 
 
 def source_flow(g: float, d: float, flow_command: float, head_cap: float) -> tuple[float, bool]:
-    """Flow into the pipe at the source end and whether the head cap limits it.
+    """Flow into the pipe at the source end, and whether the head cap limits it.
 
-    With the commanded flow ``Q`` entering the pipe (``Qn = -Q``) the node head is
-    ``H_n = D + Q/g``; above the cap the head is held at the cap and the flow follows.
+    With the commanded flow Q entering the pipe the node head is H_n = D + Q/g. Above the cap the
+    head is held at the cap and the flow follows.
     """
     head = d + flow_command / g
     if head <= head_cap:

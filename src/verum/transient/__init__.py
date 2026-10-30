@@ -1,20 +1,14 @@
 """Transient (method of characteristics) engine for the 28-edge network, as a library.
 
-Inputs: a steady solve of ``verum.hydraulics`` and the events of a transient (valve strokes,
-set-point changes, a pump stop). Outputs: heads and flows at every grid point as a function of
-time, diagnostics and a mass ledger.
-Key assumptions:
-    * Standalone: it does not touch ``verum.sim``, the truth store or the gateway, and it is not
-      called by them (decision D47). It imports only hydraulics configuration, friction and
-      valve laws.
-    * First-order method of characteristics, one common time step, per-edge wave-speed
-      adjustment, ideal mass-conserving junctions (decision D43).
-    * No cavitation model: nodes at or below the vapor pressure are flagged and nothing from
-      such an interval is usable (decision D45).
-    * Self-built: verified against closed forms and other codes, which is verification and not
-      validation.
+Starting from a steady solve and a list of events (valve strokes, set-point changes, a pump stop),
+it gives heads and flows at every grid point over time, with diagnostics and a mass ledger. It is
+standalone and is not called by the simulation, the truth store or the gateway. It is first order,
+with one common time step, a per-edge wave-speed adjustment and ideal junctions. There is no
+cavitation model, so nodes at or below the vapor pressure are flagged and nothing from such an
+interval is usable. It is self-built and verified against closed forms and other codes, which is
+verification and not validation.
 
-Source: ``docs/design_decisions.md`` D43 to D47; ``docs/transient_engine.md``.
+See D43 to D47.
 """
 
 from verum.transient.driver import TransientEngine, TransientSpec

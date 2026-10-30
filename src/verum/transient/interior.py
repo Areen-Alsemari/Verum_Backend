@@ -1,19 +1,12 @@
 """Pipe interior update: the C+ and C- characteristics with the friction term.
 
-Inputs: heads and flows at the old time level on all grid points and the constant per-point
-arrays of the pipe each point belongs to. Outputs: the new heads and flows of interior points and
-the characteristic constants of the pipe ends.
-Key assumptions:
-    * First-order scheme with the Courant number one on every edge: the characteristic through a
-      point at the new level starts at its neighbours at the old level (decision D43).
-    * C+: ``H_P = H_A + B (Q_A - Q_P) - R Q_A |Q_A|``; C-: ``H_P = H_B - B (Q_B - Q_P) +
-      R Q_B |Q_B|`` with ``B = a/(g A)`` and the reach resistance
-      ``R = (f dx/D + K dx/L)/(2 g A^2)``; the local loss coefficient K of the edge is spread
-      evenly along it, and the friction factor is that of the steady package at the old velocity.
-    * Heads are piezometric (elevation included), so no slope term appears.
+With the Courant number one on every edge, the characteristic through a point at the new level
+starts at its neighbours at the old level. The relations are C+: H_P = H_A + B (Q_A - Q_P) - R Q_A
+|Q_A| and C-: H_P = H_B - B (Q_B - Q_P) + R Q_B |Q_B|, with B = a / (g A) and the reach resistance R
+= (f dx/D + K dx/L) / (2 g A^2). The local loss coefficient of the edge is spread evenly along it.
+Heads are piezometric, so no slope term appears.
 
-Source: ``docs/design_decisions.md`` D43; Wylie and Streeter, Fluid Transients in Systems,
-chapter 2.
+See D43.
 """
 
 from __future__ import annotations

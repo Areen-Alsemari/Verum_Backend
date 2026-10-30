@@ -1,28 +1,17 @@
 """The transient driver: builds the network from a steady solve and advances it in time.
 
-Inputs: a ``HydraulicModel`` and a ``TransientSpec`` (lineup, tank levels, receipt flow and
-set-point, valve strokes, set-point steps, a pump stop, an optional leak, wave speeds). Outputs:
-heads and flows at every grid point at every step, probes, diagnostics and a mass ledger.
-Key assumptions:
-    * Decisions D43 to D45. The initial state is the steady solve of ``verum.hydraulics`` for the
-      same lineup, levels, fitting profile, property class and downstream factor; edge end heads
-      come from its end pressures (piezometric: elevation plus pressure head) and are interpolated
-      linearly along each edge. An edge without a steady pressure (no flow, no connection) takes
-      the head of the nearest determined edge through the graph.
-    * Single-threaded float64 numpy; no random numbers; the same inputs give the same bits. A
-      checkpoint is a copy of the mutable state and a restarted engine continues bit for bit.
-    * The receipt source flow follows the controller of decision D44: each step the commanded
-      flow moves from the actual flow towards the set-point with time constant 2 s; a 10 barg
-      cap at ``PIPELINE_RECEIPT_BOUNDARY`` limits the flow.
-    * Verification cases may impose the flow through a series node (``flow_schedules``), which
-      replaces the valve law there; production use does not.
-    * Valves move linearly (decision D19) and are closed at an opening of 0.001 or less. The extra
-      resistance of a partly closed valve is the steady package's ``K(alpha) - K_open`` on the
-      area of the edge that starts at the valve.
-    * No cavitation model (decision D45): points at or below the vapor pressure open a
-      ``phase_invalid`` interval and nothing is clipped.
+- The initial state is the steady solve for the same lineup, levels, fitting profile, property class
+  and downstream factor, interpolated linearly along each edge. An edge without a steady pressure
+  takes the head of the nearest determined edge.
+- Arithmetic is single-threaded float64 with no random numbers, so equal inputs give equal bits, and
+  a restarted engine continues bit for bit.
+- The receipt flow moves from the actual flow towards its set-point with a 2 s time constant and is
+  capped at 10 barg.
+- Valves move linearly and count as closed at an opening of 0.001 or less.
+- There is no cavitation model, so points at or below the vapor pressure open an invalid interval
+  and nothing is clipped.
 
-Source: ``docs/design_decisions.md`` D43 to D47; ``docs/transient_engine.md``.
+See D43 to D47.
 """
 
 from __future__ import annotations
@@ -87,10 +76,11 @@ class TransientSpec:
 
 @dataclass(frozen=True)
 class NetworkDef:
-    """A network: edges (id, nodes, length, bore, elevations), local losses, pumps, node heights.
+    """A network of edges, local losses, pumps and node heights.
 
-    ``initial`` maps an edge to (head at its from end, head at its to end, flow in m3/s) and is
-    used instead of a steady solve (idealised networks of the verification ladder)."""
+    The optional initial state maps an edge to its end heads and flow, and replaces a steady solve
+    for the idealised networks of the verification ladder.
+    """
 
     edges: tuple[Any, ...]
     k: Mapping[str, float]
@@ -243,11 +233,13 @@ class TransientEngine:
         return node.startswith("CV-") or node in self.net.pumps
 
     def _fill_dead_edges(self, known: dict[str, tuple[float, float]]) -> None:
-        """Give every edge without a steady pressure one head per segment (no flow, no gradient).
+        """Give every edge without a steady pressure one head per segment, with no flow and no
+        gradient.
 
-        A segment that touches a tank takes its level, one that touches the reservoir its head,
-        one open to flowing fluid at a node the total head of that node, and an isolated one the
-        head across its closed valve (valves first, then check valves and pumps)."""
+        A segment that touches a tank takes its level, one that touches the reservoir its head, one
+        open to flowing fluid at a node the total head of that node, and an isolated one the head
+        across its closed valve.
+        """
         m = self.model
         rho_g = self.rho * self.g
         h_res = (
@@ -463,11 +455,12 @@ class TransientEngine:
             self.leak_k = sp.leak[1]
 
     def _implicit_leak(self, hn: np.ndarray, g_e: np.ndarray, t: float) -> float:
-        """Leak flow and node head with the sink evaluated at the new head (closed form).
+        """Leak flow and node head with the sink evaluated at the new head, in closed form.
 
-        With ``u = sqrt(H - z)`` the node equation ``G (H0 - H) = k u`` (G the sum of the end
-        conductances, H0 the head without the sink) is ``G u^2 + k u - G (H0 - z) = 0``. An explicit
-        sink (evaluated at the old head) grows an oscillation of period 2 dt at larger k."""
+        With u = sqrt(H - z) the node equation G (H0 - H) = k u becomes G u^2 + k u - G (H0 - z) =
+        0, where G is the sum of the end conductances. An explicit sink grows an oscillation of
+        period 2 dt at larger k.
+        """
         k = self.leak_k * self._leak_factor(t)
         i = self.leak_local
         gsum = float(g_e[self.j_end][self.j_local == i].sum())
