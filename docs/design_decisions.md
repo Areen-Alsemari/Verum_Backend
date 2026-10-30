@@ -86,6 +86,15 @@ version superseded; records are not edited in place.
 | D57 | Study and table scripts in a tracked directory | DESIGN | 1.0 |
 | D58 | Stroke windows need flow | DESIGN | 1.0 |
 | D59 | Dense truth rows by window kind | DESIGN | 1.0 |
+| D60 | Leak | SIM | 1.0 |
+| D61 | Valve restriction | SIM | 1.0 |
+| D62 | Pump head degradation | SIM | 1.0 |
+| D63 | Sensor faults | SIM | 1.0 |
+| D64 | Misrouting | SIM | 1.0 |
+| D65 | Fault onset and ramp | SIM | 1.0 |
+| D66 | Rejection of faulted candidates | DESIGN | 1.0 |
+| D67 | Edge-flow convention | DESIGN | 1.0 |
+| D68 | Audit detectability thresholds | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1135,6 +1144,78 @@ version superseded; records are not edited in place.
 - **Reason.** The dead-leg window lasts hundreds of seconds and the quantity in it relaxes slowly; dense rows there only enlarge the truth file (S0u-E grew by 49 percent in Phase 5b).
 - **Sensitivity required.** None.
 - **Notes.** A window of a transient kind that overlaps a slow one keeps its dense rows.
+
+## D60 - Leak
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D10
+- **Decision.** A pipe leak is an orifice to the atmosphere, `Q = Cd A sqrt(2 p_gauge / rho)`, with `Cd = 0.62`, `p_gauge = rho g (H - z)` at the leak point (total head, velocity head neglected), the area `A` log-uniform between 2e-6 and 1e-3 m2, and the position uniform along the edge excluding the end 5 percent (fraction 0.05 to 0.95). It is valid only while the gauge pressure at the leak is above 10 kPa (D10); otherwise the candidate is rejected (D66). The spilled mass leaves the network once and is added to the spill line of the mass ledger. There is no flashing.
+- **Reason.** A sharp-edged orifice is the simplest outward single-phase leak law and has a closed form that tests can check by hand. The log-uniform area spans about 2.7 decades, from a weep to a large hole.
+- **Sensitivity required.** `Cd` 0.5, 0.62 and 0.8 in the audit (D68); the pressure threshold 5, 10 and 20 kPa (D10).
+- **Notes.** How the leak enters the steady network, the rigid-column engine and the ledger is in `docs/fault_models.md`; the area range and `Cd` are unsourced selections.
+
+## D61 - Valve restriction
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D19, D31
+- **Decision.** A restricted valve has an actual opening ceiling `alpha_stuck`, uniform in `[0.15, 0.9]`, reached as the severity rises, `alpha = min(alpha_motion, 1 - s (1 - alpha_stuck))`. The command and the stroke are unchanged. The loss is the law of D19 at the actual opening, and the open contact follows D31, so an opening below 0.98 reads not open. A contact that stays open while the valve is restricted is a compound fault and is not part of the single-fault audit.
+- **Reason.** A stuck or fouled valve that moves only part of its travel is the common restriction; keeping the command separate from the actual opening is what makes the fault observable only through the process.
+- **Sensitivity required.** None in this phase (the audit covers the range).
+- **Notes.** The range is an unsourced selection.
+
+## D62 - Pump head degradation
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D2
+- **Decision.** The head curve of the running pump is multiplied by `head_scale`, uniform in `[0.70, 0.98]` at severity one and interpolated linearly with the severity, for the whole curve (the shutoff head and the coefficient `k`). The speed is fixed and the efficiency is unchanged.
+- **Reason.** A worn impeller lowers the head at all flows by about the same fraction; scaling both terms keeps the curve shape.
+- **Sensitivity required.** None in this phase.
+- **Notes.** The shaft power at a given flow is computed from the scaled head with the unchanged efficiency.
+
+## D63 - Sensor faults
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D27 to D32
+- **Decision.** Sensor faults act on the continuous tags only (LT, FT, PT, TT), in the sensor chain after sampling and before noise and quantisation. Bias: `+ b` of span, `b` in `±[0.2, 5]` percent. Drift: `+ d (t - t_on)` of span per hour, `d` in `±[0.2, 5]` percent per hour. Stuck-at: the reading is frozen at the value of the first sample at or after the onset. Truth and every other tag are unchanged.
+- **Reason.** Bias, drift and a frozen reading are the usual analogue transmitter faults; the span makes the sizes comparable between tags.
+- **Sensitivity required.** None in this phase.
+- **Notes.** All three variants use the audited fault type `SENSOR_DRIFT` and differ in `mechanism`.
+
+## D64 - Misrouting
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D4, D31
+- **Decision.** Two variants on the tank inlet and outlet valves and the pump-branch valves. (a) The valve is commanded closed but is physically open (the opening rises to 1 as the severity rises). (b) The valve is commanded open but is stuck at an opening of at most 0.02 (the ceiling falls to a value log-uniform in `[0.005, 0.02]`). The commanded state, the actual opening and the contact state stay separate records.
+- **Reason.** These are the two ways a lineup differs from what the operator believes it to be.
+- **Sensitivity required.** None in this phase.
+- **Notes.** The states that follow (two suction branches open, a receipt into two tanks) are handled by the engine's branched scheme and its gates and are not suppressed.
+
+## D65 - Fault onset and ramp
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM
+- **Decision.** The onset is uniform in `[600, T - 1800]` s. A hydraulic fault ramps linearly over 30, 300 or 1200 s; there are no steps. A sensor fault may step. Faults persist to the end of the episode; there is no recovery in version 1.
+- **Reason.** A ramp avoids a step that a rigid-column model of D22 cannot represent; the last 1800 s leave time for the fault to show.
+- **Sensitivity required.** The ramp time in the audit.
+- **Notes.** The three ramp times are selections.
+
+## D66 - Rejection of faulted candidates
+
+- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D20
+- **Decision.** A candidate episode that violates any gate (pump domain, phase screen, pumping minimum, mass ledger, solver convergence, the leak pressure condition) is written as `simulation_rejected` and is never labelled as a fault. The leak pressure condition and a leak on an edge without a determined pressure are gate `SGF`.
+- **Reason.** A fault whose consequence the model cannot represent would put a label on a physically invalid record.
+- **Sensitivity required.** None.
+- **Notes.** The rejection record is never agent-visible.
+
+## D67 - Edge-flow convention
+
+- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D27
+- **Decision.** The `flow_m3s` of an edge row is the flow at its downstream end, so that FT-001 and FT-201 read at their meter nodes. A leak is a separate sink recorded in the edge row as `leak_flow_m3s`; the flow at the upstream end is the written flow plus the leak flow.
+- **Reason.** The meters sit at the ends of the edges they are attached to; without a leak the two ends are equal and the convention changes nothing.
+- **Sensitivity required.** None.
+- **Notes.** The field `leak_flow_m3s` is present in an edge row only when it is not zero.
+
+## D68 - Audit detectability thresholds
+
+- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN
+- **Decision.** A change of a tag is detectable above two thresholds, each three times a standard deviation: the noise standard deviation of the tag (D28), and the standard deviation of the healthy variability of the tag measured over 20 seeds with the demand process on. The change is that of the noise-free sampled series averaged over 60 s.
+- **Reason.** The first threshold is what a single reading can resolve; the second is what the healthy process itself does. A fault below both has no observable consequence.
+- **Sensitivity required.** `Cd` 0.5, 0.62 and 0.8 for the leak thresholds.
+- **Notes.** The audit reports, and does not choose, the severity ranges.
 
 ## Episode profile
 
