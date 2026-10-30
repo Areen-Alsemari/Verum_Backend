@@ -1,19 +1,11 @@
-"""Gates, the check valve, conservation, configuration, fittings and isolation.
+"""Gates, the check valve, conservation, configuration, fittings and isolation of the steady solve.
 
-Inputs: ``HydraulicModel`` with modified inputs or configuration. Outputs:
-pass/fail.
-Key assumptions:
-    * A rejection is an exception (over-constrained boundary, pump outside its
-      curve, no property scenario). A phase or NPSH failure is reported in the
-      result and the solved flows are identical to the passing temperature case,
-      so nothing is clipped.
-    * Node conservation is re-computed here from the edge flows and the
-      topology with separate code, not read from the solver's own residuals.
-    * Bend positions and loss coefficients are counted by hand from the route
-      polylines of the audited document (see the comments).
+A rejection is an exception (over-constrained boundary, pump outside its curve, no property
+scenario), while a phase or NPSH failure is reported in the result with the solved flows unchanged,
+so nothing is clipped. Node conservation is recomputed here from the edge flows with separate code,
+and the bends and loss coefficients are counted by hand from the route polylines.
 
-Source: ``revised/02_hydraulic_model.md`` sections 5 and 8 (gates G2 to G6);
-decisions D2, D7, D8, D11, D15.
+See D2, D7, D8, D11 and D15.
 """
 
 from __future__ import annotations
@@ -59,6 +51,9 @@ from verum.params import UnresolvedParameter
 def test_delivery_flow_with_a_fixed_pump_and_reservoir_is_over_constrained(
     model: HydraulicModel,
 ) -> None:
+    """Imposing a delivery flow on top of the fixed pump and reservoir is rejected as
+    over-constrained. Independent: yes, because the expected outcome is the boundary rule.
+    """
     inputs = dataclasses.replace(
         delivery_case("TK-102", 7.0), delivery=DeliveryBoundary(flow_m3h=300.0)
     )
@@ -67,6 +62,9 @@ def test_delivery_flow_with_a_fixed_pump_and_reservoir_is_over_constrained(
 
 
 def test_receipt_with_flow_and_pressure_is_over_constrained(model: HydraulicModel) -> None:
+    """Imposing both the receipt flow and the source pressure is rejected as over-constrained.
+    Independent: yes, because the expected outcome is the boundary rule.
+    """
     inputs = receipt_case(
         ("TK-101",), receipt=ReceiptBoundary(flow_m3h=600.0, pressure_pa_gauge=1e5)
     )
@@ -75,6 +73,9 @@ def test_receipt_with_flow_and_pressure_is_over_constrained(model: HydraulicMode
 
 
 def test_negative_boundary_values_are_refused(model: HydraulicModel) -> None:
+    """A negative receipt flow or a negative boundary-law coefficient is refused. Independent: yes,
+    because the expected outcome is the validation rule.
+    """
     with pytest.raises(ValueError):
         model.solve(receipt_case(("TK-101",), receipt=ReceiptBoundary(flow_m3h=-1.0)))
     with pytest.raises(ValueError):
@@ -82,6 +83,9 @@ def test_negative_boundary_values_are_refused(model: HydraulicModel) -> None:
 
 
 def test_an_extrapolated_pump_point_is_rejected(model: HydraulicModel) -> None:
+    """A solution beyond the pump curve is rejected, and the message gives the equivalent flow of
+    about 351 m3/h. Independent: yes, because the limit is the stated pump domain.
+    """
     # Pure fixed 2 barg boundary at the fixed speed: the intersection is at 351 m3/h, beyond 350.
     with pytest.raises(PumpOutsideCurve) as caught:
         model.solve(delivery_case("TK-101", 1.8, law=0.0))
@@ -89,6 +93,10 @@ def test_an_extrapolated_pump_point_is_rejected(model: HydraulicModel) -> None:
 
 
 def test_domain_rule_uses_q_over_s(model: HydraulicModel) -> None:
+    """The pump domain is judged on the flow divided by the speed ratio, so a lower speed accepts a
+    flow that full speed would reject. Independent: yes, because the expected outcome is the domain
+    rule.
+    """
     # At s = 0.9 the flow is about 331 m3/h, below 350, but Q/s is about 368 m3/h, above 350.
     loose = model.solve(
         delivery_case("TK-101", 9.0, law=0.0, pump_element=VariableSpeedPump(0.9, False))
@@ -101,12 +109,19 @@ def test_domain_rule_uses_q_over_s(model: HydraulicModel) -> None:
 
 @pytest.mark.parametrize("scenario", [None, "UNKNOWN"])
 def test_no_property_scenario_is_rejected(model: HydraulicModel, scenario: str | None) -> None:
+    """A solve without a named property scenario is rejected. Independent: yes, because the expected
+    outcome is the rule that no default scenario exists.
+    """
     inputs = dataclasses.replace(delivery_case("TK-102", 7.0), scenario=scenario)
     with pytest.raises(PropertyScenarioRequired):
         model.solve(inputs)
 
 
 def test_phase_failure_is_reported_and_nothing_is_clipped(model: HydraulicModel) -> None:
+    """A case that fails the phase screen at 45 C reports the failure and has the same flows as the
+    passing case at 25 C. Independent: yes, because the expected outcome is the rule that nothing is
+    clipped.
+    """
     cool = model.solve(delivery_case("TK-103", 1.8, temperature_c=25.0))
     hot = model.solve(delivery_case("TK-103", 1.8, temperature_c=45.0))
     assert cool.phase.status == "OK"
@@ -118,17 +133,26 @@ def test_phase_failure_is_reported_and_nothing_is_clipped(model: HydraulicModel)
 
 
 def test_npsh_margin_failure_is_reported(model: HydraulicModel) -> None:
+    """A case that passes the phase screen but has an NPSH margin ratio between 1 and 1.3 reports a
+    margin failure. Independent: yes, because the limits are the stated margin ratios.
+    """
     result = model.solve(delivery_case("TK-103", 1.8, npsh3=6.0))
     assert result.phase.status == "NPSH_MARGIN_FAILED"
     assert result.phase.margin_ratio is not None and 1.0 < result.phase.margin_ratio < 1.3
 
 
 def test_screen_failure_takes_precedence_over_margin_failure(model: HydraulicModel) -> None:
+    """When both fail, the phase screen failure is reported and not the margin failure. Independent:
+    yes, because the expected outcome is the stated precedence.
+    """
     result = model.solve(delivery_case("TK-103", 1.8, temperature_c=45.0, npsh3=6.0))
     assert result.phase.status == "SCREEN_FAILED"
 
 
 def test_passing_case_is_ok_with_margin_at_least_1_3(model: HydraulicModel) -> None:
+    """A passing case is reported as ok with a margin ratio of at least 1.3. Independent: yes,
+    because the limit is the stated margin ratio.
+    """
     result = model.solve(delivery_case("TK-102", 7.0))
     assert result.phase.status == "OK"
     assert result.phase.margin_ratio is not None and result.phase.margin_ratio >= 1.3
@@ -137,6 +161,9 @@ def test_passing_case_is_ok_with_margin_at_least_1_3(model: HydraulicModel) -> N
 def test_minimum_absolute_pressure_is_reported_with_the_vapor_pressure(
     model: HydraulicModel,
 ) -> None:
+    """The result reports the vapor pressure of 67530 Pa at 35 C and a minimum absolute pressure
+    above it. Independent: yes, because the vapor pressure is the documented value.
+    """
     result = model.solve(delivery_case("TK-102", 7.0, temperature_c=35.0))
     assert result.phase.vapor_pressure_pa_abs == pytest.approx(67530.0, abs=2.0)
     assert result.phase.min_abs_pressure_pa is not None
@@ -147,6 +174,9 @@ def test_minimum_absolute_pressure_is_reported_with_the_vapor_pressure(
 
 
 def test_an_isolated_standby_branch_carries_zero_flow(model: HydraulicModel) -> None:
+    """The pump branch that is not in use carries zero flow in both directions of the pump choice.
+    Independent: yes, because the expected value is zero.
+    """
     result = model.solve(delivery_case("TK-102", 7.0, pump="A"))
     assert all(result.edge_flows_m3s[f"E-PB{i}"] == 0.0 for i in range(5))
     result_b = model.solve(delivery_case("TK-102", 7.0, pump="B"))
@@ -154,6 +184,10 @@ def test_an_isolated_standby_branch_carries_zero_flow(model: HydraulicModel) -> 
 
 
 def test_an_open_but_stopped_pump_branch_carries_zero_flow(model: HydraulicModel) -> None:
+    """An open branch with a stopped pump carries zero flow and leaves the running branch unchanged.
+    Independent: yes, because the expected value is zero and the comparison is with a single-branch
+    solve.
+    """
     lineup = Lineup.of({"XV-S102", "XV-PAI", "XV-PAO", "XV-PBI", "XV-PBO"}, {"P-101A"})
     both_open = model.solve(dataclasses.replace(delivery_case("TK-102", 7.0), lineup=lineup))
     single = model.solve(delivery_case("TK-102", 7.0))
@@ -163,6 +197,10 @@ def test_an_open_but_stopped_pump_branch_carries_zero_flow(model: HydraulicModel
 
 
 def test_reverse_flow_through_the_pump_branch_is_blocked(model: HydraulicModel) -> None:
+    """With a reservoir pressure above the shutoff head the pump is dead-headed, its flow is zero
+    and the check valve blocks reverse flow. Independent: yes, because the expected outcome is the
+    one-way rule.
+    """
     # An 8 barg reservoir needs more head than the 54 m shutoff head: the pump dead-heads
     # and the check valve stops the reservoir from driving flow backwards.
     result = model.solve(delivery_case("TK-102", 7.0, reservoir_pa=8.0e5))
@@ -189,6 +227,9 @@ def test_reverse_flow_through_the_pump_branch_is_blocked(model: HydraulicModel) 
 
 
 def test_just_below_dead_head_the_flow_is_small_and_forward(model: HydraulicModel) -> None:
+    """Just below the dead-head pressure the flow is small, positive and forward through the branch.
+    Independent: yes, because the pressure is hand arithmetic on the shutoff head.
+    """
     # Reservoir head 53.9 m above the tank level: 0.5 + p/(rho g) = 7 + 53.9.
     pressure = (7.0 + 53.9 - 0.5) * 750.0 * 9.80665
     result = model.solve(delivery_case("TK-102", 7.0, reservoir_pa=pressure))
@@ -197,6 +238,9 @@ def test_just_below_dead_head_the_flow_is_small_and_forward(model: HydraulicMode
 
 
 def test_one_way_law_blocks_negative_head_difference() -> None:
+    """The one-way law gives no flow for a negative head difference and a positive slope everywhere.
+    Independent: yes, because the expected values are hand arithmetic.
+    """
     law = OneWay(LossLaw(lambda q: 100.0 * q * abs(q)))
     assert law.flow(-5.0) == 0.0 and law.flow(0.0) == 0.0
     assert law.flow(4.0) == pytest.approx(0.2)
@@ -204,6 +248,9 @@ def test_one_way_law_blocks_negative_head_difference() -> None:
 
 
 def test_loss_law_inverts_a_quadratic_loss() -> None:
+    """The loss law inverts a quadratic loss for positive and negative heads and gives the analytic
+    slope. Independent: yes, because the expected values are hand arithmetic.
+    """
     law = LossLaw(lambda q: 100.0 * q * abs(q) if q >= 0 else -100.0 * q * q)
     assert law.flow(4.0) == pytest.approx(0.2, rel=1e-10)
     assert law.flow(-4.0) == pytest.approx(-0.2, rel=1e-10)
@@ -226,6 +273,9 @@ LINEUPS = [
 def test_mass_is_conserved_at_every_node(
     model: HydraulicModel, topology: Topology, lineup: Lineup
 ) -> None:
+    """Mass is conserved at every node within the configured tolerance for each lineup. Independent:
+    yes, because the balance is recomputed from the edge flows with separate code.
+    """
     result = model.solve(
         SteadyInputs(lineup, dict(INITIAL_LEVELS), SCENARIO, 25.0, delivery=DeliveryBoundary())
     )
@@ -249,10 +299,16 @@ def test_mass_is_conserved_at_every_node(
 
 
 def test_mass_tolerance_is_the_d8_value(model: HydraulicModel) -> None:
+    """The configured mass tolerance is 4.2e-4 kg/s. Independent: yes, because the expected value is
+    the documented constant.
+    """
     assert model.config["mass_conservation_tolerance_kg_s"] == 4.2e-4
 
 
 def test_the_solve_stops_with_an_error_if_it_cannot_converge(model: HydraulicModel) -> None:
+    """A solve that cannot converge within its iteration limit stops with an error. Independent:
+    yes, because the expected outcome is the rule that no unconverged result is returned.
+    """
     params = dict(model.config.parameters)
     from verum.params import ParamValue
 
@@ -271,18 +327,27 @@ def test_the_solve_stops_with_an_error_if_it_cannot_converge(model: HydraulicMod
 
 
 def test_a_missing_tank_level_is_refused(model: HydraulicModel) -> None:
+    """A solve with a missing tank level is refused and names the tank. Independent: yes, because
+    the expected outcome is the validation rule.
+    """
     inputs = dataclasses.replace(delivery_case("TK-102", 7.0), tank_levels_m={})
     with pytest.raises(HydraulicInputError, match="TK-102"):
         model.solve(inputs)
 
 
 def test_an_unknown_valve_in_the_lineup_is_refused(model: HydraulicModel) -> None:
+    """A lineup that names an unknown valve is refused. Independent: yes, because the expected
+    outcome is the validation rule.
+    """
     inputs = dataclasses.replace(delivery_case("TK-102", 7.0), lineup=Lineup.of({"XV-NOPE"}))
     with pytest.raises(ContractError):
         model.solve(inputs)
 
 
 def test_an_idle_lineup_gives_an_empty_valid_result(model: HydraulicModel) -> None:
+    """An idle lineup gives zero flows, no pump and a valid phase status. Independent: yes, because
+    the expected values are zero.
+    """
     result = model.solve(SteadyInputs(Lineup.of(), dict(INITIAL_LEVELS), SCENARIO, 25.0))
     assert result.pump is None and result.active_edges == frozenset()
     assert all(v == 0.0 for v in result.edge_flows_m3s.values())
@@ -290,6 +355,9 @@ def test_an_idle_lineup_gives_an_empty_valid_result(model: HydraulicModel) -> No
 
 
 def test_the_other_tank_levels_do_not_change_a_delivery(model: HydraulicModel) -> None:
+    """The levels of tanks that are not delivering do not change a delivery solve. Independent: yes,
+    because the comparison is between two solves.
+    """
     alone = model.solve(delivery_case("TK-102", 7.0))
     inputs = dataclasses.replace(delivery_case("TK-102", 7.0), tank_levels_m=dict(INITIAL_LEVELS))
     both = model.solve(inputs)
@@ -301,6 +369,9 @@ def test_the_other_tank_levels_do_not_change_a_delivery(model: HydraulicModel) -
 
 
 def test_an_unresolved_boundary_coefficient_stops_the_solve(root: Path, tmp_path: Path) -> None:
+    """An unresolved boundary-law coefficient stops the solve. Independent: yes, because the
+    expected outcome is the rule that nothing replaces an unresolved parameter.
+    """
     shutil.copytree(root / "config", tmp_path / "config")
     law = tmp_path / "config" / "delivery_boundary.json"
     document = json.loads(law.read_text(encoding="utf-8"))
@@ -319,6 +390,9 @@ def test_an_unresolved_boundary_coefficient_stops_the_solve(root: Path, tmp_path
 
 
 def test_the_shipped_coefficients_are_resolved_and_documented() -> None:
+    """The shipped boundary-law coefficients are provisional with their provenance and between 5 and
+    15 m. Independent: yes, because the expected values are the stated status and range.
+    """
     for profile in ("pipe_only", "reference_fittings"):
         record = load_boundary_law_coefficient(profile)
         assert record.status == "provisional" and record.provenance_id == "VERUM-DD-D2-v3.0"
@@ -329,12 +403,19 @@ def test_the_shipped_coefficients_are_resolved_and_documented() -> None:
 
 
 def test_every_hydraulic_parameter_is_provisional_with_provenance(model: HydraulicModel) -> None:
+    """Every hydraulic parameter is provisional, carries a provenance identifier and has an allowed
+    evidence tag. Independent: yes, because the expected status is the stated rule.
+    """
     for name, record in model.config.parameters.items():
         assert record.status == "provisional" and record.provenance_id, name
         assert record.evidence_tag in {"REF", "DESIGN", "SIM", "CALC"}, name
 
 
 def test_numerical_settings_are_declared_design_values(model: HydraulicModel) -> None:
+    """The solver tolerances are tagged as design values, and the flow tolerance is below the mass
+    tolerance expressed as a flow. Independent: yes, because the expected tag and ordering are the
+    stated rule.
+    """
     assert model.config.record("newton_flow_tolerance_m3s").evidence_tag == "DESIGN"
     assert (
         model.config["newton_flow_tolerance_m3s"]
@@ -343,6 +424,9 @@ def test_numerical_settings_are_declared_design_values(model: HydraulicModel) ->
 
 
 def test_fitting_profiles_hold_the_d15_values() -> None:
+    """The reference fitting profile holds the documented loss coefficients. Independent: yes,
+    because the expected values are written out in the test.
+    """
     reference = load_fitting_profile("reference_fittings")
     values = {k: reference.k(k) for k in reference.coefficients}
     assert values == {
@@ -355,6 +439,9 @@ def test_fitting_profiles_hold_the_d15_values() -> None:
 
 
 def test_bad_profile_or_multiplier_is_refused() -> None:
+    """An unknown fitting profile or a negative multiplier is refused. Independent: yes, because the
+    expected outcome is the validation rule.
+    """
     with pytest.raises(ContractError):
         load_fitting_profile("handbook")
     with pytest.raises(ValueError):
@@ -372,6 +459,9 @@ HAND_BENDS = {
 
 
 def test_bends_are_counted_from_the_polylines(topology: Topology) -> None:
+    """The bends counted from the route polylines total 24 and equal the hand count for every edge.
+    Independent: yes, because the hand count comes from the audited document.
+    """
     counts = bends_per_edge(topology, load_route_geometry())
     assert sum(counts.values()) == 24
     for edge, expected in HAND_BENDS.items():
@@ -380,6 +470,9 @@ def test_bends_are_counted_from_the_polylines(topology: Topology) -> None:
 
 
 def test_reference_fitting_coefficients_per_edge(topology: Topology) -> None:
+    """The loss coefficient of each edge equals the hand sum of its bends and fitted elements.
+    Independent: yes, because the sums are hand arithmetic.
+    """
     profile = load_fitting_profile("reference_fittings")
     k = edge_loss_coefficients(topology, load_route_geometry(), profile, set(topology.edge_ids))
     assert k["E-R101b"] == pytest.approx(0.3 + 0.1 + 1.0)  # bend, XV-R101, tank inlet
@@ -395,6 +488,9 @@ def test_reference_fitting_coefficients_per_edge(topology: Topology) -> None:
 
 
 def test_pipe_only_gives_zero_everywhere_and_the_multiplier_scales(topology: Topology) -> None:
+    """The pipe-only profile gives zero coefficients everywhere, and a multiplier scales the
+    reference profile. Independent: yes, because the expected values are zero and a product.
+    """
     geometry = load_route_geometry()
     zero = edge_loss_coefficients(
         topology, geometry, load_fitting_profile("pipe_only", 7.0), set(topology.edge_ids)
@@ -413,6 +509,9 @@ def test_pipe_only_gives_zero_everywhere_and_the_multiplier_scales(topology: Top
 
 
 def test_the_result_is_immutable(model: HydraulicModel) -> None:
+    """A solve result and its mappings cannot be changed. Independent: yes, because the expected
+    outcome is the immutability rule.
+    """
     result = model.solve(delivery_case("TK-102", 7.0))
     with pytest.raises(dataclasses.FrozenInstanceError):
         result.receipt_clipped = True  # type: ignore[misc]
@@ -423,6 +522,9 @@ def test_the_result_is_immutable(model: HydraulicModel) -> None:
 
 
 def test_the_result_has_the_required_content(model: HydraulicModel, topology: Topology) -> None:
+    """A solve result has an entry for every edge, the pump record and the four gate statuses.
+    Independent: yes, because the expected keys are written out in the test.
+    """
     result = model.solve(delivery_case("TK-102", 7.0))
     assert set(result.edge_flows_m3s) == set(topology.edge_ids)
     assert result.pump is not None and result.pump.pump == "P-101A"
@@ -435,7 +537,9 @@ def test_the_result_has_the_required_content(model: HydraulicModel, topology: To
 
 
 def test_the_hydraulics_package_is_not_reachable_from_the_api_package() -> None:
-    """The gateway (Phase 4) exposes only its own names and imports nothing from hydraulics."""
+    """The api package exposes only its own names and imports nothing from the hydraulics package.
+    Independent: yes, because the check parses the source.
+    """
     import ast
 
     import verum.api as api

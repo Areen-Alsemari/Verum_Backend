@@ -1,20 +1,10 @@
 """The sixteen lineups: table content, rejected combinations and transitions.
 
-Inputs: ``config/lineups.json``, the topology contract and an independent
-transcription of the audited lineup table written out in this module.
-Outputs: pass/fail.
-Key assumptions:
-    * The expected valve and pump states below were typed from the audited
-      table, not generated from the configuration file, so a parsing error in
-      the file would be caught.
-    * The expected active edges are built from route membership (which edges
-      belong to the receipt, suction, pump and delivery routes), and the
-      package's active-edge result is also compared with an exhaustive
-      simple-path search, which is a different algorithm.
-    * The transition rules beyond the two documented chains are a proposal;
-      the tests state them.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2.
+The expected valve and pump states were typed from the audited table and not generated from the
+configuration, so a parsing error would be caught. The expected active edges come from route
+membership and are also compared with an exhaustive simple-path search, which is a different
+algorithm. The transition rules beyond the two documented chains are a proposal, and the tests state
+them.
 """
 
 from __future__ import annotations
@@ -76,12 +66,18 @@ def network(topology: Topology) -> Network:
 
 
 def test_there_are_sixteen_modes(table: LineupTable) -> None:
+    """The lineup table has exactly the sixteen expected modes. Independent: yes, because the
+    expected names are typed from the audited table.
+    """
     assert set(table.modes) == set(EXPECTED)
     assert len(table.modes) == 16
 
 
 @pytest.mark.parametrize("name", list(EXPECTED))
 def test_mode_states_match_the_transcribed_table(table: LineupTable, name: str) -> None:
+    """The open valves and running pumps of each mode equal the transcription of the audited table.
+    Independent: yes, because the expected states are typed by hand.
+    """
     valves, pumps = EXPECTED[name]
     assert table.modes[name].open_valves == valves
     assert table.modes[name].running_pumps == pumps
@@ -89,16 +85,25 @@ def test_mode_states_match_the_transcribed_table(table: LineupTable, name: str) 
 
 @pytest.mark.parametrize("name", list(EXPECTED))
 def test_each_mode_classifies_to_itself(table: LineupTable, topology: Topology, name: str) -> None:
+    """The valve and pump state of each mode classifies to that mode. Independent: yes, because the
+    states are typed from the audited table.
+    """
     valves, pumps = EXPECTED[name]
     assert name in table.classify(valves, pumps, topology)
 
 
 def test_four_modes_share_the_all_closed_state(table: LineupTable, topology: Topology) -> None:
+    """The all-closed state matches exactly the four modes that share it. Independent: yes, because
+    the expected set is typed from the audited table.
+    """
     assert set(table.classify(set(), set(), topology)) == ALL_CLOSED
 
 
 @pytest.mark.parametrize("name", list(EXPECTED))
 def test_modes_satisfy_the_baseline_invariants(table: LineupTable, name: str) -> None:
+    """Every mode has at most one pump, at most one suction valve and fewer than three receipt
+    inlets open. Independent: yes, because the limits are the stated baseline rules.
+    """
     mode = table.modes[name]
     assert len(mode.running_pumps) <= 1
     assert len(mode.open_valves & {"XV-S101", "XV-S102", "XV-S103"}) <= 1
@@ -109,6 +114,9 @@ def test_modes_satisfy_the_baseline_invariants(table: LineupTable, name: str) ->
 
 @pytest.mark.parametrize("name", list(EXPECTED))
 def test_a_running_pump_has_both_isolation_valves_open(table: LineupTable, name: str) -> None:
+    """A pump runs only with both of its isolation valves open, and no closed pump has its valves
+    open. Independent: yes, because the expected relation is the stated rule.
+    """
     mode = table.modes[name]
     for pump, pair in (("P-101A", {"XV-PAI", "XV-PAO"}), ("P-101B", {"XV-PBI", "XV-PBO"})):
         assert (pump in mode.running_pumps) == (pair <= mode.open_valves)
@@ -136,6 +144,9 @@ def _expected_active(topology: Topology, name: str) -> set[str]:
 def test_active_edges_match_route_membership(
     table: LineupTable, network: Network, topology: Topology, name: str
 ) -> None:
+    """The active edges of each mode equal the edges built from route membership. Independent: yes,
+    because the expected edges are built from the routes and not from connectivity.
+    """
     assert network.active_edges(table.modes[name].lineup) == _expected_active(topology, name)
 
 
@@ -163,6 +174,9 @@ def _simple_path_edges(network: Network, lineup: Lineup) -> set[str]:
 def test_active_edges_agree_with_exhaustive_simple_path_search(
     table: LineupTable, network: Network, name: str
 ) -> None:
+    """The active edges of each mode equal those found by an exhaustive simple-path search.
+    Independent: yes, because the search is a different algorithm.
+    """
     lineup = table.modes[name].lineup
     assert network.active_edges(lineup) == _simple_path_edges(network, lineup)
 
@@ -171,6 +185,9 @@ def test_active_edges_agree_with_exhaustive_simple_path_search(
 def test_receipt_and_suction_headers_are_not_connected_in_any_mode(
     table: LineupTable, network: Network, name: str
 ) -> None:
+    """No mode connects the receipt header to the suction header or the pipeline boundary to the
+    distribution boundary. Independent: yes, because the expected outcome is the topology rule.
+    """
     lineup = table.modes[name].lineup
     assert not network.connected("RECEIPT_HEADER", "SUCTION_HEADER", lineup)
     assert not network.connected("PIPELINE_RECEIPT_BOUNDARY", "DISTRIBUTION_BOUNDARY", lineup)
@@ -243,6 +260,9 @@ def test_rejected_combinations(
     pumps: set[str],
     reason: str,
 ) -> None:
+    """Each prohibited valve and pump combination is rejected with its own reason. Independent: yes,
+    because the expected reasons are written out per case.
+    """
     with pytest.raises(LineupRejected) as caught:
         table.classify(valves, pumps, topology)
     assert caught.value.reason == reason
@@ -251,6 +271,9 @@ def test_rejected_combinations(
 def test_every_open_valve_subset_is_either_a_mode_or_rejected(
     table: LineupTable, topology: Topology
 ) -> None:
+    """Every subset of open valves is either a table mode or rejected, and the accepted count equals
+    the table. Independent: yes, because the check enumerates all subsets.
+    """
     valves = sorted(v for v in topology.nodes if v.startswith("XV-"))
     accepted = 0
     for r in range(len(valves) + 1):
@@ -267,6 +290,9 @@ def test_every_open_valve_subset_is_either_a_mode_or_rejected(
 
 
 def test_unknown_mode_name_is_rejected(table: LineupTable) -> None:
+    """An unknown mode name is rejected. Independent: yes, because the expected outcome is the
+    validation rule.
+    """
     with pytest.raises(LineupRejected):
         table.mode("RECEIVE_104")
 
@@ -274,6 +300,9 @@ def test_unknown_mode_name_is_rejected(table: LineupTable) -> None:
 def test_table_is_cross_checked_against_the_topology(
     topology: Topology, raw_topology: dict[str, Any]
 ) -> None:
+    """A table that names an element missing from the topology is rejected, and the topology itself
+    carries no lineups. Independent: yes, because the expected outcome is the cross-check rule.
+    """
     # The topology contract does not carry lineups, so the table file is the only source.
     assert "lineups" not in raw_topology
     bad = {
@@ -300,6 +329,9 @@ DOCUMENTED_CHAINS = [
 
 @pytest.mark.parametrize(("start", "hold", "end"), DOCUMENTED_CHAINS)
 def test_documented_chains_are_valid(table: LineupTable, start: str, hold: str, end: str) -> None:
+    """The two documented chains, receipt switching and pump changeover, are accepted step by step.
+    Independent: yes, because the chains are those of the audited table.
+    """
     controller = LineupController(table, start)
     assert controller.request(hold) == hold
     assert controller.request(end) == end
@@ -324,6 +356,9 @@ DIRECT = [
 
 @pytest.mark.parametrize(("start", "end"), DIRECT)
 def test_direct_changes_are_rejected(table: LineupTable, start: str, end: str) -> None:
+    """A direct change between two active modes is rejected. Independent: yes, because the expected
+    outcome is the transition rule.
+    """
     with pytest.raises(TransitionRejected):
         LineupController(table, start).request(end)
 
@@ -336,11 +371,17 @@ WRONG_HOLD = [
 
 @pytest.mark.parametrize(("start", "hold"), WRONG_HOLD)
 def test_a_hold_must_serve_the_mode(table: LineupTable, start: str, hold: str) -> None:
+    """A hold that does not serve the target mode is rejected. Independent: yes, because the
+    expected outcome is the transition rule.
+    """
     with pytest.raises(TransitionRejected):
         LineupController(table, start).request(hold)
 
 
 def test_changeover_keeps_the_source_tank(table: LineupTable) -> None:
+    """Leaving the changeover hold for a delivery from another tank is rejected. Independent: yes,
+    because the expected outcome is the transition rule.
+    """
     controller = LineupController(table, "DELIVER_101_A")
     controller.request("CHANGEOVER_HOLD")
     with pytest.raises(TransitionRejected, match="source tank 101"):
@@ -349,6 +390,9 @@ def test_changeover_keeps_the_source_tank(table: LineupTable) -> None:
 
 
 def test_a_start_from_rest_goes_through_a_hold(table: LineupTable) -> None:
+    """A start from rest into an active mode is rejected unless it goes through a hold. Independent:
+    yes, because the expected outcome is the transition rule.
+    """
     controller = LineupController(table)
     with pytest.raises(TransitionRejected):
         controller.request("RECEIVE_101")
@@ -361,17 +405,26 @@ def test_a_start_from_rest_goes_through_a_hold(table: LineupTable) -> None:
 
 
 def test_no_step_between_two_active_modes_is_allowed(table: LineupTable) -> None:
+    """No step between two active modes is allowed. Independent: yes, because the expected outcome
+    is the transition rule.
+    """
     active = [n for n in EXPECTED if n not in ALL_CLOSED]
     assert not any(step_allowed(table, a, b) for a in active for b in active)
 
 
 def test_no_step_between_idle_or_maintenance_and_an_active_mode(table: LineupTable) -> None:
+    """No direct step is allowed between idle or maintenance and an active mode. Independent: yes,
+    because the expected outcome is the transition rule.
+    """
     active = [n for n in EXPECTED if n not in ALL_CLOSED]
     for rest in ("IDLE", "MAINTENANCE_ISOLATED"):
         assert not any(step_allowed(table, rest, a) or step_allowed(table, a, rest) for a in active)
 
 
 def test_active_modes_connect_only_to_a_serving_hold(table: LineupTable) -> None:
+    """An active mode connects only to the hold that serves it. Independent: yes, because the
+    expected holds are written out per mode.
+    """
     for name in (n for n in EXPECTED if n not in ALL_CLOSED):
         mode = table.modes[name]
         partners = {h for h in HOLDS if step_allowed(table, name, h)}
@@ -384,11 +437,17 @@ def test_active_modes_connect_only_to_a_serving_hold(table: LineupTable) -> None
 
 
 def test_unknown_target_is_a_rejected_transition(table: LineupTable) -> None:
+    """A transition to an unknown mode is rejected. Independent: yes, because the expected outcome
+    is the validation rule.
+    """
     with pytest.raises(TransitionRejected):
         LineupController(table).request("RECEIVE_104")
 
 
 def test_source_tank_parsing() -> None:
+    """The source tank is read from a delivery mode name, and receipt-only modes have none.
+    Independent: yes, because the expected values are written out per name.
+    """
     assert source_tank("DELIVER_103_B") == "103"
     assert source_tank("RECEIVE_101_DELIVER_102_A") == "102"
     assert source_tank("RECEIVE_101_DELIVER_101_A") == "101"

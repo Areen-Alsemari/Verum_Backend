@@ -1,22 +1,12 @@
-"""Observations of whole episodes: schema, causality, leakage, contacts, D2 consequences.
+"""Observations of whole episodes: schema, causality, leakage, contacts and the consequences of the
+delivery boundary law.
 
-Inputs: the completed episodes with their observation and audit files, and the gateway.
-Outputs: pass/fail.
-Key assumptions:
-    * Expected values are hand-derived or taken from the specification; where a test reads
-      hidden truth (the detector output, f_d) it is only to compute the expectation.
-    * LK-01 to LK-12 (build-failing leakage checks) are covered by the tests marked LK:
-      LK-01 no truth key in an observation or the gateway payload; LK-02 no normality label;
-      LK-03 no scenario name; LK-04 no tier; LK-05 no validity-window id; LK-06 no
-      truth dataset name; LK-07 the allowlist rejects an injected hidden key; LK-08 the
-      audit is not served; LK-09 dropout rate equal across scenarios; LK-10 quality
-      flags carry no scenario pattern; LK-11 the LSHH observation equals the detector output
-      after the delay; LK-12 the episode id is opaque.
-    * Random dropout is the same for every episode, and every null row is a dropout: decision
-      D39 gives idle segments a pressure, so there are no structural nulls.
+The completed episodes are checked with their observation and audit files and through the gateway.
+Expected values are hand-derived or taken from the specification, and hidden truth is read only to
+compute an expectation. The leakage checks LK-01 to LK-12 are covered by the tests marked LK, and
+their list is in the "Observations of whole episodes" section of the verification notes.
 
-Source: ``docs/design_decisions.md`` D27 to D33; ``revised/05_simulation_validation_dataset.md``
-sections 7.2 and 9.
+See D27 to D33.
 """
 
 from __future__ import annotations
@@ -68,6 +58,9 @@ def audit(episodes: dict[str, EpisodeResult]) -> dict[str, list[dict[str, Any]]]
 def test_every_observation_and_audit_row_validates_against_its_closed_schema(
     obs: dict[str, list[dict[str, Any]]], audit: dict[str, list[dict[str, Any]]], sid: str
 ) -> None:
+    """Every observation and audit row validates against its closed schema, and the two files have
+    the same number of rows. Independent: yes, because the schemas are separate files.
+    """
     check_obs, check_audit = validator("observation"), validator("observation_audit")
     assert all(check_obs.is_valid(row) for row in obs[sid])
     assert all(check_audit.is_valid(row) for row in audit[sid])
@@ -78,6 +71,9 @@ def test_every_observation_and_audit_row_validates_against_its_closed_schema(
 def test_only_the_thirty_emitted_tags_have_rows(
     obs: dict[str, list[dict[str, Any]]], sid: str
 ) -> None:
+    """Only the thirty emitted tags have rows and no withheld tag does. Independent: yes, because
+    the expected tag set is the contract.
+    """
     tags = {r["tag_id"] for r in obs[sid]}
     assert tags == EMITTED and len(tags) == 30 and not tags & WITHHELD
 
@@ -86,6 +82,10 @@ def test_only_the_thirty_emitted_tags_have_rows(
 def test_causality_source_not_after_sim_not_after_available(
     obs: dict[str, list[dict[str, Any]]], audit: dict[str, list[dict[str, Any]]], sid: str
 ) -> None:
+    """For every row the source time is not after the simulation time and the simulation time is not
+    after the availability time. Independent: yes, because the expected ordering is the causality
+    rule.
+    """
     by_key = {(r["tag_id"], r["t_sim_s"]): r for r in obs[sid]}
     for a in audit[sid]:
         row = by_key[(a["tag_id"], a["t_sim_s"])]
@@ -98,6 +98,9 @@ def test_causality_source_not_after_sim_not_after_available(
 def test_the_gateway_never_returns_a_later_row_over_a_whole_episode(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]]
 ) -> None:
+    """At a series of query times the gateway returns only rows available by then, and the set only
+    grows. Independent: yes, because the expected set is computed from the row times.
+    """
     gateway = Gateway(episodes["S0u-E"].directory)
     rows = obs["S0u-E"]
     previous = 0
@@ -111,6 +114,9 @@ def test_the_gateway_never_returns_a_later_row_over_a_whole_episode(
 def test_observations_are_a_pure_function_of_the_truth_and_the_seed(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]], tmp_path: Path
 ) -> None:
+    """Observing the same episode again gives identical rows. Independent: yes, because equality is
+    the property.
+    """
     from verum.sensors.adapter import observe_rows
 
     again = observe_rows(episodes["S0-G"].directory).observations
@@ -124,6 +130,9 @@ def test_observations_are_a_pure_function_of_the_truth_and_the_seed(
 def test_every_event_tag_has_an_initial_row_at_t_zero(
     obs: dict[str, list[dict[str, Any]]], sid: str
 ) -> None:
+    """Each of the 16 event tags has a boolean row at t = 0. Independent: yes, because the expected
+    count is the contract.
+    """
     first = {r["tag_id"]: r for r in obs[sid] if r["t_sim_s"] == 0.0 and r["tag_id"] in EVENT_TAGS}
     assert set(first) == EVENT_TAGS and len(EVENT_TAGS) == 16
     assert all(r["value"] in (0.0, 1.0) and r["unit"] == "bool" for r in first.values())
@@ -132,9 +141,10 @@ def test_every_event_tag_has_an_initial_row_at_t_zero(
 def test_the_valve_contact_follows_the_stroke_with_the_lag_of_the_table(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """XV-R000 closes from the isolation request: alpha = 1 - (t - t_req)/10 falls below 0.97 at
-    t_req + 0.3 s, and the contact row follows after the 2.0 s lag (hand: t_req + 2.3 s) and the
-    0.1 s comms delay."""
+    """The open contact of the common receipt valve releases 2.3 s after the isolation request, plus
+    the communication delay. Independent: yes, because the time is hand arithmetic on the stroke and
+    the contact lag.
+    """
     rows = [r for r in obs["S0u-E"] if r["tag_id"] == "XV-R000"]
     assert [(r["t_sim_s"], r["value"]) for r in rows] == [
         (0.0, 1.0),
@@ -151,6 +161,9 @@ def test_the_valve_contact_follows_the_stroke_with_the_lag_of_the_table(
 def test_lk11_the_lshh_observation_is_the_detector_output_after_the_comms_delay(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]]
 ) -> None:
+    """The high-high level switch observation equals the detector output after the communication
+    delay. Independent: yes, because the expected time is the trip time plus the stated delay.
+    """
     trip = next(
         e
         for e in _load(episodes["S0u-E"].directory, "events")
@@ -167,11 +180,10 @@ def test_lk11_the_lshh_observation_is_the_detector_output_after_the_comms_delay(
 def test_pt001_clips_at_ten_bar_then_relaxes_toward_the_hydrostatic_value(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """The head at the start of E002 reaches 13.5 barg at the closure, above the 10
-    barg range: clipped with quality suspect. The isolated segment then relaxes to the tank head
-    with 60 s (decision D39): it is below 10 barg after 60 ln(13.46/10) = 18 s, and at the end
-    of the hour it reads the hydrostatic value of TK-101 (13.0 m: (13.0 - 1.0 m) x 0.0735 = 0.88
-    barg, less the tank-side losses)."""
+    """After the isolation the PT-001 reading is clipped at 10 barg with a suspect flag, falls below
+    it after about 18 s, and ends at the hydrostatic value. Independent: yes, because the values are
+    hand arithmetic.
+    """
     rows = [r for r in obs["S0u-E"] if r["tag_id"] == "PT-001" and r["value"] is not None]
     closed = TIMELINE["closed"]
     clipped = [r for r in rows if closed < r["t_sim_s"] < closed + 15.0]
@@ -185,10 +197,9 @@ def test_pt001_clips_at_ten_bar_then_relaxes_toward_the_hydrostatic_value(
 
 
 def test_ft201_varies_with_the_falling_tank_level(obs: dict[str, list[dict[str, Any]]]) -> None:
-    """Decision D2 consequence. Hand: the duty flow falls 4.46 m3/h per metre of level
-    (1.24e-3 m3/s per m) and TK-101 falls 0.442 m in the hour, so the mean flow drops by
-    about 1.97 m3/h between the first and the last ten minutes (mean of the two windows,
-    separated by 3000 s, so the drop is 0.37 m of the 0.44 m): 1.65 m3/h."""
+    """The mean delivery flow drops by about 1.65 m3/h between the first and last ten minutes as the
+    tank level falls. Independent: yes, because the drop is hand arithmetic from the flow slope.
+    """
     flow = [r for r in obs["S0-A"] if r["tag_id"] == "FT-201" and r["value"] is not None]
     first = np.mean([r["value"] for r in flow if 0 <= r["t_sim_s"] < 600])
     last = np.mean([r["value"] for r in flow if 3000 <= r["t_sim_s"] < 3600])
@@ -198,8 +209,10 @@ def test_ft201_varies_with_the_falling_tank_level(obs: dict[str, list[dict[str, 
 def test_pt203_varies_with_flow_through_the_boundary_law(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]]
 ) -> None:
-    """Decision D2 version 3: PT-203 = 2 bar + rho g c f_d (Q/300)^2 (hand), against the flow
-    read from FT-201 and f_d from the hidden boundary state (used only for the expectation)."""
+    """The PT-203 reading equals 2 bar plus rho g c f_d (Q/300)^2, using the flow read from FT-201.
+    Independent: yes, because the law is evaluated by hand and the hidden factor is used only for
+    the expectation.
+    """
     boundary = {
         r["t_sim_s"]: r["downstream_factor"]
         for r in _load(episodes["S0-F"].directory, "boundary_state")
@@ -221,12 +234,9 @@ def test_pt203_varies_with_flow_through_the_boundary_law(
 def test_gauge_readings_agree_between_the_strata_while_the_absolute_truth_differs(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]]
 ) -> None:
-    """S0-A and S0-A-inland share the hydraulics defined in gauge terms (2 barg reservoir). The
-    truth pressure is absolute (gauge + the stratum atmosphere), and every emitted pressure
-    transmitter reports gauge against the episode atmosphere (decision D27), so the readings
-    agree; no emitted tag is referenced to a fixed atmosphere. The hidden truth differs by
-    101325 - 94300 = 7025 Pa, and the conversion in the unit tests shows the 0.07025 bar a
-    fixed-reference (absolute) sensor would carry."""
+    """Gauge readings agree between the coastal and inland strata while the hidden absolute pressure
+    differs by 7025 Pa. Independent: yes, because the difference is hand arithmetic.
+    """
 
     def mean(sid: str, tag: str) -> float:
         values = [r["value"] for r in obs[sid] if r["tag_id"] == tag and r["value"] is not None]
@@ -244,9 +254,10 @@ def test_gauge_readings_agree_between_the_strata_while_the_absolute_truth_differ
 def test_lk09_null_rate_is_the_binomial_dropout_rate_for_every_tag_in_every_episode(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """Decision D39 leaves no structural null: every null row is a random dropout. For each
-    continuous tag and episode the count is within five binomial deviations of 0.05 percent,
-    and the pooled rate over all tags and episodes is within five deviations too."""
+    """For every continuous tag and episode the number of null rows is within five binomial
+    deviations of the 0.05 percent dropout rate. Independent: yes, because the bound is a
+    hand-derived binomial limit.
+    """
     n_total = missing = 0
     for sid in COMPLETED:
         for tag in CONTINUOUS:
@@ -264,10 +275,10 @@ def test_lk09_null_rate_is_the_binomial_dropout_rate_for_every_tag_in_every_epis
 def test_lk10_quality_flags_carry_no_scenario_pattern(
     obs: dict[str, list[dict[str, Any]]],
 ) -> None:
-    """A real overrange is the only systematic cause of ``suspect``: PT-001 where the receipt
-    path closes under the 10 barg cap (S0u-E, and the closure of the S0u-D receipt switch).
-    Elsewhere ``suspect`` is the noise tail beyond 3 sigma below zero flow (P = 0.00135 per
-    sample), a binomial count that is the same kind in every episode."""
+    """Suspect flags on PT-001 occur only where the receipt path closes under the cap, and elsewhere
+    they follow the noise tail in the same way in every episode. Independent: yes, because the
+    expected pattern is derived from the cap and the noise tail.
+    """
     for sid in COMPLETED:
         suspect = [r for r in obs[sid] if r["quality_flag"] == "suspect"]
         pt001 = [r for r in suspect if r["tag_id"] == "PT-001"]
@@ -290,6 +301,10 @@ FORBIDDEN = re.compile(
 def test_lk01_to_lk06_no_hidden_content_in_agent_visible_data(
     episodes: dict[str, EpisodeResult], obs: dict[str, list[dict[str, Any]]]
 ) -> None:
+    """No truth key, normality label, scenario name, tier, validity-window identifier or truth
+    dataset name appears in any observation row. Independent: yes, because the check scans the
+    written rows.
+    """
     for sid in COMPLETED:
         for row in obs[sid]:
             assert set(row) == OBS_KEYS, sid  # LK-01: only the closed schema's keys
@@ -307,6 +322,9 @@ def test_lk01_to_lk06_no_hidden_content_in_agent_visible_data(
 
 
 def test_lk07_and_lk08_the_allowlist_rejects_hidden_material() -> None:
+    """The gateway allowlist rejects an injected hidden key or word, and the audit file is not
+    served. Independent: yes, because the offending payload is written by the test.
+    """
     base: dict[str, Any] = {
         "episode_id": "EP-1",
         "as_of_s": 1.0,
@@ -331,6 +349,9 @@ def test_lk07_and_lk08_the_allowlist_rejects_hidden_material() -> None:
 def test_the_gateway_refuses_a_row_outside_the_closed_schema(
     episodes: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
+    """The gateway refuses an observation row that has a field outside the closed schema.
+    Independent: yes, because the offending row is written by the test.
+    """
     copy = tmp_path / "EP-COPY"
     shutil.copytree(episodes["S0-A"].directory, copy)
     rows = _load(copy, "observations")
@@ -344,6 +365,10 @@ def test_the_gateway_refuses_a_row_outside_the_closed_schema(
 def test_lk12_the_episode_id_is_opaque_and_the_catalog_is_empty_not_invented(
     episodes: dict[str, EpisodeResult],
 ) -> None:
+    """The episode identifier is opaque, and the inspection catalog is empty because none exists in
+    the audited input. Independent: yes, because the expected pattern and the empty catalog are the
+    stated rules.
+    """
     payload = Gateway(episodes["S0-A"].directory).query(10.0)
     assert re.fullmatch(r"EP-[0-9A-F]{12}", payload["episode_id"])
     assert payload["inspection_catalog"] == []  # no catalog exists in the audited package

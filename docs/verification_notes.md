@@ -329,3 +329,15 @@ Key assumptions:
 - LK-01 to LK-12 are extended to fault episodes: no fault, severity, window, scenario or tier word in the agent-visible rows or in the gateway payload; the dropout pattern and the quality counts equal those of the healthy twin of the same seed.
 
 Independence: closed forms (bias, drift, stuck), the healthy twin, and counts; the fault code is the object under test.
+
+## Observations of whole episodes
+
+Key assumptions:
+
+- Expected values are hand-derived or taken from the specification; where a test reads hidden truth (the detector output, f_d) it is only to compute the expectation.
+- LK-01 to LK-12 (build-failing leakage checks) are covered by the tests marked LK: LK-01 no truth key in an observation or the gateway payload; LK-02 no normality label; LK-03 no scenario name; LK-04 no tier; LK-05 no validity-window id; LK-06 no truth dataset name; LK-07 the allowlist rejects an injected hidden key; LK-08 the audit is not served; LK-09 dropout rate equal across scenarios; LK-10 quality flags carry no scenario pattern; LK-11 the LSHH observation equals the detector output after the delay; LK-12 the episode id is opaque.
+- Random dropout is the same for every episode, and every null row is a dropout: decision D39 gives idle segments a pressure, so there are no structural nulls.
+
+### Gauge readings agree between the strata while the absolute truth differs
+
+S0-A and S0-A-inland share the hydraulics defined in gauge terms (2 barg reservoir). The truth pressure is absolute (gauge + the stratum atmosphere), and every emitted pressure transmitter reports gauge against the episode atmosphere (decision D27), so the readings agree; no emitted tag is referenced to a fixed atmosphere. The hidden truth differs by 101325 - 94300 = 7025 Pa, and the conversion in the unit tests shows the 0.07025 bar a fixed-reference (absolute) sensor would carry.
