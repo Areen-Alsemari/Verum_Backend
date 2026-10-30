@@ -1,23 +1,11 @@
 """Valve law and actuator, operations controller, scenarios, validity and utilities.
 
-Inputs: ``verum.hydraulics.valves``, ``verum.sim`` and ``verum.ops`` components.
-Outputs: pass/fail.
+The valve loss law, the linear actuator, the controller that is the only issuer of commands, the
+scenario files, the wave round-trip times and the root finder used for threshold crossings are
+checked against hand values. The valve-law values, the stroke rates and the receipt-path time
+constant are derived in the "Simulation components" section of the verification notes.
 
-Derivations (hand arithmetic, independent of the code):
-    * K(alpha) = K_open (Kv_max/Kv)^2 with Kv/Kv_max = 50^(alpha-1) above alpha_c = 0.05
-      and (alpha/alpha_c) 50^(alpha_c-1) below. At alpha = 1: K = 0.1. At alpha = 0.5:
-      Kv ratio 50^-0.5 = 0.14142, K = 0.1 x 50 = 5.0. At alpha = 0.05: 50^-0.95 = 0.024321,
-      K = 0.1 x 50^1.9 = 169.06. At alpha = 0.001 the linear branch gives Kv ratio =
-      (0.001/0.05) 50^-0.95, so K = 0.1 x 50^2 x 50^1.9 = 0.1 x 50^3.9 = 4.2265e5.
-    * Valve stroke: alpha moves 1/10 per second for XV-R000 and 1/30 per second for the others.
-    * Rigid-column time constant of the receipt path to TK-101 at 600 m3/h: sum L/A =
-      150/0.072190 + 45/0.032283 = 2077.9 + 1393.9 = 3471.8 1/m; Q0 = 0.166667 m3/s; the
-      head loss comes from the independent reference module with the hand-counted K of the
-      path (DN300: meter 1.0 + bend and XV-R000 0.4; DN200: two bends 0.6 + bend, XV-R101,
-      tank inlet 1.4).
-    * Hermite root: for a linear volume (equal end slopes) the crossing fraction is linear.
-
-Source: decisions D4, D18, D19; ``revised/01_facility_tanks_topology.md`` section 6.2.
+See D4, D18 and D19.
 """
 
 from __future__ import annotations
@@ -55,10 +43,16 @@ FIXED_SEEDS = {
     [(1.0, 0.1), (0.5, 5.0), (0.05, 0.1 * 50**1.9), (0.001, 0.1 * 50**3.9)],
 )
 def test_loss_coefficient_matches_hand_values(alpha: float, k_hand: float) -> None:
+    """The valve loss coefficient equals the hand value for each opening, for example 0.1 when fully
+    open and 5.0 at half open. Independent: yes, because the values are hand arithmetic.
+    """
     assert loss_coefficient(alpha, 0.1, 0.05, 50.0) == pytest.approx(k_hand, rel=1e-12)
 
 
 def test_kv_is_continuous_at_alpha_c_and_zero_at_zero() -> None:
+    """The valve flow coefficient is continuous at the crossover opening and zero at zero opening.
+    Independent: yes, because only continuity and the end value are checked.
+    """
     below = kv_fraction(0.05 - 1e-12, 0.05, 50.0)
     above = kv_fraction(0.05 + 1e-12, 0.05, 50.0)
     assert below == pytest.approx(above, rel=1e-9)
@@ -68,11 +62,17 @@ def test_kv_is_continuous_at_alpha_c_and_zero_at_zero() -> None:
 
 
 def test_kv_increases_strictly_with_opening() -> None:
+    """The valve flow coefficient increases strictly with the opening. Independent: yes, because
+    only monotonicity is checked.
+    """
     values = [kv_fraction(i / 500, 0.05, 50.0) for i in range(0, 501)]
     assert all(b > a for a, b in zip(values, values[1:], strict=False))
 
 
 def test_kv_rejects_openings_outside_the_range() -> None:
+    """An opening below 0 or above 1 is rejected. Independent: yes, because the expected outcome is
+    the validation rule.
+    """
     for bad in (-0.1, 1.1):
         with pytest.raises(ValueError):
             kv_fraction(bad, 0.05, 50.0)
@@ -82,6 +82,9 @@ def test_kv_rejects_openings_outside_the_range() -> None:
 
 
 def test_closing_valve_moves_linearly_over_its_stroke() -> None:
+    """A closing valve moves linearly over its 30 s stroke and stays closed afterwards. Independent:
+    yes, because the openings are arithmetic on the stroke time.
+    """
     valve = make_valve("XV-R101", 30.0, 0.001, True)
     assert valve.order(False, 100.0)
     for dt, expected in ((0.0, 1.0), (7.5, 0.75), (15.0, 0.5), (30.0, 0.0), (45.0, 0.0)):
@@ -91,6 +94,9 @@ def test_closing_valve_moves_linearly_over_its_stroke() -> None:
 
 
 def test_physical_closure_is_the_closed_threshold() -> None:
+    """The valve counts as physically closed at an opening of 0.001, which a 10 s stroke reaches at
+    9.99 s. Independent: yes, because the time is arithmetic on the stroke.
+    """
     valve = make_valve("XV-R000", 10.0, 0.001, True)
     valve.order(False, 0.0)
     assert valve.threshold_time_s() == pytest.approx(9.99)
@@ -99,6 +105,9 @@ def test_physical_closure_is_the_closed_threshold() -> None:
 
 
 def test_commanded_actual_and_physical_state_are_separate() -> None:
+    """A valve ordered open is commanded open while its actual opening is still zero and it is still
+    physically closed. Independent: yes, because the expected states follow from the actuator rule.
+    """
     valve = make_valve("XV-R101", 30.0, 0.001, False)
     valve.order(True, 10.0)
     assert valve.commanded_open and valve.alpha(10.0) == 0.0 and valve.is_physically_closed(10.0)
@@ -106,6 +115,9 @@ def test_commanded_actual_and_physical_state_are_separate() -> None:
 
 
 def test_a_new_order_mid_stroke_starts_from_the_actual_position() -> None:
+    """A new order during a stroke starts from the actual position at that instant. Independent:
+    yes, because the openings are arithmetic on the stroke time.
+    """
     valve = make_valve("XV-S101", 30.0, 0.001, True)
     valve.order(False, 0.0)
     assert valve.order(True, 15.0)  # back from alpha = 0.5
@@ -114,6 +126,9 @@ def test_a_new_order_mid_stroke_starts_from_the_actual_position() -> None:
 
 
 def test_an_order_to_the_present_state_does_not_start_a_motion() -> None:
+    """An order to the state a valve already has starts no motion. Independent: yes, because the
+    expected outcome is the actuator rule.
+    """
     valve = make_valve("XV-S101", 30.0, 0.001, True)
     assert not valve.order(True, 5.0) and valve.threshold_time_s() is None
 
@@ -127,6 +142,9 @@ def table(topology: Topology) -> LineupTable:
 
 
 def test_commands_cannot_be_fabricated_outside_the_controller() -> None:
+    """Creating a command or a valve order outside the controller raises a permission error.
+    Independent: yes, because the expected outcome is the token rule.
+    """
     with pytest.raises(PermissionError):
         Command(t_s=0.0, kind="valves")
     with pytest.raises(PermissionError):
@@ -136,6 +154,9 @@ def test_commands_cannot_be_fabricated_outside_the_controller() -> None:
 
 
 def test_the_issuing_token_is_referenced_only_inside_ops(root: Path) -> None:
+    """The token that authorises commands is referenced only inside the operations package.
+    Independent: yes, because the check scans the source tree.
+    """
     offenders = []
     for path in (root / "src").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
@@ -147,6 +168,9 @@ def test_the_issuing_token_is_referenced_only_inside_ops(root: Path) -> None:
 
 
 def test_a_lineup_command_goes_through_the_hold_state(table: LineupTable) -> None:
+    """A lineup command between two receipt modes passes through the hold state before the new mode.
+    Independent: yes, because the expected steps are the transition rule.
+    """
     schedule = [{"t_s": 10.0, "command": "lineup", "mode": "RECEIVE_102"}]
     ops = OperationsController(table, "RECEIVE_101", schedule)
     state = {
@@ -157,6 +181,9 @@ def test_a_lineup_command_goes_through_the_hold_state(table: LineupTable) -> Non
 
 
 def test_a_hold_then_receive_resolves_to_the_valve_differences(table: LineupTable) -> None:
+    """A hold followed by a receipt resolves to the valve orders that differ between the two states.
+    Independent: yes, because the expected orders are written out in the test.
+    """
     schedule = [
         {"t_s": 10.0, "command": "lineup", "mode": "SWITCH_RECEIPT_HOLD"},
         {"t_s": 20.0, "command": "lineup", "mode": "RECEIVE_102"},
@@ -174,6 +201,9 @@ def test_a_hold_then_receive_resolves_to_the_valve_differences(table: LineupTabl
 
 
 def test_a_lineup_change_may_not_start_or_stop_a_pump(table: LineupTable) -> None:
+    """A lineup change that would start or stop a pump is refused. Independent: yes, because the
+    expected outcome is the controller rule.
+    """
     ops = OperationsController(
         table, "DELIVER_101_A", [{"t_s": 1.0, "command": "lineup", "mode": "CHANGEOVER_HOLD"}]
     )
@@ -182,6 +212,9 @@ def test_a_lineup_change_may_not_start_or_stop_a_pump(table: LineupTable) -> Non
 
 
 def test_reactive_entries_become_commands_with_the_delay(table: LineupTable) -> None:
+    """A reactive schedule entry becomes closure commands after its configured delay. Independent:
+    yes, because the expected times are written out in the test.
+    """
     entry = {
         "on": "ISOLATION_REQUESTED",
         "tank": "TK-101",
@@ -197,6 +230,9 @@ def test_reactive_entries_become_commands_with_the_delay(table: LineupTable) -> 
 
 
 def test_an_unknown_schedule_command_is_refused(table: LineupTable) -> None:
+    """A schedule entry with an unknown command is refused. Independent: yes, because the expected
+    outcome is the validation rule.
+    """
     with pytest.raises(ValueError):
         OperationsController(table, "IDLE", [{"t_s": 1.0, "command": "start_pump"}])
 
@@ -221,6 +257,9 @@ def test_an_unknown_schedule_command_is_refused(table: LineupTable) -> None:
     ],
 )
 def test_scenario_files_are_valid(sid: str) -> None:
+    """Every shipped scenario file loads, uses the reference fittings and has its fixed seed.
+    Independent: yes, because the expected seeds are written out in the test.
+    """
     sc = load_scenario(sid)
     assert sc.fitting_profile == "reference_fittings"
     assert sc.seed == FIXED_SEEDS[sid]  # decision D41: fixed and distinct (see test_seeds)
@@ -230,6 +269,9 @@ def test_scenario_files_are_valid(sid: str) -> None:
 
 
 def test_scenario_specifics() -> None:
+    """Selected scenarios have their documented temperature, levels, schedule and options.
+    Independent: yes, because the expected values are written out in the test.
+    """
     assert (
         load_scenario("REJ-1").temperature_c == 45.0
         and load_scenario("REJ-1").tank_levels_m["TK-103"] == 5.0
@@ -260,6 +302,9 @@ def test_scenario_specifics() -> None:
     ],
 )
 def test_bad_scenarios_are_refused(root: Path, mutate: Any) -> None:
+    """Scenario files with an invalid option or value are refused. Independent: yes, because the
+    expected outcome is the validation rule.
+    """
     raw = json.loads((root / "config" / "scenarios" / "S0-A.json").read_text(encoding="utf-8"))
     mutate(raw)
     with pytest.raises(ContractError):
@@ -267,6 +312,9 @@ def test_bad_scenarios_are_refused(root: Path, mutate: Any) -> None:
 
 
 def test_sim_parameters_are_provisional_records() -> None:
+    """Every engine parameter is provisional and carries a provenance identifier. Independent: yes,
+    because the expected status is the stated rule.
+    """
     cfg = load_sim_config()
     for name, record in cfg.parameters.items():
         assert record.status == "provisional" and record.provenance_id, name
@@ -275,6 +323,9 @@ def test_sim_parameters_are_provisional_records() -> None:
 
 
 def test_stroke_times_agree_with_the_protection_configuration() -> None:
+    """The valve stroke times of the engine configuration equal those of the protection
+    configuration. Independent: yes, because the two files are compared with each other.
+    """
     cfg = load_sim_config()
     protection = json.loads(
         Path(__file__).resolve().parents[2].joinpath("config", "protection.json").read_text()
@@ -284,10 +335,16 @@ def test_stroke_times_agree_with_the_protection_configuration() -> None:
 
 
 def test_closed_threshold_is_configured(model: HydraulicModel) -> None:
+    """The closed-valve opening threshold is 0.001 and the full-open loss coefficient is 0.1.
+    Independent: yes, because the expected values are the stated constants.
+    """
     assert model.config["valve_closed_alpha"] == 0.001 and model.config["valve_full_open_k"] == 0.1
 
 
 def test_an_unresolved_sim_parameter_raises(tmp_path: Path, root: Path) -> None:
+    """An unresolved engine parameter raises when it is read. Independent: yes, because the expected
+    outcome is the rule that nothing replaces an unresolved parameter.
+    """
     import shutil
 
     shutil.copytree(root / "config", tmp_path / "config")
@@ -308,7 +365,9 @@ def test_an_unresolved_sim_parameter_raises(tmp_path: Path, root: Path) -> None:
 
 
 def test_receipt_wave_round_trip_matches_the_hand_calculation(model: HydraulicModel) -> None:
-    """Independent: 2 (150 m / 1078.2 m/s + 45 m / 1089.2 m/s) = 0.36087 s (PAR-PIP-007)."""
+    """The wave round-trip time of the receipt path is 0.36087 s. Independent: yes, because the
+    value is hand arithmetic on the screening wave speeds.
+    """
     edges = receipt_edges(model, "TK-101")
     hand = 2.0 * (150.0 / 1078.2 + 45.0 / 1089.2)
     assert round_trip_s(model, edges, wave_speeds(load_sim_config())) == pytest.approx(
@@ -318,7 +377,9 @@ def test_receipt_wave_round_trip_matches_the_hand_calculation(model: HydraulicMo
 
 
 def test_delivery_wave_round_trip_uses_each_nominal_size(model: HydraulicModel) -> None:
-    """Independent: S-102 90 m and the pump leg 20 m are DN200, E-SH 35 m is DN250, D-MAIN 250 m."""
+    """The wave round-trip time of the delivery path uses the wave speed of each nominal size.
+    Independent: yes, because the value is hand arithmetic.
+    """
     edges = delivery_edges(model, "TK-102", "P-101A")
     hand = 2.0 * ((90.0 + 20.0 + 250.0) / 1089.2 + 35.0 / 1082.8)
     assert round_trip_s(model, edges, wave_speeds(load_sim_config())) == pytest.approx(
@@ -327,15 +388,25 @@ def test_delivery_wave_round_trip_uses_each_nominal_size(model: HydraulicModel) 
 
 
 def test_wave_speeds_are_the_screening_values_of_the_audited_package() -> None:
+    """The wave speeds are 1089.2, 1082.8 and 1078.2 m/s for DN200, DN250 and DN300. Independent:
+    yes, because the values are the audited screening values.
+    """
     assert wave_speeds(load_sim_config()) == {200: 1089.2, 250: 1082.8, 300: 1078.2}
 
 
 def test_validity_rule_and_ratio() -> None:
+    """An event is valid when its duration is at least the factor times the round trip, and the
+    ratio is the duration over the round trip. Independent: yes, because the expected values are
+    arithmetic.
+    """
     assert is_valid(60.0, 6.0, 10.0) and not is_valid(59.9, 6.0, 10.0)
     assert ratio(30.0, 6.0) == 5.0
 
 
 def test_paths_are_made_of_contract_edges(model: HydraulicModel) -> None:
+    """The receipt and delivery paths consist of the expected contract edges. Independent: yes,
+    because the expected edge lists are written out in the test.
+    """
     assert receipt_edges(model, "TK-101") == ("E001", "E002", "E003", "E-R101a", "E-R101b")
     assert delivery_edges(model, "TK-102", "P-101B") == (
         "E-S102a", "E-S102b", "E-SH", "E-PB0", "E-PB1", "E-PB2", "E-PB3", "E-PB4", "E-D1", "E-D2",
@@ -343,12 +414,18 @@ def test_paths_are_made_of_contract_edges(model: HydraulicModel) -> None:
 
 
 def test_hermite_root_is_linear_for_equal_slopes() -> None:
+    """The root finder gives a crossing fraction that is linear in the level when the end slopes are
+    equal. Independent: yes, because the expected fractions are hand arithmetic.
+    """
     # V falls from 100 to 80 over 10 s at a constant -2 per s: the root for 90 is s = 0.5.
     assert _hermite_root(100.0, 80.0, -20.0, -20.0, 90.0) == pytest.approx(0.5, abs=1e-12)
     assert _hermite_root(100.0, 80.0, -20.0, -20.0, 81.0) == pytest.approx(0.95, abs=1e-12)
 
 
 def test_hermite_root_follows_a_cubic() -> None:
+    """The root finder locates the crossing of a cubic inside the step. Independent: yes, because
+    the cubic is constructed in the test.
+    """
     # V(s) = 100 - 30 s^2 + 10 s^3 has V(0)=100, V(1)=80, slopes 0 and -30 per unit s.
     s = _hermite_root(100.0, 80.0, 0.0, -30.0 + 30.0 * 0 - 0.0, 100 - 30 * 0.6**2 + 10 * 0.6**3)
     assert 0.0 < s < 1.0

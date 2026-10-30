@@ -1,19 +1,12 @@
-"""Atmospheric pressure comes from configuration; the site-pressure sensitivity file.
+"""Atmospheric pressure comes from configuration, and the site-pressure sensitivity file.
 
-Inputs: ``config/hydraulics.json``, the source tree, ``config/pumping_minimum_levels*.json``.
-Outputs: pass/fail.
-Key assumptions:
-    * No source file contains the sea-level atmosphere as a literal; every use reads
-      the ``atmosphere_pa_abs`` parameter.
-    * The site table (94300 Pa) is a sensitivity run, labelled as an estimate for a
-      site near 600 m elevation whose elevation is to be confirmed by the team. It
-      is a separate file and never overwrites the sea-level table.
-    * Changing the atmosphere shifts absolute pressures and NPSHa by exactly the
-      pressure difference (and the difference divided by rho g for NPSHa).
-Independence: the shift identities are hand arithmetic; the stored-level checks use
-the production solver and confirm the study file only.
+No source file contains the sea-level atmosphere as a literal, and every use reads the configured
+parameter. The site table for 94300 Pa is a sensitivity run for a site near 600 m elevation, to be
+confirmed by the team, and it never overwrites the sea-level table. Changing the atmosphere shifts
+absolute pressures by the pressure difference, and the available NPSH by that difference divided by
+rho g.
 
-Source: decision D7 (version 2.0), D11; ``revised/02_hydraulic_model.md`` section 4.
+See D7 and D11.
 """
 
 from __future__ import annotations
@@ -49,6 +42,9 @@ def _site_model(model: HydraulicModel) -> HydraulicModel:
 
 
 def test_no_source_file_hard_codes_the_coastal_atmosphere(root: Path) -> None:
+    """No source file contains the sea-level atmosphere as a literal. Independent: yes, because the
+    check scans the source tree.
+    """
     pattern = re.compile(r"101325|101\.325|1\.01325")
     hits = [
         p.as_posix()
@@ -59,6 +55,9 @@ def test_no_source_file_hard_codes_the_coastal_atmosphere(root: Path) -> None:
 
 
 def test_the_atmosphere_is_a_configured_parameter(model: HydraulicModel) -> None:
+    """The atmosphere is a provisional configured parameter with provenance and the value 101325 Pa.
+    Independent: yes, because the expected value is the stated constant.
+    """
     record = model.config.record("atmosphere_pa_abs")
     assert record.value == 101325.0 and record.status == "provisional" and record.provenance_id
 
@@ -66,6 +65,10 @@ def test_the_atmosphere_is_a_configured_parameter(model: HydraulicModel) -> None
 def test_a_lower_atmosphere_shifts_pressures_and_npsha_by_the_difference(
     model: HydraulicModel,
 ) -> None:
+    """A lower atmosphere shifts the absolute pressures by the pressure difference and the available
+    NPSH by that difference over rho g. Independent: yes, because the identities are hand
+    arithmetic.
+    """
     sea = model.solve(delivery_case("TK-102", 7.0))
     site = _site_model(model).solve(delivery_case("TK-102", 7.0))
     delta = 101325.0 - SITE_PA
@@ -86,6 +89,9 @@ def test_a_lower_atmosphere_shifts_pressures_and_npsha_by_the_difference(
 
 
 def test_the_site_file_is_a_separate_labelled_sensitivity(root: Path) -> None:
+    """The site file is separate, carries its estimate label and states the 94300 Pa atmosphere.
+    Independent: yes, because the expected label and value are written out in the test.
+    """
     site = json.loads((root / "config" / SITE_PRESSURE_FILENAME).read_text(encoding="utf-8"))
     assert site["label"] == LABEL
     assert site["atmosphere_pa_abs"] == SITE_PA
@@ -107,6 +113,9 @@ COMBINATIONS = [
 def test_site_levels_are_never_lower_than_coastal_and_match_the_solver(
     model: HydraulicModel, tank: str, temp: float, profile: str, coeff: float
 ) -> None:
+    """The site pumping-minimum levels are never lower than the coastal ones and match the solver.
+    Independent: no, because the check uses the production solver and only confirms the study file.
+    """
     site_model = _site_model(model)
     sea = pumping_minimum_level(tank, temp, profile, coeff)
     site = pumping_minimum_level(tank, temp, profile, coeff, filename=SITE_PRESSURE_FILENAME)

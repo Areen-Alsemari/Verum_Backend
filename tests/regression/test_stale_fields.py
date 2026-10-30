@@ -1,17 +1,9 @@
 """Stale-field tests over the machine-readable contracts.
 
-Inputs: the topology, sensor and release-policy contracts, and mutated copies.
-
-Outputs: pass/fail. The shipped contracts must contain none of the removed
-references; each removed reference, when reintroduced, must be detected by the
-stale-reference detector and, where it applies, rejected by the loaders.
-
-Key assumptions: only machine-readable contracts are scanned. The prose
-documents still describe the removed items in their history sections and are
-not part of this check.
-
-Source: ``VERUM_INTEGRATION_README.md`` section B;
-``canonical_sensor_contract.json`` (``nonbaseline_excluded``).
+The shipped contracts must contain none of the references that the audit removed. Each removed
+reference, when reintroduced into a mutated copy, must be detected by the stale-reference detector
+and, where it applies, rejected by the loaders. Only the machine-readable contracts are scanned,
+because the prose documents still describe the removed items in their history sections.
 """
 
 from __future__ import annotations
@@ -32,6 +24,9 @@ Mutation = Callable[[Raw, Raw, Raw], None]
 
 
 def test_shipped_contracts_are_clean(raw_topology: Raw, raw_sensors: Raw, raw_policy: Raw) -> None:
+    """The shipped contracts contain no stale reference. Independent: yes, because the expected
+    finding list is empty.
+    """
     assert stale_findings(raw_topology, raw_sensors, raw_policy) == []
     assert_no_stale_references(raw_topology, raw_sensors, raw_policy)
 
@@ -134,6 +129,9 @@ ALL_MUTATIONS: dict[str, Mutation] = {**SENSOR_MAPPINGS, **GRAPH_MUTATIONS, **DE
 def test_detector_flags_reintroduced_reference(
     name: str, raw_topology: Raw, raw_sensors: Raw, raw_policy: Raw
 ) -> None:
+    """Each reintroduced stale reference is flagged by the detector and raises in the strict check.
+    Independent: yes, because the mutations are written out in the test.
+    """
     ALL_MUTATIONS[name](raw_topology, raw_sensors, raw_policy)
     assert stale_findings(raw_topology, raw_sensors, raw_policy)
     with pytest.raises(ValueError, match="stale references present"):
@@ -144,6 +142,9 @@ def test_detector_flags_reintroduced_reference(
 def test_sensor_loader_rejects_stale_mapping(
     name: str, raw_topology: Raw, raw_sensors: Raw, raw_policy: Raw, topology: Topology
 ) -> None:
+    """The sensor loader rejects each reintroduced stale mapping. Independent: yes, because the
+    mutations are written out in the test.
+    """
     SENSOR_MAPPINGS[name](raw_topology, raw_sensors, raw_policy)
     with pytest.raises(ContractError):
         parse_sensor_contract(raw_sensors, topology)
@@ -153,6 +154,9 @@ def test_sensor_loader_rejects_stale_mapping(
 def test_topology_loader_rejects_stale_graph(
     name: str, raw_topology: Raw, raw_sensors: Raw, raw_policy: Raw
 ) -> None:
+    """The topology loader rejects each reintroduced stale graph element. Independent: yes, because
+    the mutations are written out in the test.
+    """
     GRAPH_MUTATIONS[name](raw_topology, raw_sensors, raw_policy)
     with pytest.raises(ContractError):
         parse_topology(raw_topology)

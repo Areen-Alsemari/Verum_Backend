@@ -351,3 +351,12 @@ Key assumptions:
 - An event time is not a multiple of the 1 s grid (no quantisation) and the error is below 1 ms.
 
 Independence: hand arithmetic and a linear interpolation of the written files; neither uses the engine's root finding.
+
+## Simulation components
+
+Derivations (hand arithmetic, independent of the code):
+
+- K(alpha) = K_open (Kv_max/Kv)^2 with Kv/Kv_max = 50^(alpha-1) above alpha_c = 0.05 and (alpha/alpha_c) 50^(alpha_c-1) below. At alpha = 1: K = 0.1. At alpha = 0.5: Kv ratio 50^-0.5 = 0.14142, K = 0.1 x 50 = 5.0. At alpha = 0.05: 50^-0.95 = 0.024321, K = 0.1 x 50^1.9 = 169.06. At alpha = 0.001 the linear branch gives Kv ratio = (0.001/0.05) 50^-0.95, so K = 0.1 x 50^2 x 50^1.9 = 0.1 x 50^3.9 = 4.2265e5.
+- Valve stroke: alpha moves 1/10 per second for XV-R000 and 1/30 per second for the others.
+- Rigid-column time constant of the receipt path to TK-101 at 600 m3/h: sum L/A = 150/0.072190 + 45/0.032283 = 2077.9 + 1393.9 = 3471.8 1/m; Q0 = 0.166667 m3/s; the head loss comes from the independent reference module with the hand-counted K of the path (DN300: meter 1.0 + bend and XV-R000 0.4; DN200: two bends 0.6 + bend, XV-R101, tank inlet 1.4).
+- Hermite root: for a linear volume (equal end slopes) the crossing fraction is linear.

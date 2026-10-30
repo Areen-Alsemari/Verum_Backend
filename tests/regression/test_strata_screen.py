@@ -1,24 +1,13 @@
-"""Pumping-minimum files per (atmosphere, volatility) pair against the screen and the engine.
+"""Pumping-minimum files per atmosphere and volatility pair, against the screen and the engine.
 
-Inputs: the six files ``config/pumping_minimum_levels_<atmosphere>_<volatility>_fd0p8.json``
-(atmosphere coastal or inland, volatility RVP_9_0, RVP_9_5 or RVP10),
-the steady solver at the atmosphere and volatility of each pair, and short engine runs.
-Outputs: pass/fail.
-Key assumptions:
-    * Decisions D24 version 2, D46 version 3 and D51: the files are computed at the worst-case
-      downstream factor f_d = 0.8, for both fitting profiles, four temperatures and the NPSH3
-      sweep. A level at or above the stored minimum passes the screen at every f_d in
-      [0.8, 1.25]; a level just below it fails at f_d = 0.8; a cell that never passes is stored
-      unresolved.
-    * 60 states are sampled per file (deterministically, with a fixed stride over the cells).
-    * Pass/fail is monotonic in level: once a level passes, every higher level passes.
-    * The engine's SG0 compares the level with the stored minimum at every step and checks the
-      screen with the solved flow; it must never accept a state that the screen rejects.
-Independence: not independent in the hydraulics. The screen is the steady solver (the same
-formulas as the study that wrote the files); the test checks that the stored files, the solver
-and the engine agree and that the minimum is sharp and monotonic.
+Six files hold the minimum levels at the worst-case downstream factor of 0.8 for both fitting
+profiles, four temperatures and the NPSH3 sweep. A level at or above the stored minimum passes the
+screen at every factor up to 1.25, a level just below it fails at 0.8, and a cell that never passes
+is stored unresolved. The engine gate must never accept a state that the screen rejects. The files,
+solver and engine share formulas, so the test checks that they agree and that the minimum is sharp
+and monotonic.
 
-Source: ``docs/design_decisions.md`` D7, D24, D46, D51, D52.
+See D7, D24, D46, D51 and D52.
 """
 
 from __future__ import annotations
@@ -82,6 +71,10 @@ def _minimum(
 def test_sampled_states_at_or_above_the_minimum_pass_at_every_factor_and_below_fail(
     model: HydraulicModel, atm: str, vol: str
 ) -> None:
+    """Sixty sampled states per file pass the screen at or above the stored minimum for every factor
+    in the range, and fail just below it at the worst-case factor. Independent: no, because the
+    screen is the steady solver that also produced the files.
+    """
     m = model.for_stratum(atm)
     assert len(SAMPLE) == 60
     passed = failed = 0
@@ -106,6 +99,9 @@ def test_sampled_states_at_or_above_the_minimum_pass_at_every_factor_and_below_f
 
 @pytest.mark.parametrize(("atm", "vol"), PAIRS)
 def test_pass_is_monotonic_in_level(model: HydraulicModel, atm: str, vol: str) -> None:
+    """Once a level passes the screen, every higher level passes. Independent: yes, because only
+    monotonicity is checked.
+    """
     m = model.for_stratum(atm)
     levels = [1.8 + 0.5 * k for k in range(21)]
     for tank, temp, profile, coeff in SAMPLE[::3]:
@@ -115,6 +111,9 @@ def test_pass_is_monotonic_in_level(model: HydraulicModel, atm: str, vol: str) -
 
 @pytest.mark.parametrize(("atm", "vol"), PAIRS)
 def test_every_file_is_complete_and_marks_never_as_unresolved(atm: str, vol: str) -> None:
+    """Every file has all its cells, and a cell that never passes is recorded as unresolved.
+    Independent: yes, because the expected outcome is the storage rule.
+    """
     for tank, temp, profile, coeff in CELLS:
         record = pumping_minimum_level(tank, temp, profile, coeff, None, stratum_filename(atm, vol))
         assert (record.status == "unresolved") == (not record.is_resolved)
@@ -127,8 +126,9 @@ def _rank(value: float | None) -> float:
 
 
 def test_volatility_and_temperature_raise_the_minimum_level() -> None:
-    """Hand argument: a higher vapor pressure lowers NPSHa, so the minimum never decreases with
-    temperature or with the volatility class (RVP 9.0 <= 9.5 <= 10)."""
+    """The minimum level never decreases with temperature or with the volatility class. Independent:
+    yes, because a higher vapor pressure lowers the available NPSH by hand argument.
+    """
     for atm in ATMOSPHERES:
         for tank, profile, coeff in itertools.product(TANKS, PROFILES, COEFFS):
             series = [
@@ -147,9 +147,10 @@ def test_volatility_and_temperature_raise_the_minimum_level() -> None:
 def test_the_engine_rejects_below_and_accepts_above_the_stored_minimum(
     model: HydraulicModel, atm: str, profile: str
 ) -> None:
-    """SG0 at the start with the baseline class: a level 0.01 m below the minimum is rejected,
-    0.1 m above is not; in the accepted run the screen holds for the next minutes with the
-    demand process on."""
+    """The engine gate rejects a start level 0.01 m below the stored minimum and accepts one 0.1 m
+    above it, with the screen holding in the following minutes. Independent: no, because the gate
+    and the study share the steady solver.
+    """
     tank, temp, vol = "TK-102", 40.0, "RVP_9_0"
     minimum = _minimum(atm, vol, tank, temp, profile, 4.0)
     assert minimum is not None and 1.8 < minimum < 12.0
@@ -188,6 +189,9 @@ def test_the_engine_rejects_below_and_accepts_above_the_stored_minimum(
 def test_the_pump_stays_inside_its_curve_over_the_factor_range(
     model: HydraulicModel, atm: str
 ) -> None:
+    """Over the range of the downstream factor the pump flow stays inside the pump curve with a
+    margin. Independent: no, because the flow comes from the steady solver.
+    """
     m = model.for_stratum(atm)
     limit = m.config["pump_max_flow_m3h"]
     worst = 0.0
