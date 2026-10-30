@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 13 (2026-10-31). Records are version 1.0 unless stated. A record
+- Log version 14 (2026-10-31). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -84,7 +84,7 @@ version superseded; records are not edited in place.
 | D55 | Usable interval after a phase_invalid window | DESIGN | 1.0 |
 | D56 | Published-experiment rungs R12 and R13 | DESIGN | 1.0 |
 | D57 | Study and table scripts in a tracked directory | DESIGN | 1.0 |
-| D58 | Stroke windows need flow | DESIGN | 1.0 |
+| D58 | Stroke windows need flow | DESIGN | 2.0 (supersedes 1.0) |
 | D59 | Dense truth rows by window kind | DESIGN | 1.0 |
 | D60 | Leak | SIM | 1.0 |
 | D61 | Valve restriction | SIM | 1.0 |
@@ -95,6 +95,12 @@ version superseded; records are not edited in place.
 | D66 | Rejection of faulted candidates | DESIGN | 1.0 |
 | D67 | Edge-flow convention | DESIGN | 1.0 |
 | D68 | Audit detectability thresholds | DESIGN | 1.0 |
+| D73 | Healthy variability, profile v2 | SIM | 1.0 |
+| D74 | Valve restriction modes | SIM | 1.0 |
+| D75 | Misrouting (b) eligibility | SIM | 1.0 |
+| D76 | Latent faults | DESIGN | 1.0 |
+| D77 | Agent-side detectability audit | DESIGN | 1.0 |
+| D78 | Severity classes | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1131,7 +1137,15 @@ version superseded; records are not edited in place.
 
 ## D58 - Stroke windows need flow
 
-- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D53
+- **Version:** 2.0 (2026-10-31)  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D53
+- **Decision.** A valve stroke can open a `valve_stroke` window only if the flow through the valve is at least 10 percent of the design flow of its path (600 m3/h for the receipt path, the receipt flow of the configuration; 300 m3/h for the delivery path, the duty flow of the pump). The flow is read at the start of an opening stroke, and at the instant the opening of a closing stroke has fallen to 0.2 (the stopped flow, and with it the surge, is decided there). A stroke below that flow is judged valid and is counted as an evaluated event. The window of a closing stroke, if there is one, still starts at the start of the stroke and is written at that time of the record.
+- **Reason.** The pressure surge of a closure scales with the flow that is stopped, and a valve whose opening is above 0.2 stops little of it. A closure that starts together with a set-point step to zero (S0u-D at 600 s) starts at the full flow, but the controller removes the flow within about 4.4 s, before the valve has closed; version 1.0 flagged it for a surge that cannot occur.
+- **Sensitivity required.** The fraction 5, 10 and 20 percent (`tools/d42_study.py d58`).
+- **Notes.** The opening of 0.2 and the 10 percent are unsourced selections. The rule changes the tier of S0u-D from restricted_benchmark to analytic_verification and leaves S0u-E restricted. Version 1.0 is kept below.
+
+## D58 - Stroke windows need flow (version 1.0, superseded)
+
+- **Version:** 1.0 (2026-10-31)  **Superseded by:** 2.0  **Status:** DESIGN  **Refines:** D53
 - **Decision.** A valve stroke can open a `valve_stroke` window only if the flow through the valve at the start of the stroke is at least 10 percent of the design flow of its path (600 m3/h for the receipt path, the receipt flow of the configuration; 300 m3/h for the delivery path, the duty flow of the pump). A stroke below that flow is judged valid and is counted as an evaluated event.
 - **Reason.** The pressure surge of a closure scales with the flow that is stopped; a stroke that starts with almost no flow cannot produce the transient the window warns about.
 - **Sensitivity required.** The fraction 5, 10 and 20 percent (`tools/d42_study.py d58`).
@@ -1216,6 +1230,54 @@ version superseded; records are not edited in place.
 - **Reason.** The first threshold is what a single reading can resolve; the second is what the healthy process itself does. A fault below both has no observable consequence.
 - **Sensitivity required.** `Cd` 0.5, 0.62 and 0.8 for the leak thresholds.
 - **Notes.** The audit reports, and does not choose, the severity ranges.
+
+## D73 - Healthy variability, profile v2
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D30
+- **Decision.** A scenario file names a `variability_profile`: `off`, `v1` or `v2`. `off` and `v1` reproduce the existing files bit for bit. Profile `v2` adds two changes on named streams. (a) The delivery-demand factor f_d follows piecewise constant regimes: each value is log-uniform in [0.6, 8], each dwell is uniform in [600, 1800] s, the change between regimes is a linear ramp of 60 s, and the existing Ornstein-Uhlenbeck process (sigma 0.05, correlation time 1800 s) is applied on top. A regime outside the gates (pump domain Q/s at most 350 m3/h, minimum stable flow 90 m3/h of D49, phase and NPSH screen, pumping minimum) is redrawn and each redraw is recorded. If any state at f_d = 0.6 exceeds Q/s = 350 m3/h minus a margin of 5 m3/h, the lower bound is raised to the smallest value that keeps the margin, and the raised bound is recorded in the configuration. (b) The receipt set-point follows an OU process with sigma 2 percent of the set-point, correlation time 600 s, clipped to plus and minus 6 percent, subject to the headroom screen at 1.06 times the set-point. The hidden `boundary_state` records the regime value and the receipt set-point.
+- **Reason.** Under profile v1 the healthy tags vary only by a slow OU process; the audit thresholds of D68 and D77 are three standard deviations of the healthy variability, and a baseline that is too quiet would make faults look more detectable than they are.
+- **Sensitivity required.** Healthy standard deviation per tag under v1 and v2 over 20 seeds; the pumping-minimum tables at the worst-case f_d of v2 for all strata, both fitting profiles and NPSH3 2.5, 4 and 6 m.
+- **Notes.** The regime and receipt streams are separate from every existing stream (D30), so that the existing streams are not displaced. The bounds 0.6 and 8, the dwell times and the 60 s ramp are unsourced selections.
+
+## D74 - Valve restriction modes
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D61, D31
+- **Decision.** A valve restriction has two modes, drawn with equal probability. In `position_visible` the actual opening is the stuck opening alpha_stuck and the contact reads not open (D31 reads the contact from the actual opening). In `obstruction` the loss coefficient follows alpha_stuck while the closed-limit contact still reads open, as it would for a valve whose stem is open and whose disc or seat is blocked. The mode is recorded in the hidden `fault_truth` as `fault_mode`.
+- **Reason.** The two physical cases differ in what the agent can see, and the audit must cover both.
+- **Sensitivity required.** The audit of D77 for both modes.
+- **Notes.** The 50 percent split is a selection.
+
+## D75 - Misrouting (b) eligibility
+
+- **Version:** 1.0 (2026-10-31)  **Status:** SIM  **Refines:** D64
+- **Decision.** Misrouting (b), an open valve reported closed or a closed valve reported open to the agent while the actual state differs, is eligible only on a valve of a parallel branch, for example in the lineup RECEIVE_101_102. It is not eligible on a valve in series with the whole flow, where the physical state is fixed by the flow. Misrouting (a) is unchanged.
+- **Reason.** On a serial valve the actual state is decided by the flow and a mismatch is not a separate fault.
+- **Sensitivity required.** None.
+- **Notes.** An ineligible draw is rejected with the gate and the reason.
+
+## D76 - Latent faults
+
+- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN
+- **Decision.** A fault placed on an asset that is inactive in the active lineup (a stopped pump, a closed valve on a path that carries no flow) is labelled `latent` in the hidden `fault_truth` field `activity`; an active asset is labelled `active`. The validator returns `active` or `latent`. In a later campaign latent faults are at most 5 percent of fault episodes and are excluded from detection metrics.
+- **Reason.** A fault with no possible consequence on the telemetry must not be scored as a missed detection.
+- **Sensitivity required.** None.
+- **Notes.** The campaign generator is not part of this phase; the cap is recorded for it.
+
+## D77 - Agent-side detectability audit
+
+- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D68
+- **Decision.** The audit computes residual features from the observation stream and design data only: mass balance, pump consistency, delivery law, FT-201 against design flow, receipt law, a one-step-ahead persistence forecast per continuous tag, and the discrete features valve contacts and pump run status. The design model is perturbed over five draws (pump head plus and minus 3 percent, fitting K multiplier in [0.5, 2], boundary coefficient multiplier in [0.8, 1.25]). The threshold of a feature is three times its standard deviation over 20 healthy seeds and five draws under profile v2. For each (fault, asset, severity) the margin of a feature is the maximum signal over the threshold, and the time to first exceed is counted in 60 s windows.
+- **Reason.** The audit of Phase 6a used the twin; an agent has only the observations and design data, and a design that is wrong by the nuisance amounts must not raise an alarm.
+- **Sensitivity required.** The nuisance ranges above and the 20 seeds.
+- **Notes.** The nuisance ranges are unsourced selections.
+
+## D78 - Severity classes
+
+- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D68
+- **Decision.** For an episode the margin m is the maximum over features of signal over threshold (D77). The class is `invisible` for m below 1, `marginal` for m from 1 to below 3 and `clear` for m from 3. A later sampler allocates equally across the three classes and draws log-uniformly within a class. The boundaries per (fault type, asset class) are stored in `config/severity_classes.json`.
+- **Reason.** Sampling log-uniformly over the whole range puts most episodes in one class; the classes make the share of hard and impossible cases explicit.
+- **Sensitivity required.** The share of episodes per class under the old and the class-balanced sampling.
+- **Notes.** No severity range is changed to improve the shares.
 
 ## Episode profile
 

@@ -147,8 +147,9 @@ pressure-wave round trip of its path, `duration >= factor * 2 sum(L_i/a_i)`, wit
 wave speeds of the audited package (1089.2, 1082.8 and 1078.2 m/s for DN200, DN250 and DN300).
 The factor is 50 for a valve stroke and 10 for a receipt set-point step, a flow collapse and a
 path closure (D53; both are proposals, the first rests on one path, one valve law and one
-source). A stroke is judged only if the flow through the valve at its start is at least 10
-percent of the design flow of its path (D58). A window is the interval in which the model does not represent the physics:
+source). A stroke is judged only if the flow through the valve is at least 10 percent of the
+design flow of its path (D58 version 2): the flow at the start of an opening stroke, and the flow
+at the instant the opening of a closing stroke has fallen to 0.2. A window is the interval in which the model does not represent the physics:
 
 - `duration_below_wave_criterion`: a valve stroke or a set-point change (four controller time
   constants) shorter than the criterion;
@@ -165,9 +166,9 @@ dataset, the `active_validity_window_ids` of the solver diagnostics, and the epi
 They are never reachable from `verum.api`. In the shipped scenarios: S0u-E has the 10 s closure
 of `XV-R000` (27.7 round trips of 0.361 s against 50), the flow collapse under the cap (about
 0.19 s, 0.5 round trips) and a dead-leg window of 329 s for the source side of the closed valve;
-S0u-D has a `valve_stroke` window for the 10 s closure of `XV-R000` at 600 s (the receipt flow
-is 600 m3/h at the start of the stroke), while its 10 s opening at 1200 s starts at zero flow and
-is not judged. The other scenarios have none. The 0.1 s truth rows are written inside windows of
+S0u-D has none: the 10 s closure of `XV-R000` at 600 s is judged when its opening has fallen to
+0.2, by which time the receipt flow is below 60 m3/h, and its 10 s opening at 1200 s starts at
+zero flow and is not judged. The other scenarios have none. The 0.1 s truth rows are written inside windows of
 kind `valve_stroke`, `flow_collapse` and `receipt_setpoint`, not inside the dead-leg window (D59).
 
 ## Gates

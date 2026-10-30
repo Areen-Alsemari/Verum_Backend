@@ -7,8 +7,9 @@ Key assumptions:
     * Decisions D22 and D53: the rigid-column model is valid for an event only if the event
       lasts at least ``factor`` pressure-wave round trips of the path, ``duration >= factor * 2 *
       sum(L_i / a_i)``; the factor is 50 for a valve stroke and 10 for a receipt set-point step,
-      a flow collapse and a path closure. A stroke is judged only if the flow through the valve at
-      its start is at least 10 percent of the design flow of its path (decision D58). The wave
+      a flow collapse and a path closure. A stroke is judged only if the flow through the valve is
+      at least 10 percent of the design flow of its path (decision D58), read at the start of an
+      opening stroke and at an opening of 0.2 for a closing stroke (version 2). The wave
       speeds are the screening values of the audited package for each nominal size; the factors
       are proposals.
     * Decision D54: an isolated segment (decision D39) whose held pressure is more than 0.5 bar
@@ -18,7 +19,7 @@ Key assumptions:
       that collapses within it, a flow stopped by a closing path, or a branched lineup for
       which no single rigid column exists. A window is hidden truth (decision D25).
 
-Source: ``docs/design_decisions.md`` D22, D25, D53, D54, D58 and D59;
+Source: ``docs/design_decisions.md`` D22, D25, D53, D54, D58 version 2 and D59;
 ``revised/05_simulation_validation_dataset.md`` PAR-PIP-007 and VV-A2 (screening wave speeds).
 """
 

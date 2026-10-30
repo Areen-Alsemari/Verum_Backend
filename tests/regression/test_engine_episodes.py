@@ -38,7 +38,7 @@ from verum.truth import ListSink
 TIMELINE = esd_timeline()
 COMPLETED = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0u-E", "S0-F", "S0-G", "S0-A-inland"]
 OPTIONAL_DATASETS = ("events", "validity_windows", "fault_truth")  # empty in a healthy episode
-FLAGGED = ("S0u-D", "S0u-E")  # episodes with a validity window (decisions D53 and D54)
+FLAGGED = ("S0u-E",)  # episodes with a validity window (decisions D53, D54 and D58 version 2)
 AREA = 706.858347
 
 
@@ -86,7 +86,7 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
     doc = json.loads((episodes[sid].directory / "episode.json").read_text())
     validate("episode", doc)
     assert doc["status"] == "completed"
-    # S0u-E has a collapse and a dead-leg window; S0u-D has a stroke window at the factor 25 of D53.
+    # S0u-E has a stroke, a collapse and a dead-leg window; S0u-D has none since D58 version 2.
     assert doc["dataset_tier"] == (
         "restricted_benchmark" if sid in FLAGGED else "analytic_verification"
     )

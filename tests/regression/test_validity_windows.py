@@ -94,37 +94,42 @@ def test_the_stroke_factor_by_hand_ratios() -> None:
     assert 10.0 / RECEIVE_102_ROUND_TRIP < 50.0 and 8.0 / RECEIVE_102_ROUND_TRIP > 10.0
 
 
-def test_the_closing_stroke_of_s0ud_is_flagged_and_the_opening_at_zero_flow_is_not(
+def test_the_closing_stroke_of_s0ud_is_judged_at_an_opening_of_0p2_and_is_not_flagged(
     series: dict[str, Series],
 ) -> None:
+    """Decision D58 version 2: the closing stroke at 600 s is judged when the opening has fallen
+    to 0.2, 8 s into the stroke. By then the receipt flow is below 60 m3/h, so no window is
+    written and the scenario returns to the analytic tier."""
     s = series["S0u-D"]
-    assert [w["kind"] for w in s.windows] == ["valve_stroke"]
-    w = s.windows[0]
-    assert (w["element_id"], w["t_start_s"], w["t_end_s"]) == ("XV-R000", 600.0, 610.0)
-    assert w["reason"] == "duration_below_wave_criterion"
-    assert w["ratio"] == pytest.approx(10.0 / RECEIPT_ROUND_TRIP, rel=1e-9)
-    assert s.episode["dataset_tier"] == "restricted_benchmark"
+    assert s.windows == []
+    assert s.episode["dataset_tier"] == "analytic_verification"
     # The opening at 1200 s starts with no receipt flow, below 10 percent of 600 m3/h (D58).
     assert all(w["t_start_s"] != 1200.0 for w in s.windows)
 
 
-@pytest.mark.parametrize(("flow", "flagged"), [(59.0, False), (61.0, True)])
-def test_a_stroke_is_judged_only_above_a_tenth_of_the_design_flow(
-    model: HydraulicModel, flow: float, flagged: bool
-) -> None:
-    """Hand: the design flow of the receipt path is 600 m3/h, so the threshold is 60 m3/h."""
+def test_a_closing_stroke_is_not_judged_at_its_start_flow(model: HydraulicModel) -> None:
+    """The same 10 s closure from the full 600 m3/h writes no window: the flow that counts is the
+    flow at an opening of 0.2, and it is below the 60 m3/h threshold there."""
     scenario = dataclasses.replace(
         load_scenario("S0-B"),
         duration_s=20.0,
-        receipt_flow_m3h=flow,
+        receipt_flow_m3h=600.0,
         receipt_setpoint_m3h=0.0,
         schedule=[{"t_s": 0.0, "command": "close_valves", "valves": ["XV-R000"]}],
     )
     _, outcome = _run(model, scenario)
-    assert [w.kind for w in outcome.windows if w.kind == "valve_stroke"] == (
-        ["valve_stroke"] if flagged else []
-    )
-    assert outcome.events_evaluated >= 1  # a stroke that is not flagged was still judged
+    assert [w for w in outcome.windows if w.kind == "valve_stroke"] == []
+    assert outcome.events_evaluated >= 1  # the stroke was judged, and found carrying no flow
+
+
+@pytest.mark.parametrize(("flow", "judged"), [(59.0, False), (61.0, True)])
+def test_a_stroke_is_judged_only_above_a_tenth_of_the_design_flow(
+    model: HydraulicModel, flow: float, judged: bool
+) -> None:
+    """Hand: the design flow of the receipt path is 600 m3/h, so the threshold is 60 m3/h."""
+    scenario = dataclasses.replace(load_scenario("S0-B"), duration_s=20.0)
+    engine, _ = _run(model, scenario)
+    assert engine._stroke_carries_flow("receipt", flow) is judged
 
 
 def test_the_esd_closure_leaves_a_stroke_a_flow_collapse_and_a_dead_leg_window(
@@ -232,7 +237,8 @@ def test_the_number_of_events_judged_and_the_number_flagged(
     series: dict[str, Series], sid: str
 ) -> None:
     """Windows listed: S0u-E the 10 s closure, the collapse (a flow event) and the dead-leg
-    window of D54; S0u-D the 10 s closure of XV-R000 at 600 s (stroke factor 50). The set-point
+    window of D54; S0u-D none, because the 10 s closure of XV-R000 at 600 s is judged at an
+    opening of 0.2 (D58 version 2), where the flow is already below 60 m3/h. The set-point
     collapse of S0u-D lasts 4.4 s, 12.2 round trips of 10 or more, and is valid.
 
     Hand ratios: 8 s set-point change 22.2 round trips, 10 s stroke 27.7, 30 s stroke 83.1
@@ -242,4 +248,4 @@ def test_the_number_of_events_judged_and_the_number_flagged(
     episode = series[sid].episode
     assert episode["events_evaluated"] == EVENTS[sid]
     flagged = len(episode["validity_windows"])
-    assert flagged == {"S0u-E": 3, "S0u-D": 1}.get(sid, 0)
+    assert flagged == {"S0u-E": 3}.get(sid, 0)

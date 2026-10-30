@@ -21,16 +21,17 @@ frequencies, detection performance or savings; claiming validated hydraulics.
 
 ## Restricted episodes
 
-**The S0u-E and S0u-D episodes are `restricted_benchmark` and must not be used in diagnostic
+**The S0u-E episode is `restricted_benchmark` and must not be used in diagnostic
 scoring.** S0u-E (fill to the high-high level, emergency isolation): the 10 s closure of the
 receipt valve is 27.7 wave round trips, below the 50 of decision D53; the closure under the 10
 barg cap produces a flow collapse of about 0.19 s, shorter than ten round trips (D22); and the
 source side of the closed valve is a dead leg that holds its pressure for 329 s (D54). The
 rigid-column model does not represent that interval, and the pressure values around it (the
 clipped PT-001 reading and its relaxation) are not credible as physics. S0u-D (receipt switch):
-the 10 s closure of the receipt valve at 600 s starts with 600 m3/h and is flagged by the same
-factor, although the controller removes the flow before the valve has closed (D58). The episodes
-are kept for infrastructure tests only. The rule applies to every episode whose record
+the 10 s closure of the receipt valve at 600 s is judged at the instant its opening has fallen to
+0.2, when the controller has already removed the flow, so it opens no window and the episode is
+`analytic_verification` (D58 version 2; version 1 flagged it at its starting flow). S0u-E is kept
+for infrastructure tests only. The rule applies to every episode whose record
 lists a validity window (`validity_windows` in `episode.json`); the hidden join utility
 `verum.evaluation.attach_window_ids` marks the observation rows that fall inside a window.
 

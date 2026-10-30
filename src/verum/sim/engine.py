@@ -115,6 +115,7 @@ EVENT_TYPE = {
 COLLAPSE_SAMPLES = 64
 DENSE_PER_S = 10
 MIN_STEP_S = 1e-9
+STROKE_JUDGED_AT = 0.2  # opening at which a closing stroke is judged (decision D58 v2)
 
 
 class FaultInjection(Protocol):
@@ -194,6 +195,9 @@ class EngineState:
     cum_received_m3: float = 0.0
     cum_delivered_m3: float = 0.0
     cum_spilled_m3: float = 0.0
+    pending_strokes: dict[str, tuple[float, float, str, tuple[str, ...]]] = field(
+        default_factory=dict
+    )  # closing strokes waiting for the flow at opening 0.2 (decision D58 version 2)
     leak_flows: dict[str, float] = field(default_factory=dict)
     ledger_terms: int = 0
     ledger_abs_kg: float = 0.0
@@ -1067,8 +1071,9 @@ class Engine:
             self._write_window(w)
 
     def _stroke_carries_flow(self, key: str, flow_m3h: float) -> bool:
-        """Decision D58: a stroke is judged only if the flow through the valve at its start is at
-        least a fraction of the design flow of its path (receipt flow, or the pump duty flow)."""
+        """Decision D58: a stroke is judged only if the flow is at least a fraction of the design
+        flow of its path (receipt flow, or the pump duty flow). The flow is read at the start of
+        an opening stroke and at the instant the opening falls to 0.2 for a closing stroke."""
         design = self.model.config[
             "receipt_flow_m3h" if key == "receipt" else "pump_reference_flow_m3h"
         ]
@@ -1469,6 +1474,8 @@ class Engine:
                     payload,
                     {"phase": "end", "position_frac": st.valves[payload].alpha(t)},
                 )
+            elif kind == "stroke_eval":
+                self._resolve_stroke(payload, t)
             elif kind == "threshold":
                 valve = st.valves[payload]
                 closing = valve.target < valve.position0
@@ -1590,6 +1597,7 @@ class Engine:
         started: list[tuple[Valve, float]] = []
         for order in orders:
             valve = st.valves[order.valve]
+            self._resolve_stroke(order.valve, t)  # a stroke that is interrupted is judged now
             self._emit(
                 t,
                 "command",
@@ -1625,11 +1633,43 @@ class Engine:
             self._push(self.state, crossing, RANK_VALVE, "threshold", valve.name)
         key = "receipt" if valve.name.startswith("XV-R") else "delivery"
         st = self.state
-        flow = st.receipt_flow_m3h if key == "receipt" else st.delivery_flow_m3h
-        self._evaluate_event(
-            "valve_stroke", valve.name, end - t, t, key, self._edges_of(key, valve.name), flow
-        )
+        edges = self._edges_of(key, valve.name)
+        if valve.target < valve.position0 and edges is not None:
+            self._defer_closing_stroke(valve, end - t, t, key, edges)
+        else:  # an opening stroke keeps the start-of-stroke rule (decision D58 version 2)
+            flow = st.receipt_flow_m3h if key == "receipt" else st.delivery_flow_m3h
+            self._evaluate_event("valve_stroke", valve.name, end - t, t, key, edges, flow)
         self._start_track(valve, key)
+
+    def _defer_closing_stroke(
+        self, valve: Valve, duration: float, t: float, key: str, edges: tuple[str, ...]
+    ) -> None:
+        """Decision D58 version 2: a closing stroke is judged on the flow at the instant the
+        opening falls to 0.2, which is when the surge it can cause is set."""
+        st = self.state
+        st.events_evaluated += 1
+        t_eval = t + max(valve.position0 - STROKE_JUDGED_AT, 0.0) * valve.stroke_s
+        st.pending_strokes[valve.name] = (t, duration, key, edges)
+        self._push(st, t_eval, RANK_VALVE, "stroke_eval", valve.name)
+        if t_eval <= t:
+            self._resolve_stroke(valve.name, t)
+
+    def _resolve_stroke(self, name: str, t: float) -> None:
+        """Judge a waiting closing stroke now; the window starts at the start of the stroke."""
+        st = self.state
+        pending = st.pending_strokes.pop(name, None)
+        if pending is None:
+            return
+        start, duration, key, edges = pending
+        flow = st.receipt_flow_m3h if key == "receipt" else st.delivery_flow_m3h
+        if not self._stroke_carries_flow(key, flow):
+            return
+        trip = vd.round_trip_s(self.model, edges, self.speeds)
+        if not vd.is_valid(duration, trip, self._factor("valve_stroke")):
+            self._add_window(
+                "valve_stroke", name, start, start + duration, vd.REASON_DURATION,
+                vd.ratio(duration, trip), trip,
+            )  # fmt: skip
 
     def _start_track(self, valve: Valve, key: str) -> None:
         st = self.state
