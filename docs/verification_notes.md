@@ -2,70 +2,25 @@
 
 Hand derivations and sampling-error arguments behind the tests, with one section per test module. A test docstring points to its section by name.
 
-## Demand process
-
-Key assumptions:
-
-- Specified values (decision D23): standard deviation of log f_d 0.05, correlation time 1800 s, clip to [0.8, 1.25], stream `demand`, grid of one second.
-- Sampling error. For a stationary OU series of length T the sample mean has standard deviation sigma sqrt(2 tau / T), and the sample variance has relative standard deviation sqrt(2 tau / T); with T = 8e6 s and tau = 1800 s these are 1.06e-3 and 0.0212. Tolerances are four standard deviations. The autocorrelation at lag k must be exp(-k/tau); its sampling variance for an AR(1) series is (Bartlett) [(1 + phi^2)(1 - phi^(2k))/(1 - phi^2) - 2 k phi^(2k)] / N, phi = exp(-1/tau), which is 0.0142 squared at k = 900 s and N = 8e6.
-
-Independence: the targets are the specified values and the sampling-error formulas above (hand derivation), not outputs of the code under test.
-
-### S0f delivery flow responds to the factor with the hand slope
-
-The flow depends on f_d and on the falling tank level; separate them by least squares.
-
-Hand derivation: at the duty point the head balance is pump(Q) = static + loss(Q) + c f_d (Q/300)^2, so dQ/df = -c (Q/300)^2 / S with S the slope of loss + law - pump with respect to Q (central difference of the reference module, TK-102 reference fittings). The level coefficient is +1/S per metre. A plain correlation with f_d alone is only about -0.8 because the level falls 0.44 m in the hour, a trend of the same size as the factor's effect (2 m3/h); the regression on both removes it.
-
-Independent: the slope uses the separate reference implementation of the friction law.
-
-## Engine accuracy
+## Dead-leg pressures
 
 Derivations (hand arithmetic):
 
-- S0-B. The receipt flow starts at 0 and follows q(t) = Q (1 - exp(-t/tau)), Q = 600 m3/h, tau = 2 s. The volume received in time T is Q T - Q tau (1 - exp(-T/tau)), so after 3600 s it is 600 m3 - 0.33333 m3 (the transient deficit Q tau = 600/3600 x 2). With A = 706.858 m2 on the floating branch, the level rise is (600 - 0.33333)/706.858 = 0.848826 - 0.000472 = 0.848354 m. The Phase 3 engine added the trapezoid error of the Heun stage average, (dt^2/12) q'(0) / A = 1.0e-5 m at dt = 1 s; the implicit integration of Phase 3b removes it.
-- Accuracy target (decision D17): level error <= 0.025 mm = 2.5e-5 m.
-- REJ-2. From 6.46 m to the stored minimum 6.278 m (coastal, RVP_9_0, f_d = 0.8) the level falls 0.182 m, i.e. 128.6 m3; at about 301 m3/h (0.0836 m3/s) that takes about 1539 s.
+- Relaxation. A segment isolated at time t_c with head H_0 relaxes to the head across its closed valve, H_target, as H(t) = H_target + (H_0 - H_target) exp(-(t - t_c)/60 s).
+  - Here XV-R000 closes on a 300 m3/h receipt into TK-101 (9 m): the segment E001 + E002 is cut off with a head a few metres above the tank and relaxes to the tank head, which the open XV-R101 gives to the header beyond the valve.
+  - The target is constant (no flow after the closure), so the closed form is exact for the model.
+- Standby branch. With pump A delivering, pump B's discharge-side segment sits behind a closed XV-PBI and takes the head of the suction tee: its pressure is rho g (H_tee - z).
 
-Independence: the S0-B reference is a closed-form expression (independent). The S0-A, S0-C and REJ-2 references integrate the same steady flow function (the production hydraulic model) with an adaptive RK45 scheme, so they are independent in the time integration only, not in the hydraulics. The step-halving study uses the S0-B closed form for the order, and the RK45 reference for S0-A.
+Independence: the closed form is independent of the code; heads are read from written rows.
 
-### S0b error is independent of the step and far below the target
-
-The receipt flow ODE is integrated implicitly to a tolerance, not on the step grid.
-
-Independent (closed form of S0-B). The Phase 3 engine had the Heun trapezoid error (dt^2/12) q'(0) / A = 1.0e-5 m at dt = 1 s and second-order convergence; the present integrator carries no step-size error, so the error sits at the integrator tolerance for every grid step and the 2.5e-5 m target is met with a margin of more than four orders.
-
-## Valve restriction, pump degradation and misrouting
+## Dead-leg window
 
 Derivations (hand arithmetic):
 
-- Valve loss (D19, D4): K(alpha) = 0.1 (1/Kv_fraction)^2 with Kv_fraction = 50^(alpha - 1) above alpha_c = 0.05 and 0.4 x 50^-0.95 = 0.009728 at alpha = 0.02. Hence K(0.5) = 0.1 x 50 = 5.0, K(0.9) = 0.1 x 50^0.2 = 0.2187, K(0.15) = 0.1 x 50^1.7 = 77.3 and K(0.02) = 1056.7.
-- Pump: H(Q) = h (54 - 12 (Q/300)^2) for a head scale h. The delivery of TK-102 at 7 m with the reference fittings has the series path of `_reference_hydraulics` (segments counted by hand there) and the boundary law with c = 10.0609 m; the operating flow is the root of pump head - required head, found by `brentq` in the reference module's functions.
-- Misrouting (a): XV-R101 and XV-R102 open with 600 m3/h received and TK-101 at 9 m, TK-102 at 7 m: the split is the root of the two branch equations in the reference module.
-- Misrouting (b): the pump branch valve XV-PAO at alpha 0.02 adds K(0.02) = 1056.7 at the DN200 pump branch; the reference path gets a segment with that coefficient and no length.
-- The valve contact (D31) asserts at 0.98 and releases below 0.97: a ceiling of 0.5 reached linearly over 30 s from 300 s releases the contact at 300 + 30 x (1 - 0.97) / 0.5 = 301.8 s.
+- Decision D39: an isolated segment relaxes to the head across its closed valve, `H = H_t + (H_0 - H_t) exp(-dt / tau)`, tau = 60 s. For E001 and E002 (same elevation, 1 m) the head difference is the pressure difference over rho g, so the gap in pressure decays as `g(t) = g_0 exp(-(t - t_0) / 60)`. The target is the pressure of E003 beyond the closed XV-R000, which is constant after the closure.
+- Decision D54: the window opens when the gap exceeds 0.5 bar and closes when it is below 0.05 bar. From the rows: g at 2968 s is about 11.8 bar, so the window opens at the closure and closes at `t_0 + 60 ln(g_0 / 0.05 bar)` = 2967.33 + 60 x 5.46 = about 3295 s, to within the 1 s rows of the grid.
 
-Independence: the reference module solves the series path by a scalar root find and does not import the package; the valve law values are hand arithmetic.
-
-- Restriction modes (D74): in both modes the loss is K(0.5) = 5.0 (the valve adds 4.9 to the open-valve loss); a visible restriction releases the open contact at 301.8 s, an obstruction leaves it asserted.
-
-## Pipe leak
-
-Derivations (hand arithmetic):
-
-- Orifice: Q = Cd A sqrt(2 p / rho). With Cd 0.62, A 1e-3 m2, p 200 kPa, rho 750 kg/m3: sqrt(2 x 200000 / 750) = 23.094 m/s, Q = 0.62 x 1e-3 x 23.094 = 0.014318 m3/s.
-- The steady-network cases read the solved gauge pressure at the leak (the quantity of D60, rho g (H - z)) and evaluate the formula on it, so the expected flow is independent of the orifice implementation but uses the pressure of the solve.
-- Doubling the area at fixed pressure doubles the flow (the law is linear in A).
-- Mass: in the steady solve the tank gives up the pump flow plus a suction-side leak; the engine ledger is received - delivered - spilled - change of tank inventory.
-- Rigid column against the transient engine: the transient engine holds the tank level constant and puts the sink at the junction RECEIPT_HEADER (the end of E003), the rigid-column leak is at 0.95 of E003, 5.25 m upstream. The pressure at the two points differs by the friction of 5.25 m of DN300 at about 2.3 m/s (f 0.0155: 0.0155 x 5.25 / 0.30318 x 2.31^2 / 19.61 = 0.073 m, 0.56 % of a head of 13 m), which changes the leak flow by half of that, 0.3 %. The inertial head the rigid column misreads during the ramp is at most Lambda dQ_L/dt = 311 s2/m2 x (0.006 m3/s / 300 s) = 0.006 m, 0.05 %. The tolerance is therefore 1 percent of the final leak flow plus the noise of the 10 s mean (0.5 %).
-
-Independence: the formula and the tolerance are hand values; the transient engine is a separate model of the same equations, not independent validation of the facility.
-
-## Headroom screen and level envelope
-
-Derivation of the expected values (independent of the package code), with A = 225 pi = 706.858347058 m2, V_post = 20 m3, dh = 0.05 m, HH = 13 m, CH = 14 m (available headroom 1 m): rise(Q, t) = (Q t + V_post) / A + dh 600 m3/h, 1 h : (600 + 20) / A + 0.05 = 0.877121 + 0.05 = 0.927121 m margin 1 - 0.927121 = 0.072879 m 660 m3/h, 1 h : (660 + 20) / A + 0.05 = 1.012003 m -> required height 14.012003 m, fails 900 m3/h, 1 h : (900 + 20) / A + 0.05 = 1.351 m, fails 600 m3/h, 2 h : (1200 + 20) / A + 0.05 = 1.776 m, fails limiting flow for 1 h: Q = (0.95 A - 20) m3/h = 651.515 m3/h normal/high screen, 15 min at 600 m3/h: (150 + 20) / A + 0.05 = 0.290501 m receipt level rise: 600 m3 / A = 0.848826 m
-
-Same-formula note: the rise expression is the definition of screen E7 and is the same expression as in the implementation; the independent parts are the decimal arithmetic, the literal values from the audited document, and the pass/fail outcomes.
+Independence: the prediction uses the written pressures of E001 and E003 and the time constant of D39; the window times come from the engine's window logic.
 
 ## Delivery hydraulics
 
@@ -78,24 +33,207 @@ Derivations (independent of the package, except where stated):
 
 Independence of the friction law: same law as the package (see `test_hydraulics_friction.py`).
 
+## Demand process
+
+Key assumptions:
+
+- Specified values (decision D23): standard deviation of log f_d 0.05, correlation time 1800 s, clip to [0.8, 1.25], stream `demand`, grid of one second.
+- Sampling error.
+  - For a stationary OU series of length T the sample mean has standard deviation sigma sqrt(2 tau / T), and the sample variance has relative standard deviation sqrt(2 tau / T); with T = 8e6 s and tau = 1800 s these are 1.06e-3 and 0.0212.
+  - Tolerances are four standard deviations.
+  - The autocorrelation at lag k must be exp(-k/tau); its sampling variance for an AR(1) series is (Bartlett) [(1 + phi^2)(1 - phi^(2k))/(1 - phi^2) - 2 k phi^(2k)] / N, phi = exp(-1/tau), which is 0.0142 squared at k = 900 s and N = 8e6.
+
+Independence: the targets are the specified values and the sampling-error formulas above (hand derivation), not outputs of the code under test.
+
+### S0f delivery flow responds to the factor with the hand slope
+
+The flow depends on f_d and on the falling tank level; separate them by least squares.
+
+Hand derivation: at the duty point the head balance is pump(Q) = static + loss(Q) + c f_d (Q/300)^2, so dQ/df = -c (Q/300)^2 / S with S the slope of loss + law - pump with respect to Q (central difference of the reference module, TK-102 reference fittings). The level coefficient is +1/S per metre.
+
+A plain correlation with f_d alone is only about -0.8 because the level falls 0.44 m in the hour, a trend of the same size as the factor's effect (2 m3/h); the regression on both removes it.
+
+Independent: the slope uses the separate reference implementation of the friction law.
+
+## Engine accuracy
+
+Derivations (hand arithmetic):
+
+- S0-B. The receipt flow starts at 0 and follows q(t) = Q (1 - exp(-t/tau)), Q = 600 m3/h, tau = 2 s.
+  - The volume received in time T is Q T - Q tau (1 - exp(-T/tau)), so after 3600 s it is 600 m3 - 0.33333 m3 (the transient deficit Q tau = 600/3600 x 2).
+  - With A = 706.858 m2 on the floating branch, the level rise is (600 - 0.33333)/706.858 = 0.848826 - 0.000472 = 0.848354 m.
+  - An explicit scheme would add the trapezoid error of the Heun stage average, (dt^2/12) q'(0) / A = 1.0e-5 m at dt = 1 s; the implicit integration removes it.
+- Accuracy target (decision D17): level error <= 0.025 mm = 2.5e-5 m.
+- REJ-2. From 6.46 m to the stored minimum 6.278 m (coastal, RVP_9_0, f_d = 0.8) the level falls 0.182 m, i.e. 128.6 m3; at about 301 m3/h (0.0836 m3/s) that takes about 1539 s.
+
+Independence: the S0-B reference is a closed-form expression (independent). The S0-A, S0-C and REJ-2 references integrate the same steady flow function (the production hydraulic model) with an adaptive RK45 scheme, so they are independent in the time integration only, not in the hydraulics. The step-halving study uses the S0-B closed form for the order, and the RK45 reference for S0-A.
+
+### S0b error is independent of the step and far below the target
+
+The receipt flow ODE is integrated implicitly to a tolerance, not on the step grid.
+
+Independent (closed form of S0-B). An explicit scheme has the Heun trapezoid error (dt^2/12) q'(0) / A = 1.0e-5 m at dt = 1 s and second-order convergence; the present integrator carries no step-size error, so the error sits at the integrator tolerance for every grid step and the 2.5e-5 m target is met with a margin of more than four orders.
+
+## Engine episodes
+
+Key assumptions: timings in S0u-D and S0u-E follow from the scenario files (commands at 600 s and 1200 s; the ESD command one second after the trip) and the D4 stroke times.
+
+### S0ue trip follows the detector offset and delay
+
+Independent: the true level reaches 13 m - offset at 2968.805057 s - offset/rate, where 0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s and rate = 2.358e-4 m/s (D26). The detector (decision D33) sees level + offset, so it asserts when the true level is 13 m minus its offset (the offset is in the event record), and the trip follows 0.2 s later.
+
+The receipt flow is 600 m3/h from the start (no ramp), the tank is on the floating branch (constant area) and no other flow touches TK-101, so the level reaches 13 m at this time. The trip is at that time, not on the 1 s grid, and the level there is the threshold.
+
+### S0ue level after closure is bounded by hand limits
+
+Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
+
+Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the command at the next update, so the volume received after the trip (decided by the detector at the time of `esd_timeline`) is at most (600/3600) x (t_closed - t_trip) m3.
+
+Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x 9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441 (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the linear branch, reached 9.69 s into the stroke. The received volume is therefore at least (600/3600) x (t_request - t_trip + 9.683) m3.
+
+## Experiment cases
+
+Key assumptions:
+
+- The valve is test-only and follows the authors' laws: `tau_v = 1 - (t/tc)^m` (eq. 27) and `Q = Q0 tau_v sqrt(H/H0)` (eq. 28) with H the pressure head at the valve and H0 its steady value. It is imposed at the series node through the engine's `flow_schedules` hook, solved implicitly with the C+ relation of the pipe end at each step.
+- The stub after the valve is kept out of the vapor check by its elevation (see `STUB_Z_M`).
+- The wave speed is set directly; the pipe has 24 reaches and the time step is `L/(24 a)`, so the Courant number is one. A short stub after the valve ends in a tank at the valve head.
+- Friction is the quasi-steady Darcy factor of the library (Haaland with the laminar blend, not Colebrook) with the properties and roughness of the experiment.
+- The engine's fluid properties are replaced by those of water after construction (density and vapor pressure for the phase check; density, viscosity and roughness for the friction).
+
+## Fault episodes
+
+rejection, eligibility, sensor faults and leakage.
+
+Key assumptions:
+
+- Expected values are hand-derived or compared with the healthy twin; nothing in the expectation comes from the fault code under test except where a test says so.
+- Equivalence: a fault of severity 0 changes no number, so every truth file and both observation files equal the healthy episode byte for byte (the episode record, the provenance and the fault files differ by design and are not compared).
+- Sensor faults (decision D63) change the noise-free sampled series by closed forms: bias `+ b span` from the onset, drift `+ d span (t - t_on) / 3600`, stuck-at the first sample at or after the onset; the truth files are those of the healthy twin and the other tags are unchanged. Noise and dropout are the same draws, so a faulted noisy series differs from the healthy one by the same offset up to one quantisation step.
+- LK-01 to LK-12 are extended to fault episodes: no fault, severity, window, scenario or tier word in the agent-visible rows or in the gateway payload; the dropout pattern and the quality counts equal those of the healthy twin of the same seed.
+
+Independence: closed forms (bias, drift, stuck), the healthy twin, and counts; the fault code is the object under test.
+
 ## Friction law
 
-Derivation of the expected values (hand arithmetic, DN200, 300 m3/h): Q = 300/3600 = 0.083333 m3/s; A = pi 0.20274^2 / 4 = 0.032283 m2; v = 2.5813 m/s; Re = 750 x 2.5813 x 0.20274 / 0.0005 = 7.85e5 (turbulent). eps/D = 4.5e-5/0.20274 = 2.2196e-4; (2.2196e-4/3.7)^1.11 = 2.055e-5; 6.9/Re = 8.79e-6; sum 2.934e-5; log10 = -4.5326; 1/sqrt(f) = 8.1587; f = 0.015023. Head loss over 250 m: 0.015023 x (250/0.20274) x (v^2/2g = 0.33964 m) = 6.292 m by hand, which the audited document gives as 6.296 m.
+Derivation of the expected values (hand arithmetic, DN200, 300 m3/h): Q = 300/3600 = 0.083333 m3/s; A = pi 0.20274^2 / 4 = 0.032283 m2; v = 2.5813 m/s; Re = 750 x 2.5813 x 0.20274 / 0.0005 = 7.85e5 (turbulent). eps/D = 4.5e-5/0.20274 = 2.2196e-4; (2.2196e-4/3.7)^1.11 = 2.055e-5; 6.9/Re = 8.79e-6; sum 2.934e-5; log10 = -4.5326; 1/sqrt(f) = 8.1587; f = 0.015023.
+
+Head loss over 250 m: 0.015023 x (250/0.20274) x (v^2/2g = 0.33964 m) = 6.292 m by hand, which the audited document gives as 6.296 m.
 
 Independence: the document figures (6.296, 0.279, 0.504, 1.875 m) were produced by the audit's script, and the hand arithmetic above is separate from the package. The friction law itself (D14) is the same law in the package, the document and `_reference_hydraulics`; the tests therefore do not check the law's physical validity, only its correct implementation.
 
-## Static pressures and NPSH
+## Headroom screen and level envelope
 
-Derivations:
+Derivation of the expected values (independent of the package code), with A = 225 pi = 706.858347058 m2, V_post = 20 m3, dh = 0.05 m, HH = 13 m, CH = 14 m (available headroom 1 m): rise(Q, t) = (Q t + V_post) / A + dh 600 m3/h, 1 h : (600 + 20) / A + 0.05 = 0.877121 + 0.05 = 0.927121 m margin 1 - 0.927121 = 0.072879 m 660 m3/h, 1 h : (660 + 20) / A + 0.05 = 1.012003 m -> required height 14.012003 m, fails 900 m3/h, 1 h : (900 + 20) / A + 0.05 = 1.351 m, fails 600 m3/h, 2 h : (1200 + 20) / A + 0.05 = 1.776 m, fails limiting flow for 1 h: Q = (0.95 A - 20) m3/h = 651.515 m3/h normal/high screen, 15 min at 600 m3/h: (150 + 20) / A + 0.05 = 0.290501 m receipt level rise: 600 m3 / A = 0.848826 m
 
-- Static pressure at a tap: p = rho g (H - z) - rho v^2 / 2, with the velocity of the tap's reference edge. At the pump suction tee the reference edge is the DN250 header, A = pi 0.25446^2 / 4 = 0.050853 m2; at 300 m3/h v = 1.6388 m/s and v^2/(2g) = 0.13691 m (document: 0.136908).
-- PT-201 at 300 m3/h and 1.8 m, pipe-only: head at the tee is 1.8 - losses(tank branch, header); the document values are -0.046 / -0.102 / -0.157 barg for TK-101 / 102 / 103.
-- Across the pump (same bore, same elevation, same velocity) the static pressure rises by exactly rho g times the head rise.
-- NPSHa at TK-102, 7 m, 25 C, 300 m3/h: (101325 - 49199)/(rho g) + (7 - 0.5)
-- losses = 10.79 m (document section 4). The solved flow of that case is 300.0 m3/h, so the document's fixed 300 m3/h applies.
-- Vapor pressures of the reference correlation: 35.065 / 49.199 / 67.530 / 90.863 kPa at 15 / 25 / 35 / 45 C (document section 1.1).
+Same-formula note: the rise expression is the definition of screen E7 and is the same expression as in the implementation; the independent parts are the decimal arithmetic, the literal values from the audited document, and the pass/fail outcomes.
 
-Independence: the document values are from the audit; the identities are hand arithmetic. The tap formula is the one the package implements (stated in the task), so the check on it is the identities and the document numbers.
+## Healthy-variability profiles
+
+Key assumptions:
+
+- Hand values (decision D73): a log-uniform regime on [0.6502, 8] has mean log (ln 0.6502 + ln 8) / 2 and variance (ln 8 - ln 0.6502)^2 / 12; a dwell uniform on [600, 1800] s has mean 1200 s; a ramp of 60 s is linear, so its midpoint is the mean of the two values; the receipt deviation has standard deviation 0.02 and lag-600 s correlation exp(-1); the headroom limit for one hour is 651.515 m3/h (`test_headroom_and_envelope.py`), so a set-point of 600 m3/h at 1.06 times (636) passes and one of 620 (657.2) does not.
+- Profiles `off` and `v1` reproduce the earlier files bit for bit: the digests below were taken from the engine rows of S0-A (off), S0-F (v1) and S0-B (off) for 900 s before profile v2 was added, with the episode identifier removed.
+- The accepted regimes and the redraws are stored in the engine state, so a restart inside a ramp reproduces the continuous run (restart cases are in `test_engine_episodes.py`).
+
+Independence: the statistics use scipy and hand arithmetic; the digests are of the earlier output, not of the new code.
+
+## Inventory ledger
+
+Derivation of the expected values (independent of the ledger code), with rho = 750 kg/m3, A = 706.858347 m2: 600 m3/h for 1 h  : 600 m3 = 450000 kg; level rise 600 / A = 0.848826 m 600 in, 300 out   : net 300 m3 = 225000 kg; level rise 300 / A = 0.424413 m leak of 5 m3      : 3750 kg leave the network once; the tank gains 450000 - 3750 = 446250 kg round-off bound   : (n - 1) 2^-53 sum|x|, e.g. terms [1, 2, -3] give 2 * 2^-53 * 6 = 12 * 2^-53
+
+Same-formula note: the closure residual is computed from the same cumulative sums the ledger keeps, so for exactly representable flows it equals zero by construction. The tests that carry information are the externally derived inventory and level changes, the detection of an injected double subtraction or an unbalanced step, and the property test over arbitrary flows that checks the residual against the stated bound.
+
+## Isolation timeline
+
+Key assumptions: reads the written hydraulic-state file with `gzip` and `json` only.
+
+### Esd timeline
+
+Times of the S0u-E isolation, computed from the scenario file (hand arithmetic).
+
+The detector asserts when the true level reaches 13 m minus its offset (the offset is the first draw of the stream `detector/TK-101`), at 0.7 m x 706.858347 m2 / (600/3600 m3/s)
+
+- offset/rate after the start from 12.3 m; the trip follows 0.2 s later; the protection logic acts at its next update, which is the next whole second or the next level-transmitter sample or arrival of any tank (they are queue events); XV-R000 is physically closed 9.99 s after the command.
+
+## Mass audit of written truth files
+
+Key assumptions:
+
+- Separate code: it uses `gzip` and `json` only and does not import the engine, the ledger package or the truth package.
+- Balance (network, liquid): `received - delivered - (sum of tank mass - initial sum of tank mass) = 0` with the tank mass `rho x volume` taken from the `tank_state` rows and `rho` from `episode.json`. Pipe inventory is constant (declared in the episode record) and there is no spill in a healthy episode.
+- Tolerance: `4.2e-4 kg/s x t` (decision D8) plus the recursive-summation bound `(n - 1) 2^-53 sum|x|` over the recorded increments, computed here.
+- It also checks each tank's ledger row against its tank state, and the residual written by the engine against the recomputed one.
+
+## Observations of whole episodes
+
+Key assumptions:
+
+- Expected values are hand-derived or taken from the specification; where a test reads hidden truth (the detector output, f_d) it is only to compute the expectation.
+- LK-01 to LK-12 (build-failing leakage checks) are covered by the tests marked LK: LK-01 no truth key in an observation or the gateway payload; LK-02 no normality label; LK-03 no scenario name; LK-04 no tier; LK-05 no validity-window id; LK-06 no truth dataset name; LK-07 the allowlist rejects an injected hidden key; LK-08 the audit is not served; LK-09 dropout rate equal across scenarios; LK-10 quality flags carry no scenario pattern; LK-11 the LSHH observation equals the detector output after the delay; LK-12 the episode id is opaque.
+- Random dropout is the same for every episode, and every null row is a dropout: decision D39 gives idle segments a pressure, so there are no structural nulls.
+
+### Gauge readings agree between the strata while the absolute truth differs
+
+S0-A and S0-A-inland share the hydraulics defined in gauge terms (2 barg reservoir). The truth pressure is absolute (gauge + the stratum atmosphere), and every emitted pressure transmitter reports gauge against the episode atmosphere (decision D27), so the readings agree; no emitted tag is referenced to a fixed atmosphere.
+
+The hidden truth differs by 101325 - 94300 = 7025 Pa, and the conversion in the unit tests shows the 0.07025 bar a fixed-reference (absolute) sensor would carry.
+
+## Partly closed valve
+
+Derivation (hand arithmetic, independent of the code): with XV-R101 half open the loss coefficient of the valve is K(0.5) = 0.1 x 50 = 5.0 instead of the profile's 0.1. The valve sits on the DN200 edge E-R101b, so at 600 m3/h (v = 0.16667 / 0.032283 = 5.163 m/s) the head at the source rises by (5.0 - 0.1) v^2 / (2 g) = 4.9 x 1.3589 = 6.659 m and the head-based source pressure by rho g x 6.659 = 48.98 kPa.
+
+Friction is unchanged. A closed valve (alpha at or below the threshold) removes the path; the cap clips the flow when the source pressure would exceed 10 barg.
+
+## Pipe leak
+
+Derivations (hand arithmetic):
+
+- Orifice: Q = Cd A sqrt(2 p / rho). With Cd 0.62, A 1e-3 m2, p 200 kPa, rho 750 kg/m3: sqrt(2 x 200000 / 750) = 23.094 m/s, Q = 0.62 x 1e-3 x 23.094 = 0.014318 m3/s.
+- The steady-network cases read the solved gauge pressure at the leak (the quantity of D60, rho g (H - z)) and evaluate the formula on it, so the expected flow is independent of the orifice implementation but uses the pressure of the solve.
+- Doubling the area at fixed pressure doubles the flow (the law is linear in A).
+- Mass: in the steady solve the tank gives up the pump flow plus a suction-side leak; the engine ledger is received - delivered - spilled - change of tank inventory.
+- Rigid column against the transient engine: the transient engine holds the tank level constant and puts the sink at the junction RECEIPT_HEADER (the end of E003), the rigid-column leak is at 0.95 of E003, 5.25 m upstream.
+  - The pressure at the two points differs by the friction of 5.25 m of DN300 at about 2.3 m/s (f 0.0155: 0.0155 x 5.25 / 0.30318 x 2.31^2 / 19.61 = 0.073 m, 0.56 % of a head of 13 m), which changes the leak flow by half of that, 0.3 %.
+  - The inertial head the rigid column misreads during the ramp is at most Lambda dQ_L/dt = 311 s2/m2 x (0.006 m3/s / 300 s) = 0.006 m, 0.05 %.
+  - The tolerance is therefore 1 percent of the final leak flow plus the noise of the 10 s mean (0.5 %).
+
+Independence: the formula and the tolerance are hand values; the transient engine is a separate model of the same equations, not independent validation of the facility.
+
+## Protection threshold crossings
+
+Key assumptions:
+
+- Under a constant receipt flow on the floating branch the level rises linearly, so the crossing time is exact by hand: t = (threshold - 12.3 m) x 706.858347 m2 / (1/6 m3/s). Hence 848.2300 s for 12.5 m and 2968.8051 s for 13 m.
+- The independent interpolation reads the written level series at the integer seconds on both sides of the event and interpolates linearly; its error is below 1 microsecond for these smooth series (second derivative of the level about 2e-10 m/s2 for the delivery).
+- An event time is not a multiple of the 1 s grid (no quantisation) and the error is below 1 ms.
+
+Independence: hand arithmetic and a linear interpolation of the written files; neither uses the engine's root finding.
+
+## PT-001 anchor
+
+Derivations (hand arithmetic):
+
+- Lambda_up. E001 (30 m) and E002 (15 m) are DN300, bore 0.30318 m, area 0.0721923 m2, so Lambda_up = 45 / (9.80665 x 0.0721923) = 63.56 s2/m2 (the whole column is 354.0).
+- Losses upstream. E001 has no local loss and E002 the receipt meter, K = 1.0 (hand count, reference fittings). loss_up(Q) = f L/D v^2/2g over 45 m + 1.0 v^2/2g.
+- Open flow state (dQ/dt = 0): head at PT-001 = H_source - loss_up, with H_source the head at the start of E001, read back from the written pressure at the start of E001 (z + p/(rho g) + v^2/2g).
+- Capped, decelerating: H_source is the cap head 1 m + 1e6/(750 x 9.80665) = 136.96 m, so the head at PT-001 is the cap minus loss_up plus Lambda_up |dQ/dt|.
+- Identity: the head at PT-001 equals the head at the end of E002 at every row, because both are the source head less the same loss and inertial terms of E001 and E002.
+
+Independence: Lambda_up, loss_up and the cap head are hand values (the loss comes from the separate reference implementation of the friction law). The identity compares two written quantities and is not a test of the loss law.
+
+## PT-001 at the start of E002
+
+Derivations (hand arithmetic):
+
+- Lambda_up for E001 only: 30 m of DN300 (bore 0.30318 m, area 0.0721923 m2): 30 / (9.80665 x 0.0721923) = 42.37 s2/m2. With E002 (15 m) it is 63.56 s2/m2.
+- Observed PT-001 (start of E002): H_source - loss(E001) - Lambda_E001 dQ/dt. E001 has no local loss, so loss(E001) is the friction of 30 m of DN300.
+- Open flow state: dQ/dt = 0. Capped and decelerating: H_source is the cap head 136.96 m and the head is the cap - loss(E001) + Lambda_E001 |dQ/dt|.
+- Hidden node value at the end of E002: H_source - loss(E001, E002) - Lambda_(E001+E002) dQ/dt, labelled `end_of_E002_lambda_E001_E002` in the node row.
+- Identity: with the same dQ/dt along the column, (H_from - H_to - loss)/Lambda is the same number for E001 and E002 at every row.
+
+Independence: Lambda and the losses are hand values (the losses from the separate reference implementation of the friction law); the identity compares written quantities.
 
 ## Receipt hydraulics
 
@@ -107,15 +245,20 @@ Derivations:
 
 Independence: the document values come from the audit's script; the reference code is a different method (scalar root finds) from the Newton solve. The friction law is the same law (decision D14).
 
-## Partly closed valve
+## Receipt inertial dip
 
-Derivation (hand arithmetic, independent of the code): with XV-R101 half open the loss coefficient of the valve is K(0.5) = 0.1 x 50 = 5.0 instead of the profile's 0.1. The valve sits on the DN200 edge E-R101b, so at 600 m3/h (v = 0.16667 / 0.032283 = 5.163 m/s) the head at the source rises by (5.0 - 0.1) v^2 / (2 g) = 4.9 x 1.3589 = 6.659 m and the head-based source pressure by rho g x 6.659 = 48.98 kPa. Friction is unchanged. A closed valve (alpha at or below the threshold) removes the path; the cap clips the flow when the source pressure would exceed 10 barg.
+Derivations (hand arithmetic; bore 0.30318 m has area 0.0721923 m2 and bore 0.20274 m has area 0.0322828 m2):
 
-## Inventory ledger
+- Lambda = sum L/(g A) over the edges downstream of the start of E002 (the PT-001 tap): E002 + E003 = 120 m of DN300: 120 / (9.80665 x 0.0721923) = 169.50 s2/m2; E-R101a + E-R101b = 45 m of DN200: 45 / (9.80665 x 0.0322828) = 142.14 s2/m2; sum 311.64 s2/m2. Beyond the end of E002 (the hidden tap node): 105 m of DN300 + 45 m of DN200 = 290.45 s2/m2.
+- The receipt controller is first order with time constant tau = 2 s (configuration): dQ/dt = (Q_set - Q) / tau. A step from 600 to 300 m3/h gives dQ/dt = -150 m3/h/s = -0.0416667 m3/s2 at the command; the head at the start of E002 falls at once by Lambda dQ/dt = 311.64 x 0.0416667 = 12.985 m, which is 12.985 x 750 x 9.80665 = 95.5 kPa.
+- The head at the start of E002 is H = Z + h_tank + sum loss(Q) + Lambda dQ/dt over the downstream edges (the receipt column is anchored at the tank). Z is a constant that is fixed from the row before the step, where dQ/dt = 0, so only the dependence on Q and dQ/dt is tested.
+- For each of E001 and E002, (H_from - H_to - loss(Q)) / Lambda_edge equals dQ/dt (the same identity as in `test_pt001_start_of_e002`).
 
-Derivation of the expected values (independent of the ledger code), with rho = 750 kg/m3, A = 706.858347 m2: 600 m3/h for 1 h  : 600 m3 = 450000 kg; level rise 600 / A = 0.848826 m 600 in, 300 out   : net 300 m3 = 225000 kg; level rise 300 / A = 0.424413 m leak of 5 m3      : 3750 kg leave the network once; the tank gains 450000 - 3750 = 446250 kg round-off bound   : (n - 1) 2^-53 sum|x|, e.g. terms [1, 2, -3] give 2 * 2^-53 * 6 = 12 * 2^-53
+Independence: Lambda and the losses are hand values (the losses from the separate reference implementation of the friction law, with the fitting coefficients of the configuration); the rate of change comes from the first-order law and the written flows.
 
-Same-formula note: the closure residual is computed from the same cumulative sums the ledger keeps, so for exactly representable flows it equals zero by construction. The tests that carry information are the externally derived inventory and level changes, the detection of an injected double subtraction or an unbalanced step, and the property test over arbitrary flows that checks the residual against the stated bound.
+The transient-engine comparison is a separate calculation (elastic waves, method of characteristics); its pressure oscillates about the rigid-column value, mainly at 1.0 s (and 0.41 s), which are periods of the whole network (the closed branches at the header), not of the receipt path alone: a window of 4 L / a of the path (0.72 s) would not remove them.
+
+The comparison therefore uses the mean over a window of 2.0 s (twice the longest period, so it also removes the second harmonic), centred on the instant, and the tolerance is 10 percent of the dip magnitude Lambda |dQ/dt| at that instant. This is a comparison of two models of the same equations in their common range, not validation against measurement.
 
 ## Rigid-column path dynamics
 
@@ -145,42 +288,9 @@ The quasi-steady source head is a steady solve at the logged flow and level (sam
 
 Hand bounds on the decay of the flow (90 % to 10 %) in the 10 s closure under the cap.
 
-The cap binds when the valve loss at 600 m3/h reaches the head budget, alpha* = 0.03165 (hand: K = 421.8 from the budget 136.96 - 13 - 9.37 m over v^2/2g = 0.27175 m, Kv ratio sqrt(0.1/421.8) = 0.015398, linear branch alpha = ratio x 0.05 / 50^-0.95). Until then the flow is 600 m3/h; afterwards it cannot fall below the cap-limited flow 600 alpha/alpha* (the column lags the equilibrium from above). The 90 % flow therefore occurs no earlier than alpha = 0.9 alpha* = 0.02849, 9.715 s into the stroke, and the valve is closed at 9.99 s, so the decay time is at most 0.275 s. The collapse is faster than 10 wave round trips of the path (3.6 s), which is why it is a validity window.
+The cap binds when the valve loss at 600 m3/h reaches the head budget, alpha* = 0.03165 (hand: K = 421.8 from the budget 136.96 - 13 - 9.37 m over v^2/2g = 0.27175 m, Kv ratio sqrt(0.1/421.8) = 0.015398, linear branch alpha = ratio x 0.05 / 50^-0.95). Until then the flow is 600 m3/h; afterwards it cannot fall below the cap-limited flow 600 alpha/alpha* (the column lags the equilibrium from above).
 
-## PT-001 anchor
-
-Derivations (hand arithmetic):
-
-- Lambda_up. E001 (30 m) and E002 (15 m) are DN300, bore 0.30318 m, area 0.0721923 m2, so Lambda_up = 45 / (9.80665 x 0.0721923) = 63.56 s2/m2 (the whole column is 354.0).
-- Losses upstream. E001 has no local loss and E002 the receipt meter, K = 1.0 (hand count, reference fittings). loss_up(Q) = f L/D v^2/2g over 45 m + 1.0 v^2/2g.
-- Open flow state (dQ/dt = 0): head at PT-001 = H_source - loss_up, with H_source the head at the start of E001, read back from the written pressure at the start of E001 (z + p/(rho g) + v^2/2g).
-- Capped, decelerating: H_source is the cap head 1 m + 1e6/(750 x 9.80665) = 136.96 m, so the head at PT-001 is the cap minus loss_up plus Lambda_up |dQ/dt|.
-- Identity: the head at PT-001 equals the head at the end of E002 at every row, because both are the source head less the same loss and inertial terms of E001 and E002.
-
-Independence: Lambda_up, loss_up and the cap head are hand values (the loss comes from the separate reference implementation of the friction law). The identity compares two written quantities and is not a test of the loss law.
-
-## PT-001 at the start of E002
-
-Derivations (hand arithmetic):
-
-- Lambda_up for E001 only: 30 m of DN300 (bore 0.30318 m, area 0.0721923 m2): 30 / (9.80665 x 0.0721923) = 42.37 s2/m2. With E002 (15 m) it is 63.56 s2/m2.
-- Observed PT-001 (start of E002): H_source - loss(E001) - Lambda_E001 dQ/dt. E001 has no local loss, so loss(E001) is the friction of 30 m of DN300.
-- Open flow state: dQ/dt = 0. Capped and decelerating: H_source is the cap head 136.96 m and the head is the cap - loss(E001) + Lambda_E001 |dQ/dt|.
-- Hidden node value at the end of E002: H_source - loss(E001, E002) - Lambda_(E001+E002) dQ/dt, labelled `end_of_E002_lambda_E001_E002` in the node row.
-- Identity: with the same dQ/dt along the column, (H_from - H_to - loss)/Lambda is the same number for E001 and E002 at every row.
-
-Independence: Lambda and the losses are hand values (the losses from the separate reference implementation of the friction law); the identity compares written quantities.
-
-## Receipt inertial dip
-
-Derivations (hand arithmetic; bore 0.30318 m has area 0.0721923 m2 and bore 0.20274 m has area 0.0322828 m2):
-
-- Lambda = sum L/(g A) over the edges downstream of the start of E002 (the PT-001 tap): E002 + E003 = 120 m of DN300: 120 / (9.80665 x 0.0721923) = 169.50 s2/m2; E-R101a + E-R101b = 45 m of DN200: 45 / (9.80665 x 0.0322828) = 142.14 s2/m2; sum 311.64 s2/m2. Beyond the end of E002 (the hidden tap node): 105 m of DN300 + 45 m of DN200 = 290.45 s2/m2.
-- The receipt controller is first order with time constant tau = 2 s (configuration): dQ/dt = (Q_set - Q) / tau. A step from 600 to 300 m3/h gives dQ/dt = -150 m3/h/s = -0.0416667 m3/s2 at the command; the head at the start of E002 falls at once by Lambda dQ/dt = 311.64 x 0.0416667 = 12.985 m, which is 12.985 x 750 x 9.80665 = 95.5 kPa.
-- The head at the start of E002 is H = Z + h_tank + sum loss(Q) + Lambda dQ/dt over the downstream edges (the receipt column is anchored at the tank). Z is a constant that is fixed from the row before the step, where dQ/dt = 0, so only the dependence on Q and dQ/dt is tested.
-- For each of E001 and E002, (H_from - H_to - loss(Q)) / Lambda_edge equals dQ/dt (the same identity as in `test_pt001_start_of_e002`).
-
-Independence: Lambda and the losses are hand values (the losses from the separate reference implementation of the friction law, with the fitting coefficients of the configuration); the rate of change comes from the first-order law and the written flows. The transient-engine comparison is a separate calculation (elastic waves, method of characteristics); its pressure oscillates about the rigid-column value, mainly at 1.0 s (and 0.41 s), which are periods of the whole network (the closed branches at the header), not of the receipt path alone: a first window of 4 L / a of the path (0.72 s) was a wrong premise, because it does not remove them. The comparison therefore uses the mean over a window of 2.0 s (twice the longest period, so it also removes the second harmonic), centred on the instant, and the tolerance is 10 percent of the dip magnitude Lambda |dQ/dt| at that instant. This is a comparison of two models of the same equations in their common range, not validation against measurement.
+The 90 % flow therefore occurs no earlier than alpha = 0.9 alpha* = 0.02849, 9.715 s into the stroke, and the valve is closed at 9.99 s, so the decay time is at most 0.275 s. The collapse is faster than 10 wave round trips of the path (3.6 s), which is why it is a validity window.
 
 ## Sensor chain
 
@@ -195,15 +305,105 @@ Derivations (hand arithmetic):
 
 Independence: the closed forms and binomial/normal sampling bounds are hand derived; the random draws come from the code under test.
 
+## Simulation components
+
+Derivations (hand arithmetic, independent of the code):
+
+- K(alpha) = K_open (Kv_max/Kv)^2 with Kv/Kv_max = 50^(alpha-1) above alpha_c = 0.05 and (alpha/alpha_c) 50^(alpha_c-1) below. At alpha = 1: K = 0.1. At alpha = 0.5: Kv ratio 50^-0.5 = 0.14142, K = 0.1 x 50 = 5.0. At alpha = 0.05: 50^-0.95 = 0.024321, K = 0.1 x 50^1.9 = 169.06. At alpha = 0.001 the linear branch gives Kv ratio = (0.001/0.05) 50^-0.95, so K = 0.1 x 50^2 x 50^1.9 = 0.1 x 50^3.9 = 4.2265e5.
+- Valve stroke: alpha moves 1/10 per second for XV-R000 and 1/30 per second for the others.
+- Rigid-column time constant of the receipt path to TK-101 at 600 m3/h: sum L/A = 150/0.072190 + 45/0.032283 = 2077.9 + 1393.9 = 3471.8 1/m; Q0 = 0.166667 m3/s; the head loss comes from the independent reference module with the hand-counted K of the path (DN300: meter 1.0 + bend and XV-R000 0.4; DN200: two bends 0.6 + bend, XV-R101, tank inlet 1.4).
+- Hermite root: for a linear volume (equal end slopes) the crossing fraction is linear.
+
+## Static pressures and NPSH
+
+Derivations:
+
+- Static pressure at a tap: p = rho g (H - z) - rho v^2 / 2, with the velocity of the tap's reference edge. At the pump suction tee the reference edge is the DN250 header, A = pi 0.25446^2 / 4 = 0.050853 m2; at 300 m3/h v = 1.6388 m/s and v^2/(2g) = 0.13691 m (document: 0.136908).
+- PT-201 at 300 m3/h and 1.8 m, pipe-only: head at the tee is 1.8 - losses(tank branch, header); the document values are -0.046 / -0.102 / -0.157 barg for TK-101 / 102 / 103.
+- Across the pump (same bore, same elevation, same velocity) the static pressure rises by exactly rho g times the head rise.
+- NPSHa at TK-102, 7 m, 25 C, 300 m3/h: (101325 - 49199)/(rho g) + (7 - 0.5)
+- losses = 10.79 m (document section 4). The solved flow of that case is 300.0 m3/h, so the document's fixed 300 m3/h applies.
+- Vapor pressures of the reference correlation: 35.065 / 49.199 / 67.530 / 90.863 kPa at 15 / 25 / 35 / 45 C (document section 1.1).
+
+Independence: the document values are from the audit; the identities are hand arithmetic. The tap formula is the one the package implements (stated in the task), so the check on it is the identities and the document numbers.
+
 ## Tank calibration
 
-Derivation of the expected values (independent of the package code): A   = pi * 30^2 / 4          = 225 pi             = 706.858347058 m2 A_d = pi * 29.7^2 / 4        = 220.5225 pi        = 692.791865951 m2 d   = m_areal / rho          = 20 / 750 = 2/75    = 0.026666667 m V_disp = A_d * d                                   = 18.474449759 m3 For h >= z_s + d (z_s = 1.5 m):  V = A h - A_d d. For h <= z_s:                    V = A h. The expected volumes are evaluated here with 50-digit decimals and pi as a literal; they are compared with the package (binary floating point) to 1e-6 m3 and with the figures printed in the audited documents to the same tolerance. The round-trip tests use hypothesis over rho 650 to 800 kg/m3 and areal mass 10 to 40 kg/m2, the ranges of the audit's sensitivity screen.
+Derivation of the expected values (independent of the package code): A   = pi * 30^2 / 4          = 225 pi             = 706.858347058 m2 A_d = pi * 29.7^2 / 4        = 220.5225 pi        = 692.791865951 m2 d   = m_areal / rho          = 20 / 750 = 2/75    = 0.026666667 m V_disp = A_d * d                                   = 18.474449759 m3 For h >= z_s + d (z_s = 1.5 m):  V = A h - A_d d.
+
+For h <= z_s:                    V = A h. The expected volumes are evaluated here with 50-digit decimals and pi as a literal; they are compared with the package (binary floating point) to 1e-6 m3 and with the figures printed in the audited documents to the same tolerance. The round-trip tests use hypothesis over rho 650 to 800 kg/m3 and areal mass 10 to 40 kg/m2, the ranges of the audit's sensitivity screen.
 
 Same-formula note: the expected volumes use the same piecewise definition as the implementation (it is the definition of the calibration); independence lies in the arithmetic (decimals against floats), the literal document values, and the closed-form branch expressions above.
 
+## Transient engine against published experiments
+
+Setup: one reservoir, one pipe, the valve at the end; the wave speed is set directly; 24 reaches with Courant number one; quasi-steady Darcy friction (Haaland with the laminar blend, whereas the paper uses Colebrook, and the first-order scheme with friction at the old point). The closure exponent m is a fitted value of the authors, not a measurement.
+
+Acceptance tolerances, fixed BEFORE the first run and not to be widened: R12, experiments 1 to 3, against the quasi-steady model of the paper: maximum head at the valve within 1 percent; third peak within 2 percent; tenth peak within 3 percent; frequency (mean over peaks 1 to 10) within 1 percent. Against measurement: the maximum within 3.5 percent.
+
+Later peaks and the frequency against measurement are reported by `tools/experiment_table.py` and are not tested: quasi-steady friction is known to overestimate the decay of the later peaks, so the engine is expected to lie above the measured third and tenth peaks. No `phase_invalid` window is expected in experiments 1 to 3.
+
+R13, experiments 5 and 6, first peak only, up to the first `phase_invalid` window: within 5 percent of the measured first peak. The window is expected after the first peak (the lower reflection takes the head below the vapor pressure), and its time is reported. A tolerance that is missed is a finding to investigate; it is not widened to pass.
+
+Result of the first run: all tolerances are met except the frequency of experiment 2 against the paper (-1.7 percent). The engine's value equals the closed form a / (4 L) to 0.1 percent for all three experiments, so the difference lies in the published figure or in a parameter that was supplied with the experiment.
+
+The comparison with the paper's frequency is therefore made for experiments 1 and 3 (1 percent), and for experiment 2 two tests state the finding: the engine equals a / (4 L) within 0.5 percent, and the published value lies 1.5 to 1.8 percent above a / (4 L). The 1 percent tolerance was not widened.
+
+Independence: the published results come from a different code and from measurement; the engine shares nothing with them except the equations of the valve. This checks the numerical method for these pipes, not the facility model.
+
+### R12 the published frequency of experiment 2 is above the closed form
+
+Documented data: the paper's 3.32 Hz is 1.5 to 1.8 percent above a / (4 L) = 1282 / (4 x 98.11) = 3.267 Hz for the stated length and wave speed, while its frequencies for experiments 1 and 3 agree with a / (4 L) to 0.1 percent.
+
+A quasi-steady friction model does not raise the fundamental frequency of a reservoir-valve pipe above a / (4 L), so the figure comes from a parameter of the paper's run that is not given or from the way the frequency was read. This test records the data; it does not test the engine.
+
+## Transient engine: idealised verification ladder
+
+Rungs in this file (R5 and R8 to R11 are in `test_transient_equivalence.py`): R1 Joukowsky (frictionless, Courant number one by construction): after an instantaneous valve closure the head at the valve rises by a' v0 / g (a' the adjusted wave speed of the grid), reaches the midpoint after L/(2a') and the reservoir after L/a'. Independent: closed form.
+
+R2 Period: the head at the closed valve is a square wave of amplitude a' v0 / g, positive and negative for 2L/a' each, period 4L/a'. Independent: closed form. R3 Slow closure (Michaud): for a flow that falls linearly over Tc >= 2L/a the head at the valve is a triangle wave between h0 and h0 + 2 L v0 / (g Tc) with period 4L/a, so Michaud's value is the exact peak for a prescribed linear flow (derivation in the test).
+
+The loose Michaud band for a real valve law is tested with the finite-closure rung in the equivalence file. Independent: closed form. R4 Friction: a steady flow reproduces the Darcy-Weisbach gradient along the pipe, and a flow perturbation decays at about the rate lambda = f v0 / (2 D) of the linearised equations. Independent: closed forms; the friction factor is evaluated by the steady package.
+
+R6 Junction: a tee reproduces the head and flow of the closed-form Riemann problem; mass continuity holds at every step. Independent: closed form. R7 Ledger: the mass residual stays bounded by one step of the largest end flow, through a transient, with and without a leak sink.
+
+### R3 prescribed linear flow peaks at michauds value
+
+Frictionless pipe, prescribed linear flow reduction over Tc = 5 x 2L/a.
+
+Closed form: with f the wave leaving the valve, H_v - h0 = f(t) - f(t - tau) and v0 - v = (g/a)(f(t) + f(t - tau)), tau = 2L/a (the reservoir reflects with sign -1). For a linear v the solution is, interval by interval, H_v - h0 = p s / tau, p - p s / tau, p s / tau, ... (s the time in the interval): a triangle wave between 0 and p = 2 L v0 / (g Tc) = Michaud's value, with period 2 tau = 4L/a.
+
+The peak and trough are checked to a few sample steps of the ramp, and the upward crossings of p / 2 are spaced 2 tau.
+
+Independent: closed form.
+
+### R4 oscillation decays at the linearised rate
+
+A 1 percent flow step at the valve produces a square wave whose plateaus decay.
+
+Closed form: linearising v_t + g H_x + (f / 2D) v |v| = 0 about v0 gives a travelling wave that decays as exp(-lambda t) with lambda = f v0 / (2 D). Two round trips (4L/a) separate plateaus k and k + 2.
+
+Tolerance: 15 percent on the ratio, because the scheme lumps the friction of a reach at one end (first order) and the local loss adds a further damping that the formula leaves out (K v0 / (2 L) per second, included below).
+
+### R6 junction matches the riemann solution
+
+Tee: a head step delta arrives at the junction through pipe A.
+
+Closed form (waves, not the engine): with admittance Y = g A / a for each pipe, the junction head is H0 + delta Y_A / (Y_A + Y_B + Y_C) and the flow into pipe i is Y_i (H_i - H_J) taken with the sign of its direction. For equal pipes the head rise is delta / 3 and the transmitted wave is 2/3 of the incident one.
+
+Continuity of mass is checked at every step from the probed end flows; the head agrees to the velocity head of the branches, because the engine conserves total head and the closed form conserves piezometric head.
+
+### R7 ledger residual is bounded by one step of end flow
+
+Inflow - outflow - leak - elastic storage stays below dt x (largest end flow).
+
+Derivation of the bound: the end flows are sampled at the step instants while the elastic storage is a trapezoid sum over the points, so the two differ by at most one step of the flow at the boundaries; the residual neither accumulates (checked: the late maximum is not above the early one by more than the bound) nor grows with the simulated time. The bound is a property of the scheme, not of the engine's output.
+
 ## Transient engine: refinement, equivalence and restart
 
-Rungs in this file: R5  Grid refinement on three grids for a friction plus finite-closure case. R9  Steady equivalence: the time stepping holds the steady solution of `verum.hydraulics` at every edge end for the reference lineups. R10 Check valve: blocked reverse flow after a pump stop, reverse-volume accounting, delay sweep. R11 Determinism and checkpoint restart, bit identical. Also: the Darcy factor equals the steady package's, the valve law scale, the series-element root near zero, and import isolation (decision D47). The slow-limit rung R8 is in `test_transient_slow_limit.py`.
+Rungs in this file: R5  Grid refinement on three grids for a friction plus finite-closure case. R9  Steady equivalence: the time stepping holds the steady solution of `verum.hydraulics` at every edge end for the reference lineups. R10 Check valve: blocked reverse flow after a pump stop, reverse-volume accounting, delay sweep.
+
+R11 Determinism and checkpoint restart, bit identical. Also: the Darcy factor equals the steady package's, the valve law scale, the series-element root near zero, and import isolation (decision D47). The slow-limit rung R8 is in `test_transient_slow_limit.py`.
 
 ### R5 three grids converge at first order within the d8 budget
 
@@ -223,150 +423,44 @@ Not independent of the boundary definitions, which the two share; it tests that 
 
 Pump stop on a running delivery: the downstream column drives flow backwards, the check valve closes after the delay and then passes nothing until the flow turns forward again.
 
-Expected, for the first closure after the stop: (a) the flow at the valve reverses before it closes; (b) the closure instant is the start of the final uninterrupted reversal plus the delay, within three steps; (c) the volume the valve accounts as reverse equals the sum of -Q dt of the probed flow over the steps in which it passed reverse flow; (d) for the next 0.2 s, while it stays closed, the flow on both sides is exactly zero; (e) the reverse volume grows with the delay (0.05, 0.3, 1 s). Independent: the integral is taken from the probed flow, not from the valve's own counter.
+Expected, for the first closure after the stop: (a) the flow at the valve reverses before it closes; (b) the closure instant is the start of the final uninterrupted reversal plus the delay, within three steps; (c) the volume the valve accounts as reverse equals the sum of -Q dt of the probed flow over the steps in which it passed reverse flow; (d) for the next 0.2 s, while it stays closed, the flow on both sides is exactly zero; (e) the reverse volume grows with the delay (0.05, 0.3, 1 s).
 
-## Transient engine against published experiments
-
-Setup: one reservoir, one pipe, the valve at the end; the wave speed is set directly; 24 reaches with Courant number one; quasi-steady Darcy friction (Haaland with the laminar blend, whereas the paper uses Colebrook, and the first-order scheme with friction at the old point). The closure exponent m is a fitted value of the authors, not a measurement.
-
-Acceptance tolerances, fixed BEFORE the first run and not to be widened: R12, experiments 1 to 3, against the quasi-steady model of the paper: maximum head at the valve within 1 percent; third peak within 2 percent; tenth peak within 3 percent; frequency (mean over peaks 1 to 10) within 1 percent. Against measurement: the maximum within 3.5 percent. Later peaks and the frequency against measurement are reported by `tools/experiment_table.py` and are not tested: quasi-steady friction is known to overestimate the decay of the later peaks, so the engine is expected to lie above the measured third and tenth peaks. No `phase_invalid` window is expected in experiments 1 to 3. R13, experiments 5 and 6, first peak only, up to the first `phase_invalid` window: within 5 percent of the measured first peak. The window is expected after the first peak (the lower reflection takes the head below the vapor pressure), and its time is reported. A tolerance that is missed is a finding to investigate; it is not widened to pass.
-
-Result of the first run: all tolerances are met except the frequency of experiment 2 against the paper (-1.7 percent). The engine's value equals the closed form a / (4 L) to 0.1 percent for all three experiments, so the difference lies in the published figure or in a parameter of the task statement. The comparison with the paper's frequency is therefore made for experiments 1 and 3 (1 percent), and for experiment 2 two tests state the finding: the engine equals a / (4 L) within 0.5 percent, and the published value lies 1.5 to 1.8 percent above a / (4 L). The 1 percent tolerance was not widened.
-
-Independence: the published results come from a different code and from measurement; the engine shares nothing with them except the equations of the valve. This checks the numerical method for these pipes, not the facility model.
-
-### R12 the published frequency of experiment 2 is above the closed form
-
-Documented data: the paper's 3.32 Hz is 1.5 to 1.8 percent above a / (4 L) = 1282 / (4 x 98.11) = 3.267 Hz for the stated length and wave speed, while its frequencies for experiments 1 and 3 agree with a / (4 L) to 0.1 percent. A quasi-steady friction model does not raise the fundamental frequency of a reservoir-valve pipe above a / (4 L), so the figure comes from a parameter of the paper's run that the task statement does not give or from the way the frequency was read. This test records the data; it does not test the engine.
-
-## Transient engine: idealised verification ladder
-
-Rungs in this file (R5 and R8 to R11 are in `test_transient_equivalence.py`): R1 Joukowsky (frictionless, Courant number one by construction): after an instantaneous valve closure the head at the valve rises by a' v0 / g (a' the adjusted wave speed of the grid), reaches the midpoint after L/(2a') and the reservoir after L/a'. Independent: closed form. R2 Period: the head at the closed valve is a square wave of amplitude a' v0 / g, positive and negative for 2L/a' each, period 4L/a'. Independent: closed form. R3 Slow closure (Michaud): for a flow that falls linearly over Tc >= 2L/a the head at the valve is a triangle wave between h0 and h0 + 2 L v0 / (g Tc) with period 4L/a, so Michaud's value is the exact peak for a prescribed linear flow (derivation in the test). The loose Michaud band for a real valve law is tested with the finite-closure rung in the equivalence file. Independent: closed form. R4 Friction: a steady flow reproduces the Darcy-Weisbach gradient along the pipe, and a flow perturbation decays at about the rate lambda = f v0 / (2 D) of the linearised equations. Independent: closed forms; the friction factor is evaluated by the steady package. R6 Junction: a tee reproduces the head and flow of the closed-form Riemann problem; mass continuity holds at every step. Independent: closed form. R7 Ledger: the mass residual stays bounded by one step of the largest end flow, through a transient, with and without a leak sink.
-
-### R3 prescribed linear flow peaks at michauds value
-
-Frictionless pipe, prescribed linear flow reduction over Tc = 5 x 2L/a.
-
-Closed form: with f the wave leaving the valve, H_v - h0 = f(t) - f(t - tau) and v0 - v = (g/a)(f(t) + f(t - tau)), tau = 2L/a (the reservoir reflects with sign -1). For a linear v the solution is, interval by interval, H_v - h0 = p s / tau, p - p s / tau, p s / tau, ... (s the time in the interval): a triangle wave between 0 and p = 2 L v0 / (g Tc) = Michaud's value, with period 2 tau = 4L/a. The peak and trough are checked to a few sample steps of the ramp, and the upward crossings of p / 2 are spaced 2 tau.
-
-Independent: closed form.
-
-### R4 oscillation decays at the linearised rate
-
-A 1 percent flow step at the valve produces a square wave whose plateaus decay.
-
-Closed form: linearising v_t + g H_x + (f / 2D) v |v| = 0 about v0 gives a travelling wave that decays as exp(-lambda t) with lambda = f v0 / (2 D). Two round trips (4L/a) separate plateaus k and k + 2. Tolerance: 15 percent on the ratio, because the scheme lumps the friction of a reach at one end (first order) and the local loss adds a further damping that the formula leaves out (K v0 / (2 L) per second, included below).
-
-### R6 junction matches the riemann solution
-
-Tee: a head step delta arrives at the junction through pipe A.
-
-Closed form (waves, not the engine): with admittance Y = g A / a for each pipe, the junction head is H0 + delta Y_A / (Y_A + Y_B + Y_C) and the flow into pipe i is Y_i (H_i - H_J) taken with the sign of its direction. For equal pipes the head rise is delta / 3 and the transmitted wave is 2/3 of the incident one. Continuity of mass is checked at every step from the probed end flows; the head agrees to the velocity head of the branches, because the engine conserves total head and the closed form conserves piezometric head.
-
-### R7 ledger residual is bounded by one step of end flow
-
-Inflow - outflow - leak - elastic storage stays below dt x (largest end flow).
-
-Derivation of the bound: the end flows are sampled at the step instants while the elastic storage is a trapezoid sum over the points, so the two differ by at most one step of the flow at the boundaries; the residual neither accumulates (checked: the late maximum is not above the early one by more than the bound) nor grows with the simulated time. The bound is a property of the scheme, not of the engine's output.
+Independent: the integral is taken from the probed flow, not from the valve's own counter.
 
 ## Transient engine: slow limit
 
 Key assumptions:
 
 - The rigid-column engine has no delivery set-point (the delivery flow follows the pump curve and the downstream law), so the slow delivery change is the 600 s stroke of XV-PAO; the receipt case is the 600 s stroke of XV-R000 at 600 m3/h.
-- Only for the receipt case, a term of 3 percent of the valve loss p - p(5 s) is allowed: it is measured, not derived. During the slow receipt closure the rigid column's pressure exceeds the steady package's value at the same opening by 0.2 to 2.0 percent of that loss (0.0072 bar at 408 s) although its flow is constant and its inertia term vanishes; the elastic engine reproduces the steady package to 0.0001 bar. The cause in the rigid-column engine was not traced and is recorded as a finding. A separate check compares the elastic series with the steady package itself.
+- Only for the receipt case, a term of 3 percent of the valve loss p - p(5 s) is allowed: it is measured, not derived.
+  - During the slow receipt closure the rigid column's pressure exceeds the steady package's value at the same opening by 0.2 to 2.0 percent of that loss (0.0072 bar at 408 s) although its flow is constant and its inertia term vanishes; the elastic engine reproduces the steady package to 0.0001 bar.
+  - The cause in the rigid-column engine was not traced and is recorded as a finding. A separate check compares the elastic series with the steady package itself.
 - The loss law K(alpha) changes regime at the opening valve_alpha_c; the one instant at that opening is left out (the two engines sit on opposite sides of the kink by round-off).
 - Compared on one-second instants from 5 s to 580 s, before the last 3 percent of the stroke in which the throttling is a near-step and 2L/a is no longer small against the time scale of the change.
 - Not independent validation of either engine: both use the same valve law, friction law and boundary definitions; the test shows that the elastic and the rigid models agree in the limit in which they should.
 
-Tolerance, derived. The two models differ in the inertia they carry: the rigid column has the lumped head Lambda dQ/dt, the elastic model carries the same inertia as waves of round-trip time T = 2 sum L/a. A flow that changes at the rate dQ/dt therefore differs between them by at most the inertial pressure rho (sum L/A) |dQ/dt| of the path, and by at most T |dQ/dt| in flow (the flow change during one round trip), apart from a relative 0.1 percent for the lumped treatment and the one-step lag. The elastic model also stores liquid as the pressure changes, a volume C dH with C = g sum(A L) / a^2 (4.0e-5 m3 per m of head on the receipt path), which the rigid column does not; at a throttled valve this makes the pressure lag the quasi-static value by tau = C dH/dQ = 2 C (head drop in the valve) / Q, at most 0.05 s over the compared range (valve opening down to 0.05). The rigid-column engine advances in steps of at most 1 s and writes the state at the end of a step, so its state can lead the elastic engine's by up to one step. The allowance is therefore delta = 1.2 s: one rigid step plus 0.2 s, four times the storage lag, for the one-second sampling and the interpolation of the elastic series. The rigid-column run also lets TK-101 fill (600 m3/h into 706.858 m2 raises the level 2.36e-4 m/s and the pressure at the tank 1.74 Pa/s) while the elastic run holds the tank level; the analytic drift is added to the bound. (A first version took the growing difference, 0.0072 bar at 408 s, for an error of the rigid-column engine; it is the filling of the tank, and the elastic engine reproduces the steady package at the opening of each instant to 0.0001 bar.) The bounds are |dp| <= 0.001 |p| + rho (sum L/A) |dQ/dt| + delta |dp/dt| + rho g (Q / A_tank) (t - 5 s), |dQ| <= 0.001 |Q| + T |dQ/dt|, with the sums over the edges of the path (receipt: E001, E002, E003, E-R101a, E-R101b, T = 0.36 s; delivery: the suction, pump and delivery edges to the distribution boundary, T = 0.67 s) and the rate taken from the rigid series by central difference. (A first version of the pressure bound used T |dp/dt|, which is the wrong scale for a pressure that differs through inertia; it failed by 45 percent at the last instant and the premise, not the data, was corrected.)
+Tolerance, derived. The two models differ in the inertia they carry: the rigid column has the lumped head Lambda dQ/dt, the elastic model carries the same inertia as waves of round-trip time T = 2 sum L/a.
 
-## Dead-leg window
+A flow that changes at the rate dQ/dt therefore differs between them by at most the inertial pressure rho (sum L/A) |dQ/dt| of the path, and by at most T |dQ/dt| in flow (the flow change during one round trip), apart from a relative 0.1 percent for the lumped treatment and the one-step lag.
 
-Derivations (hand arithmetic):
+The elastic model also stores liquid as the pressure changes, a volume C dH with C = g sum(A L) / a^2 (4.0e-5 m3 per m of head on the receipt path), which the rigid column does not; at a throttled valve this makes the pressure lag the quasi-static value by tau = C dH/dQ = 2 C (head drop in the valve) / Q, at most 0.05 s over the compared range (valve opening down to 0.05).
 
-- Decision D39: an isolated segment relaxes to the head across its closed valve, `H = H_t + (H_0 - H_t) exp(-dt / tau)`, tau = 60 s. For E001 and E002 (same elevation, 1 m) the head difference is the pressure difference over rho g, so the gap in pressure decays as `g(t) = g_0 exp(-(t - t_0) / 60)`. The target is the pressure of E003 beyond the closed XV-R000, which is constant after the closure.
-- Decision D54: the window opens when the gap exceeds 0.5 bar and closes when it is below 0.05 bar. From the rows: g at 2968 s is about 11.8 bar, so the window opens at the closure and closes at `t_0 + 60 ln(g_0 / 0.05 bar)` = 2967.33 + 60 x 5.46 = about 3295 s, to within the 1 s rows of the grid.
+The rigid-column engine advances in steps of at most 1 s and writes the state at the end of a step, so its state can lead the elastic engine's by up to one step. The allowance is therefore delta = 1.2 s: one rigid step plus 0.2 s, four times the storage lag, for the one-second sampling and the interpolation of the elastic series.
 
-Independence: the prediction uses the written pressures of E001 and E003 and the time constant of D39; the window times come from the engine's window logic.
+The rigid-column run also lets TK-101 fill (600 m3/h into 706.858 m2 raises the level 2.36e-4 m/s and the pressure at the tank 1.74 Pa/s) while the elastic run holds the tank level; the analytic drift is added to the bound.
 
-## Dead-leg pressures
+(The growing difference, 0.0072 bar at 408 s, is not an error of the rigid-column engine; it is the filling of the tank, and the elastic engine reproduces the steady package at the opening of each instant to 0.0001 bar.) The bounds are |dp| <= 0.001 |p| + rho (sum L/A) |dQ/dt| + delta |dp/dt| + rho g (Q / A_tank) (t - 5 s), |dQ| <= 0.001 |Q| + T |dQ/dt|, with the sums over the edges of the path (receipt: E001, E002, E003, E-R101a, E-R101b, T = 0.36 s; delivery: the suction, pump and delivery edges to the distribution boundary, T = 0.67 s) and the rate taken from the rigid series by central difference.
 
-Derivations (hand arithmetic):
-
-- Relaxation. A segment isolated at time t_c with head H_0 relaxes to the head across its closed valve, H_target, as H(t) = H_target + (H_0 - H_target) exp(-(t - t_c)/60 s). Here XV-R000 closes on a 300 m3/h receipt into TK-101 (9 m): the segment E001 + E002 is cut off with a head a few metres above the tank and relaxes to the tank head, which the open XV-R101 gives to the header beyond the valve. The target is constant (no flow after the closure), so the closed form is exact for the model.
-- Standby branch. With pump A delivering, pump B's discharge-side segment sits behind a closed XV-PBI and takes the head of the suction tee: its pressure is rho g (H_tee - z).
-
-Independence: the closed form is independent of the code; heads are read from written rows.
-
-## Engine episodes
-
-Key assumptions: timings in S0u-D and S0u-E follow from the scenario files (commands at 600 s and 1200 s; the ESD command one second after the trip) and the D4 stroke times.
-
-### S0ue trip follows the detector offset and delay
-
-Independent: the true level reaches 13 m - offset at 2968.805057 s - offset/rate, where 0.7 m x 706.858347 m2 / (600/3600 m3/s) = 2968.805057 s and rate = 2.358e-4 m/s (D26). The detector (decision D33) sees level + offset, so it asserts when the true level is 13 m minus its offset (the offset is in the event record), and the trip follows 0.2 s later.
-
-The receipt flow is 600 m3/h from the start (no ramp), the tank is on the floating branch (constant area) and no other flow touches TK-101, so the level reaches 13 m at this time. The trip is at that time, not on the 1 s grid, and the level there is the threshold.
-
-### S0ue level after closure is bounded by hand limits
-
-Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
-
-Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the command at the next update, so the volume received after the trip (decided by the detector at the time of `esd_timeline`) is at most (600/3600) x (t_closed - t_trip) m3.
-
-Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x 9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441 (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the linear branch, reached 9.69 s into the stroke. The received volume is therefore at least (600/3600) x (t_request - t_trip + 9.683) m3.
-
-## Fault episodes
-
-rejection, eligibility, sensor faults and leakage.
-
-Key assumptions:
-
-- Expected values are hand-derived or compared with the healthy twin; nothing in the expectation comes from the fault code under test except where a test says so.
-- Equivalence: a fault of severity 0 changes no number, so every truth file and both observation files equal the healthy episode byte for byte (the episode record, the provenance and the fault files differ by design and are not compared).
-- Sensor faults (decision D63) change the noise-free sampled series by closed forms: bias `+ b span` from the onset, drift `+ d span (t - t_on) / 3600`, stuck-at the first sample at or after the onset; the truth files are those of the healthy twin and the other tags are unchanged. Noise and dropout are the same draws, so a faulted noisy series differs from the healthy one by the same offset up to one quantisation step.
-- LK-01 to LK-12 are extended to fault episodes: no fault, severity, window, scenario or tier word in the agent-visible rows or in the gateway payload; the dropout pattern and the quality counts equal those of the healthy twin of the same seed.
-
-Independence: closed forms (bias, drift, stuck), the healthy twin, and counts; the fault code is the object under test.
-
-## Observations of whole episodes
-
-Key assumptions:
-
-- Expected values are hand-derived or taken from the specification; where a test reads hidden truth (the detector output, f_d) it is only to compute the expectation.
-- LK-01 to LK-12 (build-failing leakage checks) are covered by the tests marked LK: LK-01 no truth key in an observation or the gateway payload; LK-02 no normality label; LK-03 no scenario name; LK-04 no tier; LK-05 no validity-window id; LK-06 no truth dataset name; LK-07 the allowlist rejects an injected hidden key; LK-08 the audit is not served; LK-09 dropout rate equal across scenarios; LK-10 quality flags carry no scenario pattern; LK-11 the LSHH observation equals the detector output after the delay; LK-12 the episode id is opaque.
-- Random dropout is the same for every episode, and every null row is a dropout: decision D39 gives idle segments a pressure, so there are no structural nulls.
-
-### Gauge readings agree between the strata while the absolute truth differs
-
-S0-A and S0-A-inland share the hydraulics defined in gauge terms (2 barg reservoir). The truth pressure is absolute (gauge + the stratum atmosphere), and every emitted pressure transmitter reports gauge against the episode atmosphere (decision D27), so the readings agree; no emitted tag is referenced to a fixed atmosphere. The hidden truth differs by 101325 - 94300 = 7025 Pa, and the conversion in the unit tests shows the 0.07025 bar a fixed-reference (absolute) sensor would carry.
-
-## Protection threshold crossings
-
-Key assumptions:
-
-- Under a constant receipt flow on the floating branch the level rises linearly, so the crossing time is exact by hand: t = (threshold - 12.3 m) x 706.858347 m2 / (1/6 m3/s). Hence 848.2300 s for 12.5 m and 2968.8051 s for 13 m.
-- The independent interpolation reads the written level series at the integer seconds on both sides of the event and interpolates linearly; its error is below 1 microsecond for these smooth series (second derivative of the level about 2e-10 m/s2 for the delivery).
-- An event time is not a multiple of the 1 s grid (no quantisation) and the error is below 1 ms.
-
-Independence: hand arithmetic and a linear interpolation of the written files; neither uses the engine's root finding.
-
-## Simulation components
-
-Derivations (hand arithmetic, independent of the code):
-
-- K(alpha) = K_open (Kv_max/Kv)^2 with Kv/Kv_max = 50^(alpha-1) above alpha_c = 0.05 and (alpha/alpha_c) 50^(alpha_c-1) below. At alpha = 1: K = 0.1. At alpha = 0.5: Kv ratio 50^-0.5 = 0.14142, K = 0.1 x 50 = 5.0. At alpha = 0.05: 50^-0.95 = 0.024321, K = 0.1 x 50^1.9 = 169.06. At alpha = 0.001 the linear branch gives Kv ratio = (0.001/0.05) 50^-0.95, so K = 0.1 x 50^2 x 50^1.9 = 0.1 x 50^3.9 = 4.2265e5.
-- Valve stroke: alpha moves 1/10 per second for XV-R000 and 1/30 per second for the others.
-- Rigid-column time constant of the receipt path to TK-101 at 600 m3/h: sum L/A = 150/0.072190 + 45/0.032283 = 2077.9 + 1393.9 = 3471.8 1/m; Q0 = 0.166667 m3/s; the head loss comes from the independent reference module with the hand-counted K of the path (DN300: meter 1.0 + bend and XV-R000 0.4; DN200: two bends 0.6 + bend, XV-R101, tank inlet 1.4).
-- Hermite root: for a linear volume (equal end slopes) the crossing fraction is linear.
+(A pressure bound that used T |dp/dt| has the wrong scale for a pressure that differs through inertia, and it would fail by 45 percent at the last instant.)
 
 ## Validity windows
 
 Key assumptions:
 
 - Decisions D22 and D53: an event is valid if its duration is at least a factor times the wave round trip of its path, 2 sum(L/a): 25 for a valve stroke, 10 for a set-point change, a flow collapse and a path closure. Hand values: receipt path to tank 101 = 0.36087 s (a 10 s stroke is 27.7 round trips, a set-point change of 8 s is 22.2, a 30 s stroke is 83), to tank 102 = 2 (150/1078.2 + 80/1089.2) = 0.42514 s (a 10 s stroke is 23.5), to tank 103 = 2 (150/1078.2 + 115/1089.2) = 0.48941 s (20.4); delivery path 0.67 s or more (a 30 s stroke is more than 44 round trips).
-- Decision D53 version 3 sets the stroke factor to 50, so a 10 s stroke of XV-R000 (27.7 round trips to tank 101, 23.5 to tank 102) is flagged when the flow through the valve at its start is at least 10 percent of the design flow of the path (decision D58: 60 m3/h for the receipt path). Hence the flagged events in the shipped scenarios are the closing of XV-R000 at 600 s in S0u-D (flow 600 m3/h at the start) and, in S0u-E, the 10 s closure and the collapse of the flow under the cap. The 10 s opening of XV-R000 at 1200 s in S0u-D starts at zero flow and is not judged. The dead-leg window of D54 is tested in `test_dead_leg_window.py`.
+- Decision D53 version 3 sets the stroke factor to 50, so a 10 s stroke of XV-R000 (27.7 round trips to tank 101, 23.5 to tank 102) is flagged when the flow through the valve at its start is at least 10 percent of the design flow of the path (decision D58: 60 m3/h for the receipt path).
+  - Hence the flagged events in the shipped scenarios are the closing of XV-R000 at 600 s in S0u-D (flow 600 m3/h at the start) and, in S0u-E, the 10 s closure and the collapse of the flow under the cap.
+  - The 10 s opening of XV-R000 at 1200 s in S0u-D starts at zero flow and is not judged. The dead-leg window of D54 is tested in `test_dead_leg_window.py`.
 - A branched lineup has no single column and is flagged `rigid_column_unavailable`.
 - Every window carries a reason from a fixed list, and the dataset, the episode record and the engine outcome agree.
 
@@ -378,15 +472,19 @@ Windows listed: S0u-E the 10 s closure, the collapse (a flow event) and the dead
 
 Hand ratios: 8 s set-point change 22.2 round trips, 10 s stroke 27.7, 30 s stroke 83.1 (receipt); the collapse of S0u-E lasts 0.19 s, 0.51 round trips (a flow event, not a stroke event: the 10 s stroke itself is valid).
 
-## Healthy-variability profiles
+## Valve restriction, pump degradation and misrouting
 
-Key assumptions:
+Derivations (hand arithmetic):
 
-- Hand values (decision D73): a log-uniform regime on [0.6502, 8] has mean log (ln 0.6502 + ln 8) / 2 and variance (ln 8 - ln 0.6502)^2 / 12; a dwell uniform on [600, 1800] s has mean 1200 s; a ramp of 60 s is linear, so its midpoint is the mean of the two values; the receipt deviation has standard deviation 0.02 and lag-600 s correlation exp(-1); the headroom limit for one hour is 651.515 m3/h (`test_headroom_and_envelope.py`), so a set-point of 600 m3/h at 1.06 times (636) passes and one of 620 (657.2) does not.
-- Profiles `off` and `v1` reproduce the earlier files bit for bit: the digests below were taken from the engine rows of S0-A (off), S0-F (v1) and S0-B (off) for 900 s before profile v2 was added, with the episode identifier removed.
-- The accepted regimes and the redraws are stored in the engine state, so a restart inside a ramp reproduces the continuous run (restart cases are in `test_engine_episodes.py`).
+- Valve loss (D19, D4): K(alpha) = 0.1 (1/Kv_fraction)^2 with Kv_fraction = 50^(alpha - 1) above alpha_c = 0.05 and 0.4 x 50^-0.95 = 0.009728 at alpha = 0.02. Hence K(0.5) = 0.1 x 50 = 5.0, K(0.9) = 0.1 x 50^0.2 = 0.2187, K(0.15) = 0.1 x 50^1.7 = 77.3 and K(0.02) = 1056.7.
+- Pump: H(Q) = h (54 - 12 (Q/300)^2) for a head scale h. The delivery of TK-102 at 7 m with the reference fittings has the series path of `_reference_hydraulics` (segments counted by hand there) and the boundary law with c = 10.0609 m; the operating flow is the root of pump head - required head, found by `brentq` in the reference module's functions.
+- Misrouting (a): XV-R101 and XV-R102 open with 600 m3/h received and TK-101 at 9 m, TK-102 at 7 m: the split is the root of the two branch equations in the reference module.
+- Misrouting (b): the pump branch valve XV-PAO at alpha 0.02 adds K(0.02) = 1056.7 at the DN200 pump branch; the reference path gets a segment with that coefficient and no length.
+- The valve contact (D31) asserts at 0.98 and releases below 0.97: a ceiling of 0.5 reached linearly over 30 s from 300 s releases the contact at 300 + 30 x (1 - 0.97) / 0.5 = 301.8 s.
 
-Independence: the statistics use scipy and hand arithmetic; the digests are of the earlier output, not of the new code.
+Independence: the reference module solves the series path by a scalar root find and does not import the package; the valve law values are hand arithmetic.
+
+- Restriction modes (D74): in both modes the loss is K(0.5) = 5.0 (the valve adds 4.9 to the open-valve loss); a visible restriction releases the open contact at 301.8 s, an obstruction leaves it asserted.
 
 ## Volatility classes
 
@@ -399,34 +497,3 @@ Key assumptions:
 Independence: the tabulated values are transcribed from the EPA document; the formula and its evaluation are recomputed here by hand arithmetic (natural logarithm of 10 is 2.302585).
 
 Bracketing (D46 version 4): RVP 8.3 is not tabulated in the edition fetched, so the derived classes are bracketed by the tabulated RVP 7 and RVP 10 constants at 25, 35, 40 and 45 C. This is a necessary check and not a validation of the derived classes.
-
-## Experiment cases
-
-Key assumptions:
-
-- The valve is test-only and follows the authors' laws: `tau_v = 1 - (t/tc)^m` (eq. 27) and `Q = Q0 tau_v sqrt(H/H0)` (eq. 28) with H the pressure head at the valve and H0 its steady value. It is imposed at the series node through the engine's `flow_schedules` hook, solved implicitly with the C+ relation of the pipe end at each step.
-- The stub after the valve is kept out of the vapor check by its elevation (see `STUB_Z_M`).
-- The wave speed is set directly; the pipe has 24 reaches and the time step is `L/(24 a)`, so the Courant number is one. A short stub after the valve ends in a tank at the valve head.
-- Friction is the quasi-steady Darcy factor of the library (Haaland with the laminar blend, not Colebrook) with the properties and roughness of the experiment.
-- The engine's fluid properties are replaced by those of water after construction (density and vapor pressure for the phase check; density, viscosity and roughness for the friction).
-
-## Mass audit of written truth files
-
-Key assumptions:
-
-- Separate code: it uses `gzip` and `json` only and does not import the engine, the ledger package or the truth package.
-- Balance (network, liquid): `received - delivered - (sum of tank mass - initial sum of tank mass) = 0` with the tank mass `rho x volume` taken from the `tank_state` rows and `rho` from `episode.json`. Pipe inventory is constant (declared in the episode record) and there is no spill in a healthy episode.
-- Tolerance: `4.2e-4 kg/s x t` (decision D8) plus the recursive-summation bound `(n - 1) 2^-53 sum|x|` over the recorded increments, computed here.
-- It also checks each tank's ledger row against its tank state, and the residual written by the engine against the recomputed one.
-
-## Isolation timeline
-
-Key assumptions: reads the written hydraulic-state file with `gzip` and `json` only.
-
-### Esd timeline
-
-Times of the S0u-E isolation, computed from the scenario file (hand arithmetic).
-
-The detector asserts when the true level reaches 13 m minus its offset (the offset is the first draw of the stream `detector/TK-101`), at 0.7 m x 706.858347 m2 / (600/3600 m3/s)
-
-- offset/rate after the start from 12.3 m; the trip follows 0.2 s later; the protection logic acts at its next update, which is the next whole second or the next level-transmitter sample or arrival of any tank (they are queue events); XV-R000 is physically closed 9.99 s after the command.
