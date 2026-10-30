@@ -1,24 +1,9 @@
 """Parameter value with explicit status, evidence tag and unit.
 
-Inputs: a mapping that conforms to ``schemas/paramvalue.schema.json``
-(``urn:verum:paramvalue:0.4.0``), or the equivalent constructor arguments.
-
-Outputs: an immutable ``ParamValue``. Reading ``value`` on an unresolved
-parameter raises ``UnresolvedParameter``.
-
-Key assumptions:
-    * A missing value is never replaced by a default, a zero or a "typical"
-      number. Callers either handle ``UnresolvedParameter`` or the code path
-      stops.
-    * The invariants below are the ones the JSON Schema enforces, restated in
-      code so that objects built without going through a schema still cannot
-      violate them. ``tests/schema`` checks that both agree on the same cases.
-    * Non-finite numbers and booleans are rejected; JSON has no representation
-      for the former and the latter are not quantities.
-
-Source: ``revised/05_simulation_validation_dataset.md`` section 7.5
-(ParamValue) and section 13.1 rule 1; ``revised/02_hydraulic_model.md``
-section 6.1 (unresolved parameters are not permission to use zero).
+A missing value is never replaced by a default, a zero or a typical number: reading an unresolved
+parameter raises, and callers either handle that or the code path stops. The invariants are the ones
+the JSON Schema enforces, restated in code so that objects built without a schema still cannot
+violate them. Non-finite numbers and booleans are rejected.
 """
 
 from __future__ import annotations
@@ -56,9 +41,8 @@ class ParamValueError(ValueError):
 class ParamValue:
     """A physical or numerical parameter together with its provenance.
 
-    ``resolved`` and ``provisional`` records carry a finite number, a selected
-    evidence tag and a non-empty provenance identifier. ``unresolved`` records
-    carry no number and the ``OPEN`` tag.
+    Resolved and provisional records carry a finite number, an evidence tag and a provenance
+    identifier. Unresolved records carry no number.
     """
 
     unit: str

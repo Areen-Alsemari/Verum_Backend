@@ -1,24 +1,13 @@
 """Fail-closed release gate for dataset tiers.
 
-Inputs: a tier name, the release policy (loaded from ``config/`` unless one is
-supplied) and, for the highest tier, the set of gates that have passed.
+The gate refuses by default: an unknown tier, an unreadable policy or a tier missing from the
+allowed list is refused. The production candidate tier is refused while production generation is
+disabled, and when it is enabled it is still refused until every gate named in the policy has
+passed, so flipping the flag alone does not open it. Passing the gate authorises generation of a
+tier and does not assert that any physics is validated.
 
-Outputs: ``None`` when the tier may be produced; otherwise an exception.
-Key assumptions:
-    * The gate refuses by default. An unknown tier, an unreadable policy or a
-      tier absent from the policy's ``allowed_now`` list is refused.
-    * ``production_candidate`` is refused while
-      ``production_generation_enabled`` is false. When the flag is true it is
-      still refused unless every gate named in the policy has passed, so
-      flipping the flag alone does not open the tier.
-    * The policy names the middle tier ``restricted_benchmark_no_physical_fault_training``
-      while the documents call it ``restricted_benchmark``; the mapping below
-      is the only place that reconciles the two.
-    * Passing the gate authorises generation of a tier. It does not assert
-      that any physics is validated.
-
-Source: ``dataset_release_policy.json``; ``VERUM_INTEGRATION_README.md``
-section E; ``revised/05_simulation_validation_dataset.md`` section 1.5.
+The policy and the documents name the middle tier differently, and the mapping in this module is the
+only place that reconciles them.
 """
 
 from __future__ import annotations

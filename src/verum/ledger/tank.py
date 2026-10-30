@@ -1,22 +1,11 @@
 """Per-tank inventory ledger driven by prescribed flows.
 
-Inputs: initial liquid and vapor mass of a tank and, per step, the prescribed
-masses that enter, leave, leak or evaporate. Outputs: liquid, vapor and total
-product mass, and the residuals of the two conservation statements.
-Key assumptions:
-    * Two definitions are kept apart. The liquid-only ledger (E5) subtracts the
-      net evaporation into vapor. The total-product ledger (E5T) subtracts only
-      vapor that leaves the tank; evaporation is an internal transfer and
-      cancels. Subtracting evaporation in both would remove it twice.
-    * A leak is a single sink. Its mass leaves the liquid and the total once.
-    * The flows are inputs. Nothing here computes a flow from pressure.
-    * Rounding is bounded by the recursive-summation rule
-      ``(n - 1) 2^-53 sum|x|``, accumulated per run, so a residual is judged
-      against the arithmetic actually performed and not a fixed constant.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 5 (E5, E5T);
-``revised/05_simulation_validation_dataset.md`` section 8 (float64 summation
-bound, item T7).
+Two statements are kept apart. The liquid-only ledger subtracts the net evaporation into vapor,
+while the total-product ledger subtracts only vapor that leaves the tank, because evaporation is an
+internal transfer. Subtracting evaporation in both would remove it twice. A leak is a single sink.
+The flows are inputs and nothing here computes a flow from pressure. Rounding is bounded by the
+recursive-summation rule (n - 1) 2^-53 sum|x|, accumulated per run, so a residual is judged against
+the arithmetic actually performed.
 """
 
 from __future__ import annotations

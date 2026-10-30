@@ -1,24 +1,13 @@
 """Fault specification records: the five single-fault types, severity and physical parameters.
 
-Inputs: a mapping that describes one fault. Outputs: an immutable ``FaultSpec``, its severity
-trajectory and the value of its physical parameter at any severity.
-Key assumptions:
-    * A specification is closed: the fields are fixed by ``schemas/fault_spec.schema.json`` and no
-      field is left to a default that hides a physical choice. The magnitude is the physical value
-      of the fault at severity one: the leak area (m2), the opening ceiling of a restricted or
-      stuck valve, the head scale of a pump, the signed bias (fraction of span), the signed drift
-      (fraction of span per hour), 0 for a stuck-at, 1 for a valve forced open.
-    * The severity trajectory is piecewise linear in seconds since onset and holds its last value
-      (the form of the audited ``fault_truth`` schema): knots ``(0, 0)`` and ``(ramp, peak)``, or
-      the single knot ``(0, peak)`` for a step. ``peak`` is 1 except in the zero-fault test that
-      checks a fault of severity 0 against the healthy episode.
-    * Every physical parameter is a linear function of the severity.
-    * A valve restriction names its mode (decision D74): ``position_visible`` (the actual opening
-      is the ceiling and the open contact follows it) or ``obstruction`` (the loss follows the
-      ceiling and the open contact still reads the stem position); no default is chosen for it.
+A specification is closed, so no field is left to a default that hides a physical choice. The
+magnitude is the physical value of the fault at severity one: leak area (m2), opening ceiling of a
+restricted or stuck valve, head scale of a pump, signed bias (fraction of span), signed drift
+(fraction of span per hour), 0 for a stuck-at and 1 for a valve forced open. Severity is piecewise
+linear in seconds since onset and holds its last value, and every physical parameter is linear in
+severity. A valve restriction must name its mode.
 
-Source: ``docs/design_decisions.md`` D60 to D65, D74; ``docs/fault_models.md``;
-``schemas/fault_truth.schema.json``.
+See D60 to D65 and D74.
 """
 
 from __future__ import annotations

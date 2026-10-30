@@ -1,23 +1,12 @@
 """Eligibility of a fault specification: asset, ranges, onset, ramp and the one-fault rule.
 
-Inputs: a ``FaultSpec`` list, the topology of the plant, the duration of the episode and the
-continuous sensor tags. Outputs: the list of violations (empty if the specification is eligible),
-or an exception from ``check``.
-Key assumptions:
-    * Decision D65: onset in ``[600, T - 1800]`` s; hydraulic faults ramp over 30, 300 or 1200 s;
-      only sensor faults may step.
-    * Ranges: leak area 2e-6 to 1e-3 m2 and position 0.05 to 0.95 (D60), restriction ceiling 0.15
-      to 0.9 (D61), head scale 0.70 to 0.98 (D62), sensor bias and drift 0.002 to 0.05 of span in
-      magnitude (D63), a valve forced open to 1 and a valve stuck closed to 0.005 to 0.02 (D64).
-    * One fault in the episode and one fault per asset (this phase); a misrouted or restricted valve
-      is one of the motorized valves (inlet, outlet, pump branch); the valve of a leak edge is not
-      required to be open: whether the edge carries a determined pressure at run time is a gate.
-    * Decision D74: a restriction names its mode. Decision D75: misrouting (b) needs the lineup
-      states from the onset (``verum.faults.activity``) and a valve on a parallel branch.
-    * Conditions that depend on the run (leak pressure above 10 kPa, every engine gate) are not
-      checked here; they reject the candidate while it runs (decision D66).
+The check returns the list of violations, empty if the specification is eligible, and the strict
+form raises. It covers onset and ramp times, the range of each physical parameter, one fault per
+episode and per asset, the choice of asset, and the restriction mode. Conditions that depend on the
+run, such as the leak pressure and the engine gates, are not checked here and reject the candidate
+while it runs.
 
-Source: ``docs/design_decisions.md`` D60 to D66, D74, D75; ``docs/fault_models.md``.
+See D60 to D66, D74 and D75.
 """
 
 from __future__ import annotations

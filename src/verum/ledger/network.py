@@ -1,23 +1,11 @@
 """Network inventory ledger over the tanks, driven by prescribed flows.
 
-Inputs: a ``TankLedger`` per tank and, per step, the mass received at the
-receipt boundary, the mass delivered at the distribution boundary, the flows of
-each tank and the mass lost through pipe leaks. Outputs: the two network
-residuals (liquid-only and total product) with their round-off tolerances.
-Key assumptions:
-    * The pipes stay full and their stored mass is constant over a run, because
-      no hydraulics is solved; line-pack change is therefore zero by
-      construction and the closure says nothing about transient storage.
-    * A leak is one sink. Pipe leaks are given as ``pipe_spill_kg``; a leak at a
-      tank is given in that tank's flows. Both end in the spill total, and the
-      mass is subtracted from the network once.
-    * The residual is built from all cumulative flows and the change of tank
-      inventory; its tolerance is the recursive-summation bound over every term
-      used, computed for the run.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 5 (E5, E5T) and
-section 8 (lossless mass check); ``revised/02_hydraulic_model.md`` section 8
-(gate G6, conservation).
+Each step takes the mass received, the mass delivered, the flows of each tank and the mass lost
+through pipe leaks, and gives two network residuals (liquid only and total product) with their
+round-off tolerances. The pipes stay full and their stored mass is constant, so line-pack change is
+zero by construction and the closure says nothing about transient storage. A leak is one sink,
+subtracted from the network once. The tolerance is the recursive-summation bound over every term
+used in the run.
 """
 
 from __future__ import annotations

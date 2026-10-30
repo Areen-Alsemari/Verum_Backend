@@ -1,9 +1,4 @@
-"""Graph view of the terminal topology: connectivity, lineups and geometry.
-
-Source: ``revised/05_simulation_validation_dataset.md`` section 13.3
-(``graph/``: topology from the Member 1 table and its validators);
-``revised/01_facility_tanks_topology.md`` sections 6.2 and 7.
-"""
+"""Graph view of the terminal topology: connectivity, lineups and geometry."""
 
 from verum.graph.geometry import (
     RouteGeometry,

@@ -1,7 +1,4 @@
-"""Operating lineups and the rules for moving between them.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2.
-"""
+"""Operating lineups and the rules for moving between them."""
 
 from verum.lineups.table import (
     BOTH_PUMPS,

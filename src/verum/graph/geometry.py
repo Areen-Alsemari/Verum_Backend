@@ -1,21 +1,9 @@
 """Node coordinates and route polylines, with independent length checks.
 
-Inputs: ``config/route_geometry.json`` (node coordinates and one polyline per
-route). Outputs: ``RouteGeometry`` and functions
-that measure polylines and locate points along them.
-Key assumptions:
-    * The topology contract carries no coordinates, so the geometry comes from
-      a separate file with its own provenance (design values, provisional).
-    * Tank nozzle coordinates are not listed as assets; they are the polyline
-      ends at the tank (the last vertex of a receipt route, the first vertex of
-      a suction route).
-    * A route length is the sum of segment lengths in three dimensions. It is
-      computed here from the vertices and never read from the contract; the
-      contract value and the sum of the route's edge lengths are only compared
-      against it.
-
-Source: ``revised/01_facility_tanks_topology.md`` sections 3.2, 3.3 and 7.2
-(equation E9, route length).
+The topology contract carries no coordinates, so the geometry has its own file with design values
+marked provisional. Tank nozzles are the polyline ends at the tank. A route length is the sum of the
+three-dimensional segment lengths, computed from the vertices and never read from the contract; the
+contract value and the sum of the route's edge lengths are only compared against it.
 """
 
 from __future__ import annotations
@@ -124,7 +112,7 @@ def parse_route_geometry(raw: dict[str, Any]) -> RouteGeometry:
 
 
 def load_route_geometry(directory: Path | None = None) -> RouteGeometry:
-    """Load the geometry file from ``config/``."""
+    """Load the route geometry file."""
     path = (directory or config_dir()) / FILENAME
     try:
         return parse_route_geometry(json.loads(path.read_text(encoding="utf-8")))

@@ -1,19 +1,13 @@
-"""Hidden ``fault_truth`` rows and instance identifiers of an episode.
+"""Hidden fault-truth rows and instance identifiers of an episode.
 
-Inputs: the fault specifications and the episode identifier. Outputs: one row per fault that
-follows the audited schema ``fault_truth`` (not modified), and the instance identifiers the episode
-record lists.
-Key assumptions:
-    * The instance identifier is ``FI-<episode>-<index>``; no scenario name or seed enters it.
-    * The mechanism names the variant, and for a valve restriction the mode of decision D74
-      (``restriction_position_visible`` or ``restriction_obstruction``): ``fault_truth`` is a
-      vendored schema that stays as it is, so the mode and the activity of decision D76 are
-      also listed in the episode record. The mechanism status is provisional (all fault laws are
-      selections). The physical parameter is the one the injector changes, with its baseline value
-      and its value at severity one; the mapping states the linear law.
-    * Rows are hidden truth and are never served by ``verum.api``.
+One row per fault follows the audited fault-truth schema, which is not modified. The instance
+identifier is built from the episode and the fault index, so no scenario name or seed enters it. The
+mechanism names the variant and, for a valve restriction, its mode; the mode and the activity are
+also listed in the episode record because the vendored schema stays as it is. The physical parameter
+is the one the injector changes, with its baseline value and its value at severity one. Rows are
+hidden truth and are never served.
 
-Source: ``schemas/fault_truth.schema.json``; ``docs/design_decisions.md`` D60 to D65.
+See D60 to D65.
 """
 
 from __future__ import annotations

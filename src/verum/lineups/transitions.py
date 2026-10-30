@@ -1,28 +1,11 @@
 """Lineup transitions, allowed only through the hold states.
 
-Inputs: a ``LineupTable`` and requested mode changes. Outputs: a boolean for a
-single step, or a ``LineupController`` that tracks the current mode and rejects
-invalid steps with ``TransitionRejected``.
-Key assumptions:
-    * The audited table documents two chains: receipt switching
-      ``RECEIVE_i -> SWITCH_RECEIPT_HOLD -> RECEIVE_j`` and pump changeover
-      ``DELIVER_i_A -> CHANGEOVER_HOLD -> DELIVER_i_B``. The remaining rules are
-      this module's reading of "transitions only through the hold states":
-        - a step between two all-closed states (IDLE, MAINTENANCE_ISOLATED, a
-          hold) needs no valve motion and is allowed;
-        - an active mode (valves open or a pump running) is entered from, and
-          left to, a hold state only, never directly from or to another mode;
-        - SWITCH_RECEIPT_HOLD serves modes that open XV-R000, and
-          CHANGEOVER_HOLD serves modes that run a pump;
-        - leaving CHANGEOVER_HOLD for a delivery mode keeps the source tank of
-          the last delivery mode before the hold.
-    * These extra rules are proposals pending team confirmation. They do not
-      model timing; valve and pump motion is a hydraulic-phase matter.
-    * The controller changes a recorded mode only. It is not a handle that
-      moves any valve.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2 (receipt
-switching and pump changeover paragraph).
+The audited table documents receipt switching and pump changeover through a hold. The other rules
+are this module's reading of "transitions only through the hold states": a step between two
+all-closed states needs no valve motion, an active mode is entered from and left to a hold only,
+each hold serves a defined set of modes, and leaving the changeover hold for a delivery keeps the
+source tank. These extra rules are proposals pending team confirmation and model no timing. The
+controller records a mode and moves no valve.
 """
 
 from __future__ import annotations

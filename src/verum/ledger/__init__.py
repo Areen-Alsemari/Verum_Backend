@@ -1,7 +1,4 @@
-"""Inventory ledgers driven by prescribed flows.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 5 (E5, E5T).
-"""
+"""Inventory ledgers driven by prescribed flows."""
 
 from verum.ledger.network import Closure, NetworkLedger
 from verum.ledger.tank import LedgerError, TankFlows, TankLedger, closure_tolerance

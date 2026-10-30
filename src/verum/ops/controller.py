@@ -1,20 +1,12 @@
 """Operations controller: a scripted schedule of timed and reactive commands.
 
-Inputs: a lineup table, the initial mode and a schedule read from a scenario file.
-Outputs: ``Command`` objects with their times, and the valve orders that a lineup
-command resolves to.
-Key assumptions:
-    * It is the only issuer of valve and receipt commands. The protection logic
-      only *requests* isolation; a reactive schedule entry turns that request into
-      closure commands after a configured delay (proposal P5).
-    * Lineup changes go through ``LineupController``, so they pass the hold states.
-      A lineup change must not change which pump is running (decision D6).
-    * A reactive valve command (an emergency closure) acts on valves directly and
-      does not change the recorded lineup mode.
-    * The schedule is data; there is no randomness.
+The controller is the only issuer of valve and receipt commands. Protection logic only requests
+isolation, and a reactive schedule entry turns the request into closure commands after a configured
+delay. Lineup changes pass through the hold states and may not change which pump is running. A
+reactive valve command acts on valves directly and leaves the recorded lineup mode unchanged. The
+schedule is data and has no randomness.
 
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2 (receipt switching
-through hold states) and section 6.3; ``docs/design_decisions.md`` D6 and P5.
+See D6.
 """
 
 from __future__ import annotations

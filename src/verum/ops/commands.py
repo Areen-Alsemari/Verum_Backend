@@ -1,17 +1,10 @@
 """Commands and valve orders issued by the operations controller.
 
-Inputs: none (data types only). Outputs: ``Command`` and ``ValveOrder``.
-Key assumptions:
-    * Only ``verum.ops`` creates these objects. Their constructors require a module
-      token that no other module imports, so code elsewhere cannot fabricate a
-      command; a static test checks that the token is referenced only here.
-    * A command is data. It changes nothing by itself; the engine executes the
-      valve orders and receipt set-points that the controller resolves from it.
-    * Commanded state, actual position and physical closure are different things;
-      a command only ever sets the commanded state.
-
-Source: ``revised/05_simulation_validation_dataset.md`` section 7.4.7 (a commanded
-action is never merged with an observed limit switch or the actual position).
+Only the operations package creates these objects: the constructors require a token that no other
+module imports, and a static test checks that. A command is data and changes nothing by itself,
+since the engine executes the valve orders and receipt set-points it resolves to. Commanded state,
+actual position and physical closure are different things, and a command sets only the commanded
+state.
 """
 
 from __future__ import annotations

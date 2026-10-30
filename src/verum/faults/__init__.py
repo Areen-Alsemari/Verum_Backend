@@ -1,9 +1,10 @@
-"""Single-fault injection (hidden side).
+"""Single-fault injection, on the hidden side.
 
-Specification records and their validation, the injector that acts through physical parameters and
-the sensor-chain hook, and the hidden ``fault_truth`` rows. Nothing here is reachable from
-``verum.api``; ``verum.sensors`` knows only the hook call signature, not this package.
-Source: ``docs/fault_models.md``.
+The package holds the fault specifications and their validation, the injector that acts through
+physical parameters and a sensor-chain hook, and the hidden fault-truth rows. Nothing here is
+reachable from the gateway, and the sensor package knows only the signature of the hook.
+
+See docs on fault models.
 """
 
 from verum.faults.activity import LineupState, activity, lineup_states, on_parallel_branch

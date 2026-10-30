@@ -1,25 +1,11 @@
 """Pipe network connectivity under a valve and pump lineup.
 
-Inputs: a validated ``Topology`` and a ``Lineup`` (open valves, running pumps).
-Outputs: reachability, paths and the set of edges that can carry flow.
-Key assumptions:
-    * No node or edge is added. The tank is not an edge; ``through_tanks``
-      adds a virtual link between a tank's receipt and outlet nozzles only for
-      queries that ask for it, and it is reported as such in a path.
-    * Pipes and open valves carry flow in either direction, because the
-      receipt branches have no check valve and signed (reverse) flow is
-      physical. Check valves and pumps are one-way, in the contract's
-      from -> to direction. A stopped pump blocks. A closed valve blocks every
-      edge that touches it.
-    * An edge is active when it lies on a walk between two distinct terminals
-      (external boundaries and tank nozzles). Every branch point of this
-      topology is guarded by a valve, so a walk is equivalent to a simple path;
-      the tests confirm this by exhaustive search for all documented lineups.
-    * The phase 0 ``reachable`` query (contract orientation, no lineup) is kept.
-
-Source: ``revised/01_facility_tanks_topology.md`` sections 3.3, 6.2 and 7.1;
-``VERUM_INTEGRATION_README.md`` section B (separate receipt and suction
-headers).
+Pipes and open valves carry flow in either direction, because the receipt branches have no check
+valve and reverse flow is physical. Check valves and pumps are one-way, a stopped pump blocks, and a
+closed valve blocks every edge that touches it. An edge is active when it lies on a walk between two
+distinct terminals, which are external boundaries and tank nozzles. Every branch point of this
+topology is guarded by a valve, so a walk is equivalent to a simple path. No node or edge is added,
+and a tank is linked through only for queries that ask for it.
 """
 
 from __future__ import annotations

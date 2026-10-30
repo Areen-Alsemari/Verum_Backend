@@ -1,24 +1,13 @@
 """The fault set of an episode: what each fault does to the plant and to the sensor chain.
 
-Inputs: the fault specifications of an episode. Outputs: for the engine, the leaks at a time, the
-actual-opening modifier of a valve, the pump head scale at a time and the times at which a ramp
-changes slope; for the sensor chain, a hook that changes a reading.
-Key assumptions:
-    * A restriction in mode ``obstruction`` changes the opening that sets the loss and not the
-      stem position the open contact reads; in mode ``position_visible`` both follow the ceiling
-      (decision D74).
-    * The injector acts only through physical parameters: a leak sink (area), the actual opening
-      of a valve (the command is not touched), the head scale of the pump curve; and, for sensor
-      faults, through the reading in the sensor chain. It does not read or write any state.
-    * Everything is a pure function of time and of the specifications, so a restarted engine
-      continues exactly and the severity at a checkpoint needs no stored state (the stuck-at hook
-      keeps the one frozen value it needs).
-    * A fault of severity 0 changes no number: the leak area is 0, the opening ceiling 1, the
-      opening floor 0, the head scale 1 and the sensor offset 0 (equivalence is tested bit for
-      bit).
-    * The leak position and coefficient are passed through unchanged to the hydraulics.
+The injector acts only through physical parameters: a leak sink (area), the actual opening of a
+valve (the command is untouched), the head scale of the pump curve, and, for sensor faults, the
+reading in the sensor chain. It reads and writes no state. Everything is a pure function of time and
+of the specifications, so a restarted engine continues exactly. A fault of severity 0 changes no
+number, which the equivalence tests check bit for bit. A restriction in obstruction mode changes the
+opening that sets the loss but not the stem position the open contact reads.
 
-Source: ``docs/design_decisions.md`` D60 to D65, D74; ``docs/fault_models.md``.
+See D60 to D65 and D74.
 """
 
 from __future__ import annotations

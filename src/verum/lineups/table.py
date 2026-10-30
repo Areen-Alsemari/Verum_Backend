@@ -1,24 +1,11 @@
 """The sixteen static operating lineups and their classification.
 
-Inputs: ``config/lineups.json`` (valve and pump states per mode) and a
-``Topology`` for cross-checking element names. Outputs: a ``LineupTable``;
-``classify`` maps a valve and pump state to the mode names it matches or raises
-``LineupRejected`` with a reason.
-Key assumptions:
-    * The topology contract does not carry lineups, so the table is its own
-      configuration file; every element it names is checked against the
-      topology.
-    * IDLE, MAINTENANCE_ISOLATED, SWITCH_RECEIPT_HOLD and CHANGEOVER_HOLD have
-      identical valve and pump states. A state therefore matches all four, and
-      which one applies is a property of the sequence, not of the valves.
-    * Rejection reasons are checked in a fixed order (unknown element, both
-      pumps running, three receipt inlets, more than one outlet, not in the
-      table) so that the most specific reason is reported.
-    * Routes not in the table are disabled until added by change control; a
-      wrong-routing fault scenario is a separate mechanism and not a lineup.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2 (table of modes,
-required feedback and prohibited combinations).
+The topology contract does not carry lineups, so the table has its own configuration, and every
+element it names is checked against the topology. Classification maps a valve and pump state to the
+modes it matches or raises with a reason. Four modes have identical valve and pump states, so a
+state matches all four and which applies is a property of the sequence. Rejection reasons are
+checked in a fixed order so that the most specific one is reported. Routes not in the table are
+disabled until added by change control.
 """
 
 from __future__ import annotations
@@ -151,7 +138,7 @@ def parse_lineup_table(raw: Mapping[str, Any], topology: Topology) -> LineupTabl
 
 
 def load_lineup_table(topology: Topology, directory: Path | None = None) -> LineupTable:
-    """Load and validate ``config/lineups.json``."""
+    """Load and validate the lineup table."""
     path = (directory or config_dir()) / FILENAME
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
