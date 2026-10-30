@@ -1,0 +1,32 @@
+{
+  "provenance": {
+    "source": "Jensen, T.N., Sorensen, J.H., Bergant, A. et al. (2018) Fluids 3(3), 64, doi 10.3390/fluids3030064, Tables 1 to 7 and Sections 3.1 to 3.4",
+    "how_obtained": "The full text could not be retrieved (HTTP 403 from the publisher). Every number below was supplied in the Phase 5b task statement and is NOT verified against the paper.",
+    "closure_exponent_note": "The exponent m of the valve law tau_v = 1 - (t/tc)^m was fitted by the authors to their experiments. It is not a measured quantity.",
+    "assumptions": [
+      "D is the inner diameter.",
+      "H_res is the reservoir head measured from the elevation of the valve; the slope enters only the elevation profile, which the vapor check uses.",
+      "Experiments 5 and 6 do not give the fluid properties in the task statement: water at 20 C (998.2 kg/m3, 1.002e-3 Pa s) and a roughness of 1.5 um are assumed. Only the first peak is used, which hardly depends on them.",
+      "The vapor pressure of water is taken as 2339 Pa (20 C); the temperature of the experiments is not stated in the task statement."
+    ],
+    "units": "D, e in mm; roughness in um; L, H_res in m; a in m/s; u0 in m/s; tc in s; moduli in GPa; rho kg/m3; mu Pa s; slope in degrees"
+  },
+  "experiments": {
+    "exp1": {"D_mm": 19.0, "e_mm": 1.5, "E_GPa": 200.0, "nu": 0.28, "roughness_um": 2.0, "L_m": 7.671, "slope_deg": 1.0, "slope_direction": "upward", "rho": 998.2, "mu": 1.002e-3, "K_GPa": 2.2, "a_m_s": 1386.0, "u0_m_s": 2.75, "H_res_m": 433.0, "tc_s": 0.018, "m": 3.8},
+    "exp2": {"D_mm": 16.0, "e_mm": 1.0, "E_GPa": 120.0, "nu": 0.35, "roughness_um": 1.5, "L_m": 98.11, "slope_deg": 0.0, "slope_direction": "horizontal", "rho": 1000.0, "mu": 0.9493e-3, "K_GPa": 2.1, "a_m_s": 1282.0, "u0_m_s": 0.94, "H_res_m": 128.0, "tc_s": 0.003, "m": 0.1},
+    "exp3": {"D_mm": 20.0, "e_mm": 1.0, "E_GPa": 120.0, "nu": 0.35, "roughness_um": 1.5, "L_m": 15.22, "slope_deg": 0.0, "slope_direction": "horizontal", "rho": 998.2, "mu": 1.002e-3, "K_GPa": 2.2, "a_m_s": 1275.0, "u0_m_s": 0.423, "H_res_m": 46.0, "tc_s": 0.018, "m": 3.0},
+    "exp5": {"D_mm": 22.1, "e_mm": 1.63, "roughness_um": 1.5, "L_m": 37.23, "slope_deg": 3.12, "slope_direction": "upward (assumed)", "rho": 998.2, "mu": 1.002e-3, "a_m_s": 1319.0, "u0_m_s": 0.30, "H_res_m": 22.0, "tc_s": 0.009, "m": 5.0},
+    "exp6": {"D_mm": 22.1, "e_mm": 1.63, "roughness_um": 1.5, "L_m": 37.23, "slope_deg": 3.12, "slope_direction": "upward (assumed)", "rho": 998.2, "mu": 1.002e-3, "a_m_s": 1319.0, "u0_m_s": 1.40, "H_res_m": 22.0, "tc_s": 0.009, "m": 5.0}
+  },
+  "published_head_at_valve_m": {
+    "measured_maximum": {"exp1": 803.16, "exp2": 256.64, "exp3": 98.70},
+    "paper_quasi_steady_maximum": {"exp1": 804.79, "exp2": 252.08, "exp3": 100.95},
+    "paper_quasi_steady_third_peak": {"exp1": 795.13, "exp2": 228.01, "exp3": 100.17},
+    "paper_quasi_steady_tenth_peak": {"exp1": 765.47, "exp2": 184.90, "exp3": 97.57},
+    "paper_quasi_steady_frequency_hz": {"exp1": 45.14, "exp2": 3.32, "exp3": 20.94},
+    "measured_third_peak": {"exp1": 762.28, "exp2": 223.92, "exp3": 94.9},
+    "measured_tenth_peak": {"exp1": 616.16, "exp2": 171.77, "exp3": 83.3},
+    "measured_frequency_hz": {"exp1": 43.14, "exp2": 3.19, "exp3": 20.69},
+    "measured_first_peak_exp5_exp6": {"exp5": 62.13, "exp6": 210.69}
+  }
+}

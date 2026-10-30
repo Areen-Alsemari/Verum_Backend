@@ -100,6 +100,8 @@ Every test states whether its expected value is independent of the code.
 | R9 | steady equivalence at every edge end for four reference lineups | shares the boundary definitions with the steady package | passes to 1e-6 m and 1e-9 m3/s |
 | R10 | check valve: reverse flow blocked after the delay, reverse volume against the probed flow, delay sweep | independent integral | passes |
 | R11 | determinism; checkpoint restart bit identical | equality | passes |
+| R12 | experiments 1 to 3 of Jensen et al. 2018 (single phase), head at a test-only valve | published quasi-steady model and measurement | passes, except the frequency of experiment 2 against the paper |
+| R13 | experiments 5 and 6, first peak up to the first `phase_invalid` window | measurement | passes |
 
 Further tests: the Darcy factor equals the steady package's over the Reynolds range; the valve law
 scale `(K - K_open) / (2 g A^2)` (found wrong by a factor A during R8 and corrected); the series
@@ -129,10 +131,23 @@ reverse volume counting the flow of the step that closes the check valve.
   the velocity head, so the steady solution is compared as an energy head. Largest head difference
   0.02 to 0.06 m (tolerance 3 percent of the head change plus 0.02 m; Swamee-Jain against Haaland
   differ by about 1 percent), flow differences 0.2 percent in the two delivery cases.
-- **Published experiments.** Jensen et al. 2018 (Fluids 3(3) 64) and Kodura 2016 could not be
-  used: the full texts were not retrievable (HTTP 403 from the publisher and the university
-  repository; only the abstract of Kodura was reached, with no numbers). No experimental number is
-  quoted, none was digitised, and the engine has not been compared with any experiment.
+- **Published experiments (R12, R13, Phase 5b).** Jensen et al. 2018 (Fluids 3(3) 64): the full text
+  could not be retrieved (HTTP 403 from the publisher), so the parameters and the published results
+  were taken as given in the task statement and are not verified against the paper; Kodura 2016 was not
+  used. The closure exponent m of the valve law is a value the authors fitted. The test-only valve
+  follows their laws (equations 27 and 28); the pipe has 24 reaches, Courant number one, and Haaland
+  friction in place of Colebrook. Head at the valve, engine against the paper's quasi-steady model:
+  maximum -0.12, -0.62 and -0.09 percent (experiments 1 to 3), third peak -0.12, -0.61, -0.09, tenth
+  peak -0.08, -0.50, -0.07; frequency -0.05, -1.72 and +0.01 percent. Against measurement the maximum
+  is +0.08, -2.39 and +2.19 percent; the third and tenth peaks are above the measured ones (+4 to +5 and
+  +17 to +24 percent in experiments 1 and 3, +1 and +7 in experiment 2), which is the known
+  overestimate of quasi-steady friction, and the frequency is 1 to 5 percent high. First peak of
+  experiments 5 and 6, before the first phase window (0.066 s): 62.31 and 209.66 m against the
+  measured 62.13 and 210.69 m (+0.3 and -0.5 percent). One tolerance is missed: the frequency of
+  experiment 2 (1 percent) differs by 1.7 percent from the paper; the engine equals the closed form
+  a / (4 L) to 0.1 percent in all three, so the difference is in the published figure or in a stated
+  parameter. The paper's own code was not run: Octave is not installed. This is a check of the
+  numerical method for these pipes with single-phase flow, not validation of the facility model.
 
 ## Comparison with the rigid-column engine (T1 to T4)
 
