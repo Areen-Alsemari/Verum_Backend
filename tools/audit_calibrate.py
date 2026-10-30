@@ -96,6 +96,27 @@ def false_alarms(
     }
 
 
+def family_scale(
+    cal: dict[tuple[int, str], np.ndarray],
+    held: dict[tuple[int, str], np.ndarray],
+    th: dict[tuple[int, str], dict[str, Any]],
+) -> dict[str, float]:
+    """Common factor on all thresholds that gives 1 percent of healthy runs an alarm on any feature.
+
+    The factor is the 99th percentile, over calibration runs and draws, of the largest ratio over
+    all features and window lengths; the rate on the held-out runs is then checked against it.
+    """
+
+    def worst(data: dict[tuple[int, str], np.ndarray]) -> np.ndarray:
+        ratios = [
+            deviation_maxima(data[k][:, 1:, :], t["mean"]) / t["value"] for k, t in th.items()
+        ]
+        return np.nanmax(np.stack(ratios), axis=0)
+
+    scale = float(np.percentile(worst(cal), 99.0))
+    return {"scale": scale, "held_out_rate": float(np.mean(worst(held) > scale))}
+
+
 def hand_floor(length_s: int) -> float:
     """Noise of the summed volume rate of three tanks from the level noise, in m3/h.
 
@@ -116,6 +137,10 @@ def main() -> None:
                 held = group(profile, fam, "held", HELD_OUT_RUNS, pool)
                 th = thresholds(cal)
                 fa = false_alarms(held, th)
+                fa.update(family_scale(cal, held, th))
+                rates = np.array(list(fa["per_feature"].values()))
+                fa["mean_per_feature"] = float(rates.mean())
+                fa["share_above_2_percent"] = float(np.mean(rates > 0.02))
                 floor = {
                     str(length): float(np.nanstd(cal[(length, "mass_balance")][:, 1, :]))
                     for length in WINDOWS_S
@@ -134,6 +159,64 @@ def main() -> None:
     (RESULTS / "audit_calibration.json").write_text(json.dumps(summary), encoding="utf-8")
 
 
+def report() -> None:
+    """Tables of the calibration from the stored summary."""
+    d = json.loads((RESULTS / "audit_calibration.json").read_text(encoding="utf-8"))
+    hand = d.pop("hand_floor")
+    out = ["# Calibration of the thresholds", ""]
+    head = "| profile | lineup | calibration runs | held-out runs | threshold error, median | max |"
+    out += ["## Runs and percentile error", "", head, "| --- | --- | --- | --- | --- | --- |"]
+    for key, v in d.items():
+        profile, fam = key.split("|")
+        rel = [t["error"] / t["value"] for t in v["thresholds"].values()]
+        out.append(
+            f"| {profile} | {fam} | {v['runs'][0]} | {v['runs'][1]} | "
+            f"{100 * np.median(rel):.1f} percent | {100 * max(rel):.1f} percent |"
+        )
+    head = "| profile | lineup | mean per feature | features above 2 percent | any feature "
+    head += "| scale | any feature, scaled |"
+    out += ["", "## False-alarm rates on the held-out runs", "", head, "| --- |" + " --- |" * 6]
+    for key, v in d.items():
+        profile, fam = key.split("|")
+        fa = v["false_alarm"]
+        out.append(
+            f"| {profile} | {fam} | {100 * fa['mean_per_feature']:.2f} percent | "
+            f"{100 * fa['share_above_2_percent']:.0f} percent | {100 * fa['any']:.0f} percent | "
+            f"{fa['scale']:.2f} | {100 * fa['held_out_rate']:.0f} percent |"
+        )
+    out += ["", "## Mass-balance noise floor (m3/h)", ""]
+    out += ["| profile | lineup | 60 s | 300 s | 900 s |", "| --- | --- | --- | --- | --- |"]
+    out.append(f"| hand | all | {hand['60']:.2f} | {hand['300']:.2f} | {hand['900']:.3f} |")
+    for key, v in d.items():
+        m = v["mass_balance_std"]
+        profile, fam = key.split("|")
+        out.append(f"| {profile} | {fam} | {m['60']:.2f} | {m['300']:.2f} | {m['900']:.3f} |")
+    for key, v in d.items():
+        out += ["", f"## Features of {key.replace('|', ' ')}", ""]
+        out += ["| window | feature | healthy mean | threshold | threshold error | false alarms |"]
+        out += ["| --- | --- | --- | --- | --- | --- |"]
+        trends: list[float] = []
+        for name, t in sorted(v["thresholds"].items(), key=lambda kv: feature_order(kv[0])):
+            length, feature = name.split("|")
+            rate = v["false_alarm"]["per_feature"][name]
+            if feature.startswith("trend:"):
+                trends.append(rate)
+                continue
+            out.append(
+                f"| {length} s | {feature} | {t['mean']:.4g} | {t['value']:.4g} | "
+                f"{100 * t['error'] / t['value']:.1f} percent | {100 * rate:.0f} percent |"
+            )
+        out.append(
+            f"| all | {len(trends)} trend features | | | | mean {100 * np.mean(trends):.1f} "
+            f"percent, largest {100 * max(trends):.0f} percent |"
+        )
+    (RESULTS / "audit_calibration.md").write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+def feature_order(name: str) -> tuple[str, int]:
+    length, feature = name.split("|")
+    return feature, int(length)
+
+
 if __name__ == "__main__":
-    main()
-    sys.exit(0)
+    report() if "report" in sys.argv else main()

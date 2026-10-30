@@ -6,7 +6,7 @@ unresolved and raises when read. A fault has a marginal and a clear boundary for
 the clear boundary is not less severe than the marginal one, and a resolved value lies inside the
 severity range of the fault. The ranges are written here as hand arithmetic.
 
-See D60 to D64, D77 and D78.
+See D60 to D64, D78 and D79.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ def test_an_unreached_boundary_is_unresolved_and_raises() -> None:
                     _ = value.value
             else:
                 assert value.status == "provisional" and value.evidence_tag == "SIM"
-                assert value.provenance_id == "VERUM-PHASE6B-AUDIT-V2"
+                assert value.provenance_id == "VERUM-DD-D79-v1.0"
 
 
 def test_boundaries_lie_in_the_range_and_are_ordered() -> None:

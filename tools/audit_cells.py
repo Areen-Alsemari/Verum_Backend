@@ -114,7 +114,9 @@ def detect_time(z: dict[str, np.ndarray]) -> float | None:
     return min(firsts) if firsts else None
 
 
-def evaluate(label: str, th: Thresholds, onset_s: float = ONSET_S) -> dict[str, Any]:
+def evaluate(
+    label: str, th: Thresholds, scale: float = 1.0, onset_s: float = ONSET_S
+) -> dict[str, Any]:
     """Margins of one stored run (a fault cell or a healthy run) against the thresholds."""
     cell = parse(label)
     fam = label.split("|")[1] if cell is None else cell.family
@@ -148,13 +150,17 @@ def evaluate(label: str, th: Thresholds, onset_s: float = ONSET_S) -> dict[str, 
         changed_tags=sorted({tag for _, tag in changes}),
         signature=signature(features(run, fam, 0), th),
     )
+    family = {k: v / scale for k, v in by_length.items()}  # alarm rate 1 percent on any feature
     if discrete:
         out["margin"] = max(out["margin"], CLEAR)
+        out["held"] = max(out["held"], CLEAR)
         out["by_length"] = {k: max(v, CLEAR) for k, v in by_length.items()}
+        family = {k: max(v, CLEAR) for k, v in family.items()}
         out["detect"] = {
             k: min([x for x in (v, changes[0][0] - onset_s) if x is not None])
             for k, v in detect.items()
         }
+    out.update(scale=scale, family_by_length=family, family_margin=max(family.values()))
     return out
 
 
