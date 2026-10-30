@@ -76,6 +76,7 @@ class TransientSpec:
     setpoint_events: tuple[tuple[float, float], ...] = ()
     pump_stops: tuple[tuple[float, str], ...] = ()
     leak: tuple[str, float] | None = None  # (junction node, k in m3/s per sqrt(m))
+    leak_ramp: tuple[float, float] | None = None  # (start s, ramp s): k grows linearly from 0 to k
     dt_s: float = gr.DT_S
     wave_speeds: Mapping[int, float] | None = None
     head_cap_pa_gauge: float | None = None
@@ -461,6 +462,29 @@ class TransientEngine:
             self.leak_local = self.junction_nodes.index(sp.leak[0])
             self.leak_k = sp.leak[1]
 
+    def _implicit_leak(self, hn: np.ndarray, g_e: np.ndarray, t: float) -> float:
+        """Leak flow and node head with the sink evaluated at the new head (closed form).
+
+        With ``u = sqrt(H - z)`` the node equation ``G (H0 - H) = k u`` (G the sum of the end
+        conductances, H0 the head without the sink) is ``G u^2 + k u - G (H0 - z) = 0``. An explicit
+        sink (evaluated at the old head) grows an oscillation of period 2 dt at larger k."""
+        k = self.leak_k * self._leak_factor(t)
+        i = self.leak_local
+        gsum = float(g_e[self.j_end][self.j_local == i].sum())
+        a = float(hn[i] - self.junction_z[i])
+        if k <= 0.0 or a <= 0.0:
+            return 0.0
+        u = (-k + math.sqrt(k * k + 4.0 * gsum * gsum * a)) / (2.0 * gsum)
+        hn[i] = self.junction_z[i] + u * u
+        return k * u
+
+    def _leak_factor(self, t: float) -> float:
+        """Severity of the leak at time ``t``: 1 unless the spec ramps it (verification of D60)."""
+        if self.spec.leak_ramp is None:
+            return 1.0
+        start, ramp = self.spec.leak_ramp
+        return min(max((t - start) / ramp, 0.0), 1.0)
+
     # --- valve helpers ----------
     def _valve_edge_area_inv(self, node: str) -> float:
         e_out = self.edges[self.end_edge[self.series[self.series_index[node]][2]]]
@@ -542,11 +566,6 @@ class TransientEngine:
         leak = 0.0
         if self.junction_nodes:
             self.demand[:] = 0.0
-            if self.leak_local >= 0:
-                leak = self.leak_k * math.sqrt(
-                    max(self.node_head[self.leak_local] - self.junction_z[self.leak_local], 0.0)
-                )
-                self.demand[self.leak_local] = leak
             hn = bd.junction_heads(
                 g_e[self.j_end],
                 d_end[self.j_end],
@@ -554,6 +573,8 @@ class TransientEngine:
                 len(self.junction_nodes),
                 self.demand,
             )
+            if self.leak_local >= 0:
+                leak = self._implicit_leak(hn, g_e, t_new)
             self.node_head = hn
             qn[self.j_end] = g_e[self.j_end] * (d_end[self.j_end] - hn[self.j_local])
         # series elements

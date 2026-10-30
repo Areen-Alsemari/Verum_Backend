@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "description": "Parameters of the path-dynamics engine. Every entry is a ParamValue.",
-  "source": "docs/design_decisions.md D3, D4, D17, D18, D19, D22 to D26, D33, D53, D54",
+  "source": "docs/design_decisions.md D3, D4, D17, D18, D19, D22 to D26, D33, D53, D54, D58, D60",
   "parameters": {
     "time_step_s": {
       "value": 1.0,
@@ -191,6 +191,13 @@
       "status": "provisional",
       "evidence_tag": "DESIGN",
       "provenance_id": "VERUM-DD-D54-v1.0"
+    },
+    "leak_min_gauge_pressure_pa": {
+      "value": 10000.0,
+      "unit": "Pa",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D10-v1.0"
     }
   }
 }

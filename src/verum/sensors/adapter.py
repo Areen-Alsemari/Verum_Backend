@@ -18,6 +18,10 @@ Key assumptions:
       comms delay.
     * The six withheld tags have no specification and therefore produce no row.
     * Every continuous tag has its own random streams (noise, dropout) named after the tag.
+    * A hook (``SensorHook``) may change a sampled reading before noise and quantisation. It is
+      called for every scheduled sample, also a dropped one, in time order, so that a stateful
+      hook (a frozen reading) does not depend on the dropout draws. With ``clean`` set no noise,
+      dropout, quantisation or clipping is applied (the noise-free sampled series).
 
 Source: ``docs/design_decisions.md`` D27 to D33.
 """
@@ -26,6 +30,7 @@ from __future__ import annotations
 
 import gzip
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -39,6 +44,9 @@ from verum.sensors.specs import SensorConfig, TagSpec, load_sensor_config
 from verum.truth import MANIFEST, file_hashes, read_rows
 
 SCHEMA_VERSION = "0.5.0"
+# A hook changes the reading of a continuous tag after sampling and before noise (tag, sample time,
+# value in engineering units -> value). The sensor package does not know what supplies it.
+SensorHook = Callable[[str, float, float], float]
 OBSERVATIONS = "observations"
 AUDIT = "observation_audit"
 SIDE_RANK = {"pre_event": 0, None: 1, "post_event": 2}
@@ -116,7 +124,7 @@ def _audit(episode: str, tag: str, t: float, source: float, used: float) -> dict
 
 def _continuous(
     cfg: SensorConfig, spec: TagSpec, nodes: chain.Nodes, streams: RandomStreams,
-    episode: str, duration: float,
+    episode: str, duration: float, hook: SensorHook | None = None, clean: bool = False,
 ) -> ObservationResult:  # fmt: skip
     assert spec.interval_s and spec.range_lo is not None and spec.range_hi is not None
     y = chain.lag_response(nodes, spec.lag_s)
@@ -129,17 +137,23 @@ def _continuous(
     for k, t in enumerate(times):
         t = float(t)
         avail = t + spec.comms_delay_s
-        if drop[k] < p_drop:
-            obs.append(
-                _row(cfg, episode, spec.tag, t, avail, None, spec.unit, "bad", "missing_sample")
-            )
-        else:
+        dropped = drop[k] < p_drop and not clean
+        if hook is not None or not dropped:
             if spec.mode == "window_mean":
                 assert spec.window_s
                 v = chain.trailing_mean(nodes, y, spec.lag_s, t, spec.window_s)
             else:
                 v = chain.value_at(nodes, y, spec.lag_s, t)
-            v += float(noise[k]) * sigma  # bias and drift hooks are zero here
+            if hook is not None:
+                v = hook(spec.tag, t, v)
+        if dropped:
+            obs.append(
+                _row(cfg, episode, spec.tag, t, avail, None, spec.unit, "bad", "missing_sample")
+            )
+        elif clean:
+            obs.append(_row(cfg, episode, spec.tag, t, avail, v, spec.unit, "good", "measured"))
+        else:
+            v += float(noise[k]) * sigma
             v, clipped = chain.quantise_clip(
                 v, spec.range_lo, spec.range_hi, int(cfg["adc_steps"]), sigma
             )
@@ -218,7 +232,12 @@ def _event_rows(
     return ObservationResult(obs, aud)
 
 
-def observe_rows(directory: Path, config_dir: Path | None = None) -> ObservationResult:
+def observe_rows(
+    directory: Path,
+    config_dir: Path | None = None,
+    hook: SensorHook | None = None,
+    clean: bool = False,
+) -> ObservationResult:
     cfg = load_sensor_config(config_dir)
     meta = json.loads((directory / "episode.json").read_text(encoding="utf-8"))
     episode, duration, patm = (
@@ -235,7 +254,14 @@ def observe_rows(directory: Path, config_dir: Path | None = None) -> Observation
         if spec.kind == "continuous":
             series = _series(rows, ref["record_type"], ref["element_id"])
             res = _continuous(
-                cfg, spec, _nodes(series, ref["field"], patm), streams, episode, duration
+                cfg,
+                spec,
+                _nodes(series, ref["field"], patm),
+                streams,
+                episode,
+                duration,
+                hook,
+                clean,
             )
         elif tag.startswith("XV-"):
             series = _series(rows, "valve_state", ref["element_id"])
@@ -269,9 +295,11 @@ def _write(directory: Path, name: str, rows: list[dict[str, Any]]) -> None:
                 gz.write(line.encode("utf-8"))
 
 
-def observe_episode(directory: Path, config_dir: Path | None = None) -> ObservationResult:
+def observe_episode(
+    directory: Path, config_dir: Path | None = None, hook: SensorHook | None = None
+) -> ObservationResult:
     """Compute the observations of an episode directory and write them next to the truth."""
-    result = observe_rows(directory, config_dir)
+    result = observe_rows(directory, config_dir, hook)
     _write(directory, OBSERVATIONS, result.observations)
     _write(directory, AUDIT, result.audit)
     hashes = file_hashes(directory)

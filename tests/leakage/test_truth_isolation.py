@@ -167,6 +167,7 @@ def test_the_top_level_package_imports_nothing(root: Path) -> None:
 EPISODE_FILES = {
     "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",
     "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
+    "fault_truth.jsonl.gz",
     "episode.json", "provenance.json", "MANIFEST.sha256", "simulation_rejected.json",
     "observations.jsonl.gz", "observation_audit.jsonl.gz",
 }  # fmt: skip

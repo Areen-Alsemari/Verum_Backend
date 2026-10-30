@@ -68,6 +68,7 @@ from verum.hydraulics.config import (
 from verum.hydraulics.errors import ConvergenceError, HydraulicInputError, PumpOutsideCurve
 from verum.hydraulics.fittings import bends_per_edge, edge_loss_coefficients
 from verum.hydraulics.friction import head_loss
+from verum.hydraulics.leaks import LeakError, LeakInput, OrificeLaw
 from verum.hydraulics.properties import vapor_pressure_pa
 from verum.hydraulics.pump import FixedSpeedPump, PumpElement, hydraulic_power_w, shaft_power_w
 from verum.hydraulics.result import PhaseGate, PumpPoint, SteadyResult
@@ -77,6 +78,31 @@ SOURCE = "PIPELINE_RECEIPT_BOUNDARY"
 BOUNDARY = "DISTRIBUTION_BOUNDARY"
 RESERVOIR = "RESERVOIR"
 LAW_EDGE = "DELIVERY_BOUNDARY_LAW"
+
+
+def leak_node(edge_id: str) -> str:
+    return f"{edge_id}@leak"
+
+
+def atmosphere_node(edge_id: str) -> str:
+    return f"{edge_id}@atm"
+
+
+def leak_up(edge_id: str) -> str:
+    return f"{edge_id}#u"
+
+
+def leak_down(edge_id: str) -> str:
+    return f"{edge_id}#d"
+
+
+def leak_sink(edge_id: str) -> str:
+    return f"{edge_id}#leak"
+
+
+def base_name(name: str) -> str:
+    """The network edge a solver edge belongs to (leak parts carry a ``#`` suffix)."""
+    return name.split("#", 1)[0]
 
 
 @dataclass(frozen=True)
@@ -99,6 +125,7 @@ class SteadyInputs:
     head_offsets_m: Mapping[str, float] = field(default_factory=dict)
     apply_cap: bool = True
     tap_head_offsets_m: Mapping[str, float] = field(default_factory=dict)
+    leaks: tuple[LeakInput, ...] = ()
 
 
 class _PumpLaw(sv.FlowLaw):
@@ -201,15 +228,33 @@ class HydraulicModel:
         )
         self._add_valve_throttling(ks, inputs.valve_positions)
         edges: list[sv.Edge] = []
+        leaks = {lk.edge_id: lk for lk in inputs.leaks if lk.area_m2 > 0.0}
+        for lk in leaks.values():
+            if lk.edge_id not in active:
+                raise LeakError(f"leak on {lk.edge_id}: the edge carries no determined pressure")
         for eid in sorted(active, key=lambda x: self.topology.edge_ids.index(x)):
             e = self._edges[eid]
-            law: sv.FlowLaw = sv.LossLaw(
-                self._loss_function(e.inner_diameter_m, e.length_m, ks[eid])
-            )
-            if e.from_node.startswith("CV-") or e.to_node.startswith("CV-"):
-                law = sv.OneWay(law)
+            a, b = self._end(e.from_node, "from"), self._end(e.to_node, "to")
+            one_way = e.from_node.startswith("CV-") or e.to_node.startswith("CV-")
+            leak = leaks.get(eid)
+            if leak is None:
+                law: sv.FlowLaw = sv.LossLaw(
+                    self._loss_function(e.inner_diameter_m, e.length_m, ks[eid])
+                )
+                edges.append(sv.Edge(eid, a, b, sv.OneWay(law) if one_way else law))
+                continue
+            x, mid = leak.fraction, leak_node(eid)
+            for name, lo, hi, share in (
+                (leak_up(eid), a, mid, x), (leak_down(eid), mid, b, 1.0 - x),
+            ):  # fmt: skip
+                part = sv.LossLaw(
+                    self._loss_function(e.inner_diameter_m, share * e.length_m, share * ks[eid])
+                )
+                edges.append(sv.Edge(name, lo, hi, sv.OneWay(part) if one_way else part))
             edges.append(
-                sv.Edge(eid, self._end(e.from_node, "from"), self._end(e.to_node, "to"), law)
+                sv.Edge(
+                    leak_sink(eid), mid, atmosphere_node(eid), OrificeLaw(leak.coefficient(self.g))
+                )
             )
         return edges
 
@@ -333,6 +378,7 @@ class _Case:
     c_law: float = 0.0
     notes: list[str] = field(default_factory=list)
     tap_heads: dict[str, float] = field(default_factory=dict)
+    _leak_up: dict[str, float] = field(default_factory=dict)
 
     # --- orchestration ---------------------------------------------------------------
     def run(self, vapor_pa: float) -> SteadyResult:
@@ -347,6 +393,11 @@ class _Case:
         self.edges = m._pipe_edges(self.active, inp)
         nodes = {n for e in self.edges for n in (e.a, e.b)}
         self.fixed = m._levels(nodes, inp.tank_levels_m)
+        for lk in inp.leaks:
+            if lk.area_m2 > 0.0:
+                edge = m._edges[lk.edge_id]
+                z = edge.z_from_m + lk.fraction * (edge.z_to_m - edge.z_from_m)
+                self.fixed[atmosphere_node(lk.edge_id)] = z
         pumps_on = [p for p in m.topology.pumps if f"{p}:in" in nodes]
         if self.delivery_active:
             self._add_delivery(pumps_on)
@@ -386,20 +437,20 @@ class _Case:
 
     def _delivery_names(self) -> set[str]:
         receipt = {e.edge_id for e in self.model.topology.edges if e.route_id.startswith("R-")}
-        return {e.name for e in self.edges if e.name not in receipt}
+        return {base_name(e.name) for e in self.edges if base_name(e.name) not in receipt}
 
     def _check_deadhead(self, h_res: float) -> None:
         names = self._delivery_names()
         outlets = [
             self.fixed[n]
             for e in self.edges
-            if e.name in names
+            if base_name(e.name) in names
             for n in (e.a, e.b)
             if n.endswith(":outlet_nozzle") and n in self.fixed
         ]
         if len(set(outlets)) == 1 and h_res - outlets[0] >= self.pump.shutoff_head_m:
             self.deadhead = True
-            self.edges = [e for e in self.edges if e.name not in names]
+            self.edges = [e for e in self.edges if base_name(e.name) not in names]
             self.fixed = {
                 k: v
                 for k, v in self.fixed.items()
@@ -421,9 +472,7 @@ class _Case:
         tol, itmax = m.config["newton_flow_tolerance_m3s"], int(m.config["newton_max_iterations"])
         if not self.edges:
             return sv.Solution(dict(self.fixed), {}, {}, 0)
-        sol = sv.solve_heads(
-            self.edges, self.fixed, self.inflow, tol, itmax, self.inputs.warm_start
-        )
+        sol = sv.solve_heads(self.edges, self.fixed, self.inflow, tol, itmax, self._warm_start())
         if self.receipt_active and SOURCE in self.inflow and self.inputs.apply_cap:
             cap = m.config["receipt_pressure_cap_pa_gauge"]
             p_source = m.rho * m.g * (sol.heads[SOURCE] - m.node_z[SOURCE])
@@ -435,10 +484,29 @@ class _Case:
                 sol = sv.solve_heads(self.edges, self.fixed, self.inflow, tol, itmax)
         return sol
 
+    def _warm_start(self) -> Mapping[str, float] | None:
+        """The warm start of the caller, with a leak node placed between the heads of its ends.
+
+        Without it the first guess of the leak node is the mean of the fixed heads, which can lie
+        on the wrong side of a check valve next to the leak and makes the first step unbounded."""
+        warm = self.inputs.warm_start
+        if warm is None or not self.inputs.leaks:
+            return warm
+        extended = dict(warm)
+        for lk in self._leaked().values():
+            e = self.model._edges[lk.edge_id]
+            a, b = self.model._end(e.from_node, "from"), self.model._end(e.to_node, "to")
+            if a in warm and b in warm:
+                extended[leak_node(lk.edge_id)] = warm[a] + lk.fraction * (warm[b] - warm[a])
+        return extended
+
     # --- results -----------------------------------------------------------------------
     def _heads(self, sol: sv.Solution) -> dict[str, float]:
         heads = dict(sol.heads)
         heads.pop(RESERVOIR, None)
+        for lk in self.inputs.leaks:
+            heads.pop(leak_node(lk.edge_id), None)
+            heads.pop(atmosphere_node(lk.edge_id), None)
         if self.deadhead:
             self._deadhead_heads(heads)
         self._static_heads(heads)
@@ -493,8 +561,27 @@ class _Case:
         for node, value in known.items():
             heads.setdefault(node, value)
 
+    def _leaked(self) -> dict[str, LeakInput]:
+        return {lk.edge_id: lk for lk in self.inputs.leaks if lk.area_m2 > 0.0}
+
     def _flows(self, sol: sv.Solution) -> dict[str, float]:
-        return {eid: sol.flows.get(eid, 0.0) for eid in self.model.topology.edge_ids}
+        """Edge flows at the downstream end (decision D67); a leak edge reads its lower part."""
+        leaked = self._leaked()
+        return {
+            eid: sol.flows.get(leak_down(eid) if eid in leaked else eid, 0.0)
+            for eid in self.model.topology.edge_ids
+        }
+
+    def _leak_flows(self, sol: sv.Solution) -> dict[str, float]:
+        return {eid: sol.flows.get(leak_sink(eid), 0.0) for eid in self._leaked()}
+
+    def _leak_pressures(self, sol: sv.Solution) -> dict[str, float]:
+        """Gauge pressure ``rho g (H - z)`` at each leak point (decision D60)."""
+        m = self.model
+        out = {}
+        for eid in self._leaked():
+            out[eid] = m.rho * m.g * (sol.heads[leak_node(eid)] - self.fixed[atmosphere_node(eid)])
+        return out
 
     def _end_pressure(self, head: float, z: float, flow: float, diameter: float) -> float:
         m = self.model
@@ -511,8 +598,9 @@ class _Case:
             if ha is None or hb is None:
                 continue
             q = flows[e.edge_id]
+            q_up = q + self._leak_up.get(e.edge_id, 0.0)  # the flow at the upstream end
             ends[e.edge_id] = (
-                self._end_pressure(ha, e.z_from_m, q, e.inner_diameter_m),
+                self._end_pressure(ha, e.z_from_m, q_up, e.inner_diameter_m),
                 self._end_pressure(hb, e.z_to_m, q, e.inner_diameter_m),
             )
         taps: dict[str, float] = {}
@@ -539,7 +627,8 @@ class _Case:
         if not running or not self.delivery_active:
             return None
         name = running[0]
-        q = flows[self._pump_edge(name)]
+        edge = self._pump_edge(name)
+        q = flows[edge] + self._leak_up.get(edge, 0.0)  # the flow through the pump
         q_m3h = q * 3600.0
         if not self.pump.in_domain(q_m3h):
             raise PumpOutsideCurve(
@@ -609,6 +698,8 @@ class _Case:
         m = self.model
         heads = self._heads(sol)
         flows = self._flows(sol)
+        leak_flows = self._leak_flows(sol)
+        self._leak_up = leak_flows
         ends, taps = self._pressures(heads, flows)
         pump_point = self._pump_point(heads, flows)
         phase = self._phase(vapor_pa, heads, pump_point, ends)
@@ -632,7 +723,7 @@ class _Case:
             pump=pump_point,
             phase=phase,
             source_pressure_pa_gauge=source_p,
-            receipt_flow_m3h=flows["E001"] * 3600.0,
+            receipt_flow_m3h=(flows["E001"] + leak_flows.get("E001", 0.0)) * 3600.0,
             receipt_clipped=self.clipped,
             node_mass_residual_kg_s=residual,
             gates=gates,
@@ -643,5 +734,7 @@ class _Case:
             k_multiplier=self.inputs.k_multiplier,
             boundary_law_coefficient_m=self.c_law,
             tap_heads_m=self.tap_heads,
+            leak_flows_m3s=leak_flows,
+            leak_pressures_pa_gauge=self._leak_pressures(sol),
             notes=tuple(self.notes),
         )

@@ -31,6 +31,7 @@ DATASETS = (
     "events",
     "boundary_state",
     "validity_windows",
+    "fault_truth",
 )
 MANIFEST = "MANIFEST.sha256"
 

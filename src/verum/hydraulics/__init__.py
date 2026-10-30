@@ -21,6 +21,7 @@ from verum.hydraulics.errors import (
     PumpOutsideCurve,
 )
 from verum.hydraulics.friction import friction_factor, head_loss
+from verum.hydraulics.leaks import LeakError, LeakInput
 from verum.hydraulics.pump import FixedSpeedPump, PumpElement
 from verum.hydraulics.pumping_minimum import pumping_minimum_level
 from verum.hydraulics.result import PhaseGate, PumpPoint, SteadyResult
@@ -35,6 +36,8 @@ __all__ = [
     "HydraulicInputError",
     "HydraulicModel",
     "HydraulicsError",
+    "LeakError",
+    "LeakInput",
     "OverConstrained",
     "PhaseGate",
     "PropertyScenarioRequired",

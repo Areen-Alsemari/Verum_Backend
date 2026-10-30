@@ -130,6 +130,10 @@
         },
         "fluid_temperature_K": {
           "type": "number"
+        },
+        "leak_flow_m3s": {
+          "type": "number",
+          "exclusiveMinimum": 0
         }
       }
     },

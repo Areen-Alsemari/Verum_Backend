@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend. Specification of one injected single fault. Evaluator-only: never served to agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "urn:verum:fault_spec:0.7.0",
+  "title": "fault_spec (hidden, evaluator-only)",
+  "required": [
+    "schema_version",
+    "dataset",
+    "hidden",
+    "fault_type",
+    "variant",
+    "asset_id",
+    "onset_s",
+    "ramp_s",
+    "magnitude",
+    "position",
+    "discharge_coefficient",
+    "peak_severity"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.7\\.[0-9]+$"
+    },
+    "hidden": {
+      "const": true
+    },
+    "dataset": {
+      "const": "fault_spec"
+    },
+    "fault_type": {
+      "enum": [
+        "PIPE_LEAK",
+        "VALVE_RESTRICTION",
+        "PUMP_HEAD_DEGRADATION",
+        "SENSOR_DRIFT",
+        "VALVE_MISROUTING"
+      ]
+    },
+    "variant": {
+      "enum": [
+        "orifice",
+        "restriction",
+        "head_scale",
+        "bias",
+        "drift",
+        "stuck",
+        "closed_but_open",
+        "open_but_stuck"
+      ]
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "onset_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "ramp_s": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "magnitude": {
+      "type": "number",
+      "description": "Physical value at severity one: leak area m2; opening ceiling; head scale; signed bias or drift as a fraction of span (per hour for drift); 0 for stuck-at; 1 for a valve forced open."
+    },
+    "position": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "discharge_coefficient": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "peak_severity": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

@@ -50,7 +50,7 @@ import heapq
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 from scipy.optimize import brentq
@@ -61,6 +61,8 @@ from verum.hydraulics import (
     DeliveryBoundary,
     HydraulicModel,
     HydraulicsError,
+    LeakError,
+    LeakInput,
     PumpOutsideCurve,
     ReceiptBoundary,
     SteadyInputs,
@@ -68,6 +70,7 @@ from verum.hydraulics import (
     load_boundary_law_coefficient,
     pumping_minimum_level,
 )
+from verum.hydraulics.pump import FixedSpeedPump
 from verum.hydraulics.pumping_minimum import stratum_filename
 from verum.ledger.tank import UNIT_ROUNDOFF
 from verum.lineups import LineupTable
@@ -89,9 +92,16 @@ from verum.sim import rows as rw
 from verum.sim import validity as vd
 from verum.sim.config import SimConfig
 from verum.sim.demand import DemandProcess
-from verum.sim.path import LumpedPath, delivery_edges, delivery_path, receipt_edges, receipt_path
+from verum.sim.path import (
+    LeakLayout,
+    LumpedPath,
+    delivery_edges,
+    delivery_path,
+    receipt_edges,
+    receipt_path,
+)
 from verum.sim.scenario import Scenario
-from verum.sim.valves import Valve, make_valve
+from verum.sim.valves import OpeningModifier, Valve, make_valve
 from verum.tanks import load_tank_geometry
 from verum.truth import TruthSink
 
@@ -105,6 +115,18 @@ EVENT_TYPE = {
 COLLAPSE_SAMPLES = 64
 DENSE_PER_S = 10
 MIN_STEP_S = 1e-9
+
+
+class FaultInjection(Protocol):
+    """What the engine asks of a fault set: physical parameters as functions of time."""
+
+    def leaks(self, t: float) -> tuple[LeakInput, ...]: ...
+
+    def valve_fault(self, valve: str) -> OpeningModifier | None: ...
+
+    def pump_scale(self, t: float) -> float: ...
+
+    def knot_times(self, closed_alpha: float) -> tuple[float, ...]: ...
 
 
 class Rejected(Exception):
@@ -171,6 +193,8 @@ class EngineState:
     event_index: int = 0
     cum_received_m3: float = 0.0
     cum_delivered_m3: float = 0.0
+    cum_spilled_m3: float = 0.0
+    leak_flows: dict[str, float] = field(default_factory=dict)
     ledger_terms: int = 0
     ledger_abs_kg: float = 0.0
     warm: dict[str, float] | None = None
@@ -247,6 +271,8 @@ class Stepped:
     iterations: int
     residual: float
     inside: Callable[[float], Inside] | None = None
+    spill_m3: float = 0.0
+    leaks: tuple[float, float, float] = (0.0, 0.0, 0.0)  # receipt, suction, discharge (m3/s)
 
 
 @dataclass(frozen=True)
@@ -271,7 +297,9 @@ class Engine:
         sink: TruthSink,
         episode_id: str,
         state: EngineState | None = None,
+        faults: FaultInjection | None = None,
     ) -> None:
+        self.faults = faults
         self.model = model.for_stratum(scenario.atmosphere_stratum)
         self.table, self.scenario, self.cfg = table, scenario, config
         self.sink, self.episode_id = sink, episode_id
@@ -331,6 +359,9 @@ class Engine:
             v: make_valve(v, self.cfg.stroke_time_s(v), self.closed_alpha, v in mode.open_valves)
             for v in rw.VALVES
         }
+        if self.faults is not None:
+            for name, valve in valves.items():
+                valve.fault = self.faults.valve_fault(name)
         protections = {t: TankProtection(self._protection_config(t)) for t in tanks}
         ops = OperationsController(self.table, sc.initial_mode, sc.schedule)
         state = EngineState(
@@ -348,6 +379,9 @@ class Engine:
         )
         for command in ops.timed_commands:
             self._push(state, command.t_s, RANK_COMMAND, "command", command)
+        if self.faults is not None:  # a step ends where a ramp changes slope (D65)
+            for t_knot in self.faults.knot_times(self.closed_alpha):
+                self._push(state, t_knot, RANK_VALVE, "fault_knot", None)
         for tank, lt in self._lt.items():
             state.lt_y[tank] = self.geometry.level_m(volumes[tank], self.rho)
             state.lt_visible[tank] = None
@@ -398,15 +432,20 @@ class Engine:
             head_offsets_m=offsets or {},
             apply_cap=apply_cap,
             tap_head_offsets_m=self._tap_offsets(t, receipt_m3h, qdot_receipt),
+            pump=self._pump(t),
+            leaks=self._leaks(t),
         )
         try:
             result = self.model.solve(inputs)
+        except LeakError as exc:
+            raise Rejected("SGF", t, "leak_edge", str(exc), None, None) from exc
         except PumpOutsideCurve as exc:
             raise Rejected(
                 "SG0", t, "pump_domain", str(exc), None, self.model.config["pump_max_flow_m3h"]
             ) from exc
         except (ConvergenceError, HydraulicsError) as exc:
             raise Rejected("SG2", t, "steady_solve", str(exc), None, None) from exc
+        self._check_leaks(t, result)
         result = self._with_dead_legs(result, volumes, t, open_valves)
         st.warm = dict(result.node_heads_m)
         st.iterations = max(st.iterations, result.iterations)
@@ -448,6 +487,33 @@ class Engine:
             dead_edges=dead,
             dead_leg_gaps_m=gaps,
         )
+
+    def _pump(self, t: float) -> FixedSpeedPump:
+        """The duty pump with the head scale of a pump fault at time ``t`` (decision D62)."""
+        pump = self.model.default_pump()
+        scale = 1.0 if self.faults is None else self.faults.pump_scale(t)
+        if scale == 1.0:
+            return pump
+        return dataclasses.replace(pump, h0_m=pump.h0_m * scale, k_m=pump.k_m * scale)
+
+    def _leaks(self, t: float) -> tuple[LeakInput, ...]:
+        return () if self.faults is None else self.faults.leaks(t)
+
+    def _layout(self, path: LumpedPath, t: float) -> LeakLayout | None:
+        """Where the frozen leak flows sit on a column (decision D60, ``docs/fault_models.md``)."""
+        st = self.state
+        if not st.leak_flows:
+            return None
+        fractions = {lk.edge_id: lk.fraction for lk in self._leaks(t)}
+        return path.leak_layout(fractions, st.leak_flows)
+
+    def _check_leaks(self, t: float, result: SteadyResult) -> None:
+        """Decision D10: a leak is valid only above the minimum gauge pressure (gate SGF)."""
+        limit = self.cfg["leak_min_gauge_pressure_pa"]
+        for edge, p in result.leak_pressures_pa_gauge.items():
+            if p <= limit:
+                detail = f"gauge pressure {p:.0f} Pa is not above {limit:.0f} Pa"
+                raise Rejected("SGF", t, f"leak_pressure[{edge}]", detail, p, limit)
 
     def _tap_offsets(self, t: float, receipt_m3h: float, qdot: float) -> dict[str, float]:
         """Head of the PT-001 tap relative to its node (decision D36), for a single receipt path."""
@@ -555,14 +621,16 @@ class Engine:
         st, m = self.state, self.model
         level = self.geometry.level_m(st.volumes[tank], self.rho)
         head_cap = m.node_z[SOURCE_NODE] + m.config["receipt_pressure_cap_pa_gauge"] / (m.rho * m.g)
+        path = self._path("receipt", tank, None, t)
         return dyn.ReceiptColumn(
-            self._path("receipt", tank, None, t),
+            path,
             tank,
             head_cap,
             level,
             self._area(tank),
             self.cfg["receipt_controller_tau_s"],
             st.receipt_setpoint_m3h / 3600.0,
+            self._layout(path, t),
         )
 
     def _delivery_column(self, tank: str, pump: str, t: float) -> dyn.DeliveryColumn:
@@ -571,16 +639,18 @@ class Engine:
         reservoir = m.node_z[BOUNDARY_NODE] + m.config["reservoir_pressure_pa_gauge"] / (
             m.rho * m.g
         )
+        path = self._path("delivery", tank, pump, t)
         return dyn.DeliveryColumn(
-            self._path("delivery", tank, pump, t),
+            path,
             tank,
-            m.default_pump(),
+            self._pump(t),
             reservoir,
             self._law_c,
             level,
             self._area(tank),
             m.config["pump_reference_flow_m3h"],
             self.demand.factor,
+            self._layout(path, t),
         )
 
     # --- one step ----------
@@ -630,11 +700,17 @@ class Engine:
             offsets.update(plan.receipt.path.offsets(qdot_r))
         if plan.delivery is not None:
             offsets.update(plan.delivery.path.offsets(qdot_d))
+        leak_r = plan.receipt.layout.total if plan.receipt and plan.receipt.layout else 0.0
+        leak_s = plan.delivery.layout.tank_extra if plan.delivery and plan.delivery.layout else 0.0
+        leak_d = (
+            plan.delivery.layout.boundary_deduct if plan.delivery and plan.delivery.layout else 0.0
+        )
+        boundary_flow = (y1[1] - leak_d) * 3600.0 if plan.delivery is not None else None
         new = self._solve(
             volumes,
             t1,
             y1[0] * 3600.0,
-            y1[1] * 3600.0 if plan.delivery is not None else None,
+            boundary_flow,
             offsets,
             apply_cap=False,
             qdot_receipt=qdot_r,
@@ -668,9 +744,11 @@ class Engine:
                 float(y[0]), float(y[1]), rates[0], rates[1], float(y[2]), float(y[3]),
             )  # fmt: skip
 
+        h = t1 - t0
         return Stepped(
             t0, t1, plan, volumes, y1[0] * 3600.0, y1[1] * 3600.0, qdot_r, qdot_d,
-            y1[2], y1[3], new, volume_at, flow_at, 0, 0.0, inside,
+            y1[2] + leak_r * h, y1[3] - (leak_s + leak_d) * h, new, volume_at, flow_at, 0, 0.0,
+            inside, (leak_r + leak_s + leak_d) * h, (leak_r, leak_s, leak_d),
         )  # fmt: skip
 
     def _quasi(self, t0: float, t1: float, plan: Plan) -> Stepped:
@@ -686,8 +764,9 @@ class Engine:
         s2 = self._solve(predictor, t1, q1)
         f2 = s2.tank_net_inflow_m3s
         volumes = {k: v + 0.5 * h * (f1[k] + f2[k]) for k, v in st.volumes.items()}
-        recv = 0.5 * h * (s0.edge_flows_m3s["E001"] + s2.edge_flows_m3s["E001"])
+        recv = 0.5 * h * (_source_flow(s0) + _source_flow(s2))
         deliv = 0.5 * h * (s0.edge_flows_m3s["E-D2"] + s2.edge_flows_m3s["E-D2"])
+        spill = 0.5 * h * (sum(s0.leak_flows_m3s.values()) + sum(s2.leak_flows_m3s.values()))
         new = self._solve(volumes, t1, q1)
         q_d = new.pump.flow_m3h if new.pump is not None else 0.0
         base = dict(st.volumes)
@@ -698,17 +777,23 @@ class Engine:
             return _hermite(base[tank], volumes[tank], h * f1[tank], h * d1[tank], s)
 
         return Stepped(
-            t0, t1, plan, volumes, q1, q_d, 0.0, 0.0, recv, deliv, new, volume_at, None, 0, 0.0
+            t0, t1, plan, volumes, q1, q_d, 0.0, 0.0, recv, deliv, new, volume_at, None, 0, 0.0,
+            None, spill,
         )  # fmt: skip
 
     def _commit(self, step: Stepped, landing: tuple[float, str, str, float] | None) -> None:
         st = self.state
         net = sum(step.volumes.values()) - sum(st.volumes.values())
         base_received, base_delivered = st.cum_received_m3, st.cum_delivered_m3
+        base_spilled = st.cum_spilled_m3
         st.cum_received_m3 += step.recv_m3
         st.cum_delivered_m3 += step.deliv_m3
+        st.cum_spilled_m3 += step.spill_m3
+        st.leak_flows = dict(step.new.leak_flows_m3s)
         st.ledger_terms += 3
-        st.ledger_abs_kg += self.rho * (abs(step.recv_m3) + abs(step.deliv_m3) + abs(net))
+        st.ledger_abs_kg += self.rho * (
+            abs(step.recv_m3) + abs(step.deliv_m3) + abs(net) + abs(step.spill_m3)
+        )
         self._track_collapse(step)
         self._advance_level_chain(step)
         st.volumes = step.volumes
@@ -722,7 +807,7 @@ class Engine:
         st.current = step.new
         fresh = step.new.dead_edges - st.dead_edges
         self._finish_inactive(self._plan(step.t1, step.t1), step.t1)
-        self._write_interior(step, base_received, base_delivered)
+        self._write_interior(step, base_received, base_delivered, base_spilled)
         if fresh:
             # An edge isolated at the end of the step keeps the last head determined inside it.
             open_now = {v for v, x in st.valves.items() if not x.is_physically_closed(step.t1)}
@@ -802,9 +887,16 @@ class Engine:
             for edge, head in result.edge_heads_m.items():
                 if edge not in result.dead_edges:
                     self.state.edge_heads[edge] = head
+            lr, ls, ld = step.leaks
+            into = t - step.t0
             snap = self._snapshot(
-                t, result, ins.volumes, (base_received + ins.c_r, base_delivered + ins.c_d)
-            )
+                t, result, ins.volumes,
+                (
+                    base_received + ins.c_r + lr * into,
+                    base_delivered + ins.c_d - (ls + ld) * into,
+                    base_spilled + (lr + ls + ld) * into,
+                ),
+            )  # fmt: skip
             self._write_snapshot(snap, None)
 
     def _record_landing(self, landing: tuple[float, str, str, float]) -> None:
@@ -1142,13 +1234,17 @@ class Engine:
         self,
         t: float,
         volumes: dict[str, float] | None = None,
-        cumulative: tuple[float, float] | None = None,
+        cumulative: tuple[float, float, float] | None = None,
     ) -> dict[str, Any]:
         st, rho = self.state, self.rho
         volumes = st.volumes if volumes is None else volumes
-        received, delivered = cumulative or (st.cum_received_m3, st.cum_delivered_m3)
+        received, delivered, spilled = cumulative or (
+            st.cum_received_m3,
+            st.cum_delivered_m3,
+            st.cum_spilled_m3,
+        )
         total = sum(volumes.values())
-        residual = rho * (received - delivered - (total - st.initial_volume_total))
+        residual = rho * (received - delivered - spilled - (total - st.initial_volume_total))
         roundoff = (
             max(st.ledger_terms - 1, 0)
             * UNIT_ROUNDOFF
@@ -1158,6 +1254,7 @@ class Engine:
         return {
             "received_kg": rho * received,
             "delivered_kg": rho * delivered,
+            "spilled_kg": rho * spilled,
             "liquid_total_kg": rho * total,
             "tank_kg": {k: rho * v for k, v in volumes.items()},
             "residual_kg": residual,
@@ -1297,7 +1394,7 @@ class Engine:
         t: float,
         result: SteadyResult | None = None,
         volumes: dict[str, float] | None = None,
-        cumulative: tuple[float, float] | None = None,
+        cumulative: tuple[float, float, float] | None = None,
     ) -> rw.Snapshot:
         st = self.state
         assert st.current is not None
@@ -1541,6 +1638,11 @@ class Engine:
             st.tracks.setdefault(key, Track(valve.name, flow / 3600.0))
         elif valve.target > valve.position0:
             st.tracks.pop(key, None)
+
+
+def _source_flow(result: SteadyResult) -> float:
+    """Flow that enters at the pipeline boundary: the downstream flow of E001 plus its leak."""
+    return result.edge_flows_m3s["E001"] + result.leak_flows_m3s.get("E001", 0.0)
 
 
 def _hermite(v0: float, v1: float, d0: float, d1: float, s: float) -> float:

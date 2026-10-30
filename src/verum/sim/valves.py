@@ -9,6 +9,9 @@ Key assumptions:
     * Three records are kept apart: the commanded state (an order), the actual
       position (alpha) and the physical closure (alpha at or below the closed
       threshold, 0.001).
+    * A fault may change the actual opening (a ceiling or a floor) but not the command, the stroke
+      or the actuator position: the actuator keeps moving as commanded and the actual opening is
+      the result of the fault applied to that motion.
     * The position is a pure function of time between orders, so the engine can
       evaluate it at any stage time without stepping the actuator.
 
@@ -18,6 +21,13 @@ Source: ``docs/design_decisions.md`` D4 (version 2.0) and D19.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
+
+
+class OpeningModifier(Protocol):
+    """A fault that changes the actual opening and nothing else (decisions D61 and D64)."""
+
+    def apply(self, alpha: float, t: float) -> float: ...
 
 
 @dataclass
@@ -29,20 +39,26 @@ class Valve:
     t0: float
     target: float
     commanded_open: bool
+    fault: OpeningModifier | None = None
 
-    def alpha(self, t: float) -> float:
-        """Actual opening at time ``t``."""
+    def motion_alpha(self, t: float) -> float:
+        """Opening the actuator would have at time ``t`` without a fault (the commanded motion)."""
         travelled = max(t - self.t0, 0.0) / self.stroke_s
         distance = abs(self.target - self.position0)
         step = min(travelled, distance)
         return self.position0 + step if self.target > self.position0 else self.position0 - step
+
+    def alpha(self, t: float) -> float:
+        """Actual opening at time ``t``: the commanded motion, changed by a fault if any."""
+        alpha = self.motion_alpha(t)
+        return alpha if self.fault is None else self.fault.apply(alpha, t)
 
     def is_physically_closed(self, t: float) -> bool:
         # The tolerance absorbs the last bit of the linear motion at the threshold time.
         return self.alpha(t) <= self.closed_alpha + 1e-12
 
     def is_moving(self, t: float) -> bool:
-        return self.alpha(t) != self.target
+        return self.motion_alpha(t) != self.target
 
     def motion_end_s(self) -> float:
         return self.t0 + abs(self.target - self.position0) * self.stroke_s
@@ -56,7 +72,7 @@ class Valve:
 
     def order(self, is_open: bool, t: float) -> bool:
         """Apply an order at time ``t``; returns True if the valve starts moving."""
-        current = self.alpha(t)
+        current = self.motion_alpha(t)  # the actuator continues from its own position
         self.position0, self.t0 = current, t
         self.target = 1.0 if is_open else 0.0
         self.commanded_open = is_open

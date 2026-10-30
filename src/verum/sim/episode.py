@@ -30,11 +30,14 @@ from pathlib import Path
 from typing import Any
 
 from verum.contracts import validate
+from verum.faults import FaultSet, fault_truth_rows, instance_ids
+from verum.faults import check as check_faults
 from verum.gates import assert_release_allowed
 from verum.hydraulics import HydraulicModel
 from verum.lineups import load_lineup_table
 from verum.provenance import config_hash, episode_id, git_state, lockfile_hash
 from verum.sensors import observe_episode
+from verum.sensors.specs import load_sensor_config
 from verum.sim.config import SimConfig, load_sim_config
 from verum.sim.engine import Engine, EpisodeOutcome
 from verum.sim.scenario import Scenario, load_scenario
@@ -71,6 +74,7 @@ def episode_document(
     chash: str,
     status: str,
     outcome: EpisodeOutcome,
+    fault_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     levels = scenario.tank_levels_m
     return {
@@ -100,6 +104,7 @@ def episode_document(
         "atmosphere_pa_abs": model.for_stratum(scenario.atmosphere_stratum).patm,
         "demand_process": scenario.demand_process,
         "events_evaluated": outcome.events_evaluated,
+        "fault_instance_ids": fault_ids or [],
         "validity_windows": [w.as_row() for w in outcome.windows],
         "protection_crossings": outcome.crossings,
         "pipe_inventory_constant": True,
@@ -113,17 +118,22 @@ def run_episode(
     out_dir: Path,
     model: HydraulicModel | None = None,
     scenario: Scenario | None = None,
+    faults: FaultSet | None = None,
 ) -> EpisodeResult:
     assert_release_allowed(TIER)
     model = model or HydraulicModel.load()
     cfg = load_sim_config(model.directory)
     scenario = scenario or load_scenario(scenario_id, model.directory)
+    sensors = load_sensor_config(model.directory)
+    continuous = [t for t, spec in sensors.tags.items() if spec.kind == "continuous"]
+    if faults is not None and faults.specs:
+        edges = [e.edge_id for e in model.topology.edges]
+        check_faults(faults.specs, edges, continuous, scenario.duration_s)
     chash = config_hash(model.directory)
     episode = episode_id(scenario.seed, scenario.scenario_id, chash)
     sink = DirectorySink(out_dir / episode)
-    engine = Engine(
-        model, load_lineup_table(model.topology, model.directory), scenario, cfg, sink, episode
-    )
+    table = load_lineup_table(model.topology, model.directory)
+    engine = Engine(model, table, scenario, cfg, sink, episode, faults=faults)
     start = time.perf_counter()
     outcome = engine.run()
     wall = time.perf_counter() - start
@@ -141,13 +151,26 @@ def run_episode(
         validate("simulation_rejected", record)
         sink.write_json("simulation_rejected.json", record)
     assert_release_allowed(tier_of(outcome))  # the tier actually produced is asked as well
-    document = episode_document(scenario, cfg, model, episode, chash, status, outcome)
+    specs = faults.specs if faults is not None else ()
+    ids = [] if outcome.rejection else instance_ids(episode, specs)  # never label a rejected run
+    if not outcome.rejection:
+        for row in fault_truth_rows(episode, specs):
+            validate("fault_truth", row)
+            sink.write("fault_truth", row)
+    document = episode_document(scenario, cfg, model, episode, chash, status, outcome, ids)
     validate("episode", document)
     sink.write_json("episode.json", document)
     commit, dirty = git_state()
     sink.write_json("provenance.json", {"git_commit": commit, "git_dirty": dirty})
     hashes = sink.finalize()
     if not outcome.rejection:
-        observe_episode(out_dir / episode)  # agent-visible rows, written next to the truth
+        hook = None
+        if faults is not None and faults.specs:
+            spans = {
+                t: sensors.tags[t].range_hi - sensors.tags[t].range_lo  # type: ignore[operator]
+                for t in continuous
+            }
+            hook = faults.sensor_hook(spans)
+        observe_episode(out_dir / episode, hook=hook)  # agent-visible rows, next to the truth
         hashes = file_hashes(out_dir / episode)
     return EpisodeResult(episode, out_dir / episode, outcome, wall, hashes)

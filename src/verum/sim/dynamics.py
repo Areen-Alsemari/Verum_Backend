@@ -17,6 +17,11 @@ Key assumptions:
       and the ledger fluxes are the same numbers and the ledger closes by construction.
     * Tank levels inside the interval follow from the volumes with the local tank area
       (the geometry is piecewise linear); the valve openings are functions of time.
+    * Leaks (decision D60, ``docs/fault_models.md``): the state is the source flow of the receipt
+      column and the pump flow of the delivery column; the losses use the flow of each edge from the
+      frozen leak flows of the layout, the boundary law uses the boundary flow, and the volumes
+      that have passed are the flows into and out of the tank, ``dC_r = Q_r - leaks`` and
+      ``dC_d = Q_d + suction leaks``. The inertial term keeps the single dQ/dt of D22.
     * Only the lumped paths are used here. The steady network solve is called afterwards
       for the node heads and pressures at the imposed flows.
 
@@ -33,7 +38,7 @@ from scipy.integrate import solve_ivp
 
 from verum.hydraulics.errors import ConvergenceError
 from verum.hydraulics.pump import FixedSpeedPump
-from verum.sim.path import LumpedPath
+from verum.sim.path import LeakLayout, LumpedPath
 from verum.sim.valves import Valve
 
 
@@ -46,6 +51,7 @@ class ReceiptColumn:
     area_m2: float
     tau_c_s: float
     setpoint_m3s: float
+    layout: LeakLayout | None = None
 
 
 @dataclass(frozen=True)
@@ -59,6 +65,7 @@ class DeliveryColumn:
     area_m2: float
     q_ref_m3h: float
     demand: Callable[[float], float]
+    layout: LeakLayout | None = None
 
 
 @dataclass(frozen=True)
@@ -92,19 +99,23 @@ def make_rhs(
         dq_r = dq_d = 0.0
         if receipt is not None:
             level = receipt.level_m + (c_r - (c_d if shared else 0.0)) / receipt.area_m2
-            h_source = level + receipt.path.loss(q_r, _alphas(valves, r_valves, t))
+            h_source = level + receipt.path.loss(q_r, _alphas(valves, r_valves, t), receipt.layout)
             free = (receipt.setpoint_m3s - q_r) / receipt.tau_c_s
             dq_r = min(free, (receipt.head_cap_m - h_source) / i_r)
         if delivery is not None:
             level = delivery.level_m + ((c_r if shared else 0.0) - c_d) / delivery.area_m2
             q_h = max(q_d, 0.0) * 3600.0
-            boundary = delivery.law_c_m * delivery.demand(t) * (q_h / delivery.q_ref_m3h) ** 2
+            deduct = delivery.layout.boundary_deduct if delivery.layout else 0.0
+            q_b = max(q_d - deduct, 0.0) * 3600.0
+            boundary = delivery.law_c_m * delivery.demand(t) * (q_b / delivery.q_ref_m3h) ** 2
             drive = level + delivery.pump.head_rise_m(q_h) - delivery.reservoir_head_m - boundary
-            drive -= delivery.path.loss(q_d, _alphas(valves, d_valves, t))
+            drive -= delivery.path.loss(q_d, _alphas(valves, d_valves, t), delivery.layout)
             dq_d = drive / i_d
             if q_d <= 0.0 and dq_d < 0.0:
                 dq_d = 0.0
-        return [dq_r, dq_d, q_r, q_d]
+        out_r = receipt.layout.total if receipt is not None and receipt.layout else 0.0
+        out_d = delivery.layout.tank_extra if delivery is not None and delivery.layout else 0.0
+        return [dq_r, dq_d, q_r - out_r, q_d + out_d]
 
     return rhs
 

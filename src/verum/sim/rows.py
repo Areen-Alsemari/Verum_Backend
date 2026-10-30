@@ -107,6 +107,9 @@ def hydraulic_rows(
             "p_to_pa_abs": _abs(ends[1], patm) if ends else None,
             "fluid_temperature_K": temperature_k,
         }
+        leak = r.leak_flows_m3s.get(edge.edge_id, 0.0)
+        if leak > 0.0:
+            payload["leak_flow_m3s"] = leak  # decision D67: a separate sink, absent without a leak
         rows.append(_state_row(episode, snap, side, "edge_state", edge.edge_id, payload))
     for node, ref in model.config.tap_reference_edges.items():
         gauge = r.tap_pressures_pa_gauge.get(node)
@@ -281,7 +284,7 @@ def ledger_rows(episode: str, snap: Snapshot, side: str | None) -> list[dict[str
             "liquid_kg": led["liquid_total_kg"],
             "cumulative_received_kg": led["received_kg"],
             "cumulative_delivered_kg": led["delivered_kg"],
-            "cumulative_spill_kg": 0.0,
+            "cumulative_spill_kg": led["spilled_kg"],
             "residual_kg": led["residual_kg"],
             "tolerance_kg": led["tolerance_kg"],
             "closed": led["closed"],

@@ -25,13 +25,37 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from verum.graph import Lineup
 from verum.hydraulics import HydraulicModel
 from verum.hydraulics.friction import head_loss
 
 RECEIPT_COMMON = ("E001", "E002", "E003")
+AFTER_PUMP = frozenset(
+    {"E-PA2", "E-PA3", "E-PA4", "E-PB2", "E-PB3", "E-PB4", "E-D1", "E-D2"}
+)  # edges downstream of the pump outlet
+
+
+@dataclass(frozen=True)
+class LeakLayout:
+    """Where the leaks sit on a column and how they change the flow of each edge.
+
+    ``fractions`` maps a leaked edge to its position; ``offsets`` maps every edge to the flow at its
+    upstream and downstream ends relative to the state of the column (the source flow of a
+    receipt column, the pump flow of a delivery column). ``tank_extra`` is the flow the tank
+    gives up beyond the state (suction-side leaks), ``boundary_deduct`` the flow that never reaches
+    the end of the column (a receipt tank inflow or a delivery boundary flow is the state less
+    this)."""
+
+    fractions: Mapping[str, float] = field(default_factory=dict)
+    offsets: Mapping[str, tuple[float, float]] = field(default_factory=dict)
+    tank_extra: float = 0.0
+    boundary_deduct: float = 0.0
+
+    @property
+    def total(self) -> float:
+        return self.tank_extra + self.boundary_deduct
 
 
 @dataclass(frozen=True)
@@ -56,15 +80,57 @@ class LumpedPath:
         g = self.model.g
         return sum(e.length_m / (g * math.pi * e.diameter_m**2 / 4) for e in self.edges)
 
-    def loss(self, flow_m3s: float, alphas: Mapping[str, float]) -> float:
+    def loss(
+        self, flow_m3s: float, alphas: Mapping[str, float], layout: LeakLayout | None = None
+    ) -> float:
         m = self.model
         total = 0.0
         for e in self.edges:
             k = e.k_base
             if e.valve is not None:
                 k += m.valve_extra_k(alphas.get(e.valve, 1.0))
-            total += head_loss(flow_m3s, e.diameter_m, e.length_m, k, m.rho, m.mu, m.roughness, m.g)
+            if layout is None or e.edge_id not in layout.offsets:
+                total += head_loss(
+                    flow_m3s, e.diameter_m, e.length_m, k, m.rho, m.mu, m.roughness, m.g
+                )
+                continue
+            up, down = layout.offsets[e.edge_id]
+            x = layout.fractions.get(e.edge_id, 1.0)
+            for share, off in ((x, up), (1.0 - x, down)):
+                total += head_loss(
+                    flow_m3s + off, e.diameter_m, share * e.length_m, share * k,
+                    m.rho, m.mu, m.roughness, m.g,
+                )  # fmt: skip
         return total
+
+    def leak_layout(
+        self, fractions: Mapping[str, float], flows: Mapping[str, float]
+    ) -> LeakLayout | None:
+        """Layout of the leaks that lie on this column (``flows``: the frozen leak flow of each)."""
+        here = {eid: x for eid, x in fractions.items() if any(e.edge_id == eid for e in self.edges)}
+        if not here or not any(flows.get(eid, 0.0) > 0.0 for eid in here):
+            return None
+        offsets: dict[str, tuple[float, float]] = {}
+        ids = [e.edge_id for e in self.edges]
+        if self.kind == "receipt":
+            cum = 0.0
+            for eid in ids:
+                up = -cum
+                cum += flows.get(eid, 0.0) if eid in here else 0.0
+                offsets[eid] = (up, -cum)
+            return LeakLayout(here, offsets, 0.0, cum)
+        pump = next((i for i, eid in enumerate(ids) if eid in AFTER_PUMP), len(ids))
+        suction = 0.0
+        for eid in reversed(ids[:pump]):
+            down = suction
+            suction += flows.get(eid, 0.0) if eid in here else 0.0
+            offsets[eid] = (suction, down)
+        discharge = 0.0
+        for eid in ids[pump:]:
+            up = -discharge
+            discharge += flows.get(eid, 0.0) if eid in here else 0.0
+            offsets[eid] = (up, -discharge)
+        return LeakLayout(here, offsets, suction, discharge)
 
     def wave_time_s(self, speeds: Mapping[int, float]) -> float:
         return sum(e.length_m / speeds[_dn(e.diameter_m)] for e in self.edges)

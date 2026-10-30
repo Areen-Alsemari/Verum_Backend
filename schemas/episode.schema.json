@@ -33,7 +33,8 @@
     "events_evaluated",
     "validity_windows",
     "protection_crossings",
-    "volatility_class"
+    "volatility_class",
+    "fault_instance_ids"
   ],
   "properties": {
     "schema_version": {
@@ -52,6 +53,14 @@
     },
     "scenario_id": {
       "type": "string"
+    },
+    "fault_instance_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Hidden. Instance identifiers of the injected faults, in the order of the fault_truth rows."
     },
     "seed": {
       "type": "integer",
