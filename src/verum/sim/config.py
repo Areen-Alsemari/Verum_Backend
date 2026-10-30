@@ -1,11 +1,9 @@
 """Engine configuration as parameter records.
 
-Inputs: ``config/sim.json``. Outputs: ``SimConfig`` (scalar access to the records).
-Key assumptions: every number is a ``ParamValue``; reading an unresolved one raises
-``UnresolvedParameter``. Stroke times follow decision D4: 10 s for ``XV-R000`` and
-30 s for the other motorized valves.
+Every number is a parameter record, and reading an unresolved one raises. Valve stroke times are 10
+s for the common receipt valve and 30 s for the other motorized valves.
 
-Source: ``docs/design_decisions.md`` D3, D4, D17, D18, D19.
+See D4.
 """
 
 from __future__ import annotations

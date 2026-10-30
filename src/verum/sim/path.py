@@ -1,24 +1,13 @@
 """Lumped liquid column of one flow path: losses, inertance and inertial head offsets.
 
-Inputs: the ordered edges of a single flow path, the lineup that sets the local loss
-coefficients, the fitting profile and the hydraulic model. Outputs: the head loss
-``H_loss(Q)`` with partly closed valves, the inertance ``I = sum L_i / (g A_i)``, the
-wave travel time ``sum L_i / a_i`` and the head offsets that the inertial term adds to
-the node heads of a steady solve.
-Key assumptions:
-    * Rigid column (decision D22): the liquid along the path moves as one body, so the
-      path has one flow and one ``dQ/dt``. Pipes are full; the pipe inventory is constant.
-    * The loss uses the same friction law, fitting coefficients and valve law as the
-      steady solver, so a steady solve at an imposed flow and this path agree (a
-      same-formula check, not independent validation).
-    * A partly closed valve adds ``K(alpha) - K_open`` to the edge that starts at the
-      valve, as in the steady solver.
-    * Offsets: along the flow, the head drop over edge ``i`` is ``loss_i + (L_i/(g A_i)) dQ/dt``.
-      A receipt path is anchored at its tank (offset ``+ Lambda_down dQ/dt``); a delivery
-      path is anchored at its tank and the pump rise is quasi-steady (offset
-      ``- Lambda_up dQ/dt``).
+The column is rigid: the liquid along the path moves as one body with a single flow and a single
+dQ/dt, and the pipes are full. The loss uses the same friction law, fitting coefficients and valve
+law as the steady solver, so a steady solve at an imposed flow agrees with it; that is a
+same-formula check and not independent validation. Along the flow, the head drop over edge i is
+loss_i + (L_i / (g A_i)) dQ/dt. A receipt path is anchored at its tank, and a delivery path is
+anchored at its tank with a quasi-steady pump rise.
 
-Source: ``docs/design_decisions.md`` D22; ``revised/02_hydraulic_model.md`` section 3.
+See D22.
 """
 
 from __future__ import annotations
@@ -41,12 +30,11 @@ AFTER_PUMP = frozenset(
 class LeakLayout:
     """Where the leaks sit on a column and how they change the flow of each edge.
 
-    ``fractions`` maps a leaked edge to its position; ``offsets`` maps every edge to the flow at its
-    upstream and downstream ends relative to the state of the column (the source flow of a
-    receipt column, the pump flow of a delivery column). ``tank_extra`` is the flow the tank
-    gives up beyond the state (suction-side leaks), ``boundary_deduct`` the flow that never reaches
-    the end of the column (a receipt tank inflow or a delivery boundary flow is the state less
-    this)."""
+    Offsets give the flow at the upstream and downstream end of every edge relative to the state of
+    the column, which is the source flow of a receipt column and the pump flow of a delivery column.
+    The tank gives up extra flow for suction-side leaks, and some flow never reaches the end of the
+    column.
+    """
 
     fractions: Mapping[str, float] = field(default_factory=dict)
     offsets: Mapping[str, tuple[float, float]] = field(default_factory=dict)
@@ -136,9 +124,12 @@ class LumpedPath:
         return sum(e.length_m / speeds[_dn(e.diameter_m)] for e in self.edges)
 
     def tap_offset(self, flow_m3s: float, qdot_m3s2: float, n_upstream: int = 2) -> float:
-        """Head at a tap that lies after the first ``n_upstream`` edges of the column, minus
-        the head at the start of the column: ``-(loss + Lambda dQ/dt)`` over those edges
-        (decision D36). Valves are not on these edges for the receipt path."""
+        """Head at a tap after the first n edges of the column, minus the head at the start of the
+        column.
+
+        The offset is -(loss + Lambda dQ/dt) over those edges, with Lambda the inertance of the
+        edges (D36). Valves are not on these edges for the receipt path.
+        """
         m, g = self.model, self.model.g
         edges = self.edges[:n_upstream]
         loss = sum(

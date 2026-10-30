@@ -1,27 +1,14 @@
 """Episode runner: release check, engine run, record files and manifest.
 
-Inputs: a scenario identifier and an output directory. Outputs: a directory with the
-truth files, ``episode.json``, ``provenance.json``, ``simulation_rejected.json`` (if
-rejected) and a hash manifest; and an ``EpisodeResult``.
-Key assumptions:
-    * The episode record lists the atmosphere stratum, the validity windows and the
-      protection threshold crossings (decisions D24 to D26); it is hidden truth.
-    * The dataset tier is ``analytic_verification``, or ``restricted_benchmark`` for an
-      episode that lists a flagged validity window (decision D37). The release gate is asked
-      first for the former and again for the tier actually produced; it fails closed.
-    * The episode identifier is derived from the seed, the scenario and the
-      configuration hash; two runs with the same inputs write identical files.
-    * A completed episode gets its observation rows (``verum.sensors``) after the truth is
-      final; they are written next to the truth and listed in the manifest.
-    * A rejected episode keeps only its records: the truth files are removed so that
-      a rejected run cannot be mistaken for data.
-    * Profile v2 (decision D73) adds the profile, the accepted demand regimes and the redrawn
-      candidates to the episode record; episodes of the other profiles do not carry them.
-    * ``provenance.json`` carries the git commit; the deterministic episode record
-      does not.
+The episode record lists the atmosphere stratum, the validity windows and the protection threshold
+crossings, and is hidden truth. The dataset tier is analytic verification, or restricted benchmark
+for an episode with a flagged validity window, and the release gate is asked for the tier actually
+produced and fails closed. The episode identifier is derived from the seed, the scenario and the
+configuration hash, so equal inputs write identical files. A completed episode gets its observation
+rows after the truth is final, and a rejected episode keeps only its records so that it cannot be
+mistaken for data. The git commit goes in a separate provenance file.
 
-Source: ``VERUM_INTEGRATION_README.md`` section E (rejected candidates are stored as
-such); ``docs/design_decisions.md`` D20, D24, D25, D26, D37.
+See D20, D24 to D26, D37 and D73.
 """
 
 from __future__ import annotations

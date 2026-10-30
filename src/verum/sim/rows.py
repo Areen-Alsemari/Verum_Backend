@@ -1,19 +1,10 @@
 """Row builders: turn an engine snapshot into the typed truth records.
 
-Inputs: a ``Snapshot`` (state at one instant) and the model. Outputs: row
-dictionaries for the hydraulic-state, solver-diagnostic, boundary-state and mass-ledger
-datasets.
-Key assumptions:
-    * Pressures are written in Pa absolute (gauge plus the configured atmosphere);
-      a pressure that the solve could not determine is ``null``, never zero.
-    * ``side`` is ``null`` for a grid row and ``pre_event`` / ``post_event`` for the
-      two rows written at an event time.
-    * Protection rows carry ``signal_source = "independent_detector"``: the high-high trip is
-      decided on the detector signal of the engine (decision D33), not on the true level.
-    * Every row carries ``hidden = true`` and the schema version 0.7.0.
-
-Source: ``revised/05_simulation_validation_dataset.md`` section 7.4.8;
-``schemas/hydraulic_state.schema.json`` and the other proposed schemas.
+Pressures are written in Pa absolute (gauge plus the configured atmosphere), and a pressure that the
+solve could not determine is null and never zero. The side field is null on a grid row and is
+pre-event or post-event on the two rows written at an event time. Protection rows state that the
+trip was decided on the independent detector and not on the true level. Every row is marked hidden
+and carries the schema version.
 """
 
 from __future__ import annotations

@@ -1,21 +1,12 @@
 """Valve actuator: commanded state, actual position and physical closure.
 
-Inputs: valve orders and times. Outputs: the actual opening at any time, and the
-times at which the valve starts and stops moving or crosses the closed threshold.
-Key assumptions:
-    * The opening alpha moves linearly at ``1 / stroke`` per second towards the
-      target (decision D19). A new order during a stroke starts from the actual
-      position at that instant.
-    * Three records are kept apart: the commanded state (an order), the actual
-      position (alpha) and the physical closure (alpha at or below the closed
-      threshold, 0.001).
-    * A fault may change the actual opening (a ceiling or a floor) but not the command, the stroke
-      or the actuator position: the actuator keeps moving as commanded and the actual opening is
-      the result of the fault applied to that motion.
-    * The position is a pure function of time between orders, so the engine can
-      evaluate it at any stage time without stepping the actuator.
+The opening moves linearly at 1 / stroke per second towards its target, and a new order during a
+stroke starts from the actual position at that instant. The commanded state, the actual position and
+the physical closure (an opening of 0.001 or less) are kept apart. A fault may change the actual
+opening through a ceiling or a floor, but not the command, the stroke or the actuator position.
+Between orders the position is a pure function of time.
 
-Source: ``docs/design_decisions.md`` D4 (version 2.0), D19 and D74.
+See D19 and D74.
 """
 
 from __future__ import annotations
@@ -57,8 +48,9 @@ class Valve:
         return alpha if self.fault is None else self.fault.apply(alpha, t)
 
     def contact_alpha(self, t: float) -> float | None:
-        """Stem position the open contact reads when a fault hides it from the opening that sets
-        the loss (an obstruction, decision D74); None when the two are the same."""
+        """Stem position the open contact reads when a fault hides it from the opening that sets the
+        loss; None when the two are the same (D74).
+        """
         if self.fault is not None and self.fault.hides_position:
             return self.motion_alpha(t)
         return None

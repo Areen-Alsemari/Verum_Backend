@@ -1,45 +1,19 @@
 """Path-dynamics engine: rigid-column flows and tank volumes over a steady network.
 
-Inputs: a scenario, the lineup table, the hydraulic model, the engine configuration
-and a truth sink. Outputs: truth rows written to the sink and an ``EpisodeOutcome``.
-Key assumptions:
-    * State: tank volumes, valve actuators, the receipt and delivery path flows, the
-      running pump (fixed speed, one pump, no start or trip: decision D6), protection
-      machines and the operations controller. Pipes are full and incompressible, so pipe
-      inventory is constant; the network ledger balances boundary fluxes against tank
-      volumes only.
-    * The loop advances in steps of at most one time step (D17). Events (commands,
-      the end of a valve stroke, a valve crossing the closed threshold, a protection
-      threshold crossing) end a step exactly. At one time the order is: commands,
-      protection update, valve changes, then the solver step.
-    * A single receipt path and a single delivery path are rigid columns (decision D22):
-      their flows are states, integrated together with the tank volumes by an implicit
-      method (``verum.sim.dynamics``); the steady network solve then runs at the imposed
-      flows and the inertial head offsets are added. The 10 barg cap limits the receipt
-      drive head, so under the cap or a closing valve the flow decays by inertia.
-    * A receipt set-point step changes dQ/dt at the command while the flow is continuous; the
-      post-command hydraulics are solved again with the new rate, so the post-event rows carry
-      the jump of the inertial offsets (decision D22).
-    * A branched lineup (two receipt branches or two suction branches open) has no single
-      column. The step falls back to the Phase 3 scheme: Heun on the tank volumes with two
-      steady solves, the receipt flow first order, the cap applied in the solve. Such an
-      interval is a validity window (decision D25).
-    * The downstream factor f_d (decision D23) multiplies the boundary-law coefficient and
-      is stored in the hidden truth. The atmosphere stratum (decision D24) sets the
-      atmosphere of the solves and the pumping-minimum table.
-    * A protection threshold crossing inside a step is located by root-finding on the
-      interpolated tank volume and the step is shortened to end on it (decision D26).
-    * Gates run during the whole episode: SG0 (pumping-minimum level and the phase and
-      NPSH screen while a pump runs), SG1 (mass ledger), SG2 (solver or pump-domain
-      failure) and SG3 (healthy envelope, if the scenario asks for it). A failure
-      stops the run with a rejection record; nothing is clipped or truncated.
-    * Protection signals: the alarm uses the process level (the true level in this phase,
-      labelled as such); the high-high trip uses only the independent detector (D33).
-    * A checkpoint is a deep copy of the state (the immutable last solve is shared); a
-      restarted engine continues bit for bit.
+- State: tank volumes, valve actuators, the receipt and delivery path flows, the running pump (fixed
+  speed, no start or trip), the protection machines and the operations controller. Pipes are full
+  and incompressible.
+- A step is at most one time step long, and events (commands, the end of a valve stroke, a
+  protection threshold crossing) end a step exactly.
+- A receipt and a delivery path are rigid columns integrated together with the tank volumes. The
+  steady solve then runs at the imposed flows and the inertial head offsets are added.
+- A branched lineup has no single column, so it falls back to a simpler scheme and counts as a
+  validity window.
+- Gates run during the whole episode, and a failure stops the run with a rejection record. Nothing
+  is clipped or truncated.
+- A checkpoint is a deep copy of the state, and a restarted engine continues bit for bit.
 
-Source: ``docs/design_decisions.md`` D3, D6, D17 to D26;
-``revised/01_facility_tanks_topology.md`` sections 6.2 and 6.3.
+See D6 and D17 to D26.
 """
 
 from __future__ import annotations
@@ -165,8 +139,9 @@ class Rejected(Exception):
 
 @dataclass(frozen=True)
 class LevelChain:
-    """The level transmitter of a tank as the alarm sees it (decision D40): the specification
-    and the draws of the observation chain, which uses the same streams."""
+    """The level transmitter of a tank as the alarm sees it: the specification and the draws of the
+    observation chain, which uses the same streams.
+    """
 
     spec: TagSpec
     sigma: float
@@ -570,7 +545,7 @@ class Engine:
         return () if self.faults is None else self.faults.leaks(t)
 
     def _layout(self, path: LumpedPath, t: float) -> LeakLayout | None:
-        """Where the frozen leak flows sit on a column (decision D60, ``docs/fault_models.md``)."""
+        """Where the frozen leak flows sit on a column."""
         st = self.state
         if not st.leak_flows:
             return None
@@ -645,11 +620,11 @@ class Engine:
     def _regime_gate(self, value: float) -> str | None:
         """Why a regime value is not acceptable now, or None.
 
-        Decision D73: the pump must stay inside its curve with a margin at the smallest total
-        factor of the regime, pass the phase and NPSH screen there, and keep the minimum stable
-        flow of decision D49 at the largest factor, with the delivering tank lowered by an
-        allowance for the level change over the ramp. Without a running pump the factor has no
-        effect on the flow and any value passes."""
+        The pump must stay inside its curve with a margin at the smallest total factor of the
+        regime, pass the phase and NPSH screen there, and keep the minimum stable flow at the
+        largest factor, with the delivering tank lowered by an allowance for the level change over
+        the ramp. Without a running pump the factor has no effect and any value passes (D73).
+        """
         st, cfg = self.state, self.cfg
         tank = next(
             (
@@ -994,8 +969,9 @@ class Engine:
         self._push(st, t + lt.spec.comms_delay_s, RANK_DETECTOR, "lt_visible", (tank, value))
 
     def _dense_needed(self, t0: float, t1: float) -> bool:
-        """Decisions D34 and D59: 0.1 s rows while a valve moves or inside a window of a transient
-        kind; the slow windows (a dead leg, a branched lineup, a closed path) do not need them."""
+        """Whether 0.1 s rows are needed: while a valve moves or inside a window of a transient
+        kind. The slow windows do not need them (D34, D59).
+        """
         st, tm = self.state, 0.5 * (t0 + t1)
         if any(v.is_moving(tm) for v in st.valves.values()):
             return True
@@ -1217,24 +1193,30 @@ class Engine:
             self._write_window(w)
 
     def _stroke_carries_flow(self, key: str, flow_m3h: float) -> bool:
-        """Decision D58: a stroke is judged only if the flow is at least a fraction of the design
-        flow of its path (receipt flow, or the pump duty flow). The flow is read at the start of
-        an opening stroke and at the instant the opening falls to 0.2 for a closing stroke."""
+        """Whether a valve stroke is judged, which needs a flow of at least a fraction of the design
+        flow of its path.
+
+        The flow is read at the start of an opening stroke and at the instant the opening falls to
+        0.2 for a closing stroke (D58).
+        """
         design = self.model.config[
             "receipt_flow_m3h" if key == "receipt" else "pump_reference_flow_m3h"
         ]
         return flow_m3h >= self.cfg["stroke_window_min_flow_fraction"] * design
 
     def _factor(self, kind: str) -> float:
-        """Decision D53: the minimum ratio of duration to round trip of a valve stroke is its own
-        factor; a set-point step, a flow collapse and a path closure keep the factor of D22."""
+        """Minimum ratio of duration to wave round trip: a valve stroke has its own factor, and a
+        set-point step, a flow collapse and a path closure keep the factor of the rigid-column model
+        (D22, D53).
+        """
         name = vd.STROKE_FACTOR if kind == "valve_stroke" else "wave_criterion_factor"
         return self.cfg[name]
 
     def _update_dead_leg_windows(self, result: SteadyResult, t: float) -> None:
-        """Decision D54: a window opens when an isolated segment holds a pressure more than the
-        opening distance from its target and closes when it is within the closing distance; a
-        segment that is no longer isolated closes its window."""
+        """Open a dead-leg window when an isolated segment holds a pressure farther from its target
+        than the opening distance, and close it within the closing distance or when the segment is
+        no longer isolated (D54).
+        """
         st = self.state
         rho_g = self.model.rho * self.model.g
         opening = self.cfg["dead_leg_window_open_pa"] / rho_g
@@ -1486,10 +1468,12 @@ class Engine:
         self._check_envelope(t)
 
     def _refresh_rates(self, t: float) -> None:
-        """Decision D22: a set-point step changes dQ/dt at once while the flow is continuous, so
-        the inertial head offsets, and with them the pressures, jump at the command. The steady
-        solve of the last step carries the rate before the command; it is solved again with the
-        rate after it (the post-event rows and the next step start from that solve)."""
+        """Solve the last step again with the rate after a set-point command.
+
+        A set-point step changes dQ/dt at once while the flow is continuous, so the inertial head
+        offsets and the pressures jump at the command. The post-event rows and the next step start
+        from the new solve (D22).
+        """
         st = self.state
         if not st.rates_stale:
             return
@@ -1804,8 +1788,9 @@ class Engine:
     def _defer_closing_stroke(
         self, valve: Valve, duration: float, t: float, key: str, edges: tuple[str, ...]
     ) -> None:
-        """Decision D58 version 2: a closing stroke is judged on the flow at the instant the
-        opening falls to 0.2, which is when the surge it can cause is set."""
+        """Judge a closing stroke at the instant the opening falls to 0.2, which is when the surge
+        it can cause is set (D58).
+        """
         st = self.state
         st.events_evaluated += 1
         t_eval = t + max(valve.position0 - STROKE_JUDGED_AT, 0.0) * valve.stroke_s

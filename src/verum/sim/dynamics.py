@@ -1,34 +1,14 @@
 """Rigid-column flow dynamics of the receipt and delivery paths, integrated implicitly.
 
-Inputs: a receipt column and a delivery column (each optional), the valve actuators, the
-state ``[Q_r, Q_d, C_r, C_d]`` (path flows in m3/s and the volumes that have passed) and
-a time interval. Outputs: the state at the end of the interval, the flow rates of change
-there, and a dense interpolant over the interval.
-Key assumptions:
-    * Decision D22: ``dQ/dt = (H_drive - H_loss(Q)) / I`` with ``I = sum L_i / (g A_i)``.
-      Receipt: ``H_drive = min(H_demand, H_cap)`` and ``H_demand = H_loss(Q) +
-      I (Q_set - Q) / tau_c``, so that ``dQ/dt = min[(Q_set - Q) / tau_c,
-      (H_cap - H_source(Q)) / I]`` where ``H_source = h_tank + H_loss(Q)``. Delivery:
-      ``H_drive = h_tank + pump head(Q) - h_reservoir - c f_d (Q/Q_ref)^2``; the check
-      valve keeps the flow from reversing.
-    * The system is stiff when a valve nearly closes (the loss slope is large), so it is
-      integrated with Radau IIA (implicit, order 5) with tolerances from the configuration.
-      The volumes ``C_r`` and ``C_d`` are states of the same system, so the tank volumes
-      and the ledger fluxes are the same numbers and the ledger closes by construction.
-    * Tank levels inside the interval follow from the volumes with the local tank area
-      (the geometry is piecewise linear); the valve openings are functions of time.
-    * Leaks (decision D60, ``docs/fault_models.md``): the state is the source flow of the receipt
-      column and the pump flow of the delivery column; the losses use the flow of each edge from the
-      frozen leak flows of the layout, the boundary law uses the boundary flow, and the volumes
-      that have passed are the flows into and out of the tank, ``dC_r = Q_r - leaks`` and
-      ``dC_d = Q_d + suction leaks``. The inertial term keeps the single dQ/dt of D22.
-    * Profile v2 (decision D73) gives the receipt column a set-point that is a function of time
-      (the nominal set-point with a small clipped deviation); without it the set-point is the
-      constant of the column.
-    * Only the lumped paths are used here. The steady network solve is called afterwards
-      for the node heads and pressures at the imposed flows.
+The flow of a path obeys dQ/dt = (H_drive - H_loss(Q)) / I with the inertance I = sum L_i / (g A_i).
+On receipt the drive head is capped, and on delivery it is the tank head plus the pump head less the
+reservoir head and the boundary law, with a check valve that prevents reversal. The system is stiff
+when a valve nearly closes, so it is integrated with Radau IIA. The volumes that have passed are
+states of the same system, so the tank volumes and the ledger fluxes are the same numbers and the
+ledger closes by construction. Leaks are carried as frozen flows on each edge. Only the lumped paths
+are used here, and the steady network solve runs afterwards for node heads and pressures.
 
-Source: ``docs/design_decisions.md`` D22; ``revised/02_hydraulic_model.md`` section 3.
+See D22, D60 and D73.
 """
 
 from __future__ import annotations

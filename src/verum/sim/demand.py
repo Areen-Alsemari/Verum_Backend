@@ -1,18 +1,12 @@
 """Downstream demand factor: an Ornstein-Uhlenbeck process in the logarithm.
 
-Inputs: the master seed, the duration, the process parameters and, optionally, the
-named stream. Outputs: ``f_d`` at any time, the factor that multiplies the
-boundary-law coefficient of the delivery (decision D23).
-Key assumptions:
-    * ``log f_d`` is stationary with standard deviation ``sigma`` and correlation time
-      ``tau``; it is drawn on the grid of one second with the exact transition
-      ``X(k+1) = phi X(k) + sigma sqrt(1 - phi^2) xi``, ``phi = exp(-dt / tau)``.
-    * The draws come from the named stream ``demand`` only. The whole path is drawn when
-      the process is created, so a restart reproduces it and no other stream is touched.
-    * Between grid points ``log f_d`` is linear; the factor is clipped to
-      ``[f_min, f_max]``. Without a demand process the factor is exactly one.
+The factor multiplies the boundary-law coefficient of the delivery. Its logarithm is stationary with
+standard deviation sigma and correlation time tau, drawn on a one-second grid with the exact
+transition, and is linear between grid points. The factor is clipped to a configured range and is
+exactly one without a demand process. The whole path is drawn from the named stream "demand" when
+the process is created, so a restart reproduces it and no other stream is touched.
 
-Source: ``docs/design_decisions.md`` D23.
+See D23.
 """
 
 from __future__ import annotations

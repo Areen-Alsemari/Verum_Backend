@@ -1,27 +1,13 @@
 """Healthy-variability profile v2: demand regimes and a receipt set-point process.
 
-Inputs: the master seed, the configuration (decision D73) and, for each regime, a gate callback
-that reports why a candidate regime value is not acceptable at the present state. Outputs: the
-regime-valued downstream factor, the receipt set-point deviation, and the records of every regime
-drawn and every candidate redrawn.
-Key assumptions:
-    * A regime holds a log-uniform factor for a dwell drawn uniformly, and is entered by a linear
-      ramp from the previous value; the first regime has no ramp. The downstream factor is the
-      regime value times the Ornstein-Uhlenbeck factor of decision D23, floored at the lower bound
-      that keeps the pump inside its curve with a margin (``tools/regime_bound.py``).
-    * Regime ``i`` is drawn from the named stream ``demand_regime/i``, all of its candidates in
-      order, so the draw is a function of the seed and the index only and no generator state has
-      to be saved in a checkpoint; the accepted regimes and the redraws live in the engine state.
-    * A regime is drawn when time first reaches the end of the previous plateau, and the gate is
-      asked at the state of that moment with the delivering tank lowered by an allowance that
-      covers the level change over the ramp.
-    * The receipt set-point deviation is an Ornstein-Uhlenbeck process on the named stream
-      ``receipt_setpoint``, a fraction of the set-point, clipped; it is drawn for the whole
-      duration when the engine is created. The nominal set-points are screened for headroom at
-      the largest clipped value before the run.
-    * ``off`` and ``v1`` are the profiles that existed before this module; they do not use it.
+A regime holds a log-uniform factor for a uniformly drawn dwell and is entered by a linear ramp from
+the previous value. The downstream factor is the regime value times the Ornstein-Uhlenbeck factor of
+D23, floored at the bound that keeps the pump inside its curve with a margin. Regime i is drawn from
+its own named stream, so the draw depends only on the seed and the index and no generator state is
+saved in a checkpoint. The receipt set-point deviation is an Ornstein-Uhlenbeck process on its own
+stream, clipped, and drawn for the whole duration when the engine is created.
 
-Source: ``docs/design_decisions.md`` D23, D73.
+See D73.
 """
 
 from __future__ import annotations

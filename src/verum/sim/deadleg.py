@@ -1,26 +1,14 @@
-"""Pressure of segments that carry no flow (decision D39).
+"""Pressure of segments that carry no flow.
 
-Inputs: the topology, the valves that are not closed, a steady result, the tank heads, the
-reservoir head, the heads held from the last committed step and the time constant.
-Outputs: a total head for every edge of the network, determined by the solve or not.
-Key assumptions:
-    * An edge that the steady solve gave end pressures is determined; its head is the mean of
-      the heads at its ends.
-    * Every other edge is a dead leg. Dead legs are joined into segments through nodes that
-      are not barriers (a closed valve, a check valve, a pump). A segment that touches a tank
-      nozzle takes that tank's head, one that touches the distribution boundary takes the
-      reservoir head, both without delay.
-    * An isolated segment holds one head (the mean of its edges' last determined heads) and
-      relaxes to the
-      head across its closed isolation valve (valves first, then check valves and pumps, in
-      name order; a neighbour that is itself a dead leg contributes its own head) with
-      ``H = H_target + (H_0 - H_target) exp(-dt / tau)``. A segment with no neighbour at all
-      takes zero gauge pressure at its elevation. No edge is left undetermined.
-    * The distance between the head an isolated segment holds and its target is reported for the
-      window of decision D54 (``dead_leg_unvalidated``).
-    * Trapped-liquid thermal and compressibility effects are outside the model.
+An edge that the steady solve gave end pressures is determined, and its head is the mean of its end
+heads. Every other edge is a dead leg. Dead legs join into segments through nodes that are not
+barriers (a closed valve, a check valve, a pump). A segment that touches a tank takes that tank's
+head, and one that touches the distribution boundary takes the reservoir head. An isolated segment
+holds its last head and relaxes towards the head across its closed isolation valve with time
+constant tau, and one with no neighbour takes zero gauge pressure at its elevation, so no edge is
+left undetermined. Trapped-liquid thermal and compressibility effects are outside the model.
 
-Source: ``docs/design_decisions.md`` D39, D54.
+See D39 and D54.
 """
 
 from __future__ import annotations
@@ -102,12 +90,12 @@ def edge_heads(
     tau_s: float,
     gaps: dict[str, float] | None = None,
 ) -> tuple[dict[str, float], frozenset[str]]:
-    """Total head of every edge and the set of dead edges.
+    """Total head of every edge, and the set of dead edges.
 
-    Determined edges keep the mean of their end heads. An edge that was determined at the last
-    committed step and is dead now is isolated at this instant: it keeps its held head. If
-    ``gaps`` is given it receives, for each isolated segment (key: its edge ids joined by ``+``),
-    the distance in metres of head between the pressure it holds and its target (decision D54)."""
+    An edge that was determined at the last committed step and is dead now is isolated at this
+    instant and keeps its held head. If a gaps mapping is given it receives, for each isolated
+    segment, the distance in metres of head between the held pressure and its target.
+    """
     det = _determined_heads(model, result)
     heads = {eid: 0.5 * (a + b) for eid, (a, b) in det.items()}
     dead = [e for e in model.topology.edges if e.edge_id not in det]

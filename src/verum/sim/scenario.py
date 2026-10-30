@@ -1,24 +1,13 @@
 """Scenario files: initial state, schedule and episode options.
 
-Inputs: ``config/scenarios/<id>.json``. Outputs: a validated ``Scenario``.
-Key assumptions:
-    * The initial valve and pump state is the named lineup mode with every open valve
-      fully open and every pump of the mode running (decision D6: an episode starts
-      with a pump running).
-    * ``healthy_envelope`` turns on gate SG3 (levels 1.8 to 12 m, protection NORMAL).
-    * The schedule is passed unchanged to the operations controller; this module
-      only checks its shape.
-    * The seed is recorded in the episode. The only random draw is the downstream demand
-      process (decision D23), on the named stream ``demand``, and only if the scenario
-      switches ``demand_process`` on; profile ``v2`` (decision D73) adds the regime stream
-      ``demand_regime`` and the stream ``receipt_setpoint``. ``variability_profile`` is ``off``,
-      ``v1`` or ``v2``; a file without it is ``v1`` with the demand process and ``off`` without.
-    * ``volatility_class`` is ``RVP_9_0`` (baseline), ``RVP_9_5`` or ``RVP10`` (decision D46).
-    * ``atmosphere_stratum`` is ``coastal`` or ``inland`` (decision D24). Receipt
-      set-points are chosen from 0, 300, 400, 500 and 600 m3/h (decision D23).
+The initial valve and pump state is the named lineup mode with every open valve fully open and every
+pump of the mode running. The schedule is passed unchanged to the operations controller, and this
+module only checks its shape. The only random draws are the downstream demand process and, in
+profile v2, the regime and receipt set-point streams. The variability profile is off, v1 or v2, the
+volatility class is RVP_9_0, RVP_9_5 or RVP10, and the atmosphere stratum is coastal or inland.
+Receipt set-points are chosen from 0, 300, 400, 500 and 600 m3/h.
 
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2;
-``docs/design_decisions.md`` D6, D11, D21, D23, D24, D73.
+See D6, D23, D24, D46 and D73.
 """
 
 from __future__ import annotations
