@@ -141,6 +141,32 @@ and the contact state stay separate records (the valve row carries `commanded_op
 The states that result (two suction branches open, a receipt into two tanks) are not suppressed.
 The engine's quasi-steady branched scheme and its windows apply, and the gates decide.
 
+## Representable range (Phase 6b)
+
+`tools/representable_range.py` applies each fault type to each eligible asset in a lineup in which
+the asset acts, at the least and the most severe end of its range (onset 600 s, ramp 30 s, 1800 s
+observed, 25 C, coastal, `RVP_9_0`, reference fittings, reference levels 9, 7 and 5 m), and finds by
+bisection the largest severity that passes every gate of the engine. The full tables are in
+`local/results/representable_range.md`; the summary is the following. A candidate beyond the limit
+is written as `simulation_rejected` with its gate and is never labelled healthy (D66).
+
+| fault type | range tried | largest passing severity | rejected beyond, and the gate |
+| --- | --- | --- | --- |
+| leak (area) | 2e-6 to 1e-3 m2 | 1e-3 m2 on every edge that carries a determined pressure in the lineup | on an edge that does not (for example the pump B branch while pump A delivers, the receipt edges of a delivery) every severity is rejected by SGF `leak_edge`; no leak is ever labelled on an idle edge |
+| restriction, outlet or pump suction valve (closure fraction) | 0.10 to 0.85 | 0.7533 for `XV-S101`, `XV-PAI` and `XV-PBI`, 0.7196 for `XV-S102`, 0.6662 for `XV-S103` | SG0 `phase_validity_status` (the suction loss takes the NPSH margin below the screen) |
+| restriction, pump discharge or receipt inlet valve | 0.10 to 0.85 | 0.85 for `XV-PAO`, `XV-PBO`, `XV-R101`, `XV-R102`, `XV-R103` | none in the range |
+| pump head loss fraction | 0.02 to 0.30 | 0.30 for `P-101A` and `P-101B` | none in the range |
+| misrouting (a), forced open | magnitude 1 | passes for `XV-PBI`, `XV-R101`, `XV-R102`, `XV-R103`, `XV-S101`, `XV-S102`, `XV-S103` in the lineups tried | `XV-PBO` forced open in `DELIVER_101_A`: SG2 `steady_solve` (no steady state); rejected |
+| misrouting (b), stuck opening | 0.02 down to 0.005 | 0.005 for `XV-R101` and `XV-R102` in `RECEIVE_101_102` | none; every other valve is not eligible (D75) |
+| sensor bias, drift, stuck-at | 0.002 to 0.05 of span | the whole range | no gate applies; the fault acts only in the sensor chain |
+
+Consequence: a severe restriction of a valve on the suction side of the duty pump (more than 0.67 to
+0.75 closed, according to the tank) is not representable, because the rigid-column model with the
+NPSH screen of D7 rejects the run; such a fault is outside the dataset and not a weak signal. The
+limits depend on the level, the temperature and the stratum of the run (the NPSH margin), and are
+those of the conditions listed; the bisection assumes that a severity that passes implies that every
+smaller one passes, and the end points of the 106 cases agree with it.
+
 ## Eligibility and rejection (D66)
 
 Checked before the run, as a validator of the specification record: the asset exists and has the type

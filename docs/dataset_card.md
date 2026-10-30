@@ -71,6 +71,12 @@ against the paper; that is a check of the numerical method for those pipes, not 
 
 ## Known limitations
 
+- Severe restrictions of a valve on the suction side of the duty pump are not representable. A closure
+  above about 0.67 (`XV-S103`), 0.72 (`XV-S102`) or 0.75 (`XV-S101`, `XV-PAI`, `XV-PBI`) of the
+  opening is rejected by the phase and NPSH screen, and a forced opening of `XV-PBO` while pump A
+  delivers has no steady state; such candidates are written as `simulation_rejected` and are never
+  labelled healthy (decisions D66 and D74; `docs/fault_models.md`, "Representable range"). A leak on
+  an edge that carries no determined pressure in the lineup is rejected in the same way.
 - No wave dynamics in the episodes; peak surge pressure and sub-second events are not resolved.
   A standalone transient engine exists (`docs/transient_engine.md`); it is not integrated, it does
   not change any tier (D47) and it has no cavitation model. The rigid-column engine under-predicts
