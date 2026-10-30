@@ -17,7 +17,7 @@ version superseded; records are not edited in place.
   *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its
   implementation. They are not part of the decision.
-- Log version 11 (2026-10-29). Records are version 1.0 unless stated. A record
+- Log version 12 (2026-10-30). Records are version 1.0 unless stated. A record
   with a later version states the version it supersedes and keeps the earlier
   version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under
@@ -72,13 +72,18 @@ version superseded; records are not edited in place.
 | D43 | First-order method of characteristics | DESIGN | 1.0 |
 | D44 | Boundaries of the transient engine | DESIGN | 1.0 |
 | D45 | No cavitation model | DESIGN | 1.0 |
-| D46 | Volatility classes | SIM | 3.0 |
+| D46 | Volatility classes | SIM | 4.0 (supersedes 3.0) |
 | D47 | The transient engine does not change tiers | DESIGN | 1.0 |
 | D48 | Dataset-card limitations | DESIGN | 1.0 |
 | D49 | Minimum stable flow window deferred | DESIGN | 1.0 |
 | D50 | Further sensitivity sweeps | DESIGN | 1.0 |
 | D51 | Grid of the pumping-minimum tables | DESIGN | 1.0 |
 | D52 | Production baseline NPSH3 coefficient | SIM | 1.0 |
+| D53 | Validity-window factors | DESIGN | 1.0 |
+| D54 | Dead-leg unvalidated window | DESIGN | 1.0 |
+| D55 | Usable interval after a phase_invalid window | DESIGN | 1.0 |
+| D56 | Published-experiment rungs R12 and R13 | DESIGN | 1.0 |
+| D57 | Study and table scripts in a tracked directory | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -968,7 +973,26 @@ version superseded; records are not edited in place.
 
 ## D46 - Volatility classes
 
-- **Version:** 3.0 (2026-10-29)  **Status:** SIM
+- **Version:** 4.0 (2026-10-30)  **Status:** SIM  **Supersedes:** 3.0
+- **Decision.** Three volatility classes, as in version 3.0: `EPA_GENERIC_MOTOR_GASOLINE_RVP10` (RVP 10 psi) is resolved and is the stress class; `RVP_9_0` (baseline) and `RVP_9_5` (upper bracket) are derived, provisional, evidence SIM, with the AP-42 gasoline correlation (S = 3, B in degrees Rankine, P_v (psia) = exp(A - B/T_R)). The verification gate stands as specified (constants within 0.1 percent, true vapor pressures within 2 percent, a failed gate leaves the derived classes unresolved).
+- **Deviation record.** Version 3.0 named eight tabulated classes (RVP 7, 7.8, 8.3, 10, 11.5, 13, 13.5, 15). The edition fetched (June 2026 edition of the chapter, Table 7.1-2 and the worked example of Section 7.1.4) tabulates three gasoline classes, so the gate ran on the points available and not on the eight; RVP 7.8, 8.3, 11.5, 13.5 and 15 do not appear in it and were not checked. Maximum relative deviation of the correlation from the tabulated point:
+
+  | class | tabulated point | constants A, B | true vapor pressure |
+  | --- | --- | --- | --- |
+  | RVP 13 | Table 7.1-2, 60 F | 2.8e-5 | 0.755 percent |
+  | RVP 10 | Table 7.1-2, 60 F | 5.1e-6 | 0.274 percent |
+  | RVP 7 | Table 7.1-2, 60 F | 1.4e-5 | 0.438 percent |
+  | RVP 12 | worked example, 528.37 R | 1.5e-5 | 0.010 percent |
+  | RVP 7 | worked example, 528.37 R | 1.4e-5 | 0.045 percent |
+
+  All five points pass. The bracketing check requested for RVP 8.3 cannot be made, because RVP 8.3 is not tabulated. In its place a weaker check is made with the classes that are tabulated: at 25, 35, 40 and 45 C the true vapor pressures of `RVP_9_0` and `RVP_9_5` lie between those of the tabulated RVP 7 and RVP 10 constants, and `RVP_9_0` lies below `RVP_9_5`. That check is necessary and not sufficient. The derived classes stay provisional (status provisional, evidence SIM); nothing in the dataset presents them as validated.
+- **Reason.** Gulf 95 RON export specifications and neighbouring specifications cap RVP at 9 to 9.5 psi. A Saudi domestic summer limit is not established. The derived classes bracket that range.
+- **Sensitivity required.** The three classes are themselves the sweep (D51).
+- **Notes.** Expected values to check: RVP 9 about 44 kPa at 25 C and 82 kPa at 45 C (the correlation gives 43.96 and 81.93). Version 3.0 is kept below.
+
+## D46 - Volatility classes (version 3.0, superseded)
+
+- **Version:** 3.0 (2026-10-29)  **Superseded by:** 4.0  **Status:** SIM
 - **Decision.** Three volatility classes. `EPA_GENERIC_MOTOR_GASOLINE_RVP10` (RVP 10 psi) is resolved and is the stress class (the audited constants A = 11.724, B = 5237.3 degR). `RVP_9_0` (baseline) and `RVP_9_5` (upper bracket) are derived, provisional, evidence SIM, with the AP-42 gasoline correlation: A = 15.64 - 1.854 S^0.5 - (0.8742 - 0.3280 S^0.5) ln(RVP) and B = 8742 - 1042 S^0.5 - (1049 - 179.4 S^0.5) ln(RVP), S = 3, RVP in psi, B in degrees Rankine, P_v (psia) = exp(A - B/T_R). Verification gate, run before any derived class is used: the formula must reproduce A = 11.724 and B = 5237.3 for RVP 10 within 0.1 percent and must agree within 2 percent with the tabulated true vapor pressures of Table 7.1-2 of the EPA AP-42 chapter 7.1 for the tabulated classes (RVP 7, 7.8, 8.3, 10, 11.5, 13, 13.5, 15) at the tabulated temperatures. A derived class that fails the gate, or whose gate cannot be run, is an `UnresolvedParameter` and raises when selected; the formula is never adjusted to pass.
 - **Reason.** Gulf 95 RON export specifications and neighbouring specifications cap RVP at 9 to 9.5 psi. A Saudi domestic summer limit is not established. The derived classes bracket that range.
 - **Sensitivity required.** The three classes are themselves the sweep (D51).
@@ -1021,6 +1045,46 @@ version superseded; records are not edited in place.
 - **Reason.** One coefficient keeps the production tables single-valued (D35).
 - **Sensitivity required.** 2.5 and 6 m (D50).
 - **Notes.** Restates D35 for the production baseline.
+
+## D53 - Validity-window factors
+
+- **Version:** 1.0 (2026-10-30)  **Status:** DESIGN  **Refines:** D22
+- **Decision.** The ratio of event duration to the wave round trip of the path (D22) has a separate minimum for each kind of window: `valve_stroke` 25, `receipt_setpoint` 10. A valve stroke, and the flow collapse and path closure that a stroke causes, is valid for the rigid column only if the stroke lasts at least 25 round trips; a receipt set-point step is valid at 10. The receipt set-point factor stays at 10 on the result of the Phase 5b comparison (step 1): after the correction of the post-event row, the rigid-column pressure at the start of E002 agrees with the mean of the transient-engine pressure within 5 percent of the dip `Lambda_down |dQ/dt|` at 1, 2 and 4 s after a step down, a step up and a start-up, at a duration of four controller time constants (8 s, ratio 22).
+- **Reason.** Comparison T2 of Phase 5 (one receipt path, one valve law, the capped source): at a ratio of 20 (7.2 s) the rigid-column peak is 8.3 percent from the transient peak before the closure, at 27.7 (10 s) 2.5 percent, at 10 (3.6 s) 39 percent; the data cannot separate thresholds between 20 and 27, so 25 is the round number between the failing and the passing case. It rests on one path, one valve law and one source and is provisional.
+- **Sensitivity required.** The valve-stroke factor 20, 25 and 30 in the extended study (D42), replacing the 5, 10 and 20 of D38.
+- **Notes.** The factor of the configuration (`wave_criterion_factor`, 10) is the set-point factor; the valve-stroke factor is a new parameter. The oscillation of the transient solution about the rigid-column mean (period 1.0 s in the network response) is not represented by the rigid column at any ratio of this table.
+
+## D54 - Dead-leg unvalidated window
+
+- **Version:** 1.0 (2026-10-30)  **Status:** DESIGN  **Refines:** D39, D25
+- **Decision.** A hidden validity window of kind `dead_leg_unvalidated` opens for an isolated segment (D39) when the pressure it holds differs from its target (the head across its closed isolation valve to which D39 relaxes it) by more than 0.5 bar, and closes when the difference is below 0.05 bar. The window is written like the others (hidden `validity_windows` and the episode record). The tier of an episode that lists it follows D37 (`restricted_benchmark`).
+- **Reason.** D39 holds an isolated segment at its last determined head and relaxes it with a selected time constant; neither the held value nor the relaxation is validated, and a large difference between the held value and the target is where the choice matters most. The two thresholds are a hysteresis so that a segment near 0.5 bar does not open and close a window at every step.
+- **Sensitivity required.** The dead-leg time constant 10, 60 and 300 s (D42), and the thresholds 0.25, 0.5 and 1 bar for the opening.
+- **Notes.** The thresholds are unsourced selections.
+
+## D55 - Usable interval after a phase_invalid window
+
+- **Version:** 1.0 (2026-10-30)  **Status:** DESIGN  **Refines:** D45
+- **Decision.** When a `phase_invalid` window opens in the transient engine during a closure, everything from its start to the end of that transient is excluded from usable data. The transient ends when the heads at all points have settled to within 0.05 bar of the heads they have at the end of the run, measured after the last command. Results quoted from a run with such a window are the values before the window opened, and the rigid-column values at the same instants.
+- **Reason.** The engine has no vapor model (D45); after the first node reaches the vapor pressure the numbers describe a liquid that does not exist, and the oscillation that follows is not a property of the system.
+- **Sensitivity required.** None.
+- **Notes.** In the comparison tables the values at the instant of closure are labelled unusable when a window opens before it.
+
+## D56 - Published-experiment rungs R12 and R13
+
+- **Version:** 1.0 (2026-10-30)  **Status:** DESIGN
+- **Decision.** Two rungs are added to the transient verification ladder from the water-hammer experiments of Jensen et al. 2018 (Fluids 3(3) 64): R12 compares the engine with experiments 1 to 3 (single phase, no cavitation expected) and R13 with the first pressure peak of experiments 5 and 6, up to the first `phase_invalid` window. The experimental parameters are kept in a test-data file with their provenance. The closure exponent of the valve law is a value fitted by the authors, not a measurement, and the file says so. The test-only valve follows the authors' law `tau_v = 1 - (t/tc)^m` and `Q = Q0 tau_v sqrt(H/H0)`; the wave speed is set directly and friction is quasi-steady Darcy-Weisbach. The tolerances are fixed in the test docstring before the run: against the paper's quasi-steady model, maximum 1 percent, third peak 2 percent, tenth peak 3 percent, frequency 1 percent; against measurement, first peak 3.5 percent for experiments 1 to 3 and 5 percent for R13; later peaks and frequency are reported and not tested, with the overestimate of quasi-steady friction stated as a known limitation. A tolerance that is missed is reported and investigated and is not widened.
+- **Reason.** Until now the engine was checked against closed forms and other codes only; this is its first comparison with measurement, and the first quantity at risk is the pressure rise at the valve.
+- **Sensitivity required.** None.
+- **Notes.** A comparison with experiments is validation of the numerical method for those pipes, not of the facility model.
+
+## D57 - Study and table scripts in a tracked directory
+
+- **Version:** 1.0 (2026-10-30)  **Status:** DESIGN
+- **Decision.** The scripts that compute the studies and tables the documents quote (the D42 study, the pumping-minimum and stratum tables, the transient scenarios T1 to T4, the experiment comparisons) live in `tools/`, which is tracked. Each has a module docstring that says what it computes and which decision it serves. Scripts that need the full audited package or an isolated environment stay in `local/checks/`. Results and reports stay in `local/`.
+- **Reason.** A table in a document that cannot be regenerated from tracked files cannot be checked.
+- **Sensitivity required.** None.
+- **Notes.** D51 and the documents that named `local/tools/` now name `tools/`.
 
 ## Episode profile
 

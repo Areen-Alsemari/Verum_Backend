@@ -15,7 +15,11 @@ Key assumptions:
 Independence: the tabulated values are transcribed from the EPA document; the formula and its
 evaluation are recomputed here by hand arithmetic (natural logarithm of 10 is 2.302585).
 
-Source: ``docs/design_decisions.md`` D46 version 3.
+Bracketing (D46 version 4): RVP 8.3 is not tabulated in the edition fetched, so the derived classes
+are bracketed by the tabulated RVP 7 and RVP 10 constants at 25, 35, 40 and 45 C. This is a
+necessary check and not a validation of the derived classes.
+
+Source: ``docs/design_decisions.md`` D46 versions 3 and 4.
 """
 
 from __future__ import annotations
@@ -67,6 +71,24 @@ def test_the_classes_are_ordered_and_the_legacy_name_is_the_rvp_10_class() -> No
         assert p[2] == vapor_pressure_pa(
             "EPA_GENERIC_RVP10_REFERENCE", t, model.config, model.fluid
         )
+
+
+def test_derived_classes_lie_between_the_tabulated_rvp_7_and_rvp_10_values(root: Path) -> None:
+    gate = json.loads((root / "config" / "volatility_gate.json").read_text())
+    tab = {row["rvp_psi"]: row for row in gate["table_7_1_2"]}
+    assert 8.3 not in tab  # the class the decision asked for is not in the edition fetched
+    model = HydraulicModel.load()
+    psi_to_pa = 6894.757293
+
+    def tabulated(rvp: float, celsius: float) -> float:
+        t_rankine = 1.8 * (celsius + 273.15)
+        return psi_to_pa * math.exp(tab[rvp]["A"] - tab[rvp]["B_degR"] / t_rankine)
+
+    for t in (25.0, 35.0, 40.0, 45.0):
+        low, high = tabulated(7.0, t), tabulated(10.0, t)
+        p90 = vapor_pressure_pa("RVP_9_0", t, model.config, model.fluid)
+        p95 = vapor_pressure_pa("RVP_9_5", t, model.config, model.fluid)
+        assert low < p90 < p95 < high, t
 
 
 def test_a_failed_gate_leaves_the_derived_classes_unresolved(tmp_path: Path, root: Path) -> None:
