@@ -1,28 +1,12 @@
 """Episodes with one injected fault: equivalence at severity 0, determinism, restart, schemas,
 rejection, eligibility, sensor faults and leakage.
 
-Inputs: S0-A shortened to 2400 s with a fault set (leak, sensor bias, drift and stuck-at, and
-faults of severity 0), the healthy twin of the same seed, and direct engine runs. Outputs:
-pass/fail.
-Key assumptions:
-    * Expected values are hand-derived or compared with the healthy twin; nothing in the
-      expectation comes from the fault code under test except where a test says so.
-    * Equivalence: a fault of severity 0 changes no number, so every truth file and both
-      observation files equal the healthy episode byte for byte (the episode record, the
-      provenance and the fault files differ by design and are not compared).
-    * Sensor faults (decision D63) change the noise-free sampled series by closed forms: bias
-      ``+ b span`` from the onset, drift ``+ d span (t - t_on) / 3600``, stuck-at the first sample
-      at or after the onset; the truth files are those of the healthy twin and the other tags are
-      unchanged. Noise and dropout are the same draws, so a faulted noisy series differs from the
-      healthy one by the same offset up to one quantisation step.
-    * LK-01 to LK-12 are extended to fault episodes: no fault, severity, window, scenario or tier
-      word in the agent-visible rows or in the gateway payload; the dropout pattern and the quality
-      counts equal those of the healthy twin of the same seed.
-Independence: closed forms (bias, drift, stuck), the healthy twin, and counts; the fault code is
-the object under test.
+A shortened delivery scenario is run with a fault set and compared with the healthy twin of the same
+seed. A fault of severity 0 changes no byte, sensor faults change the noise-free series by closed
+forms, and nothing about a fault may reach the agent-visible rows or the gateway. The closed forms
+are in the "Fault episodes" section of the verification notes.
 
-Source: ``docs/design_decisions.md`` D63 to D67; ``docs/fault_models.md``;
-``revised/05_simulation_validation_dataset.md`` sections 7.2 and 9.
+See D63 to D67.
 """
 
 from __future__ import annotations
@@ -119,6 +103,9 @@ def same_bytes(a: EpisodeResult, b: EpisodeResult, names: tuple[str, ...]) -> bo
 def test_a_fault_of_severity_zero_reproduces_the_healthy_episode_bit_for_bit(
     model: HydraulicModel, healthy: EpisodeResult, tmp_path: Path, spec: FaultSpec
 ) -> None:
+    """A fault of severity 0 gives truth and observation files that equal the healthy episode byte
+    for byte. Independent: yes, because the healthy twin is the reference.
+    """
     twin = run(model, tmp_path, FaultSet((spec,)))
     assert not twin.rejected and same_bytes(healthy, twin, DATA_FILES)
 
@@ -126,12 +113,18 @@ def test_a_fault_of_severity_zero_reproduces_the_healthy_episode_bit_for_bit(
 def test_the_same_inputs_give_the_same_files(
     model: HydraulicModel, faulted: dict[str, EpisodeResult], tmp_path: Path
 ) -> None:
+    """Running the same faulted episode twice gives the same identifier and file hashes.
+    Independent: yes, because equality is the property.
+    """
     again = run(model, tmp_path, FaultSet((LEAK,)))
     assert again.episode_id == faulted["leak"].episode_id
     assert again.file_hashes == faulted["leak"].file_hashes
 
 
 def test_a_restart_inside_a_leak_ramp_continues_bit_for_bit(model: HydraulicModel) -> None:
+    """A run restarted from a checkpoint inside a leak ramp gives exactly the rows of the continuous
+    run. Independent: yes, because equality is the property.
+    """
     faults = fc.leak("E-PA3", 5e-4, 300.0, 300.0)
     sink_a = ListSink()
     a = fc.engine(model, "S0-A", 800.0, faults, sink=sink_a)
@@ -153,6 +146,9 @@ def test_a_restart_inside_a_leak_ramp_continues_bit_for_bit(model: HydraulicMode
 def test_every_written_row_and_record_of_a_leak_episode_is_valid(
     faulted: dict[str, EpisodeResult],
 ) -> None:
+    """Every row and record of a leak episode validates against its schema. Independent: yes,
+    because the schemas are separate files.
+    """
     result = faulted["leak"]
     series = load_series(
         result.directory
@@ -173,6 +169,9 @@ def test_every_written_row_and_record_of_a_leak_episode_is_valid(
 
 
 def test_a_leak_edge_row_carries_the_separate_sink(faulted: dict[str, EpisodeResult]) -> None:
+    """The edge rows of a leak carry the leak as a separate sink with its flow. Independent: yes,
+    because the expected fields are written out in the test.
+    """
     rows = read_rows(faulted["leak"].directory, "hydraulic_state")
     edge = {
         r["t_sim_s"]: r["payload"]
@@ -189,6 +188,9 @@ def test_a_leak_edge_row_carries_the_separate_sink(faulted: dict[str, EpisodeRes
 def test_a_rejected_candidate_is_never_labelled_as_a_fault(
     model: HydraulicModel, tmp_path: Path
 ) -> None:
+    """A fault whose run is rejected leaves a rejection record and is never labelled as a fault.
+    Independent: yes, because the expected outcome is the rejection rule.
+    """
     dead = FaultSet((dataclasses.replace(LEAK, asset_id="E-R102a"),))
     result = run(model, tmp_path, dead)
     assert result.rejected
@@ -212,6 +214,9 @@ def good() -> list[FaultSpec]:
 
 
 def test_an_eligible_specification_has_no_violation() -> None:
+    """A well-formed specification has no violation. Independent: yes, because the expected outcome
+    is the eligibility rule.
+    """
     assert violations(good(), EDGES, TAGS, 3600.0) == []
     check(good(), EDGES, TAGS, 3600.0)
 
@@ -257,6 +262,9 @@ def test_an_eligible_specification_has_no_violation() -> None:
     ],
 )
 def test_an_ineligible_specification_is_refused(spec: FaultSpec, text: str) -> None:
+    """Each ineligible specification is refused with its own reason. Independent: yes, because the
+    expected reasons are written out per case.
+    """
     problems = violations([spec], EDGES, TAGS, 3600.0)
     assert problems and any(text in p for p in problems), problems
     with pytest.raises(ContractError):
@@ -264,12 +272,18 @@ def test_an_ineligible_specification_is_refused(spec: FaultSpec, text: str) -> N
 
 
 def test_one_fault_per_episode_and_per_asset() -> None:
+    """Two faults in one episode, or two on one asset, are refused. Independent: yes, because the
+    expected outcome is the one-fault rule.
+    """
     two = [LEAK, dataclasses.replace(LEAK, position=0.7)]
     assert any("one fault per episode" in p for p in violations(two, EDGES, TAGS, 3600.0))
     assert any("two faults" in p for p in violations(two, EDGES, TAGS, 3600.0))
 
 
 def test_the_specification_schema_refuses_an_open_record() -> None:
+    """The specification schema refuses a record with an added field. Independent: yes, because the
+    expected outcome is the closed schema.
+    """
     record = LEAK.as_record()
     with pytest.raises(ContractError):
         validate("fault_spec", {**record, "severity_label": "high"})
@@ -292,6 +306,10 @@ def clean(result: EpisodeResult, spec: FaultSpec | None) -> dict[str, list[dict[
 def test_bias_drift_and_stuck_match_their_closed_forms_and_touch_nothing_else(
     healthy: EpisodeResult, faulted: dict[str, EpisodeResult]
 ) -> None:
+    """Bias, drift and stuck-at faults change the noise-free series by their closed forms and leave
+    the truth files and the other tags unchanged. Independent: yes, because the reference is a
+    closed form and the healthy twin.
+    """
     base = clean(healthy, None)
     for key, spec in (("bias", BIAS), ("drift", DRIFT), ("stuck", STUCK)):
         changed = clean(faulted[key], spec)
@@ -317,6 +335,10 @@ def test_bias_drift_and_stuck_match_their_closed_forms_and_touch_nothing_else(
 def test_a_noisy_faulted_series_differs_from_the_twin_by_the_offset_and_one_step(
     healthy: EpisodeResult, faulted: dict[str, EpisodeResult]
 ) -> None:
+    """A noisy faulted series differs from the healthy one by the fault offset up to one
+    quantisation step, because the noise draws are the same. Independent: yes, because the reference
+    is the healthy twin and a closed form.
+    """
     def tag_rows(result: EpisodeResult, tag: str) -> list[dict[str, Any]]:
         path = result.directory / "observations.jsonl.gz"
         with gzip.open(path, "rt") as handle:
@@ -348,6 +370,10 @@ def observations(result: EpisodeResult) -> list[dict[str, Any]]:
 def test_no_fault_information_reaches_the_agent_visible_data(
     healthy: EpisodeResult, faulted: dict[str, EpisodeResult], key: str
 ) -> None:
+    """No fault, severity, window, scenario or tier word appears in the agent-visible rows, and the
+    dropout pattern equals that of the healthy twin. Independent: yes, because the check scans the
+    written rows.
+    """
     result = faulted[key]
     keys = set(load_schema("observation")["properties"])
     rows = observations(result)
@@ -372,6 +398,9 @@ def test_no_fault_information_reaches_the_agent_visible_data(
 def test_the_fault_files_are_not_served_and_the_packages_do_not_import_the_faults(
     faulted: dict[str, EpisodeResult], root: Path
 ) -> None:
+    """The gateway serves no fault file, and the sensors and api packages do not import the fault
+    package. Independent: yes, because the check inspects the payload keys and the imports.
+    """
     assert set(Gateway(faulted["leak"].directory).query(100.0)) == {
         "episode_id", "as_of_s", "observations", "assets", "inspection_catalog",
     }  # fmt: skip
@@ -386,10 +415,10 @@ def test_the_fault_files_are_not_served_and_the_packages_do_not_import_the_fault
 def test_a_valve_commanded_closed_but_open_keeps_three_separate_records(
     model: HydraulicModel,
 ) -> None:
-    """Hand: XV-S102 is commanded closed in S0-A. Forced open it opens a second suction branch, so
-    the engine falls back to its branched scheme and flags the interval (decision D25); the valve
-    row keeps the command (closed), the actual opening (1) and the physical state (open) apart,
-    and the open contact of D31 reads 1 once the opening has passed 0.98."""
+    """A valve forced open against its closed command keeps the command, the actual opening and the
+    physical state apart, flags a branched lineup, and its open contact reads 1 above an opening of
+    0.98. Independent: yes, because the expected records follow from the actuator rule.
+    """
     spec = FaultSpec("VALVE_MISROUTING", "closed_but_open", "XV-S102", 300.0, 30.0, 1.0)
     e, outcome = fc.run(model, "S0-A", 700.0, FaultSet((spec,)))
     assert outcome.rejection is None
@@ -410,6 +439,9 @@ def test_a_valve_commanded_closed_but_open_keeps_three_separate_records(
 def test_a_valve_stuck_almost_closed_is_stopped_by_a_gate_and_not_suppressed(
     model: HydraulicModel,
 ) -> None:
+    """A pump valve stuck almost closed is stopped by an engine gate and the run is not suppressed.
+    Independent: yes, because the expected outcome is the rule that a gate rejection is recorded.
+    """
     spec = FaultSpec("VALVE_MISROUTING", "open_but_stuck", "XV-PAO", 300.0, 30.0, 0.01)
     _, outcome = fc.run(model, "S0-A", 700.0, FaultSet((spec,)))
     assert outcome.rejection is not None

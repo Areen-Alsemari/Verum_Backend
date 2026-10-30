@@ -316,3 +316,16 @@ Independent hand limits for the 10 s closure of XV-R000 under the 10 barg cap.
 Upper: the flow cannot exceed 600 m3/h, and the valve is physically closed 9.99 s after the command at the next update, so the volume received after the trip (decided by the detector at the time of `esd_timeline`) is at most (600/3600) x (t_closed - t_trip) m3.
 
 Lower: the flow stays at 600 m3/h until the cap binds. The cap head is 1 m + 1e6 Pa/(750 x 9.80665) = 136.96 m; at 13 m tank level the valve may lose about 120 m, K = 120/0.2719 = 441 (v = 2.309 m/s in DN300), Kv ratio = sqrt(0.1/441) = 0.01506, i.e. alpha = 0.031 on the linear branch, reached 9.69 s into the stroke. The received volume is therefore at least (600/3600) x (t_request - t_trip + 9.683) m3.
+
+## Fault episodes
+
+rejection, eligibility, sensor faults and leakage.
+
+Key assumptions:
+
+- Expected values are hand-derived or compared with the healthy twin; nothing in the expectation comes from the fault code under test except where a test says so.
+- Equivalence: a fault of severity 0 changes no number, so every truth file and both observation files equal the healthy episode byte for byte (the episode record, the provenance and the fault files differ by design and are not compared).
+- Sensor faults (decision D63) change the noise-free sampled series by closed forms: bias `+ b span` from the onset, drift `+ d span (t - t_on) / 3600`, stuck-at the first sample at or after the onset; the truth files are those of the healthy twin and the other tags are unchanged. Noise and dropout are the same draws, so a faulted noisy series differs from the healthy one by the same offset up to one quantisation step.
+- LK-01 to LK-12 are extended to fault episodes: no fault, severity, window, scenario or tier word in the agent-visible rows or in the gateway payload; the dropout pattern and the quality counts equal those of the healthy twin of the same seed.
+
+Independence: closed forms (bias, drift, stuck), the healthy twin, and counts; the fault code is the object under test.

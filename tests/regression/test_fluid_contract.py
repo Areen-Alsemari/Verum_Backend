@@ -1,13 +1,8 @@
 """Fluid contract: conversion into parameter records.
 
-Inputs: ``config/fluid_contract.json`` and mutated copies.
-
-Outputs: pass/fail.
-Key assumptions: the constants are provisional simulation selections; the
-vapor reference is a generic published correlation and is not promoted to a
-resolved fuel property. No physics is evaluated here.
-
-Source: ``fluid_contract.json``; ``revised/02_hydraulic_model.md`` section 1.1.
+The constants are provisional simulation selections, and the vapor reference is a generic published
+correlation that is never promoted to a resolved fuel property. A mutated contract that is
+incomplete must be rejected. No physics is evaluated here.
 """
 
 from __future__ import annotations
@@ -22,6 +17,9 @@ from verum.params import ParamValue
 
 
 def test_constants_are_provisional_simulation_values() -> None:
+    """The fluid constants are provisional simulation values with their stated numbers. Independent:
+    yes, because the expected numbers are written out in the test.
+    """
     fluid = load_fluid_contract()
     expected = {
         "rho_kg_m3": 750.0,
@@ -36,6 +34,9 @@ def test_constants_are_provisional_simulation_values() -> None:
 
 
 def test_vapor_reference_is_generic_and_not_resolved() -> None:
+    """The vapor reference is the generic correlation with its stated constants and is not marked
+    resolved. Independent: yes, because the expected constants are written out in the test.
+    """
     fluid = load_fluid_contract()
     assert fluid.vapor_reference_id == "EPA_GENERIC_MOTOR_GASOLINE_RVP10"
     assert {k: v.value for k, v in fluid.vapor_constants.items()} == {
@@ -50,6 +51,9 @@ def test_vapor_reference_is_generic_and_not_resolved() -> None:
 
 
 def test_every_property_is_a_param_value() -> None:
+    """Every fluid property and vapor constant is a parameter record. Independent: yes, because the
+    check inspects the types.
+    """
     fluid = load_fluid_contract()
     assert all(
         isinstance(v, ParamValue)
@@ -93,6 +97,9 @@ def _drop_vapor_constant(c: dict[str, Any]) -> None:
     ],
 )
 def test_loader_rejects_incomplete_contract(raw_fluid: dict[str, Any], change: Any) -> None:
+    """The loader rejects a contract with a missing or malformed entry. Independent: yes, because
+    the expected outcome is the validation rule.
+    """
     change(raw_fluid)
     with pytest.raises(ContractError):
         parse_fluid_contract(raw_fluid)
