@@ -1,20 +1,10 @@
 """Configuration of the steady-state hydraulics, as parameter records.
 
-Inputs: ``config/hydraulics.json``, ``config/fitting_profiles.json`` and
-``config/delivery_boundary.json``; the fluid contract for density, viscosity
-and the vapor reference. Outputs: ``HydraulicConfig`` (scalar access to the
-parameter records) and the loss-coefficient profile and boundary-law
-coefficient for a named fitting profile.
-Key assumptions:
-    * Every number is a ``ParamValue``. Reading an unresolved one raises
-      ``UnresolvedParameter``; nothing here supplies a default.
-    * The boundary-law coefficient is looked up by fitting profile and is never
-      a literal in code.
-    * The solver tolerances are numerical settings, recorded as design values
-      with their own provenance.
+Every number is a parameter record, so reading an unresolved one raises and nothing here supplies a
+default. The boundary-law coefficient is looked up by fitting profile and is never a literal in
+code. The solver tolerances are numerical settings with their own provenance.
 
-Source: ``revised/02_hydraulic_model.md`` sections 1.1, 3 and 4;
-``docs/design_decisions.md`` D2 (version 3.0), D3, D7, D8, D11, D14 and D15.
+See D2, D3, D7, D8, D11, D14 and D15.
 """
 
 from __future__ import annotations
@@ -81,7 +71,7 @@ class HydraulicConfig:
 
 
 def load_hydraulic_config(directory: Path | None = None) -> HydraulicConfig:
-    """Load ``config/hydraulics.json``."""
+    """Load the hydraulic configuration."""
     raw = _read("hydraulics.json", directory)
     return HydraulicConfig(
         parameters=_records(raw["parameters"]),

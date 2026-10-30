@@ -1,20 +1,12 @@
 """Loss coefficients assigned to edges for a fitting profile.
 
-Inputs: the topology, the route geometry, a ``FittingProfile`` and a set of
-edge identifiers. Outputs: a total local-loss coefficient K per edge.
-Key assumptions:
-    * Bends are the interior vertices of a route polyline at which the
-      direction changes. A bend belongs to the edge whose arc-length interval
-      contains it, taking the interval as closed at its start and open at its
-      end, so a bend exactly on a node falls to the downstream edge.
-    * An element in a node (valve, check valve, meter, tank outlet) is charged
-      to the edge that starts at that node; a tank inlet is charged to the edge
-      that ends at the receipt nozzle. The loss uses that edge's velocity.
-    * Isolation valves in the active set are open; partial opening is outside
-      steady Phase 2.
+A bend belongs to the edge whose arc-length interval contains it, closed at the start and open at
+the end, so a bend exactly on a node falls to the downstream edge. An element in a node (valve,
+check valve, meter, tank outlet) is charged to the edge that starts at that node, and a tank inlet
+to the edge that ends at the receipt nozzle. Isolation valves in the active set are open, because
+partial opening is outside the steady model.
 
-Source: ``docs/design_decisions.md`` D15; ``revised/01_facility_tanks_topology.md``
-section 7.2 (bends are the polyline vertices).
+See D15.
 """
 
 from __future__ import annotations

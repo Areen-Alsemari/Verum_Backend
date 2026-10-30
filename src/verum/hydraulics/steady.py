@@ -1,43 +1,18 @@
 """Steady-state network solve for one lineup, set of tank levels and boundary case.
 
-Inputs: a ``SteadyInputs`` (lineup, tank levels, boundaries, fitting profile,
-property scenario and temperature, optional pump) and the loaded configuration.
-Outputs: an immutable ``SteadyResult``; or an exception for a rejected case.
-Key assumptions:
-    * Unknowns are node total heads. Tanks are constant-head nodes at their
-      free-surface level (tank bottom z = 0, atmospheric); a tank nozzle has the
-      tank head and the entrance or exit loss sits on the adjoining edge.
-    * Only edges that lie on a flow path between terminals (``Network.active_edges``)
-      are solved; a closed valve removes its edges, a stopped pump blocks, and
-      check valves are one-way. Receipt branches have no check valve, so their
-      flow can be negative and is never clipped.
-    * The pump node is split into an inlet and an outlet node with the pump
-      curve between them. If the head the pump must add reaches its shutoff
-      head, the delivery path carries no flow (dead-head) and the check valve
-      keeps it from reversing.
-    * Receipt: total flow imposed and source pressure solved; if the source
-      pressure (head-based, gauge) would exceed the cap, the cap is imposed and
-      the flow is solved and reported as clipped.
-    * Delivery: reservoir pressure beyond ``DISTRIBUTION_BOUNDARY`` plus the
-      boundary law ``dH_d = c (Q/300)^2``; with c = 0 the boundary node itself is
-      held at the reservoir head.
-    * Static pressure at an edge end or tap is ``rho g (H - z) - rho v^2 / 2``
-      with the velocity of the tap's reference edge. Gauge and absolute are kept
-      apart by ``atmosphere_pa_abs``.
-    * A solved pump flow outside the curve is rejected, never extrapolated.
-      Phase and NPSH failures are reported in the result and nothing is clipped.
-    * A tap may read a head that differs from its node head (``tap_head_offsets_m``,
-      decision D36): the tap pressure and ``tap_heads_m`` carry the offset, the edge-end
-      pressures do not.
-    * Dynamic use (decision D22): the engine may impose the delivery flow (the reservoir
-      and the boundary law then play no part in the solve; the engine applies them in
-      its flow equation), switch the receipt cap off (the engine applies it), and add
-      inertial head offsets to node heads after the solve. The offsets are the
-      ``(L / (g A)) dQ/dt`` terms of the rigid column, so the pressures and the NPSH
-      screen see the surge.
+- Unknowns are node total heads. Tanks are constant-head nodes at their free-surface level, and only
+  edges on a flow path between terminals are solved.
+- The pump is split into an inlet and an outlet node. If the head it must add reaches its shutoff
+  head, the delivery path carries no flow.
+- Receipt either imposes the flow and solves the source pressure, or imposes the capped pressure and
+  reports the flow as clipped.
+- Static pressure at a tap is rho g (H - z) - rho v^2 / 2, in Pa gauge, and a tap may read a head
+  offset from its node (D36).
+- A pump flow outside the curve is rejected, and phase and NPSH failures are reported and never
+  clipped.
+- The engine may impose the delivery flow and add inertial head offsets after the solve (D22).
 
-Source: ``revised/02_hydraulic_model.md`` sections 3 and 4 and 8 (gates G2 to
-G4); ``docs/design_decisions.md`` D2 (version 3.0), D3, D7, D11, D14, D15.
+See D2, D3, D7, D11, D14 and D15.
 """
 
 from __future__ import annotations

@@ -1,7 +1,6 @@
 """Steady-state network hydraulics: friction, pump, boundaries, solve and gates.
 
-Internal results only; nothing here is exposed through ``verum.api``.
-Source: ``revised/02_hydraulic_model.md`` sections 3 and 4.
+The results are internal and are never served to an agent.
 """
 
 from verum.hydraulics.boundaries import DeliveryBoundary, ReceiptBoundary

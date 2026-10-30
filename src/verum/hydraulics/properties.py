@@ -1,21 +1,11 @@
 """True vapor pressure for a named property scenario.
 
-Inputs: a scenario name, a temperature, the fluid contract's vapor-reference
-constants and the configured scenario table. Outputs: vapor pressure in Pa
-absolute.
-Key assumptions:
-    * A scenario must be named. ``None`` or an unknown name raises
-      ``PropertyScenarioRequired``; there is no default scenario.
-    * The scenarios are the volatility classes of decision D46 (RVP10 from the fluid contract,
-      RVP_9_0 and RVP_9_5 from the AP-42 correlation behind a verification gate) and the legacy
-      name of the RVP 10 reference; none is a PG95 assay.
-      Hydraulic properties stay at the 25 C constants (decision D11); the
-      temperature enters the phase and NPSH screens only.
-    * ``6894.757293`` converts psi to Pa and ``273.15`` converts degC to K; both
-      are unit conversions.
+A scenario must be named: none, or an unknown name, raises and there is no default. The scenarios
+are the volatility classes and the legacy name of the RVP 10 reference, and none is an assay of the
+product. Hydraulic properties stay at their 25 C constants, so the temperature enters only the phase
+and NPSH screens. The result is in Pa absolute.
 
-Source: ``fluid_contract.json`` (vapor_reference);
-``docs/design_decisions.md`` D11; ``revised/02_hydraulic_model.md`` section 1.1.
+See D11 and D46.
 """
 
 from __future__ import annotations

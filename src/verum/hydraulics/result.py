@@ -1,20 +1,10 @@
 """Immutable result of a steady-state solve.
 
-Inputs: produced by ``HydraulicModel.solve``. Outputs: a frozen dataclass of
-node heads, edge flows, end pressures, tank flows, the pump operating point and
-the gate statuses.
-Key assumptions:
-    * Internal data. It is not part of any agent-visible interface and is not
-      exposed through ``verum.api``.
-    * Heads are total heads (m) relative to the site datum, with gauge pressure
-      zero at the tank free surface. Pressures are *static* and in Pa gauge;
-      the absolute value is ``gauge + atmosphere_pa_abs``.
-    * Flow is signed along the contract edge direction (from -> to).
-    * Values that could not be determined for an edge (no flow and no static
-      head known) are absent from the mappings, never filled with zero.
-
-Source: ``revised/02_hydraulic_model.md`` sections 3 and 6.2 (typed hidden
-state, pressure basis).
+It holds node heads, edge flows, end pressures, tank flows, the pump operating point and the gate
+statuses. Heads are total heads (m) relative to the site datum, with gauge pressure zero at the tank
+free surface. Pressures are static, in Pa gauge, and the absolute value is the gauge value plus the
+atmospheric pressure. Flow is signed along the contract edge direction. Values that could not be
+determined are absent and are never filled with zero. The data is internal and never served.
 """
 
 from __future__ import annotations

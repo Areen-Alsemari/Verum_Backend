@@ -1,16 +1,10 @@
 """Valve flow coefficient and loss coefficient as functions of the opening.
 
-Inputs: an opening fraction alpha in [0, 1] and the law parameters (alpha_c,
-rangeability, full-open K). Outputs: Kv / Kv_max and the loss coefficient K(alpha).
-Key assumptions:
-    * Kv(alpha) is continuous: linear below alpha_c, equal-percentage above,
-      ``Kv = Kv_max alpha / alpha_c R^(alpha_c - 1)`` and ``Kv = Kv_max R^(alpha - 1)``
-      (decision D4 version 2.0), zero at alpha = 0.
-    * The loss coefficient is ``K = K_open (Kv_max / Kv)^2`` at the local diameter
-      (decision D19), so K(1) = K_open. Below the closed threshold the caller treats
-      the edge as closed; this function itself returns infinity at alpha = 0.
+Kv is continuous: linear below the crossover opening, equal-percentage above, and zero at alpha = 0.
+The loss coefficient is K = K_open (Kv_max / Kv)^2 at the local diameter, so K(1) = K_open and K is
+infinite at alpha = 0. Below the closed threshold the caller treats the edge as closed.
 
-Source: ``docs/design_decisions.md`` D4 (version 2.0) and D19.
+See D4 and D19.
 """
 
 from __future__ import annotations

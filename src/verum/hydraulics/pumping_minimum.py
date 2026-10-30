@@ -1,23 +1,12 @@
 """Configured pumping-minimum tank levels.
 
-Inputs: ``config/pumping_minimum_levels.json``, produced by the Phase 2 study.
-Outputs: the lowest tank level at which the solved delivery operating point
-passes the phase and NPSH screen, for a tank, temperature stratum, fitting
-profile and NPSH3 coefficient, as a ``ParamValue``.
-Key assumptions:
-    * This level is separate from, and does not replace, the 1.8 m geometry
-      minimum of the topology contract. At most it equals 1.8 m, when the
-      geometry minimum already passes.
-    * A combination that never passes inside the normal range (1.8 to 12 m) is
-      stored as an unresolved record; reading its value raises
-      ``UnresolvedParameter``.
-    * The levels are computed for the duty pump A with the delivery boundary law
-      of decision D2 version 3.0 and the margin ratio of decision D7.
-    * ``SITE_PRESSURE_FILENAME`` names a sensitivity table for a lower
-      atmospheric pressure (94300 Pa); it never replaces the sea-level table.
+For a tank, temperature stratum, fitting profile and NPSH3 coefficient this gives the lowest level
+at which the solved delivery operating point passes the phase and NPSH screen. It is separate from
+the 1.8 m geometry minimum of the topology and at most equals it. A combination that never passes in
+the normal range (1.8 to 12 m) is stored as unresolved, and reading it raises. The levels are for
+the duty pump with the delivery boundary law of D2 and the margin ratio of D7.
 
-Source: ``docs/design_decisions.md`` D7 (version 2.0), D51, D73; the study script
-``tools/pumping_minimum_study.py``.
+See D7, D51 and D73.
 """
 
 from __future__ import annotations
@@ -36,8 +25,11 @@ WORST_CASE_FACTOR_TAG = {"off": "fd0p8", "v1": "fd0p8", "v2": "fd0p6502"}
 
 
 def stratum_filename(atmosphere: str, volatility: str, profile: str = "v1") -> str:
-    """Table of one (atmosphere, volatility) pair at the worst-case downstream factor of a
-    variability profile: 0.8 for ``off`` and ``v1`` (decision D51), 0.6502 for ``v2`` (D73)."""
+    """Name of the table for one atmosphere and volatility pair at the worst-case downstream factor
+    of a variability profile.
+
+    The factor is 0.8 for the off and v1 profiles (D51) and 0.6502 for v2 (D73).
+    """
     return f"pumping_minimum_levels_{atmosphere}_{volatility}_{WORST_CASE_FACTOR_TAG[profile]}.json"
 
 

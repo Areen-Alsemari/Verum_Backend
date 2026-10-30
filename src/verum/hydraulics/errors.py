@@ -1,12 +1,8 @@
 """Exceptions of the steady-state hydraulics package.
 
-Inputs: none. Outputs: exception types. A rejection is an exception; a
-physical-validity failure (phase, NPSH) is *not*: it is reported in the result
-and the solved values are never clipped.
-Key assumption: each exception name states the gate it belongs to.
-
-Source: ``revised/02_hydraulic_model.md`` section 8 (dataset eligibility gates
-G2 to G4).
+A rejection is an exception and each name states the gate it belongs to. A physical-validity failure
+(phase, NPSH) is not an exception: it is reported in the result, and the solved values are never
+clipped.
 """
 
 from __future__ import annotations

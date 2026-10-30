@@ -1,21 +1,12 @@
 """Damped Newton solve for node total heads on a pipe network.
 
-Inputs: edges (each with a flow law), the nodes whose head is fixed, the
-external inflow at nodes, a tolerance and an iteration limit. Outputs: node
-heads, edge flows and the node-balance residual.
-Key assumptions:
-    * Unknowns are node total heads (m). The flow of an edge is obtained from
-      the head difference across it by inverting its loss law; the Jacobian is
-      assembled from the analytic slope of that inverse (one over the slope of
-      the loss law, which is differenced numerically).
-    * Newton steps are damped by backtracking on the largest node imbalance.
-    * Flow may be negative: nothing clips it.
-    * Every connected component must contain a fixed-head node; otherwise the
-      heads are undetermined and the solve is refused.
-    * The tolerance is on the largest node imbalance in m3/s.
+The unknowns are node total heads (m). The flow of an edge follows from the head difference across
+it by inverting its loss law, and the Jacobian uses the slope of that inverse. Steps are damped by
+backtracking on the largest node imbalance, and flow may be negative. Every connected component must
+contain a fixed-head node, otherwise the heads are undetermined and the solve is refused. The
+tolerance is on the largest node imbalance in m3/s.
 
-Source: ``revised/02_hydraulic_model.md`` section 3 (steady equations, signed
-flow); ``docs/design_decisions.md`` D8 (conservation tolerance).
+See D8.
 """
 
 from __future__ import annotations

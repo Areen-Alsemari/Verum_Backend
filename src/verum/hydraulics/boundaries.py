@@ -1,21 +1,12 @@
 """Boundary specifications and the over-constraint check (gate G2).
 
-Inputs: the receipt and delivery boundary choices of a case. Outputs: validated
-specifications, or ``OverConstrained``.
-Key assumptions:
-    * The receipt boundary has one degree of freedom: either the total flow is
-      imposed and the source pressure is solved, or the source pressure is
-      imposed and the flow is solved. Imposing both is rejected. Imposing
-      neither takes the configured flow.
-    * The delivery boundary imposes the reservoir pressure and the boundary law;
-      the flow is then fixed by the fixed-speed pump and the network. Imposing
-      a delivery flow as well is over-determined and is rejected.
-    * A boundary-law coefficient of exactly zero turns the boundary node into a
-      fixed-pressure node (the pure fixed-pressure boundary of the audited
-      reference cases).
+The receipt boundary has one degree of freedom: either the total flow is imposed and the source
+pressure is solved, or the pressure is imposed and the flow is solved. Imposing both is rejected,
+and imposing neither takes the configured flow. The delivery boundary imposes the reservoir pressure
+and the boundary law, so the pump and network fix the flow and a delivery flow cannot be imposed as
+well. A boundary-law coefficient of exactly zero makes the boundary a fixed-pressure node.
 
-Source: ``revised/02_hydraulic_model.md`` sections 1 and 8 (gate G2);
-``docs/design_decisions.md`` D2 (version 3.0) and D3.
+See D2 and D3.
 """
 
 from __future__ import annotations

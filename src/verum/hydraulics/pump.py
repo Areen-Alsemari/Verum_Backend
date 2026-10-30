@@ -1,22 +1,11 @@
 """Pump element: synthetic fixed-speed curve and the interface the solver uses.
 
-Inputs: the curve parameters (shutoff head, curve coefficient, reference flow,
-maximum flow, efficiency) as read from configuration. Outputs: flow as a
-function of the head difference across the pump, domain checks and power.
-Key assumptions:
-    * Curve: ``H(Q) = H0 s^2 - k (Q / Q_ref)^2`` with s = 1 in this phase. The
-      curve is synthetic and is not a manufacturer curve.
-    * The domain is ``0 <= Q / s <= Q_max``. A solution outside it is rejected
-      by the caller, never extrapolated.
-    * The element is one-way: flow is zero when the head the pump must add
-      reaches the shutoff head.
-    * ``PumpElement`` is a structural interface so that tests can supply a
-      reference-case variable-speed pump; production code only provides the
-      fixed-speed pump.
-    * Power uses a constant efficiency (a simulation selection).
+The curve is H(Q) = H0 s^2 - k (Q / Q_ref)^2 with speed ratio s = 1, and is synthetic, not a
+manufacturer curve. The domain is 0 <= Q / s <= Q_max, and a solution outside it is rejected by the
+caller and never extrapolated. The element is one-way, so flow is zero when the head the pump must
+add reaches the shutoff head. Power uses a constant efficiency, which is a simulation selection.
 
-Source: ``revised/02_hydraulic_model.md`` section 3.2; ``docs/design_decisions.md``
-D2 (fixed speed).
+See D2.
 """
 
 from __future__ import annotations

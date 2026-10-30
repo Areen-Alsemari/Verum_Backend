@@ -1,20 +1,12 @@
-"""Volatility classes: vapor-pressure constants for the property scenarios (decision D46).
+"""Volatility classes: vapor-pressure constants for the property scenarios.
 
-Inputs: ``config/volatility_classes.json`` and ``config/volatility_gate.json``. Outputs: for each
-derived class the pair of constants (A, B in degrees Rankine) of the true vapor pressure
-``P_v (psia) = exp(A - B / T_R)``, or an unresolved pair.
-Key assumptions:
-    * The derived classes use the AP-42 gasoline correlation with distillation slope S = 3:
-      ``A = 15.64 - 1.854 S^0.5 - (0.8742 - 0.3280 S^0.5) ln(RVP)`` and
-      ``B = 8742 - 1042 S^0.5 - (1049 - 179.4 S^0.5) ln(RVP)``.
-    * Verification gate: the formula must reproduce the tabulated A and B within 0.1 percent
-      and the tabulated true vapor pressures (Table 7.1-2 at 60 F and the worked example) within
-      2 percent. If any tabulated point disagrees, both derived classes are unresolved and raise
-      ``UnresolvedParameter`` when read; the formula is never adjusted.
-    * The resolved class is the audited RVP 10 constants of the fluid contract.
+The true vapor pressure is P_v (psia) = exp(A - B / T_R), with T_R in degrees Rankine. The derived
+classes use the AP-42 gasoline correlation with distillation slope S = 3. A verification gate
+requires the formula to reproduce the tabulated constants within 0.1 percent and the tabulated vapor
+pressures within 2 percent. If any point disagrees, both derived classes are unresolved and the
+formula is never adjusted. The resolved class is the audited RVP 10 constants of the fluid contract.
 
-Source: ``docs/design_decisions.md`` D46 version 3; US EPA AP-42 chapter 7.1 (Table 7.1-2 and
-the worked example of Section 7.1.4).
+See D46.
 """
 
 from __future__ import annotations

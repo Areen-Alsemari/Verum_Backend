@@ -1,20 +1,12 @@
 """Darcy-Weisbach friction and head loss with signed flow.
 
-Inputs: flow (m3/s), pipe bore, length, loss coefficient, fluid density and
-viscosity, roughness and gravity. Outputs: Darcy friction factor and signed
-head loss (m).
-Key assumptions:
-    * Friction law (decision D14): 64/Re for Re < 2300; Haaland for Re > 4000;
-      a linear blend in Re between the laminar value at 2300 and the Haaland
-      value at 4000. The blend is a numerical device, not a physical model.
-    * The loss is evaluated with the magnitude of the velocity and carries the
-      sign of the flow, so reverse flow is represented, never clipped.
-    * A local loss coefficient K uses the velocity in the same pipe (the local
-      diameter).
-    * SI units throughout.
+The friction factor is 64/Re below Re 2300 and the Haaland expression above Re 4000, with a linear
+blend in between that is a numerical device and not a physical model. The head loss uses the
+magnitude of the velocity and carries the sign of the flow, so reverse flow is represented and never
+clipped. A local loss coefficient uses the velocity in the same pipe. All quantities are in SI
+units.
 
-Source: ``docs/design_decisions.md`` D14; ``revised/02_hydraulic_model.md``
-section 3 (Darcy-Weisbach with Haaland in the turbulent regime).
+See D14.
 """
 
 from __future__ import annotations
