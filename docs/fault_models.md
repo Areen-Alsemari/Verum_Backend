@@ -166,10 +166,103 @@ lists the instance ids. The specification record is validated by `schemas/fault_
 Nothing about faults is reachable from `verum.api`; `verum.sensors` knows only a hook interface
 (a callable acting on the reading), not the faults package.
 
-## Observability audit (D68)
+## Implementation
 
-The audit asks what each single fault changes in the emitted tags, not whether an agent could detect it.
-Detectability thresholds: three times the noise standard deviation of the tag, and three times the
-standard deviation of the healthy variability of the tag measured over 20 seeds with the demand
-process on. A change is judged on the noise-free sampled series averaged over 60 s. The grid, the
-tools and the results are in the audit section at the end of this document.
+- `verum.faults` (hidden side): `FaultSpec` records validated by `schemas/fault_spec.schema.json`
+  (backend-proposed, closed), the eligibility validator (`check`, `violations`), `FaultSet` (the
+  injector the engine calls) and the hidden `fault_truth` rows (`fault_truth.jsonl.gz` in the episode
+  directory, empty for a healthy episode; the episode record lists `fault_instance_ids`).
+- The engine takes a `FaultInjection` (leaks, valve opening modifiers, pump head scale, step
+  boundaries at the knots of a ramp). A ramp ends a step where it changes slope, so the state at a
+  knot is exact. `Valve.alpha` is the commanded motion changed by the modifier; the actuator
+  continues from its own position, so a restriction does not change what a later command does.
+- The sensor chain knows only a hook, `SensorHook(tag, t, value) -> value`, called after sampling and
+  before noise for every scheduled sample (also a dropped one). With `clean` set the chain returns
+  the noise-free sampled series, which the audit uses.
+- Gates: a leak on an edge without a determined pressure or with a gauge pressure at or below 10 kPa
+  stops the run with gate `SGF`; every other gate is unchanged. A rejected candidate keeps
+  `simulation_rejected.json` only, and its record lists no fault.
+- The leak adds `leak_flow_m3s` to the edge row when it is positive and fills the spill line of the
+  network ledger row; the transient engine accepts a sink that grows linearly (`leak_ramp`) and
+  evaluates it implicitly, which an explicit sink did not allow at larger coefficients.
+
+## Limits
+
+- A leak in the rigid-column engine is a sink evaluated from the last accepted solve (frozen over a
+  step of at most 1 s); a leak that grows faster than a 30 s ramp, or a leak at the end of an edge,
+  is outside the verified range. Its position within the edge is a share of length and of the local
+  loss coefficient. The velocity head is neglected in its pressure.
+- A leak in the transient engine sits at a junction, not inside an edge; the rigid-column leak of
+  the comparison test is 5.25 m from that junction.
+- Misrouting can create lineups the operator model does not expect (two suction branches, a receipt
+  into two tanks). They are handled by the branched scheme, which is a validity window, or by a gate.
+  A stuck-almost-closed valve on the duty path is not realisable at any severity of the range
+  (gate SG0 or SG2): the audit reports it as rejected, not as a fault with a weak signal.
+- A stuck-at has no consequence on a tag whose true signal is constant over the episode.
+- Single faults only: the signatures of two simultaneous faults are not studied, a recovery is not
+  modelled, and the sensor faults act on the 14 continuous tags only.
+- No fault law, range or threshold is validated; the audit says what the model produces, not what a
+  real terminal would show.
+
+## Observability audit (D68): results
+
+The runs are made by `tools/fault_audit.py` and tabulated by `tools/fault_audit_report.py`
+(full tables in `local/results/fault_audit.md`, not committed). Grid: 8 log-spaced severities across
+the range of each fault, scenarios S0-A, S0-C and S0-B as applicable, three assets or locations per
+type (two pumps), onset 900 s, 1800 s observed, 300 s ramp, coastal, 25 C, reference fittings, the
+healthy twin of the same seed; 240 fault runs, 63 healthy runs (20 seeds with the demand process on per
+scenario and the twins) and 153 sensor-fault cases applied to the twins' truth. The severity coordinate is the area of a leak, the closure fraction
+`1 - alpha_stuck` of a restriction, the head loss fraction `1 - head_scale` of a pump, the fraction of
+span (per hour for a drift) of a sensor fault and the stuck opening of a misrouted valve. The two
+detectability thresholds are those of D68; where the demand process does not touch a tag its healthy
+variability is numerically zero and only the noise limits detection.
+
+| fault | severity coordinate | smallest above 3 sigma of the noise | smallest above the healthy variability as well | first detection at the largest severity (s) | rejected by a gate | no consequence |
+| --- | --- | --- | --- | --- | --- | --- |
+| leak | area m2 | 2.87e-05 to 6.97e-05 (9 of 9 assets) | 6.97e-05 to 0.000412 (9 of 9 assets) | 30 to 250 | 0 of 72 runs | 0 of 9 assets |
+| restriction | closure fraction | 0.136 to 0.25 (7 of 9 assets) | 0.136 to 0.626 (7 of 9 assets) | 70 to 130 | 4 of 72 runs | 2 of 9 assets |
+| pump | head loss fraction | 0.02 to 0.02 (2 of 4 assets) | 0.0434 to 0.0434 (2 of 4 assets) | 30 to 30 | 0 of 32 runs | 2 of 4 assets |
+| bias | fraction of span | 0.002 to 0.002 (9 of 9 assets) | 0.002 to 0.0199 (9 of 9 assets) | 10 to 10 | 0 of 72 runs | 0 of 9 assets |
+| drift | fraction of span per hour | 0.002 to 0.00317 (9 of 9 assets) | 0.002 to 0.0316 (9 of 9 assets) | 20 to 140 | 0 of 72 runs | 0 of 9 assets |
+| stuck | - | 7 of 9 assets | 5 of 9 assets | 30 to 1160 | 0 of 9 runs | 2 of 9 assets |
+| misroute_a | - | 6 of 8 assets | 6 of 8 assets | 20 to 50 | 1 of 8 runs | 1 of 8 assets |
+| misroute_b | stuck opening | 0.005 to 0.005 (2 of 7 assets) | 0.005 to 0.005 (2 of 7 assets) | 70 to 70 | 40 of 56 runs | 5 of 7 assets |
+
+Reading the table:
+
+- **Smallest detectable severity.** "Smallest above 3 sigma of the noise" is the smallest of the eight
+  severities for which some tag leaves the noise band in the 60 s mean; "as well" requires also the
+  healthy variability of D68. For the pump, the bias and the drift the smallest severity of the range
+  (2 percent head loss, 0.2 percent of span) is already detectable, so the lower end of those
+  ranges is not an observability limit; the ranges were not changed. A leak is detectable from
+  2.9e-5 m2 (delivery side, about 1.9 m3/h at 3.3 bar, seen by the flow meter and the tank level) or 7.0e-5 m2 (suction
+  side and receipt side, the tank level only); above the healthy variability of the delivery
+  process it needs 4.1e-4 m2. At a discharge coefficient of 0.5 or 0.8 the same flow needs an area
+  of 0.62/Cd times that (3.6e-5 and 2.2e-5 m2 for the delivery-side leak): the leak depends on
+  Cd times A only, and a test checks the identity.
+- **Tags that carry the signal.** A leak on the delivery side: FT-201, the level of the delivering tank,
+  PT-202A and PT-203 (177, 69, 43 and 33 noise sigmas at the largest area). A suction-side leak: only
+  the tank level (the pump flow hardly changes). A receipt-side leak: the tank level and PT-001. A
+  restriction or a pump fault: FT-201, the tank level, PT-202A and PT-203, and a restriction on a
+  valve with a limit switch also its contact, which changes at every closure fraction of the range
+  (the contact releases below 0.97) and is the earliest indicator. A sensor fault: its own tag only.
+  A forced-open valve: the levels of the two tanks it connects and its contact.
+- **No observable consequence** (no tag above either threshold and no event change): a restriction of a
+  closed receipt valve (XV-R102, XV-R103 in S0-B), a head degradation of the stopped pump P-101B, a
+  stuck-at on a tag that does not change (PT-202A in S0-A, FT-001 in S0-B), and a forced-open pump-B
+  outlet valve in S0-C (rejected by the solver gate). These are faults of the model with no trace.
+- **Rejected by a gate.** Severity 8 (closure fraction 0.85) of a restriction of the duty suction or
+  pump inlet valve (the NPSH margin of the pump, SG0), and every severity of a valve stuck almost closed on the duty path (SG0 or SG2).
+  They are not observations.
+- **Confusable signatures** (cosine above 0.95 between the mean change over the last 300 s of two runs,
+  in noise sigmas): a restriction of the pump inlet valve and a pump head degradation (0.999, S0-A and
+  S0-C; the valve contact of the restriction separates them); leaks at different places of the same
+  hydraulic zone (E-D1 and E-PA3, 0.993; E002, E003 and E-R101a on the receipt side, 0.997 to 1.0); a
+  leak on the receipt side and a stuck level transmitter (0.98 to 0.99); a restriction of the receipt
+  inlet valve and a bias or drift of PT-001 (1.0, both move PT-001 only); a bias, a drift and a
+  stuck-at of the same tag (1.0 in the end change; they differ in time); two misrouted receipt or
+  suction valves in S0-C (0.994). Leak against flow-meter bias or drift is not confusable in this
+  measure (cosine between -0.03 and 0.0), because the leak also moves the tank level and the
+  pressures; valve restriction against pump degradation is.
+- **First detection.** At the largest severity the earliest tag leaves the noise band 30 to 250 s after
+  the onset for a leak, 70 to 130 s for a restriction, 30 s for a pump fault and 10 s for a bias.

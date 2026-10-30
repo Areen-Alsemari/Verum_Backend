@@ -5,7 +5,7 @@ A field that cannot be filled from the present work is marked **unresolved**.
 
 | Field | Value |
 | --- | --- |
-| schema version of the card | 0.7.0 |
+| schema version of the card | 0.8.0 |
 | name | VERUM synthetic gasoline-terminal dataset |
 | release identifier | unresolved (no release has been made) |
 | dataset tier | `analytic_verification` for episodes without a flagged validity window; `restricted_benchmark` for episodes with one (decision D37). `production_candidate` is refused while `production_generation_enabled` is false |
@@ -36,7 +36,10 @@ lists a validity window (`validity_windows` in `episode.json`); the hidden join 
 
 ## Composition
 
-Families: hydraulic only; no faults are implemented. Scenario classes: healthy delivery, healthy
+Families: hydraulic, with single injected faults available (a pipe leak, a valve restriction, a pump
+head degradation, sensor bias, drift and stuck-at, and valve misrouting; `docs/fault_models.md`),
+but no episode of the shipped scenarios carries a fault and no campaign of faulted episodes has been
+defined. Scenario classes: healthy delivery, healthy
 receipt, concurrent receipt and delivery, receipt switch, fill to high-high with isolation,
 set-point step, delivery with a downstream demand process, delivery in the inland stratum, and
 two rejected starts. Episode count and horizon: **unresolved** (a campaign has not been defined);
@@ -87,7 +90,15 @@ against the paper; that is a check of the numerical method for those pipes, not 
   gives a correlation of temperature and initial level of 0.31, 0.38 and 0.45 (coastal) and 0.43,
   0.50 and 0.57 (inland): a high temperature goes with a high starting level, and an agent can
   read that from the data (`tools/feasibility_correlation.py`).
-- Faults, damaged-seal and fitting multipliers, and inspection outcomes do not exist yet.
+- Faults exist only as single, persistent faults of five types; damaged-seal and fitting multipliers,
+  multi-fault episodes, recovery, vapor-related faults and inspection outcomes do not exist yet. The
+  fault laws, ranges and thresholds are selections (D60 to D65). Some severities are not realisable
+  (a valve stuck almost closed on the duty path is rejected by a gate at every severity of its range),
+  some faults leave no trace (a restriction of a closed valve, a degraded stopped pump, a stuck-at on
+  a constant signal), and several pairs of faults have almost the same signature in the emitted tags
+  (a restriction of the pump inlet valve and a pump degradation, leaks in the same zone); the audit
+  of `docs/fault_models.md` gives the numbers. A leak is a rigid-column sink evaluated from the last
+  accepted solve and valid above 10 kPa gauge only.
 - Dead-leg pressures relax with a selected time constant; trapped-liquid thermal and
   compressibility effects are not modelled (D39).
 - The sensor noise, dropout, quantisation and delay values are selections, not measurements.
