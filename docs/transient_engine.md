@@ -136,17 +136,43 @@ reverse volume counting the flow of the step that closes the check valve.
 
 ## Comparison with the rigid-column engine (T1 to T4)
 
-Full tables are in the Phase 5 report. Summary for the ESD isolation (XV-R000 over 10 s, XV-R101 over
-30 s, 600 m3/h, cap 10 barg, ratio of stroke to wave round trip 27.7):
+Full tables are in the Phase 5 and 5b reports. Numbers are quoted for the valid interval only (decision
+D55): from the command to the start of the first `phase_invalid` window of the transient engine, with
+the rigid-column value over the same interval. Values at the instant of closure are unusable, because
+a window has opened before it (it opens at 97 to 98 percent of the stroke in every case below).
 
-- The PT-001 tap reaches 14.4 barg at the end of the stroke in the transient engine against 12.3
-  barg in the last dense row of the rigid column (the tabulated rigid value 13.46 barg is at the
-  instant alpha = 0.001). Up to 0.1 s before the end the two agree within 3 percent.
-- Strokes: ratio 5.5 (2 s) +8.5 percent, 10 (3.6 s) +39, 20 (7.2 s) -8.3, 27.7 (10 s) +2.5, 55
-  (20 s) +0.4, 83 (30 s) -1.3, rigid minus transient on the pre-closure peak. None of the D22
-  factors 5, 10, 20 keeps the peak within 5 percent; a factor near 30 would. The last 0.1 s of
-  any stroke, where the head rises sharply, is not represented by the rigid column at any ratio
-  (7.5 to 15 percent low at ratios 28 to 83).
+ESD isolation (XV-R000 over 10 s, XV-R101 over 30 s, 600 m3/h, cap 10 barg, ratio of stroke to wave
+round trip 27.7), first window at 19.77 s:
+
+| location | transient peak, valid interval (barg) | rigid-column peak, same interval (barg) | rigid minus transient |
+| --- | --- | --- | --- |
+| start of E002 (PT-001) | 11.50 | 10.08 | -12.4 % |
+| end of E002 (hidden tap) | 11.69 | 10.10 | -13.6 % |
+| receipt header | 1.48 | 1.50 | +1.1 % |
+
+The earlier columns "at closure" (14.4 barg at PT-001, 15.9 at the tap in the transient engine, 12.3
+and 13.5 in the rigid column) are unusable: they lie after the window opened. The tabulated rigid values
+13.46 and 15.19 barg of the ESD table belong to alpha = 0.001 and are in the same case.
+
+Receipt valve strokes with the cap, PT-001 peak up to the first window, rigid minus transient: 2 s
+(ratio 5.5) -15.3 %, 3.6 s (10) -29.1 %, 7.2 s (20) +13.5 %, 10 s (27.7) -8.6 %, 20 s (55) -4.2 %, 30 s
+(83) -2.7 %. The sign changes with the ratio, so the error is not a simple function of it. The values
+quoted in Phase 5 (+8.5, +39.2, -8.3, +2.5, +0.4, -1.3 %) were peaks up to 0.1 s before the end of the
+stroke, which lies after the window has opened at ratios of 20 and above, and are withdrawn. Only a
+ratio of 55 reaches 5 percent in the valid interval.
+
+Where the first vapor-pressure point is (Phase 5b, step 3): in all four cases (the isolation and the
+strokes of 7.2, 10 and 30 s) it is the first point of E003, that is the downstream face of XV-R000 (0 m
+from the valve), a single point at the first step, at an opening of 0.023 to 0.026 and 0.425 to 0.436
+bar absolute against 0.4396 bar. The rarefaction behind the closing valve, not the compression ahead of
+it, reaches the vapor pressure first.
+
+What neither engine can represent in an ESD closure: the last 2 to 3 percent of the stroke of XV-R000,
+where the flow stops, the downstream face of the valve reaches the vapor pressure, a vapor cavity forms
+and collapses and the head at the valve is set by that collapse. The transient engine has no vapor model
+and the rigid column has no wave, so the maximum pressure of the event and its timing are not
+represented by either.
+
 - Slow limit (R8, 600 s strokes): the transient engine reproduces the steady package at the
   opening of each instant to 0.0001 bar; the rigid column agrees with it apart from the filling
   of the tank, which the transient engine (constant-head tanks) does not represent (1.74 Pa/s

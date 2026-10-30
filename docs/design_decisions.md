@@ -79,7 +79,7 @@ version superseded; records are not edited in place.
 | D50 | Further sensitivity sweeps | DESIGN | 1.0 |
 | D51 | Grid of the pumping-minimum tables | DESIGN | 1.0 |
 | D52 | Production baseline NPSH3 coefficient | SIM | 1.0 |
-| D53 | Validity-window factors | DESIGN | 1.0 |
+| D53 | Validity-window factors | DESIGN | 1.1 (supersedes 1.0) |
 | D54 | Dead-leg unvalidated window | DESIGN | 1.0 |
 | D55 | Usable interval after a phase_invalid window | DESIGN | 1.0 |
 | D56 | Published-experiment rungs R12 and R13 | DESIGN | 1.0 |
@@ -1048,7 +1048,15 @@ version superseded; records are not edited in place.
 
 ## D53 - Validity-window factors
 
-- **Version:** 1.0 (2026-10-30)  **Status:** DESIGN  **Refines:** D22
+- **Version:** 1.1 (2026-10-30)  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D22
+- **Decision.** The ratio of event duration to the wave round trip of the path (D22) has a separate minimum for each kind of window: `valve_stroke` 25, `receipt_setpoint` 10, as in version 1.0. A valve stroke, and the flow collapse and path closure that a stroke causes, is valid for the rigid column only if the stroke lasts at least 25 round trips; a receipt set-point step is valid at 10. The set-point factor stays at 10 on the result of the Phase 5b comparison (step 1): after the correction of the post-event row, the rigid-column pressure at the start of E002 agrees with the mean of the transient-engine pressure within 5 percent of the dip `Lambda_down |dQ/dt|` at 1, 2 and 4 s after a step down, a step up and a start-up, at a duration of four controller time constants (8 s, ratio 22).
+- **Reason.** Comparison T2 of Phase 5 (one receipt path, one valve law, the capped source). Version 1.0 gave as basis errors of the rigid-column peak of 39 percent at ratio 10, 8.3 percent at 20 and 2.5 percent at 27.7. Those peaks ran to 0.1 s before the end of the stroke, which is after the first `phase_invalid` window of the transient engine has opened for ratios of 20 and above (D55), so they are withdrawn. On the valid interval (command to the first window) the rigid minus transient error of the PT-001 peak is -15.3 percent at ratio 5.5, -29.1 at 10, +13.5 at 20, -8.6 at 27.7, -4.2 at 55 and -2.7 at 83. Of the strokes tested only a ratio of 55 reaches 5 percent, and the sign changes between 20 and 27.7, so the error is not a simple function of the ratio. The value 25 is kept as the owner's selection: it lies between a ratio that fails clearly and one that fails by less, it is not supported by a 5 percent criterion on these data, and it rests on one path, one valve law and one source. It is provisional and is to be confirmed by the owner, who may prefer a value near 55.
+- **Sensitivity required.** The valve-stroke factor 20, 25, 30 and 55 in the extended study (D42), replacing the 5, 10 and 20 of D38.
+- **Notes.** The factor of the configuration (`wave_criterion_factor`, 10) is the set-point factor; the valve-stroke factor is a new parameter. The oscillation of the transient solution about the rigid-column mean (period 1.0 s in the network response) is not represented by the rigid column at any ratio of this table. Version 1.0 is kept below.
+
+## D53 - Validity-window factors (version 1.0, superseded)
+
+- **Version:** 1.0 (2026-10-30)  **Superseded by:** 1.1  **Status:** DESIGN  **Refines:** D22
 - **Decision.** The ratio of event duration to the wave round trip of the path (D22) has a separate minimum for each kind of window: `valve_stroke` 25, `receipt_setpoint` 10. A valve stroke, and the flow collapse and path closure that a stroke causes, is valid for the rigid column only if the stroke lasts at least 25 round trips; a receipt set-point step is valid at 10. The receipt set-point factor stays at 10 on the result of the Phase 5b comparison (step 1): after the correction of the post-event row, the rigid-column pressure at the start of E002 agrees with the mean of the transient-engine pressure within 5 percent of the dip `Lambda_down |dQ/dt|` at 1, 2 and 4 s after a step down, a step up and a start-up, at a duration of four controller time constants (8 s, ratio 22).
 - **Reason.** Comparison T2 of Phase 5 (one receipt path, one valve law, the capped source): at a ratio of 20 (7.2 s) the rigid-column peak is 8.3 percent from the transient peak before the closure, at 27.7 (10 s) 2.5 percent, at 10 (3.6 s) 39 percent; the data cannot separate thresholds between 20 and 27, so 25 is the round number between the failing and the passing case. It rests on one path, one valve law and one source and is provisional.
 - **Sensitivity required.** The valve-stroke factor 20, 25 and 30 in the extended study (D42), replacing the 5, 10 and 20 of D38.
