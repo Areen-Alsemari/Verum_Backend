@@ -497,3 +497,15 @@ Key assumptions:
 Independence: the tabulated values are transcribed from the EPA document; the formula and its evaluation are recomputed here by hand arithmetic (natural logarithm of 10 is 2.302585).
 
 Bracketing (D46 version 4): RVP 8.3 is not tabulated in the edition fetched, so the derived classes are bracketed by the tabulated RVP 7 and RVP 10 constants at 25, 35, 40 and 45 C. This is a necessary check and not a validation of the derived classes.
+
+## Agent-side audit
+
+Derivations (hand arithmetic):
+
+- Slope of a regression. A window of n readings taken every 5 s has the slope variance sigma^2 / S with S = sum of (t_i - mean t)^2 = 25 n (n^2 - 1) / 12 s^2. For 60, 300 and 900 s (n = 12, 60, 180) S^0.5 is 59.8, 670.7 and 3485 s. Averaging pairs of readings into blocks of 10 s changes S by under 2 percent.
+- Rate noise of the mass balance. One tank of area 706.858 m2 and level noise 0.25 mm gives sigma 3600 A / S^0.5 = 10.6, 0.948 and 0.182 m3/h for the three windows; three tanks give a factor of the square root of 3: 18.4, 1.64 and 0.316 m3/h. The flow meters add a negligible 0.2 m3/h over the root of the number of readings.
+- Known leak. A tank loses a metered 300 m3/h and a leak of 36 m3/h with no inflow, so its volume falls at 336 m3/h and its level at 336 / 3600 / 706.858 = 1.3203e-4 m/s. The mass balance is 0 - 300 - (-336) = 36 m3/h, the leak flow, for any window.
+- Threshold of a maximum. The largest of n independent normal deviations of unit spread stays below q with probability (2 Phi(q) - 1)^n. For 0.99 and n = 40, 2 Phi(q) - 1 = 0.99^(1/40) = 0.99975, so q = 3.66.
+- Power law. A margin m = (x / x0)^p reaches a level at x = x0 level^(1/p), so the boundary of level 3 exceeds that of level 1 by the factor 3^(1/p).
+
+Independence: every expected value is a closed form of the noise, the window or the definition; none is read from the module under test. The test that calibrates the same series twice is a guard against hidden state, not a check of the value.
