@@ -1,7 +1,4 @@
-"""Independent protection logic: pure state machine and receipt interlock.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 6.3.
-"""
+"""Independent protection logic: a pure state machine and the receipt interlock."""
 
 from verum.protection.config import ProtectionConfig, load_protection_config
 from verum.protection.machine import (

@@ -1,32 +1,17 @@
 """Independent high-level protection state machine for one tank.
 
-Inputs: injected signals only (process level, independent level and its
-validity, power availability, observed closure evidence, observed receipt
-flow) and explicit authorised reset events. Outputs: the state, a latched-trip
-flag and timestamped events, including the *request* to close valves.
-Key assumptions:
-    * Pure logic. There is no hydraulics, no clock and no valve handle: the
-      machine records that closure is requested, and only injected closure
-      evidence can move it to confirmed. A request is not a closure.
-    * The trip is decided on the independent level signal alone. The process
-      (LT) signal can raise the high alarm but never trips and cannot block a
-      trip, so a drifting LT does not defeat the independent layer.
-    * One transition per update. A trip enters HIGH_HIGH and the next update
-      enters ISOLATION_REQUESTED; the timeout runs from the trip time.
-    * Confirmation needs both closure evidence for every requested valve and an
-      observed receipt flow at or below the residual threshold. After the
-      timeout, anything short of that fails the isolation.
-    * PROTECTION_UNAVAILABLE is entered only from NORMAL or HIGH_ALARM; once a
-      trip is latched, the latch and its isolation sequence are not lost when a
-      signal is later declared invalid.
-    * The latch clears only on an authorised reset from operations or
-      protection, with the independent signal valid and below the trip level
-      minus the hysteresis (D16). HIGH_ALARM clears below the alarm level minus
-      the hysteresis; an absent process level leaves the alarm unchanged.
-      No agent can reset, bypass or command a valve through this module.
+- Pure logic: no hydraulics, no clock and no valve handle. The machine records that closure is
+  requested, and only injected closure evidence can confirm it.
+- The trip is decided on the independent level signal alone. The process level can raise the high
+  alarm but never trips and cannot block a trip.
+- One transition per update. Confirmation needs closure evidence for every requested valve and an
+  observed receipt flow at or below the residual threshold; after the timeout, anything less fails
+  the isolation.
+- A latched trip is cleared only by an authorised reset with the independent signal valid and below
+  the trip level minus the hysteresis. No agent can reset, bypass or command a valve through this
+  module.
 
-Source: ``revised/01_facility_tanks_topology.md`` section 6.3 (state machine and
-required protection tests); ``docs/design_decisions.md`` D12, D13 and D16.
+See D12, D13 and D16.
 """
 
 from __future__ import annotations

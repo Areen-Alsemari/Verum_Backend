@@ -1,15 +1,8 @@
 """Receipt interlock: protection must permit receipt into every connected tank.
 
-Inputs: a lineup ``Mode`` and the protection state machines of the tanks.
-Outputs: ``None`` when receipt is permitted; ``ReceiptBlocked`` otherwise.
-Key assumptions:
-    * A mode receives into the tank of every open receipt inlet valve.
-    * Receipt is permitted only while the tank's protection is NORMAL or
-      HIGH_ALARM. PROTECTION_UNAVAILABLE and any latched trip block it.
-    * A mode that does not receive is never blocked by this check.
-
-Source: ``revised/01_facility_tanks_topology.md`` section 6.2 (receive family:
-independent protection on all connected tanks) and section 6.3.
+A mode receives into the tank of every open receipt inlet valve. Receipt is permitted only while the
+protection of each such tank is normal or in high alarm; an unavailable protection or a latched trip
+blocks it. A mode that does not receive is never blocked.
 """
 
 from __future__ import annotations

@@ -1,23 +1,14 @@
-"""Configuration of the independent protection logic.
+"""Configuration of the independent protection logic for one tank.
 
-Inputs: the level thresholds of a tank from the topology contract and
-``config/protection.json`` (isolation-timeout multiplier, residual-flow
-threshold, valve stroke times and confirming-contact lags), all ``ParamValue``
-records. Outputs: a ``ProtectionConfig`` for one tank.
-Key assumptions:
-    * The isolation timeout is ``multiplier x stroke time + contact lag``
-      (decision D12), evaluated for each requested valve; the timeout of a
-      request is the largest of them, so the slowest valve sets the wait.
-    * The request closes the common receipt valve ``XV-R000`` and the tank
-      inlet valve of the tripped tank. This choice is a proposal: the audited
-      text says "selected/common receipt isolation" without naming valves.
-    * The alarm and reset hysteresis (D16) lowers the level at which HIGH_ALARM
-      clears and the level below which a latched trip can be reset.
-    * Values are read when a timeout is needed. An unresolved parameter raises
-      ``UnresolvedParameter`` then; nothing substitutes a default.
+The level thresholds come from the topology contract, and the isolation-timeout multiplier,
+residual-flow threshold, valve stroke times and contact lags from the protection configuration, all
+as parameter records. The isolation timeout is the multiplier times the stroke time plus the contact
+lag, for each requested valve, and the request's timeout is the largest of them. The request closes
+the common receipt valve and the inlet valve of the tripped tank, which is a proposal because the
+audited text names no valves. Alarm and reset hysteresis lower the levels at which the high alarm
+clears and a latched trip can be reset.
 
-Source: ``docs/design_decisions.md`` D4, D12, D13 and D16;
-``revised/01_facility_tanks_topology.md`` sections 3.5 and 6.3.
+See D4, D12, D13 and D16.
 """
 
 from __future__ import annotations
@@ -108,7 +99,7 @@ def parse_protection_config(raw: dict[str, object], tank: Tank) -> ProtectionCon
 def load_protection_config(
     topology: Topology, tank_id: str, directory: Path | None = None
 ) -> ProtectionConfig:
-    """Load ``config/protection.json`` for a tank of the topology."""
+    """Load the protection configuration for a tank of the topology."""
     tank = next((t for t in topology.tanks if t.tank_id == tank_id), None)
     if tank is None:
         raise ContractError(f"protection config: unknown tank {tank_id!r}")
