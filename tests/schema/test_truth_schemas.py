@@ -1,12 +1,7 @@
 """Positive and negative cases for the six backend-proposed hidden-dataset schemas.
 
-Inputs: ``schemas/hydraulic_state|solver_diagnostics|mass_ledger|events|episode|
-simulation_rejected.schema.json`` and hand-built rows. Outputs: pass/fail.
-Key assumptions: these schemas are proposals (version 0.7.0, ``x-status`` marker) for
-review by the schema owner; every row carries ``hidden = true``; the structural checks
-here say nothing about physical plausibility.
-
-Source: ``revised/05_simulation_validation_dataset.md`` sections 7.4.8 and 7.5.
+The schemas are proposals for review by the schema owner. Every row carries the hidden marker, and
+the structural checks say nothing about physical plausibility.
 """
 
 from __future__ import annotations
@@ -417,6 +412,9 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
     ("schema", "name", "doc"), POSITIVE, ids=[f"{s}:{n}" for s, n, _ in POSITIVE]
 )
 def test_valid_rows_are_accepted(schema: str, name: str, doc: Doc) -> None:
+    """Each hand-built valid row is accepted by its schema. Independent: yes, because the cases are
+    written out by hand.
+    """
     assert validator(schema).is_valid(doc)
 
 
@@ -424,21 +422,33 @@ def test_valid_rows_are_accepted(schema: str, name: str, doc: Doc) -> None:
     ("schema", "name", "doc"), NEGATIVE, ids=[f"{s}:{n}" for s, n, _ in NEGATIVE]
 )
 def test_invalid_rows_are_rejected(schema: str, name: str, doc: Doc) -> None:
+    """Each hand-built invalid row is rejected by its schema. Independent: yes, because the cases
+    are written out by hand.
+    """
     assert not validator(schema).is_valid(doc)
 
 
 @pytest.mark.parametrize("schema", PROPOSED_SCHEMA_NAMES)
 def test_each_schema_has_positive_and_negative_cases(schema: str) -> None:
+    """Every hidden-dataset schema has at least one accepted and one rejected case. Independent:
+    yes, because the check counts the cases.
+    """
     assert any(s == schema for s, _, _ in POSITIVE) and any(s == schema for s, _, _ in NEGATIVE)
 
 
 @pytest.mark.parametrize("schema", PROPOSED_SCHEMA_NAMES)
 def test_each_schema_is_a_marked_proposal(schema: str) -> None:
+    """Every hidden-dataset schema is marked as a backend proposal with a versioned identifier.
+    Independent: yes, because the check reads the schema documents directly.
+    """
     doc = load_schema(schema)
     assert doc["x-status"] == "backend-proposed" and doc["$id"] == f"urn:verum:{schema}:0.7.0"
     assert doc["properties"]["schema_version"]["pattern"] == "^0\\.7\\.[0-9]+$"
 
 
 def test_every_record_type_has_a_payload_definition() -> None:
+    """Every record type of the hydraulic-state schema has a payload definition and the payload
+    table matches the schema. Independent: yes, because the sets are compared with each other.
+    """
     schema = load_schema("hydraulic_state")
     assert set(schema["$defs"]) == set(PAYLOADS) == set(schema["properties"]["record_type"]["enum"])

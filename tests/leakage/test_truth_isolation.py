@@ -1,20 +1,11 @@
 """Isolation of the hidden truth store and the protection-signal tripwire.
 
-Inputs: the source tree and temporary modules written by the tests. Outputs: pass/fail.
-Key assumptions:
-    * Nothing outside the engine package may import the truth store, and the
-      observation and api packages may import none of the truth, engine, hydraulics or
-      ledger modules. The observation package does not exist yet; the test covers it as
-      soon as it appears and today asserts the rule on the api package.
-    * The tag ``truth_placeholder`` no longer exists (decision D33): the independent level
-      that the protection logic receives is the output of the engine's detector function,
-      and a static scan fails if any call passes anything else as ``independent_level_m``.
-      The scan itself is tested on a synthetic offending module.
-    * Within ``verum.sensors`` only the adapter imports the truth store.
-    * The hidden-dataset schemas require the ``hidden`` marker and refuse unknown fields.
+Only the engine package and one adapter may import the truth store, the observation and api packages
+may import no truth, engine, hydraulics or ledger module, and the protection logic must receive the
+independent level from the detector function and never the true level. The scans are tested on
+synthetic offending modules.
 
-Source: ``CONTRIBUTING.md`` (data exposure); ``revised/05_simulation_validation_dataset.md``
-sections 7.2 and 9.4.
+See D33.
 """
 
 from __future__ import annotations
@@ -77,6 +68,9 @@ def tag_users(root: Path) -> set[str]:
 
 
 def test_only_the_engine_and_one_adapter_import_the_truth_store(root: Path) -> None:
+    """Only the engine package, the truth package itself and the sensor adapter import the truth
+    store. Independent: yes, because the check scans the imports of the source tree.
+    """
     importers = importers_of(root, "verum.truth")
     assert importers
     assert all(
@@ -87,7 +81,9 @@ def test_only_the_engine_and_one_adapter_import_the_truth_store(root: Path) -> N
 
 
 def test_the_chain_and_the_specs_import_no_hidden_module(root: Path) -> None:
-    """Only the adapter of verum.sensors may touch the truth; the rest works on arrays."""
+    """Within the sensors package only the adapter touches the truth, and the rest works on arrays.
+    Independent: yes, because the check scans the imports of the source tree.
+    """
     base = root / "src" / "verum" / "sensors"
     for path in base.glob("*.py"):
         if path.name == "adapter.py":
@@ -97,6 +93,9 @@ def test_the_chain_and_the_specs_import_no_hidden_module(root: Path) -> None:
 
 
 def test_the_api_package_imports_no_hidden_module(root: Path) -> None:
+    """The api package imports no hidden module and not the sensor adapter. Independent: yes,
+    because the check scans the imports of the source tree.
+    """
     base = root / "src" / "verum" / "api"
     for path in base.rglob("*.py"):
         bad = [i for i in _imports(path) if i.startswith(FORBIDDEN_FOR_VISIBLE)]
@@ -117,8 +116,10 @@ def independent_signal_sources(root: Path) -> list[tuple[str, str]]:
 
 
 def test_protection_reads_the_detector_and_never_the_true_level(root: Path) -> None:
-    """The tripwire of Phase 4 (decision D33): the independent level handed to the protection
-    logic must come from the detector function, and the old tag must be gone."""
+    """Every independent level handed to the protection logic comes from the detector function, and
+    the old placeholder tag no longer appears in the source. Independent: yes, because the check
+    scans the source tree.
+    """
     sources = independent_signal_sources(root)
     assert sources
     assert all(src.startswith("self._detector_signal(") for _m, src in sources), sources
@@ -130,6 +131,9 @@ def test_protection_reads_the_detector_and_never_the_true_level(root: Path) -> N
 def test_the_tripwire_fails_for_a_module_that_feeds_the_true_level_to_protection(
     tmp_path: Path,
 ) -> None:
+    """The tripwire flags a synthetic module that passes the true level as the independent level.
+    Independent: yes, because the offending module is written by the test.
+    """
     pkg = tmp_path / "src" / "verum" / "later"
     pkg.mkdir(parents=True)
     (pkg / "m.py").write_text(
@@ -144,6 +148,9 @@ def test_the_tripwire_fails_for_a_module_that_feeds_the_true_level_to_protection
 def test_the_import_scan_finds_a_truth_import_in_a_synthetic_observation_module(
     tmp_path: Path,
 ) -> None:
+    """The import scan finds a truth import in a synthetic observation module. Independent: yes,
+    because the offending module is written by the test.
+    """
     pkg = tmp_path / "src" / "verum" / "observation"
     pkg.mkdir(parents=True)
     (pkg / "m.py").write_text('"""x."""\nimport verum.truth.sinks\n', encoding="utf-8")
@@ -152,6 +159,9 @@ def test_the_import_scan_finds_a_truth_import_in_a_synthetic_observation_module(
 
 @pytest.mark.parametrize("name", PROPOSED_SCHEMA_NAMES)
 def test_hidden_dataset_schemas_require_the_marker_and_refuse_unknown_fields(name: str) -> None:
+    """Each hidden-dataset schema is closed, requires the hidden marker and names its own dataset.
+    Independent: yes, because the check reads the schema documents directly.
+    """
     schema = load_schema(name)
     assert schema["additionalProperties"] is False
     assert "hidden" in schema["required"] and schema["properties"]["hidden"] == {"const": True}
@@ -159,6 +169,9 @@ def test_hidden_dataset_schemas_require_the_marker_and_refuse_unknown_fields(nam
 
 
 def test_the_top_level_package_imports_nothing(root: Path) -> None:
+    """The top-level package init imports nothing. Independent: yes, because the check parses the
+    source.
+    """
     assert _imports(root / "src" / "verum" / "__init__.py") == set()
 
 
@@ -176,10 +189,9 @@ EPISODE_FILES = {
 def test_no_scenario_identifier_appears_in_any_directory_or_file_name(
     episodes: dict[str, Any],
 ) -> None:
-    """Only the opaque episode id names an episode directory; file names come from a fixed set.
-
-    Scenario identifiers (S0-A, S0u-E, REJ-1, ...) describe the injected situation and live
-    only inside the hidden episode record.
+    """Only the opaque episode identifier names an episode directory, and file names come from a
+    fixed set, so no scenario identifier appears in a path. Independent: yes, because the check
+    inspects the written file names.
     """
     import re
 

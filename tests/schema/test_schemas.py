@@ -1,15 +1,8 @@
-"""Positive and negative cases for the five non-ParamValue schemas.
+"""Positive and negative cases for the five schemas other than the parameter value.
 
-Inputs: the schemas in ``schemas/`` and hand-built documents.
-
-Outputs:
-pass/fail per case. ParamValue has its own module.
-Key assumptions: a schema verdict covers structure only; physical plausibility
-is out of scope. The fault-truth case embeds ParamValue records, so the
-cross-schema reference is exercised, including the known flaws.
-
-Source: ``revised/05_simulation_validation_dataset.md`` sections 7.5 and 8.9;
-``member5_schema_reference_tests.py`` (the cases here extend its set).
+A schema verdict covers structure only, and physical plausibility is out of scope. The fault-truth
+case embeds parameter records, so the reference between schemas is exercised, including the known
+flaws.
 """
 
 from __future__ import annotations
@@ -334,17 +327,26 @@ CASES: list[tuple[str, str, Doc, bool]] = [
     ids=[f"{c[0]}:{c[1]}" for c in CASES],
 )
 def test_schema_verdict(schema: str, name: str, document: Doc, expected: bool) -> None:
+    """Each hand-built document is accepted or rejected by its schema as expected. Independent: yes,
+    because the verdicts are written out per case.
+    """
     assert validator(schema).is_valid(document) is expected
 
 
 @pytest.mark.parametrize("schema", [n for n in SCHEMA_NAMES if n != "paramvalue"])
 def test_every_schema_has_a_positive_and_a_negative_case(schema: str) -> None:
+    """Every schema has at least one accepted and one rejected case. Independent: yes, because the
+    check counts the cases.
+    """
     verdicts = {c[3] for c in CASES if c[0] == schema}
     assert verdicts == {True, False}
 
 
 @pytest.mark.parametrize("schema", SCHEMA_NAMES)
 def test_schema_ids_are_versioned_urns(schema: str) -> None:
+    """Every schema identifier is a versioned URN. Independent: yes, because the check reads the
+    schema documents directly.
+    """
     assert load_schema(schema)["$id"].startswith(f"urn:verum:{schema}:")
 
 
@@ -361,6 +363,9 @@ def test_schema_ids_are_versioned_urns(schema: str) -> None:
 )
 @pytest.mark.parametrize("status", ["not_requested", "requested", "approved", "cancelled"])
 def test_inspection_evidence_only_after_performed(status: str, field: str) -> None:
+    """Inspection evidence fields are accepted only when the workflow status is performed.
+    Independent: yes, because the expected outcome is the stated visibility rule.
+    """
     document = {
         **RESULT_APPROVED,
         "workflow_status": status,
