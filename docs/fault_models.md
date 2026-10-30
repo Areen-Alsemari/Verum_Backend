@@ -102,7 +102,21 @@ The actual opening is limited by a ceiling that falls from 1 to `alpha_stuck` as
 valve that is commanded closed is closed. The loss is the D19 law at the actual opening
 (`K(alpha) = K_open (Kv_max/Kv(alpha))^2`) and the valve contact is derived from the actual
 opening by D31, so a valve with `alpha < 0.98` reads not open. A contact that stays open while the
-valve is restricted would be a compound fault and is not part of this phase.
+valve is restricted is the second mode of decision D74, below.
+
+Two modes (D74), named in the specification (`fault_mode`; a restriction without it is refused, no
+mode is assumed):
+
+- **`position_visible`:** the actual opening is the ceiling and the open contact follows it, as above.
+- **`obstruction`:** the loss follows the ceiling (the same D19 law at `alpha_stuck`) and the flow and
+  pressures are those of the other mode, but the stem is at the commanded position, so the open
+  contact still reads open (D31 applied to the stem position). The valve-state truth row carries the
+  stem position as `contact_position_frac` next to `position_frac`, which sets the loss.
+
+The two modes differ only in the contact tag; a test checks the same flow in both (reference path with
+the extra loss `K(alpha_stuck) - K(1)`, evaluated at the tank level of the row) and the release of
+the contact at 301.8 s in one and not in the other. The split between modes in a later campaign is a
+sampler choice (50 percent each, D74) and is not implemented here.
 
 ## Pump head degradation (D62)
 
@@ -136,7 +150,13 @@ and the contact state stay separate records (the valve row carries `commanded_op
 - **(a) commanded closed, physically open:** the opening floor rises with the severity,
   `alpha = max(alpha_motion, s)`. The valve is commanded closed and ends fully open.
 - **(b) commanded open, stuck at `alpha <= 0.02`:** the ceiling falls to `alpha_stuck`, log-uniform in
-  `[0.005, 0.02]`; the mechanism is the restriction of D61 with a closed-like range.
+  `[0.005, 0.02]`; the mechanism is the restriction of D61 with a closed-like range. Eligible only on
+  a valve of a parallel branch (D75): a tank inlet valve while another inlet is open (for example
+  `XV-R101` and `XV-R102` in `RECEIVE_101_102`) or a tank outlet valve while another outlet is open.
+  On a valve in series with the whole flow (`XV-R101` in `RECEIVE_101`, `XV-S101` and the pump-branch
+  valves in `DELIVER_101_A`) the state is fixed by the flow and the candidate is refused before the
+  run. The pump branches are never open together in the static lineups, so a pump-branch valve is not
+  eligible. Misrouting (a) is unchanged.
 
 The states that result (two suction branches open, a receipt into two tanks) are not suppressed.
 The engine's quasi-steady branched scheme and its windows apply, and the gates decide.
@@ -167,12 +187,36 @@ limits depend on the level, the temperature and the stratum of the run (the NPSH
 those of the conditions listed; the bisection assumes that a severity that passes implies that every
 smaller one passes, and the end points of the 106 cases agree with it.
 
+## Latent faults (D76)
+
+A fault on an asset that is inactive in the lineup in force from its onset is labelled `latent` in
+the episode record (`fault_activity`); an active one is `active`. The label is computed from the
+lineup states from the onset to the end of the episode (the state at the onset and one per later
+timed lineup or set-point command; `verum.faults.activity`):
+
+| fault | active if |
+| --- | --- |
+| leak, sensor fault | always |
+| pump head fault | the pump runs |
+| restriction, `position_visible` | the valve is open (its contact changes) |
+| restriction, `obstruction` | the valve is open and carries flow (a receipt set-point above zero for an inlet valve, a running pump for an outlet or pump-branch valve) |
+| misrouting (a), forced open | the valve is not already open |
+| misrouting (b), stuck nearly closed | the valve is open |
+
+A latent fault changes no emitted number: the observation and hydraulic-state files of the faulted
+episode equal those of the healthy episode (a test runs a head fault on the stopped pump B while pump
+A delivers). In a later campaign latent faults are at most 5 percent of the fault episodes and are
+excluded from the detection metrics; a campaign generator is not part of this phase. A command
+triggered by an event (a protection request) is not applied in the label, which can turn a latent
+label into active but never the reverse.
+
 ## Eligibility and rejection (D66)
 
 Checked before the run, as a validator of the specification record: the asset exists and has the type
 the fault needs; the severity parameter lies in its range; the onset lies in `[600, T - 1800]`; the
 ramp is one of 30, 300, 1200 s (hydraulic faults); at most one fault per asset and one fault in the
-episode; for a leak, `x` in `[0.05, 0.95]`. Checked while running: every gate of the engine (pump
+episode; a restriction names its mode (D74); misrouting (b) is on a parallel branch of the lineup at
+the onset (D75); for a leak, `x` in `[0.05, 0.95]`. Checked while running: every gate of the engine (pump
 domain, phase and NPSH screen, pumping minimum, mass ledger, solver convergence) and the leak
 pressure condition. A candidate that fails any of them is written as `simulation_rejected` with
 the gate; the fault is not labelled and no data are kept.
@@ -188,7 +232,11 @@ convention changes nothing.
 `fault_truth` rows follow the audited schema (`schemas/fault_truth.schema.json`, not modified): fault
 type, instance id, asset, location (a leak's edge and fraction), onset, mechanism, the severity
 trajectory, the physical parameter with baseline and severity-one values, hidden. The episode record
-lists the instance ids. The specification record is validated by `schemas/fault_spec.schema.json`.
+lists the instance ids. The vendored schema has no field for the restriction mode or the activity
+label, so the `mechanism` of a restriction row is `restriction_position_visible` or
+`restriction_obstruction`, and the episode record lists `fault_modes` and `fault_activity` in the
+order of the instance ids (only when a fault is injected). The specification record is validated by
+`schemas/fault_spec.schema.json`.
 Nothing about faults is reachable from `verum.api`; `verum.sensors` knows only a hook interface
 (a callable acting on the reading), not the faults package.
 
@@ -222,8 +270,8 @@ Nothing about faults is reachable from `verum.api`; `verum.sensors` knows only a
   the comparison test is 5.25 m from that junction.
 - Misrouting can create lineups the operator model does not expect (two suction branches, a receipt
   into two tanks). They are handled by the branched scheme, which is a validity window, or by a gate.
-  A stuck-almost-closed valve on the duty path is not realisable at any severity of the range
-  (gate SG0 or SG2): the audit reports it as rejected, not as a fault with a weak signal.
+  A stuck-almost-closed valve on the duty path is outside the eligible set since D75 (it was
+  rejected by gate SG0 or SG2 in Phase 6a, and is now refused before the run).
 - A stuck-at has no consequence on a tag whose true signal is constant over the episode.
 - Single faults only: the signatures of two simultaneous faults are not studied, a recovery is not
   modelled, and the sensor faults act on the 14 continuous tags only.
@@ -292,3 +340,92 @@ Reading the table:
   pressures; valve restriction against pump degradation is.
 - **First detection.** At the largest severity the earliest tag leaves the noise band 30 to 250 s after
   the onset for a leak, 70 to 130 s for a restriction, 30 s for a pump fault and 10 s for a bias.
+
+## Agent-side detectability audit (D77, D78): results
+
+The twin-based audit above compares a faulted run with its healthy twin. An agent has no twin: it has
+the observed tags and the design data. `tools/fault_audit_v2.py` runs the grid again under the
+healthy-variability profiles v1 and v2 (the 6a grid with 8 severities, three assets per type, onset
+900 s, 1800 s observed, ramp 300 s, both restriction modes, and misrouting (b) on `XV-R101` and
+`XV-R102` of `RECEIVE_101_102`, as D75 requires; 544 fault runs and 160 healthy runs with 20 seeds per
+profile and lineup, and 153 sensor cases per scenario and profile), and `tools/fault_audit_v2_report.py`
+computes the residual features of D77, the margins and the classes (full tables in
+`local/results/fault_audit_v2.md` and `fault_audit_v2_cells.md`, not committed; the class boundaries
+are in `config/severity_classes.json`). Latent cells (D76: the stopped pump B, restrictions of the
+closed valves `XV-R102` and `XV-R103`) are excluded from the counts below.
+
+**Healthy floor.** A margin is only meaningful against what healthy runs produce. The largest
+single-window deviation exceeds the 3 sigma threshold in 51 of 80 healthy runs under v1 and 55 of 80
+under v2 (the maximum of about 570 feature-window samples), so a single-window margin of 1 is no
+detection; the margin held over three windows is below 1 in 80 of 80 (v1) and 77 of 80 (v2) healthy
+runs and below 3 in all (latent cells, which are identical to a healthy run: 0 of 48 at or above 1
+under either profile). The classes use the held margin.
+
+**Twin audit against agent-side residuals** (active cells; the number with a held margin of at least 1,
+and in brackets at least 3, out of the cells of the fault):
+
+| fault | 6a twin: consequence | agent v1 | agent v2 |
+| --- | --- | --- | --- |
+| leak | 40/72 | 16/72 (6) | 13/72 (2) |
+| restriction, `position_visible` | 52/52 | 52/52 (52, by the contact) | 54/54 (54) |
+| restriction, `obstruction` | not run | 25/52 (16) | 14/54 (7) |
+| pump head loss | 16/16 | 12/16 (7) | 11/16 (6) |
+| sensor bias | 72/72 | 9/72 (1) | 7/72 (1) |
+| sensor drift | 67/72 | 37/72 (22) | 23/72 (15) |
+| sensor stuck-at | 7/9 | 3/9 (3) | 6/9 (3) |
+| misrouting (a) | 7/7 | 7/7 (7, by the contact) | 7/7 (7) |
+| misrouting (b), parallel branch | not comparable | 16/16 (16, by the contact) | 16/16 (16) |
+
+Most of what the twin audit called a consequence is below what an agent can see. A leak is seen from
+about 3 to 9 x 10^-4 m2 (a margin of 3 is not reached on every asset of any zone inside the range), a
+bias of a flow or level meter does not reach a margin of 1 on every asset inside the range, and under
+v2 every residual that
+depends on the downstream factor is less sensitive: the delivery-law and delivery-flow residuals have
+thresholds of 1.6 to 1.8 x 10^5 Pa and 126 to 137 m3/h. A restriction in mode `obstruction` is seen only
+through its flow and pressure effect (the contact stays open): 26 percent of its cells under v2 reach a
+held margin of 1 or more, against 100 percent for `position_visible`. A stuck-at is seen more often
+under v2 than under v1: the regimes move the true quantity away from the frozen reading.
+
+**Classes** (profile v2, held margin; share of the active cells of the grid, which is log-uniform in
+severity, and the share under class-balanced sampling):
+
+| fault | invisible | marginal | clear | class-balanced sampling |
+| --- | --- | --- | --- | --- |
+| leak | 0.82 | 0.15 | 0.03 | one third each |
+| restriction, `position_visible` | 0.00 | 0.00 | 1.00 | only `clear` is populated |
+| restriction, `obstruction` | 0.74 | 0.13 | 0.13 | one third each |
+| pump head loss | 0.31 | 0.31 | 0.38 | one third each |
+| sensor bias | 0.90 | 0.08 | 0.01 | one third each |
+| sensor drift | 0.68 | 0.11 | 0.21 | one third each |
+| sensor stuck-at | 0.33 | 0.33 | 0.33 | one third each |
+| misrouting (a), (b) | 0.00 | 0.00 | 1.00 | only `clear` is populated |
+
+Under the old sampling about four episodes in five are invisible for a leak and nine in ten for a
+bias; class-balanced sampling gives a third of each. Where the grid has no cell in a class (the
+restriction that changes its contact, misrouting) the class cannot be allocated. The same shares under
+profile v1 are in the report (leak 0.78 / 0.14 / 0.08, obstruction 0.52 / 0.17 / 0.31, drift 0.49 /
+0.21 / 0.31).
+
+**Boundaries** (`config/severity_classes.json`, profile v2, median over the assets of the class): a
+leak is marginal from 3.3 x 10^-4 m2 (discharge and pump branch), 6.1 x 10^-4 (receipt) and
+8.8 x 10^-4 (suction), and is not clear inside the range on any zone; an obstruction of a receipt
+inlet valve is marginal from a closure of 0.31 and clear from 0.47, of an outlet valve marginal from
+0.50 and not clear; a pump head loss is marginal from 0.043 and clear from 0.105; a flow-meter
+bias, a level-meter bias and a flow-meter drift never reach a margin of 1 on all assets. A boundary
+that an asset of the class does not reach is an unresolved record.
+
+**Confusable pairs** (cosine above 0.95 of the normalised signature over the residual features, cells
+with a held margin of at least 1, profile v2): a restriction in mode `obstruction` and a pump head
+degradation are confusable (12 cell pairs) and the contact does **not** separate them, because an
+obstruction leaves the contact open and a pump fault has none; a restriction in mode
+`position_visible` and a pump degradation (13 pairs) are separated by the contact; the two restriction
+modes (26 pairs), misrouting (a) and a visible restriction (17) are separated by their contacts; a
+bias, a drift and a stuck-at of one tag (3 to 13 pairs) and a leak against a stuck-at (7) are not
+separated by any contact. Under the cosine measure leak against pump degradation is no longer
+confusable once only held margins are used.
+
+**Limits.** The nuisance ranges, the three windows and the 20 seeds are selections; the features use
+60 s windows and the design model of the plant itself, so an agent with a worse model sees less. The
+thresholds are pooled over seeds and draws, and the margin of a run is that of the worst of five
+perturbed designs (the unperturbed design is used only for the signatures of the confusable pairs). The
+classes describe this model and these features, not a real terminal.

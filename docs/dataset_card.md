@@ -46,6 +46,39 @@ set-point step, delivery with a downstream demand process, delivery in the inlan
 two rejected starts. Episode count and horizon: **unresolved** (a campaign has not been defined);
 the shipped scenarios last 3600 s.
 
+## Healthy variability profiles
+
+A scenario file names a `variability_profile` (decision D73). `off` has no demand process; `v1` has
+the slow downstream factor of D23 (a log-normal process of standard deviation 0.05 and correlation
+time 1800 s, clipped to 0.8 to 1.25); both reproduce the earlier files bit for bit (a test compares the
+rows of S0-A, S0-B and S0-F over 900 s with digests taken before profile v2 existed). Profile `v2`
+(scenarios `S0-A-v2`, `S0-B-v2`, `S0-C-v2`, each with its own seed) adds two things on named streams:
+
+- The downstream factor follows regimes: a value log-uniform between 0.6502 and 8, held for a dwell
+  uniform between 600 and 1800 s, entered by a 60 s linear ramp, multiplied by the OU factor and not
+  smaller than 0.6502. The lower bound is 0.6 raised to the smallest value that keeps the pump 5 m3/h
+  inside its curve at a tank level of 12 m (flow 348.07 m3/h at 0.6, 344.99 m3/h at 0.6502;
+  `tools/regime_bound.py`). A regime that would leave the pump domain, fail the phase and NPSH screen
+  or fall below the minimum stable flow of 90 m3/h (D49) at the state of the moment is redrawn, and
+  the redraw is recorded (event `demand_regime`, episode record, `demand_regime_redraws`); in the
+  shipped v2 scenarios none was needed (the flow at a factor of 10 is 167 m3/h).
+- The receipt set-point is followed with a deviation: an OU process of standard deviation 2 percent
+  of the set-point, correlation time 600 s, clipped to plus and minus 6 percent, after a headroom
+  screen at 1.06 times the set-point (636 m3/h for 600 against 651.5 m3/h).
+
+The pumping-minimum levels for v2 are tabulated at the factor 0.6502 (`..._fd0p6502.json`, one file
+per atmosphere and volatility class) and gate SG0 reads the table of the profile; the minimum rises
+by up to 1.28 m, and 2 to 4 cells per file that passed at 0.8 never pass at 0.6502
+(`local/results/strata_tables_v2.md`). The hidden `boundary_state` records the regime value and the
+nominal and effective receipt set-points.
+
+Effect on the emitted tags (20 seeds, 2700 s, cross-seed standard deviation of the 60 s mean, S0-A,
+v1 against v2): FT-201 2.39 to 44.9 m3/h, PT-203 0.027 to 0.41 barg, PT-202A 0.018 to 0.27 barg,
+LT-101 0.0017 to 0.024 m; with a receipt, FT-001 0 to 12.9 m3/h and PT-001 0.027 barg. A detector or
+a model that assumes the downstream law of v1 sees a baseline fourteen to nineteen times more variable
+on the tags that depend on the factor; the audit of `docs/fault_models.md` shows what that does to
+detectability. None of the regime values is measured; they are selections (D73).
+
 ## Generation
 
 Campaign seed: unresolved. Solver version `path-dynamics-radau-1`. The code commit, the lockfile
@@ -71,6 +104,18 @@ against the paper; that is a check of the numerical method for those pipes, not 
 
 ## Known limitations
 
+- Agent-side detectability is low for small faults (decisions D77 and D78, `docs/fault_models.md`). From
+  the observed tags and the design model alone, over 60 s windows and with a margin held for three
+  windows, about four episodes in five of a log-uniform leak sampling and nine in ten of a sensor bias
+  sampling are invisible under the healthy-variability profile v2; a leak is marginal from about
+  3 to 9 x 10^-4 m2 and never clear on every asset inside the range; a restriction in mode
+  `obstruction` cannot be told from a pump head degradation by the contact, which stays open. Severity
+  classes (`invisible`, `marginal`, `clear`) and their boundaries per fault type and asset class are
+  in `config/severity_classes.json`; a later sampler is to allocate equally across the classes a
+  fault type populates. A fault on an asset that is not active in the lineup is labelled `latent` in
+  the episode record and is to be excluded from detection metrics (D76); the single-window margin of a
+  healthy run reaches 1 in two runs out of three, so only the held margin is a detection. None of
+  this is validated against real data.
 - Severe restrictions of a valve on the suction side of the duty pump are not representable. A closure
   above about 0.67 (`XV-S103`), 0.72 (`XV-S102`) or 0.75 (`XV-S101`, `XV-PAI`, `XV-PBI`) of the
   opening is rejected by the phase and NPSH screen, and a forced opening of `XV-PBO` while pump A

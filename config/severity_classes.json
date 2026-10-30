@@ -1,0 +1,259 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Severity class boundaries of the agent-side audit, profile v2 (decisions D77, D78): the severity coordinate (the same as the audit: leak area in m2, closure or head loss fraction, sensor fraction of span, stuck opening) from which the margin of the worst design reaches 1 (marginal) and 3 (clear); the median over the assets of the class. A value at the lower end of the range of the fault means the class begins at or below that end.",
+  "source": "tools/fault_audit_v2_report.py",
+  "parameters": {
+    "bias/flow/marginal_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 2 of 3 assets does not reach 1 within the range"
+    },
+    "bias/flow/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 3 within the range"
+    },
+    "bias/level/marginal_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 1 within the range"
+    },
+    "bias/level/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 3 within the range"
+    },
+    "bias/pressure/marginal_from": {
+      "value": 0.044215721089739445,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "bias/pressure/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 2 of 3 assets does not reach 3 within the range"
+    },
+    "drift/flow/marginal_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 1 within the range"
+    },
+    "drift/flow/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 3 within the range"
+    },
+    "drift/level/marginal_from": {
+      "value": 0.0020670999777790975,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "drift/level/clear_from": {
+      "value": 0.006251046697756461,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "drift/pressure/marginal_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 2 of 3 assets does not reach 1 within the range"
+    },
+    "drift/pressure/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 3 within the range"
+    },
+    "leak/discharge/marginal_from": {
+      "value": 0.0003270541203408906,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "leak/discharge/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 1 of 2 assets does not reach 3 within the range"
+    },
+    "leak/pump_branch/marginal_from": {
+      "value": 0.0003263203590421113,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "leak/pump_branch/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 1 of 2 assets does not reach 3 within the range"
+    },
+    "leak/receipt/marginal_from": {
+      "value": 0.0006094613191864469,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "leak/receipt/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 3 of 3 assets does not reach 3 within the range"
+    },
+    "leak/suction/marginal_from": {
+      "value": 0.0008827199761839094,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "leak/suction/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 2 of 2 assets does not reach 3 within the range"
+    },
+    "misroute_b/tank_inlet/marginal_from": {
+      "value": 0.02,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "misroute_b/tank_inlet/clear_from": {
+      "value": 0.02,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "pump/pump/marginal_from": {
+      "value": 0.04340047666259783,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "pump/pump/clear_from": {
+      "value": 0.1052376992396028,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_obstruction/pump_branch/marginal_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 1 of 3 assets does not reach 1 within the range"
+    },
+    "restriction_obstruction/pump_branch/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 2 of 3 assets does not reach 3 within the range"
+    },
+    "restriction_obstruction/tank_inlet/marginal_from": {
+      "value": 0.30526142352514907,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_obstruction/tank_inlet/clear_from": {
+      "value": 0.47080716131065514,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_obstruction/tank_outlet/marginal_from": {
+      "value": 0.4955836718807962,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_obstruction/tank_outlet/clear_from": {
+      "value": null,
+      "unit": "1",
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "the margin of 1 of 2 assets does not reach 3 within the range"
+    },
+    "restriction_position_visible/pump_branch/marginal_from": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_position_visible/pump_branch/clear_from": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_position_visible/tank_inlet/marginal_from": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_position_visible/tank_inlet/clear_from": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_position_visible/tank_outlet/marginal_from": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    },
+    "restriction_position_visible/tank_outlet/clear_from": {
+      "value": 0.1,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-PHASE6B-AUDIT-V2"
+    }
+  }
+}

@@ -50,7 +50,10 @@ A standalone transient engine (`verum.transient`, a first-order method of charac
 on the 28 edges; see `docs/transient_engine.md`) is a library with its own verification ladder.
 It is not called by the episode engine and changes no dataset tier. Single faults (a pipe leak, a
 valve restriction, a pump head degradation, sensor faults and valve misrouting) can be injected
-into an episode through `verum.faults`; see `docs/fault_models.md`. Multi-fault episodes, a campaign
+into an episode through `verum.faults`; see `docs/fault_models.md`. A scenario names a healthy
+variability profile (`off`, `v1`, or `v2` with demand regimes and a moving receipt set-point;
+`docs/dataset_card.md`), a restriction is `position_visible` or `obstruction`, and a fault on an
+asset that is not active in the lineup is labelled latent. Multi-fault episodes, a campaign
 generator and agents are not implemented. The release policy
 in `config/dataset_release_policy.json` keeps `production_generation_enabled`
 false, and the gate refuses the `production_candidate` tier while it is false.
