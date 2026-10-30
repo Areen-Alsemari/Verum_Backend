@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 14 (2026-10-31). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 15 (2026-11-01). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -86,8 +86,12 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D74 | Valve restriction modes | SIM | 1.0 |
 | D75 | Misrouting (b) eligibility | SIM | 1.0 |
 | D76 | Latent faults | DESIGN | 1.0 |
-| D77 | Agent-side detectability audit | DESIGN | 1.0 |
-| D78 | Severity classes | DESIGN | 1.0 |
+| D77 | Agent-side detectability audit | DESIGN | 2.0 (supersedes 1.0) |
+| D78 | Severity classes | DESIGN | 2.0 (supersedes 1.0) |
+| D79 | Calibrated feature thresholds and single-window margin | DESIGN | 1.0 |
+| D80 | Window lengths and slope features | DESIGN | 1.0 |
+| D81 | Held margin as a secondary column | DESIGN | 1.0 |
+| D82 | Limits carried to the dataset card | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -976,7 +980,30 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 
 ## D77 - Agent-side detectability audit
 
-- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D68
+- **Version:** 2.0 (2026-11-01)  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D68
+- **Decision.**
+  - The audit computes residual features from the observation stream and design data only: (1) mass balance, FT-001 minus FT-201 minus the rate of change of the summed tank volume from LT; (2) pump consistency, PT-202A minus PT-201 minus rho g H(FT-201) of the design pump curve; (3) delivery law, PT-203 minus (2 barg + rho g c (FT-201/300)^2) with the design coefficient; (4) FT-201 against the design delivery flow for the observed level; (5) PT-001 against the design receipt pressure for FT-001 and the observed level; (6) a trend of each continuous tag; and the discrete features, a change after the onset of a valve contact or of a pump run status.
+  - The window lengths and the statistic of each feature are those of D80; the thresholds and the margin are those of D79.
+  - The design model is perturbed over five draws (pump head scale 0.97 to 1.03, fitting K multiplier log-uniform in 0.5 to 2, boundary coefficient multiplier log-uniform in 0.8 to 1.25).
+  - The margin of a run under a draw is the largest over features and window lengths; the margin of the run is the smallest over the five draws. A change of a contact or a run status is a margin of 3 at once.
+- **Reason.** An agent has only the observations and design data, and a design that is wrong by the nuisance amounts must not raise an alarm. Version 1.0 judged a margin held over three windows against three standard deviations; the false-alarm rate of that rule was not controlled, and the held margin made the classes depend on how long a deviation lasts.
+- **Sensitivity required.** The nuisance ranges above, the number of healthy runs, and the window lengths.
+- **Notes.** The nuisance ranges are unsourced selections. A fault on an asset that is latent (D76) is excluded from the counts and its margin is reported as a healthy floor.
+
+## D78 - Severity classes
+
+- **Version:** 2.0 (2026-11-01)  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D68
+- **Decision.**
+  - For an episode the margin m is the single-window margin of D79. The class is `invisible` for m below 1, `marginal` for m from 1 to below 3 and `clear` for m from 3.
+  - A later sampler allocates equally across the classes that the fault type populates and draws log-uniformly within a class.
+  - The boundaries per (fault type, asset class) are stored in `config/severity_classes.json` as the severity coordinate from which the margin reaches 1 and 3 (the median over the assets of the class, log-log interpolation across the 8 severities); a boundary that the margin of any asset of the class does not reach inside the range is an unresolved record.
+- **Reason.** Sampling log-uniformly over the whole range puts most episodes in one class; the classes make the share of hard and impossible cases explicit.
+- **Sensitivity required.** The share of episodes per class under the old and the class-balanced sampling; the boundaries under profile v1.
+- **Notes.** No severity range is changed to improve the shares. A boundary equal to the least severe end of the range means that the class begins at or below that end.
+
+## D77 - Agent-side detectability audit (version 1.0, superseded)
+
+- **Version:** 1.0 (2026-10-31)  **Superseded by:** 2.0  **Status:** DESIGN  **Refines:** D68
 - **Decision.**
   - The audit computes residual features from the observation stream and design data only, over 60 s windows of the observed tags: (1) mass balance FT-001 - FT-201 - the sum over tanks of area times the level slope of LT; (2) pump consistency PT-202A - PT-201 - rho g H(FT-201) of the design pump curve; (3) delivery law PT-203 - (2 barg + rho g c (FT-201/300)^2) with the design coefficient; (4) FT-201 against the design delivery flow for the observed level; (5) PT-001 against the design receipt pressure for FT-001 and the observed level; (6) each continuous tag minus its previous window mean (a one-step persistence forecast); and the discrete features, a change after the onset of a valve contact or of a pump run status.
   - The design model is perturbed over five draws (pump head scale 0.97 to 1.03, fitting K multiplier log-uniform in 0.5 to 2, boundary coefficient multiplier log-uniform in 0.8 to 1.25).
@@ -990,9 +1017,9 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Sensitivity required.** The nuisance ranges above, the 20 seeds, and the single-window margin reported next to the held margin.
 - **Notes.** The single-window maximum is reported in `local/results/fault_audit_v2_cells.md`; the three windows are a selection. The nuisance ranges are unsourced selections. A fault on an asset that is latent (D76) is excluded from the counts and its margin is reported as a healthy floor.
 
-## D78 - Severity classes
+## D78 - Severity classes (version 1.0, superseded)
 
-- **Version:** 1.0 (2026-10-31)  **Status:** DESIGN  **Refines:** D68
+- **Version:** 1.0 (2026-10-31)  **Superseded by:** 2.0  **Status:** DESIGN  **Refines:** D68
 - **Decision.**
   - For an episode the margin m is the held margin of D77. The class is `invisible` for m below 1, `marginal` for m from 1 to below 3 and `clear` for m from 3.
   - A later sampler allocates equally across the three classes that the fault type populates and draws log-uniformly within a class.
@@ -1000,6 +1027,53 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** Sampling log-uniformly over the whole range puts most episodes in one class (the invisible one for leaks and sensor bias); the classes make the share of hard and impossible cases explicit.
 - **Sensitivity required.** The share of episodes per class under the old and the class-balanced sampling; the boundaries under profile v1 are in the report.
 - **Notes.** No severity range is changed to improve the shares. A boundary equal to the least severe end of the range means that the class begins at or below that end.
+
+## D79 - Calibrated feature thresholds and single-window margin
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN  **Refines:** D77
+- **Decision.**
+  - For each feature and window length the threshold is the 99th percentile, over the healthy runs of a profile and lineup and the five nuisance draws, of the per-run maximum over all windows of the absolute deviation of the feature from its healthy mean.
+  - The healthy mean is taken per scenario family and per window length, over the same runs, draws and windows.
+  - The margin of a feature in a faulted run is the largest absolute deviation from the healthy mean over all windows of the run, divided by the threshold. A cell is detected when the margin reaches 1.
+  - The target false-alarm rate is 1 percent of healthy runs for each feature.
+- **Reason.** A threshold of three standard deviations does not control the false-alarm rate of a maximum over many windows: the maximum of a few hundred samples exceeds it in most healthy runs. Calibrating the maximum itself makes a margin of 1 mean what it says.
+- **Sensitivity required.** At least 200 healthy runs per lineup and profile; the sampling error of the percentile; the false-alarm rate on a separate set of 100 healthy runs.
+- **Notes.** The rate for one feature is 1 percent; a cell takes the largest margin over features and window lengths, so its false-alarm rate is higher. The report states the rate over all features together.
+
+## D80 - Window lengths and slope features
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN  **Refines:** D77
+- **Decision.**
+  - Features are evaluated over windows of 60, 300 and 900 s that end on a 60 s grid; the cell margin is the best over the three lengths, and the time to detect is reported for each length.
+  - The mass-balance feature uses the least-squares slope of the summed tank volume over the window (the slope of each LT reading, times the tank area), not a difference of two readings.
+  - The trend feature of a continuous tag is the least-squares slope of the tag over the window; for a level tag it is the difference of the window mean and that of the window before it.
+  - The other features use the window mean of their inputs.
+  - A window is used only if it starts after 180 s, so that the start-up of the receipt controller is excluded.
+- **Reason.** Averaging over a longer window lowers the noise of a feature by the square root of the number of samples and a slope over a long window lowers the noise of a rate much further, at the price of a later detection.
+- **Sensitivity required.** The three window lengths; the noise floor of the mass-balance slope per length against the hand estimate.
+- **Notes.** The lengths are selections. Windows overlap, because they end on a 60 s grid.
+
+## D81 - Held margin as a secondary column
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN  **Refines:** D79
+- **Decision.**
+  - The held margin (the smallest of three consecutive windows, largest over time) is reported next to the single-window margin.
+  - The time to detect is the end of the third window of the first run of three consecutive windows after the onset whose deviation exceeds the threshold.
+  - The class of a cell uses the single-window margin only.
+- **Reason.** The held margin is a measure of persistence. A detector acts on persistence, so the time to detect uses it; the class describes whether a fault can be seen at all.
+- **Sensitivity required.** None.
+- **Notes.** Windows overlap, so three consecutive windows of 900 s are not independent.
+
+## D82 - Limits carried to the dataset card
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN
+- **Decision.**
+  - A leak on an idle branch that is connected to live fluid cannot be represented, because the steady network does not solve dead-end edges; such a candidate is rejected at every severity and is never labelled.
+  - Misrouting and the visible restriction have a single class (clear) in the grid and cannot be balanced across classes.
+  - The dataset card states both limits.
+- **Reason.** The limits follow from the model and from the grid; a reader of the dataset needs them stated.
+- **Sensitivity required.** None.
+- **Notes.** The first limit is a property of the steady network solve, not of the leak law.
 
 ## Episode profile
 
