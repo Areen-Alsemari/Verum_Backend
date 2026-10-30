@@ -360,3 +360,42 @@ Derivations (hand arithmetic, independent of the code):
 - Valve stroke: alpha moves 1/10 per second for XV-R000 and 1/30 per second for the others.
 - Rigid-column time constant of the receipt path to TK-101 at 600 m3/h: sum L/A = 150/0.072190 + 45/0.032283 = 2077.9 + 1393.9 = 3471.8 1/m; Q0 = 0.166667 m3/s; the head loss comes from the independent reference module with the hand-counted K of the path (DN300: meter 1.0 + bend and XV-R000 0.4; DN200: two bends 0.6 + bend, XV-R101, tank inlet 1.4).
 - Hermite root: for a linear volume (equal end slopes) the crossing fraction is linear.
+
+## Validity windows
+
+Key assumptions:
+
+- Decisions D22 and D53: an event is valid if its duration is at least a factor times the wave round trip of its path, 2 sum(L/a): 25 for a valve stroke, 10 for a set-point change, a flow collapse and a path closure. Hand values: receipt path to tank 101 = 0.36087 s (a 10 s stroke is 27.7 round trips, a set-point change of 8 s is 22.2, a 30 s stroke is 83), to tank 102 = 2 (150/1078.2 + 80/1089.2) = 0.42514 s (a 10 s stroke is 23.5), to tank 103 = 2 (150/1078.2 + 115/1089.2) = 0.48941 s (20.4); delivery path 0.67 s or more (a 30 s stroke is more than 44 round trips).
+- Decision D53 version 3 sets the stroke factor to 50, so a 10 s stroke of XV-R000 (27.7 round trips to tank 101, 23.5 to tank 102) is flagged when the flow through the valve at its start is at least 10 percent of the design flow of the path (decision D58: 60 m3/h for the receipt path). Hence the flagged events in the shipped scenarios are the closing of XV-R000 at 600 s in S0u-D (flow 600 m3/h at the start) and, in S0u-E, the 10 s closure and the collapse of the flow under the cap. The 10 s opening of XV-R000 at 1200 s in S0u-D starts at zero flow and is not judged. The dead-leg window of D54 is tested in `test_dead_leg_window.py`.
+- A branched lineup has no single column and is flagged `rigid_column_unavailable`.
+- Every window carries a reason from a fixed list, and the dataset, the episode record and the engine outcome agree.
+
+Independence: the round trips are hand arithmetic from the audited lengths and the screening wave speeds; the flagged set follows from the criterion, not from the engine.
+
+### The number of events judged and the number flagged
+
+Windows listed: S0u-E the 10 s closure, the collapse (a flow event) and the dead-leg window of D54; S0u-D none, because the 10 s closure of XV-R000 at 600 s is judged at an opening of 0.2 (D58 version 2), where the flow is already below 60 m3/h. The set-point collapse of S0u-D lasts 4.4 s, 12.2 round trips of 10 or more, and is valid.
+
+Hand ratios: 8 s set-point change 22.2 round trips, 10 s stroke 27.7, 30 s stroke 83.1 (receipt); the collapse of S0u-E lasts 0.19 s, 0.51 round trips (a flow event, not a stroke event: the 10 s stroke itself is valid).
+
+## Healthy-variability profiles
+
+Key assumptions:
+
+- Hand values (decision D73): a log-uniform regime on [0.6502, 8] has mean log (ln 0.6502 + ln 8) / 2 and variance (ln 8 - ln 0.6502)^2 / 12; a dwell uniform on [600, 1800] s has mean 1200 s; a ramp of 60 s is linear, so its midpoint is the mean of the two values; the receipt deviation has standard deviation 0.02 and lag-600 s correlation exp(-1); the headroom limit for one hour is 651.515 m3/h (`test_headroom_and_envelope.py`), so a set-point of 600 m3/h at 1.06 times (636) passes and one of 620 (657.2) does not.
+- Profiles `off` and `v1` reproduce the earlier files bit for bit: the digests below were taken from the engine rows of S0-A (off), S0-F (v1) and S0-B (off) for 900 s before profile v2 was added, with the episode identifier removed.
+- The accepted regimes and the redraws are stored in the engine state, so a restart inside a ramp reproduces the continuous run (restart cases are in `test_engine_episodes.py`).
+
+Independence: the statistics use scipy and hand arithmetic; the digests are of the earlier output, not of the new code.
+
+## Volatility classes
+
+Key assumptions:
+
+- The correlation reproduces the tabulated constants of RVP 13, 10 and 7 within 0.1 percent and the tabulated true vapor pressures (Table 7.1-2 at 60 F, 519.67 R, and the worked example at 528.37 R) within 2 percent. The edition fetched tabulates three gasoline classes, not the eight named in the decision; five of the named classes (7.8, 8.3, 11.5, 13.5, 15) are not in it, which is recorded as a deviation.
+- RVP 9 gives about 44 kPa at 25 C and 82 kPa at 45 C (the expected values of the decision).
+- If the gate fails, the derived classes are unresolved and raise when selected; the audited RVP 10 class still works.
+
+Independence: the tabulated values are transcribed from the EPA document; the formula and its evaluation are recomputed here by hand arithmetic (natural logarithm of 10 is 2.302585).
+
+Bracketing (D46 version 4): RVP 8.3 is not tabulated in the edition fetched, so the derived classes are bracketed by the tabulated RVP 7 and RVP 10 constants at 25, 35, 40 and 45 C. This is a necessary check and not a validation of the derived classes.

@@ -1,15 +1,10 @@
-"""Joining validity-window identifiers to observation rows by time (evaluation side).
+"""Joining validity-window identifiers to observation rows by time, on the evaluation side.
 
-Inputs: the S0u-E episode (a stroke window, a collapse window and, since D54, a dead-leg
-window) and small synthetic cases. Outputs: pass/fail.
-Key assumptions:
-    * The join sits in ``verum.evaluation``, not in ``verum.api``; the gateway imports
-      nothing from the evaluation package, and the audited audit schema is not changed.
-    * A row belongs to a window if ``t_start_s <= t_sim_s <= t_end_s`` (sample time).
-Independence: the expected membership is computed here by a direct comparison with the window
-times written in the episode record.
+The join sits in the evaluation package and not in the api package, and the gateway imports nothing
+from it. A row belongs to a window if its sample time lies between the start and end of the window,
+and the expected membership is computed directly from the window times of the episode record.
 
-Source: ``docs/design_decisions.md`` D25.
+See D25.
 """
 
 from __future__ import annotations
@@ -27,6 +22,10 @@ from verum.sim.episode import EpisodeResult
 def test_the_s0ue_windows_are_attached_to_the_samples_inside_them(
     episodes: dict[str, EpisodeResult],
 ) -> None:
+    """Each observation row of the isolation scenario receives the identifiers of the windows that
+    contain its sample time. Independent: yes, because the membership is computed by a direct
+    comparison with the recorded window times.
+    """
     directory = episodes["S0u-E"].directory
     with gzip.open(directory / "observations.jsonl.gz", "rt") as handle:
         rows = [json.loads(line) for line in handle]
@@ -50,6 +49,9 @@ def test_the_s0ue_windows_are_attached_to_the_samples_inside_them(
 
 
 def test_overlapping_open_and_empty_windows() -> None:
+    """Overlapping windows, a window with no end and a window that holds no row are all joined
+    correctly. Independent: yes, because the expected membership is written out in the test.
+    """
     rows = [{"t_sim_s": float(t)} for t in (0, 5, 10, 15, 20)]
     windows: list[dict[str, Any]] = [
         {"window_id": "VW-0002", "t_start_s": 10.0, "t_end_s": None},
@@ -63,6 +65,9 @@ def test_overlapping_open_and_empty_windows() -> None:
 
 
 def test_the_gateway_does_not_import_the_evaluation_package(root: Path) -> None:
+    """The gateway modules import nothing from the evaluation package. Independent: yes, because the
+    check parses the source.
+    """
     for path in (root / "src" / "verum" / "api").glob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         names = [n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)] + [

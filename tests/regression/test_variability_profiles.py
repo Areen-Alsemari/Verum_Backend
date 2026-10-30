@@ -1,23 +1,13 @@
-"""Healthy-variability profiles: off and v1 unchanged, v2 regimes and receipt set-point process.
+"""Healthy-variability profiles: off and v1 unchanged, and the v2 regimes and receipt set-point
+process.
 
-Inputs: the regime drawer and the set-point process (statistics over many seeds), short engine
-runs of the v2 scenarios, and the stored pumping-minimum tables. Outputs: pass/fail.
-Key assumptions:
-    * Hand values (decision D73): a log-uniform regime on [0.6502, 8] has mean log
-      (ln 0.6502 + ln 8) / 2 and variance (ln 8 - ln 0.6502)^2 / 12; a dwell uniform on [600, 1800]
-      s has mean 1200 s; a ramp of 60 s is linear, so its midpoint is the mean of the two values;
-      the receipt deviation has standard deviation 0.02 and lag-600 s correlation exp(-1); the
-      headroom limit for one hour is 651.515 m3/h (``test_headroom_and_envelope.py``), so a
-      set-point of 600 m3/h at 1.06 times (636) passes and one of 620 (657.2) does not.
-    * Profiles ``off`` and ``v1`` reproduce the earlier files bit for bit: the digests below were
-      taken from the engine rows of S0-A (off), S0-F (v1) and S0-B (off) for 900 s before profile
-      v2 was added, with the episode identifier removed.
-    * The accepted regimes and the redraws are stored in the engine state, so a restart inside a
-      ramp reproduces the continuous run (restart cases are in ``test_engine_episodes.py``).
-Independence: the statistics use scipy and hand arithmetic; the digests are of the earlier
-output, not of the new code.
+The regime drawer and the set-point process are checked by statistics over many seeds, short engine
+runs of the version 2 scenarios, and the stored pumping-minimum tables. The profiles off and v1
+reproduce the earlier engine rows bit for bit, which the digests taken before version 2 existed
+confirm. The hand values and the digests are described in the "Healthy-variability profiles" section
+of the verification notes.
 
-Source: ``docs/design_decisions.md`` D23, D51, D73.
+See D23, D51 and D73.
 """
 
 from __future__ import annotations
@@ -89,6 +79,9 @@ def _draw_many(seeds: range, count: int) -> list[Any]:
 
 # --- profile selection ----------
 def test_a_file_without_the_key_keeps_its_earlier_meaning() -> None:
+    """A scenario file without a profile key means off without the demand process and v1 with it.
+    Independent: yes, because the expected meanings are the stated rule.
+    """
     assert resolve_profile(None, False) == "off"
     assert resolve_profile(None, True) == "v1"
     assert load_scenario("S0-A").variability_profile == "off"
@@ -103,11 +96,17 @@ def test_a_file_without_the_key_keeps_its_earlier_meaning() -> None:
 def test_a_profile_that_disagrees_with_the_demand_switch_is_refused(
     declared: str, demand: bool
 ) -> None:
+    """A declared profile that disagrees with the demand switch is refused. Independent: yes,
+    because the expected outcome is the validation rule.
+    """
     with pytest.raises(ContractError):
         resolve_profile(declared, demand)
 
 
 def test_the_v2_copies_differ_from_the_shipped_files_only_in_profile_and_seed() -> None:
+    """Each version 2 copy differs from its shipped scenario only in the profile and the seed.
+    Independent: yes, because the two files are compared with each other.
+    """
     for sid in ("S0-A", "S0-B", "S0-C"):
         a, b = load_scenario(sid), load_scenario(f"{sid}-v2")
         same = dataclasses.replace(
@@ -127,6 +126,9 @@ def test_the_v2_copies_differ_from_the_shipped_files_only_in_profile_and_seed() 
 def test_profiles_off_and_v1_reproduce_the_earlier_rows_bit_for_bit(
     model: HydraulicModel, sid: str
 ) -> None:
+    """The engine rows of the off and v1 scenarios match digests taken before version 2 existed.
+    Independent: yes, because the digests are of the earlier output and not of the new code.
+    """
     engine, outcome = fc.run(model, sid, 900.0)
     assert outcome.rejection is None
     assert _digest(engine.sink.rows) == GOLDEN[sid]  # type: ignore[attr-defined]
@@ -135,6 +137,9 @@ def test_profiles_off_and_v1_reproduce_the_earlier_rows_bit_for_bit(
 
 # --- regime statistics ----------
 def test_regime_values_are_log_uniform_on_the_configured_range() -> None:
+    """Regime values are log-uniform on the configured range, with the mean and variance of the hand
+    formulas. Independent: yes, because the statistics use scipy and hand arithmetic.
+    """
     regimes = _draw_many(range(40), 50)
     logs = np.array([math.log(r.value) for r in regimes])
     assert logs.min() >= math.log(LOW) and logs.max() <= math.log(HIGH)
@@ -146,6 +151,9 @@ def test_regime_values_are_log_uniform_on_the_configured_range() -> None:
 
 
 def test_regime_dwells_are_uniform_between_600_and_1800_s() -> None:
+    """Regime dwell times are uniform between 600 and 1800 s with a mean of 1200 s. Independent:
+    yes, because the expected mean is hand arithmetic.
+    """
     dwell = np.array([r.dwell_s for r in _draw_many(range(40), 50)])
     assert dwell.min() >= 600.0 and dwell.max() <= 1800.0
     assert dwell.mean() == pytest.approx(1200.0, abs=25.0)
@@ -153,6 +161,9 @@ def test_regime_dwells_are_uniform_between_600_and_1800_s() -> None:
 
 
 def test_the_first_regime_has_no_ramp_and_the_others_ramp_for_60_s() -> None:
+    """The first regime has no ramp and each later regime is entered over 60 s. Independent: yes,
+    because the expected durations are the stated configuration.
+    """
     regimes = _draw_many(range(3), 6)
     for r in regimes:
         assert r.ramp_s == (0.0 if r.index == 0 else 60.0)
@@ -161,6 +172,9 @@ def test_the_first_regime_has_no_ramp_and_the_others_ramp_for_60_s() -> None:
 
 
 def test_the_ramp_between_regimes_is_linear_and_continuous() -> None:
+    """The ramp between two regimes is linear and continuous, so its midpoint is the mean of the two
+    values. Independent: yes, because the expected values are hand arithmetic.
+    """
     regimes = _draw_many(range(1), 4)
     for prev, nxt in zip(regimes, regimes[1:], strict=False):
         t0 = nxt.t_start_s
@@ -174,6 +188,9 @@ def test_the_ramp_between_regimes_is_linear_and_continuous() -> None:
 
 
 def test_a_regime_is_a_function_of_the_seed_and_the_index_only() -> None:
+    """A regime depends on the seed and the index only. Independent: yes, because equality is the
+    property.
+    """
     a, b = _draw_many(range(5, 6), 5), _draw_many(range(5, 6), 5)
     assert a == b
     assert _draw_many(range(6, 7), 5) != a
@@ -183,6 +200,9 @@ def test_a_regime_is_a_function_of_the_seed_and_the_index_only() -> None:
 
 
 def test_the_regime_draws_do_not_disturb_the_other_streams() -> None:
+    """Drawing regimes leaves the demand stream unchanged. Independent: yes, because the stream is
+    compared before and after.
+    """
     seed = 20261001
     before = RandomStreams(seed).stream("demand").standard_normal(5)
     _draw_many(range(seed, seed + 1), 5)
@@ -193,6 +213,9 @@ def test_the_regime_draws_do_not_disturb_the_other_streams() -> None:
 
 
 def test_a_candidate_that_fails_the_gate_is_redrawn_and_recorded() -> None:
+    """A candidate regime value that fails the gate is redrawn and recorded with its reason.
+    Independent: yes, because the gate is written in the test.
+    """
     drawer = RegimeDrawer(11, CFG)
     regime, redraws = drawer.draw(2, 0.0, lambda v: "too_high" if v > 2.0 else None)
     assert regime.value <= 2.0 and regime.draws == len(redraws) + 1
@@ -206,6 +229,9 @@ def test_a_candidate_that_fails_the_gate_is_redrawn_and_recorded() -> None:
 
 # --- receipt set-point process ----------
 def test_the_receipt_deviation_has_the_configured_spread_correlation_and_clip() -> None:
+    """The receipt set-point deviation has a standard deviation of 0.02 and a lag-600 s correlation
+    of exp(-1), within sampling bounds. Independent: yes, because the statistics are hand derived.
+    """
     # 200 paths of 3600 s with a correlation of 600 s hold about 200 x 3600 / 1200 = 600
     # independent samples, so the relative standard error of the spread is 1 / sqrt(2 x 600) =
     # 2.9 percent and the tolerance below is three of them.
@@ -222,6 +248,9 @@ def test_the_receipt_deviation_has_the_configured_spread_correlation_and_clip() 
 
 
 def test_the_clip_binds_when_the_deviation_is_large() -> None:
+    """With a large spread the deviation is clipped to its bounds. Independent: yes, because the
+    expected bounds are the configured values.
+    """
     wide = SimConfig(
         {
             **CFG.parameters,
@@ -244,6 +273,9 @@ def _raw(name: str) -> dict[str, Any]:
 
 
 def test_the_headroom_screen_uses_the_largest_clipped_set_point() -> None:
+    """The headroom screen uses the largest clipped set-point, so 600 m3/h at 1.06 times passes and
+    620 m3/h does not. Independent: yes, because the limit is the hand-derived 651.515 m3/h.
+    """
     assert 600.0 * 1.06 == pytest.approx(636.0) and 620.0 * 1.06 == pytest.approx(657.2)
     check_receipt_headroom([0.0, 300.0, 600.0], 651.515, 0.06)
     with pytest.raises(ContractError):
@@ -251,12 +283,18 @@ def test_the_headroom_screen_uses_the_largest_clipped_set_point() -> None:
 
 
 def test_the_engine_limit_is_the_headroom_figure_of_the_tank_audit(model: HydraulicModel) -> None:
+    """The engine's headroom limit equals the 651.515 m3/h of the tank headroom screen. Independent:
+    yes, because the figure is hand arithmetic.
+    """
     e = fc.engine(model, "S0-B-v2", 10.0)
     assert e._receipt_headroom_limit_m3h() == pytest.approx(651.515, abs=1e-3)
 
 
 # --- the worst-case factor and the pumping-minimum tables ----------
 def test_the_lower_bound_keeps_the_pump_five_m3h_inside_its_curve(model: HydraulicModel) -> None:
+    """At the lower bound of the downstream factor the pump flow stays at least 5 m3/h inside its
+    curve. Independent: no, because the flow comes from the steady solver.
+    """
     from verum.graph import Lineup
     from verum.hydraulics import DeliveryBoundary, SteadyInputs, load_boundary_law_coefficient
 
@@ -281,6 +319,10 @@ def test_the_lower_bound_keeps_the_pump_five_m3h_inside_its_curve(model: Hydraul
 
 
 def test_the_v2_tables_never_lower_a_minimum_and_are_read_by_v2_scenarios() -> None:
+    """The version 2 pumping-minimum tables never lower a minimum relative to the version 1 tables,
+    and version 2 scenarios read them. Independent: yes, because only the ordering and the file
+    choice are checked.
+    """
     for atm in ("coastal", "inland"):
         for vol in ("RVP_9_0", "RVP_9_5", "RVP10"):
             old = json.loads((_config() / stratum_filename(atm, vol)).read_text(encoding="utf-8"))[
@@ -337,6 +379,9 @@ def _engine(
 def test_the_mass_ledger_closes_through_a_regime_ramp_and_the_pump_stays_inside_the_curve(
     model: HydraulicModel,
 ) -> None:
+    """Through the first regime ramp the mass ledger closes and the pump stays inside its curve.
+    Independent: yes, because closure and the pump limit are stated rules.
+    """
     first, _ = RegimeDrawer(load_scenario("S0-A-v2").seed, CFG).draw(0, 0.0, lambda v: None)
     duration = float(math.ceil(first.plateau_end_s + 60.0 + 40.0))  # the first ramp and 40 s more
     engine = _engine(model, "S0-A-v2", duration)
@@ -360,6 +405,9 @@ def test_the_mass_ledger_closes_through_a_regime_ramp_and_the_pump_stays_inside_
 def test_the_gate_redraws_are_recorded_in_the_events_and_the_outcome(
     model: HydraulicModel,
 ) -> None:
+    """Regime redraws appear in the truth events and in the engine outcome. Independent: yes,
+    because the expected records are written out in the test.
+    """
     strict = SimConfig(
         {
             **CFG.parameters,
@@ -388,6 +436,9 @@ def test_the_gate_redraws_are_recorded_in_the_events_and_the_outcome(
 def test_the_boundary_rows_record_the_regime_and_the_receipt_set_point(
     model: HydraulicModel,
 ) -> None:
+    """The hidden boundary rows record the regime and the receipt set-point. Independent: yes,
+    because the expected fields are written out in the test.
+    """
     engine = _engine(model, "S0-B-v2", 400.0)
     outcome = engine.run()
     assert outcome.rejection is None
@@ -423,6 +474,9 @@ def test_the_boundary_rows_record_the_regime_and_the_receipt_set_point(
 def test_the_episode_record_carries_the_profile_only_for_v2(
     model: HydraulicModel, tmp_path: Any
 ) -> None:
+    """Only the version 2 episode record carries the profile, the accepted regimes and the redrawn
+    candidates. Independent: yes, because the expected keys are written out in the test.
+    """
     from verum.sim.episode import run_episode
 
     scenario = dataclasses.replace(load_scenario("S0-A-v2"), duration_s=120.0)
@@ -439,6 +493,9 @@ def test_the_episode_record_carries_the_profile_only_for_v2(
 
 
 def test_a_scenario_file_names_the_profile_in_its_own_field() -> None:
+    """A scenario file names its profile in its own field, and a contradiction is refused.
+    Independent: yes, because the expected outcome is the validation rule.
+    """
     raw = json.loads((_config() / "scenarios" / "S0-B-v2.json").read_text())
     assert raw["variability_profile"] == "v2" and raw["demand_process"] is True
     raw["variability_profile"] = "off"
@@ -449,6 +506,9 @@ def test_a_scenario_file_names_the_profile_in_its_own_field() -> None:
 def test_the_sensor_and_detector_streams_do_not_depend_on_the_profile(
     model: HydraulicModel,
 ) -> None:
+    """The detector offset and the sensor streams are the same under profile v1 and v2 for the same
+    seed. Independent: yes, because equality is the property.
+    """
     v1 = fc.engine(model, "S0-A", 10.0, variability_profile="v1", demand_process=True)
     v2 = fc.engine(model, "S0-A-v2", 10.0, seed=load_scenario("S0-A").seed)
     assert v1.detector_offset == v2.detector_offset
@@ -460,8 +520,10 @@ def test_the_sensor_and_detector_streams_do_not_depend_on_the_profile(
 
 
 def test_sg0_reads_the_table_of_the_profile(model: HydraulicModel) -> None:
-    """Hand: at 45 C TK-101 needs 6.2776 m at f_d = 0.8 and 6.8784 m at f_d = 0.6502 (stored
-    tables), so a start at 6.5 m passes under v1 and is rejected at t = 0 under v2 (gate SG0)."""
+    """The engine gate reads the pumping-minimum table of the scenario's profile, so a 6.5 m start
+    passes under v1 and is rejected under v2. Independent: yes, because the two minima are stored
+    values.
+    """
     levels = {"TK-101": 6.5, "TK-102": 7.0, "TK-103": 5.0}
     v1 = fc.run(model, "S0-A", 5.0, temperature_c=45.0, tank_levels_m=levels)[1]
     assert v1.rejection is None

@@ -1,30 +1,12 @@
 """Validity windows: which events are flagged and why, per episode and per custom case.
 
-Inputs: the written episodes, and short custom scenarios run on the engine. Outputs:
-pass/fail.
-Key assumptions:
-    * Decisions D22 and D53: an event is valid if its duration is at least a factor times the
-      wave round trip of its path, 2 sum(L/a): 25 for a valve stroke, 10 for a set-point change,
-      a flow collapse and a path closure. Hand values: receipt path to tank 101 = 0.36087 s (a
-      10 s stroke is 27.7 round trips, a set-point change of 8 s is 22.2, a 30 s stroke is 83),
-      to tank 102 = 2 (150/1078.2 + 80/1089.2) = 0.42514 s (a 10 s stroke is 23.5), to tank 103
-      = 2 (150/1078.2 + 115/1089.2) = 0.48941 s (20.4); delivery path 0.67 s or more (a 30 s
-      stroke is more than 44 round trips).
-    * Decision D53 version 3 sets the stroke factor to 50, so a 10 s stroke of XV-R000 (27.7
-      round trips to tank 101, 23.5 to tank 102) is flagged when the flow through the valve at its
-      start is at least 10 percent of the design flow of the path (decision D58: 60 m3/h for
-      the receipt path). Hence the flagged events in the shipped scenarios are the closing of
-      XV-R000 at 600 s in S0u-D (flow 600 m3/h at the start) and, in S0u-E, the 10 s closure and
-      the collapse of the flow under the cap. The 10 s opening of XV-R000 at 1200 s in S0u-D
-      starts at zero flow and is not judged. The dead-leg window of D54 is tested in
-      ``test_dead_leg_window.py``.
-    * A branched lineup has no single column and is flagged ``rigid_column_unavailable``.
-    * Every window carries a reason from a fixed list, and the dataset, the episode record
-      and the engine outcome agree.
-Independence: the round trips are hand arithmetic from the audited lengths and the screening
-wave speeds; the flagged set follows from the criterion, not from the engine.
+An event is valid if its duration is at least a factor times the wave round trip of its path, and
+the flagged set follows from this criterion and not from the engine. A stroke is judged only when
+the flow through the valve is at least a tenth of the design flow of its path, and a branched lineup
+is flagged because it has no single column. The round trips and ratios are derived by hand in the
+"Validity windows" section of the verification notes.
 
-Source: ``docs/design_decisions.md`` D22 and D25.
+See D22, D25, D53, D54 and D58.
 """
 
 from __future__ import annotations
@@ -72,6 +54,9 @@ def _run(model: HydraulicModel, scenario: Any, cfg: Any = None) -> tuple[Engine,
 
 @pytest.mark.parametrize("sid", CLEAN)
 def test_no_event_is_flagged_in_the_clean_scenarios(series: dict[str, Series], sid: str) -> None:
+    """No event is flagged in the clean scenarios, and their episode records list no window.
+    Independent: yes, because the flagged set follows from the criterion.
+    """
     s = series[sid]
     assert s.windows == [] and s.episode["validity_windows"] == []
     assert s.episode["events_evaluated"] >= 0
@@ -79,6 +64,9 @@ def test_no_event_is_flagged_in_the_clean_scenarios(series: dict[str, Series], s
 
 
 def test_the_clean_scenarios_pass_by_the_hand_ratios() -> None:
+    """The 10 s stroke, the 8 s set-point change and the 30 s stroke are 27.7, 22.2 and 83.1 round
+    trips of the receipt path. Independent: yes, because the ratios are hand arithmetic.
+    """
     assert 10.0 / RECEIPT_ROUND_TRIP == pytest.approx(27.7, abs=0.1)
     assert 8.0 / RECEIPT_ROUND_TRIP == pytest.approx(22.2, abs=0.1)
     assert 30.0 / RECEIPT_ROUND_TRIP == pytest.approx(83.1, abs=0.1)
@@ -88,6 +76,9 @@ def test_the_clean_scenarios_pass_by_the_hand_ratios() -> None:
 
 
 def test_the_stroke_factor_by_hand_ratios() -> None:
+    """The round trips to tanks TK-102 and TK-103 are 0.42514 s and 0.48941 s, and a 10 s stroke is
+    23.5 and 20.4 of them. Independent: yes, because the values are hand arithmetic.
+    """
     assert RECEIVE_102_ROUND_TRIP == pytest.approx(0.42514, abs=1e-5)
     assert 10.0 / RECEIVE_102_ROUND_TRIP == pytest.approx(23.52, abs=0.01)
     assert 10.0 / RECEIVE_103_ROUND_TRIP == pytest.approx(20.43, abs=0.01)
@@ -97,9 +88,10 @@ def test_the_stroke_factor_by_hand_ratios() -> None:
 def test_the_closing_stroke_of_s0ud_is_judged_at_an_opening_of_0p2_and_is_not_flagged(
     series: dict[str, Series],
 ) -> None:
-    """Decision D58 version 2: the closing stroke at 600 s is judged when the opening has fallen
-    to 0.2, 8 s into the stroke. By then the receipt flow is below 60 m3/h, so no window is
-    written and the scenario returns to the analytic tier."""
+    """The closing stroke of the lineup-change scenario is judged at an opening of 0.2, where the
+    receipt flow is below 60 m3/h, so no window is written and the tier is analytic verification.
+    Independent: yes, because the rule is the stated judging point.
+    """
     s = series["S0u-D"]
     assert s.windows == []
     assert s.episode["dataset_tier"] == "analytic_verification"
@@ -108,8 +100,9 @@ def test_the_closing_stroke_of_s0ud_is_judged_at_an_opening_of_0p2_and_is_not_fl
 
 
 def test_a_closing_stroke_is_not_judged_at_its_start_flow(model: HydraulicModel) -> None:
-    """The same 10 s closure from the full 600 m3/h writes no window: the flow that counts is the
-    flow at an opening of 0.2, and it is below the 60 m3/h threshold there."""
+    """A 10 s closure from the full 600 m3/h writes no window, because the flow that counts is the
+    flow at an opening of 0.2. Independent: yes, because the expected outcome is the judging rule.
+    """
     scenario = dataclasses.replace(
         load_scenario("S0-B"),
         duration_s=20.0,
@@ -126,7 +119,9 @@ def test_a_closing_stroke_is_not_judged_at_its_start_flow(model: HydraulicModel)
 def test_a_stroke_is_judged_only_above_a_tenth_of_the_design_flow(
     model: HydraulicModel, flow: float, judged: bool
 ) -> None:
-    """Hand: the design flow of the receipt path is 600 m3/h, so the threshold is 60 m3/h."""
+    """A stroke is judged only if the flow is at least 60 m3/h, a tenth of the 600 m3/h design flow
+    of the receipt path. Independent: yes, because the threshold is hand arithmetic.
+    """
     scenario = dataclasses.replace(load_scenario("S0-B"), duration_s=20.0)
     engine, _ = _run(model, scenario)
     assert engine._stroke_carries_flow("receipt", flow) is judged
@@ -135,6 +130,9 @@ def test_a_stroke_is_judged_only_above_a_tenth_of_the_design_flow(
 def test_the_esd_closure_leaves_a_stroke_a_flow_collapse_and_a_dead_leg_window(
     episodes: dict[str, EpisodeResult], series: dict[str, Series]
 ) -> None:
+    """The emergency isolation writes a valve-stroke window, a flow-collapse window and a dead-leg
+    window. Independent: yes, because the expected kinds follow from the criterion.
+    """
     s = series["S0u-E"]
     assert sorted(w["kind"] for w in s.windows) == [
         "dead_leg_unvalidated", "flow_collapse", "valve_stroke",
@@ -154,13 +152,18 @@ def test_the_esd_closure_leaves_a_stroke_a_flow_collapse_and_a_dead_leg_window(
 def test_every_window_has_a_listed_reason_and_validates(
     series: dict[str, Series], sid: str
 ) -> None:
+    """Every window has a reason from the fixed list and validates against its schema. Independent:
+    yes, because the list and the schema are separate.
+    """
     for w in series[sid].windows:
         assert w["reason"] in REASONS
         validate("validity_windows", w)  # raises on a violation
 
 
 def test_a_short_stroke_is_flagged_by_the_duration_criterion(model: HydraulicModel) -> None:
-    """XV-R000 closing in 2 s: 2 / 0.36087 = 5.54 round trips, below 10."""
+    """A 2 s closure of the common receipt valve is 5.54 round trips and is flagged. Independent:
+    yes, because the ratio is hand arithmetic.
+    """
     cfg0 = load_sim_config()
     cfg = dataclasses.replace(
         cfg0,
@@ -185,6 +188,9 @@ def test_a_short_stroke_is_flagged_by_the_duration_criterion(model: HydraulicMod
 
 
 def test_a_branched_lineup_is_flagged_as_unavailable(model: HydraulicModel) -> None:
+    """A lineup with two receipt branches open is flagged as having no rigid column. Independent:
+    yes, because the expected outcome is the stated rule.
+    """
     scenario = dataclasses.replace(
         load_scenario("S0-B"),
         initial_mode="RECEIVE_101_102",
@@ -236,14 +242,9 @@ EVENTS = {
 def test_the_number_of_events_judged_and_the_number_flagged(
     series: dict[str, Series], sid: str
 ) -> None:
-    """Windows listed: S0u-E the 10 s closure, the collapse (a flow event) and the dead-leg
-    window of D54; S0u-D none, because the 10 s closure of XV-R000 at 600 s is judged at an
-    opening of 0.2 (D58 version 2), where the flow is already below 60 m3/h. The set-point
-    collapse of S0u-D lasts 4.4 s, 12.2 round trips of 10 or more, and is valid.
-
-    Hand ratios: 8 s set-point change 22.2 round trips, 10 s stroke 27.7, 30 s stroke 83.1
-    (receipt); the collapse of S0u-E lasts 0.19 s, 0.51 round trips (a flow event, not a
-    stroke event: the 10 s stroke itself is valid).
+    """The numbers of events judged and flagged per scenario equal the expected counts, and the
+    dataset, the record and the outcome agree. Independent: yes, because the counts follow from the
+    hand ratios.
     """
     episode = series[sid].episode
     assert episode["events_evaluated"] == EVENTS[sid]

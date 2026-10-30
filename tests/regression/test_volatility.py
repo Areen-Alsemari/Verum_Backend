@@ -1,25 +1,13 @@
-"""Volatility classes and the verification gate of decision D46 version 3.
+"""Volatility classes and the verification gate of the property scenarios.
 
-Inputs: ``config/volatility_classes.json``, ``config/volatility_gate.json`` (tabulated points of
-Table 7.1-2 and the worked example of the US EPA AP-42 chapter 7.1, June 2026 edition) and the
-property scenarios. Outputs: pass/fail.
-Key assumptions:
-    * The correlation reproduces the tabulated constants of RVP 13, 10 and 7 within 0.1 percent
-      and the tabulated true vapor pressures (Table 7.1-2 at 60 F, 519.67 R, and the worked
-      example at 528.37 R) within 2 percent. The edition fetched tabulates three gasoline
-      classes, not the eight named in the decision; five of the named classes (7.8, 8.3, 11.5,
-      13.5, 15) are not in it, which is recorded as a deviation.
-    * RVP 9 gives about 44 kPa at 25 C and 82 kPa at 45 C (the expected values of the decision).
-    * If the gate fails, the derived classes are unresolved and raise when selected; the audited
-      RVP 10 class still works.
-Independence: the tabulated values are transcribed from the EPA document; the formula and its
-evaluation are recomputed here by hand arithmetic (natural logarithm of 10 is 2.302585).
+The correlation must reproduce the tabulated constants of RVP 13, 10 and 7 within 0.1 percent and
+the tabulated vapor pressures within 2 percent, and RVP 9 gives about 44 kPa at 25 C and 82 kPa at
+45 C. If the gate fails, the derived classes are unresolved and raise when selected, while the
+audited RVP 10 class still works. The tabulated values are transcribed from the EPA document, and
+the formula is recomputed by hand. The bracketing argument is in the "Volatility classes" section of
+the verification notes.
 
-Bracketing (D46 version 4): RVP 8.3 is not tabulated in the edition fetched, so the derived classes
-are bracketed by the tabulated RVP 7 and RVP 10 constants at 25, 35, 40 and 45 C. This is a
-necessary check and not a validation of the derived classes.
-
-Source: ``docs/design_decisions.md`` D46 versions 3 and 4.
+See D46.
 """
 
 from __future__ import annotations
@@ -38,20 +26,28 @@ from verum.params import UnresolvedParameter
 
 
 def test_the_formula_reproduces_the_rvp_10_constants() -> None:
-    """Hand: S^0.5 = 1.732051; A = 15.64 - 3.211 - (0.8742 - 0.5681) x 2.302585 = 11.724 and
-    B = 8742 - 1804.8 - (1049 - 310.7) x 2.302585 = 5237.3."""
+    """The correlation gives the constants A = 11.724 and B = 5237.3 for RVP 10. Independent: yes,
+    because the values are hand arithmetic.
+    """
     a, b = ap42_constants(10.0)
     assert a == pytest.approx(11.724, rel=1e-3) and b == pytest.approx(5237.3, rel=1e-3)
     assert a == pytest.approx(15.64 - 1.854 * 1.732051 - (0.8742 - 0.3280 * 1.732051) * 2.302585)
 
 
 def test_the_gate_passes_on_every_tabulated_point() -> None:
+    """The verification gate passes on all five tabulated points, with constants within 0.01 percent
+    and pressures within 1 percent. Independent: yes, because the tabulated values are transcribed
+    from the EPA document.
+    """
     gate = run_gate()
     assert gate.passed and gate.points == 5
     assert gate.worst_constant_error < 1e-4 and gate.worst_pressure_error < 0.01
 
 
 def test_rvp_9_gives_about_44_and_82_kpa() -> None:
+    """RVP 9 gives about 44 kPa at 25 C and 82 kPa at 45 C. Independent: yes, because the expected
+    values are those of the decision.
+    """
     model = HydraulicModel.load()
     p25 = vapor_pressure_pa("RVP_9_0", 25.0, model.config, model.fluid)
     p45 = vapor_pressure_pa("RVP_9_0", 45.0, model.config, model.fluid)
@@ -61,6 +57,9 @@ def test_rvp_9_gives_about_44_and_82_kpa() -> None:
 
 
 def test_the_classes_are_ordered_and_the_legacy_name_is_the_rvp_10_class() -> None:
+    """The vapor pressure rises with the volatility class, and the legacy reference name equals the
+    RVP 10 class. Independent: yes, because only the ordering and equality are checked.
+    """
     model = HydraulicModel.load()
     for t in (25.0, 35.0, 40.0, 45.0):
         p = [
@@ -74,6 +73,10 @@ def test_the_classes_are_ordered_and_the_legacy_name_is_the_rvp_10_class() -> No
 
 
 def test_derived_classes_lie_between_the_tabulated_rvp_7_and_rvp_10_values(root: Path) -> None:
+    """The derived classes lie between the tabulated RVP 7 and RVP 10 values at 25, 35, 40 and 45 C.
+    Independent: yes, because the bracketing is a necessary check and not a validation of the
+    derived classes.
+    """
     gate = json.loads((root / "config" / "volatility_gate.json").read_text())
     tab = {row["rvp_psi"]: row for row in gate["table_7_1_2"]}
     assert 8.3 not in tab  # the class the decision asked for is not in the edition fetched
@@ -92,6 +95,10 @@ def test_derived_classes_lie_between_the_tabulated_rvp_7_and_rvp_10_values(root:
 
 
 def test_a_failed_gate_leaves_the_derived_classes_unresolved(tmp_path: Path, root: Path) -> None:
+    """A failed gate leaves the derived classes unresolved so that they raise when selected.
+    Independent: yes, because the expected outcome is the rule that nothing replaces an unresolved
+    parameter.
+    """
     shutil.copytree(root / "config", tmp_path / "config")
     path = tmp_path / "config" / "volatility_gate.json"
     doc = json.loads(path.read_text())
