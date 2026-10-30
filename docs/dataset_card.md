@@ -5,7 +5,7 @@ A field that cannot be filled from the present work is marked **unresolved**.
 
 | Field | Value |
 | --- | --- |
-| schema version of the card | 0.6.0 |
+| schema version of the card | 0.7.0 |
 | name | VERUM synthetic gasoline-terminal dataset |
 | release identifier | unresolved (no release has been made) |
 | dataset tier | `analytic_verification` for episodes without a flagged validity window; `restricted_benchmark` for episodes with one (decision D37). `production_candidate` is refused while `production_generation_enabled` is false |
@@ -21,12 +21,15 @@ frequencies, detection performance or savings; claiming validated hydraulics.
 
 ## Restricted episodes
 
-**The S0u-E episode (fill to the high-high level, emergency isolation) is `restricted_benchmark`
-and must not be used in diagnostic scoring.** Its closure of the receipt valve under the 10 barg
-cap produces a flow collapse of about 0.19 s, shorter than ten pressure-wave round trips of the
-path (decision D22). The rigid-column model does not represent that interval, and the pressure
-values around it (the clipped PT-001 reading and its relaxation) are not credible as physics.
-The episode is kept for infrastructure tests only. The rule applies to every episode whose record
+**The S0u-E and S0u-D episodes are `restricted_benchmark` and must not be used in diagnostic
+scoring.** S0u-E (fill to the high-high level, emergency isolation): the closure of the receipt
+valve under the 10 barg cap produces a flow collapse of about 0.19 s, shorter than ten
+pressure-wave round trips of the path (decision D22), and the source side of the closed valve is a
+dead leg that holds its pressure for 329 s (decision D54). The rigid-column model does not
+represent that interval, and the pressure values around it (the clipped PT-001 reading and its
+relaxation) are not credible as physics. S0u-D (receipt switch): the 10 s opening of the receipt
+valve on the path to TK-102 lasts 23.5 round trips, below the 25 of decision D53. The episodes are
+kept for infrastructure tests only. The rule applies to every episode whose record
 lists a validity window (`validity_windows` in `episode.json`); the hidden join utility
 `verum.evaluation.attach_window_ids` marks the observation rows that fall inside a window.
 
@@ -56,13 +59,19 @@ pending sensitivity studies (D38).
 ## Validation
 
 Analytic and code-verification tests are in `tests/`; the verification ladder of the transient engine is described in `docs/transient_engine.md`. **Self-consistency checks are not
-independent validation.** No independent validation exists: **none**.
+independent validation.** No independent validation of the facility model exists: **none**. The
+transient engine has been compared with single-phase water-hammer experiments of Jensen et al.
+2018 (rungs R12 and R13) using parameters and results that were taken as given and not verified
+against the paper; that is a check of the numerical method for those pipes, not of the facility.
 
 ## Known limitations
 
 - No wave dynamics in the episodes; peak surge pressure and sub-second events are not resolved.
   A standalone transient engine exists (`docs/transient_engine.md`); it is not integrated, it does
-  not change any tier (D47) and it has no cavitation model.
+  not change any tier (D47) and it has no cavitation model. The rigid-column engine under-predicts
+  the pressure peak of a valve closure unless the stroke lasts many wave round trips (D53) and
+  does not represent the last 2 to 3 percent of an emergency closure, where the downstream face of
+  the valve reaches the vapor pressure.
 - Faults, damaged-seal and fitting multipliers, and inspection outcomes do not exist yet.
 - Dead-leg pressures relax with a selected time constant; trapped-liquid thermal and
   compressibility effects are not modelled (D39).

@@ -4,7 +4,7 @@
   "description": "Pumping-minimum tank level as in pumping_minimum_levels.json, recomputed with the atmospheric pressure below. A sensitivity file: it does not replace the sea-level file.",
   "atmosphere_pa_abs": 94300.0,
   "scenario": "EPA_GENERIC_RVP10_REFERENCE",
-  "source": "local/tools/site_pressure_study.py",
+  "source": "tools/site_pressure_study.py",
   "levels": {
     "TK-101": {
       "25": {

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "description": "Parameters of the path-dynamics engine. Every entry is a ParamValue.",
-  "source": "docs/design_decisions.md D3, D4, D17, D18, D19, D22 to D26, D33",
+  "source": "docs/design_decisions.md D3, D4, D17, D18, D19, D22 to D26, D33, D53, D54",
   "parameters": {
     "time_step_s": {
       "value": 1.0,
@@ -163,6 +163,27 @@
       "status": "provisional",
       "evidence_tag": "SIM",
       "provenance_id": "VERUM-DD-D39-v1.0"
+    },
+    "wave_criterion_factor_valve_stroke": {
+      "value": 25.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D53-v1.2"
+    },
+    "dead_leg_window_open_pa": {
+      "value": 50000.0,
+      "unit": "Pa",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D54-v1.0"
+    },
+    "dead_leg_window_close_pa": {
+      "value": 5000.0,
+      "unit": "Pa",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D54-v1.0"
     }
   }
 }

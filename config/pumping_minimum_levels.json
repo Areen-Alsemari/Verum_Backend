@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "description": "Pumping-minimum tank level: the lowest level in 1.8 to 12 m at which the solved delivery operating point passes the phase and NPSH screen (margin ratio 1.3). Separate from, and does not replace, the 1.8 m geometry minimum. Levels are for the duty pump A with the delivery boundary law of D2 version 3.0.",
   "scenario": "EPA_GENERIC_RVP10_REFERENCE",
-  "source": "local/tools/phase2_studies.py; decisions D2 v3.0, D7 v2.0, D11, D15",
+  "source": "tools/pumping_minimum_study.py; decisions D2 v3.0, D7 v2.0, D11, D15",
   "levels": {
     "TK-101": {
       "25": {

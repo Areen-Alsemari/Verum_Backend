@@ -82,6 +82,7 @@ class SteadyResult:
     tap_heads_m: Mapping[str, float] = field(default_factory=dict)
     edge_heads_m: Mapping[str, float] = field(default_factory=dict)
     dead_edges: frozenset[str] = frozenset()
+    dead_leg_gaps_m: Mapping[str, float] = field(default_factory=dict)
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
@@ -93,6 +94,7 @@ class SteadyResult:
             "tank_net_inflow_m3s",
             "tap_heads_m",
             "edge_heads_m",
+            "dead_leg_gaps_m",
             "node_mass_residual_kg_s",
             "gates",
         ):

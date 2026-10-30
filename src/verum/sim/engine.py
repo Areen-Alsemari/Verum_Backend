@@ -419,9 +419,10 @@ class Engine:
         """Decision D39: pressures for the segments the steady solve left undetermined."""
         st, m = self.state, self.model
         h_res = m.node_z[BOUNDARY_NODE] + m.config["reservoir_pressure_pa_gauge"] / (m.rho * m.g)
+        gaps: dict[str, float] = {}
         heads, dead = deadleg.edge_heads(
             m, open_valves, result, self._levels(volumes), h_res, st.edge_heads,
-            st.dead_edges, t - st.edge_heads_t, self.cfg["dead_leg_time_constant_s"],
+            st.dead_edges, t - st.edge_heads_t, self.cfg["dead_leg_time_constant_s"], gaps,
         )  # fmt: skip
         rho_g = m.rho * m.g
         ends = {
@@ -445,6 +446,7 @@ class Engine:
             tap_heads_m=tap_heads,
             edge_heads_m=heads,
             dead_edges=dead,
+            dead_leg_gaps_m=gaps,
         )
 
     def _tap_offsets(self, t: float, receipt_m3h: float, qdot: float) -> dict[str, float]:
@@ -728,6 +730,7 @@ class Engine:
             st.current = step.new
         st.edge_heads, st.edge_heads_t = dict(step.new.edge_heads_m), step.t1
         st.dead_edges = step.new.dead_edges
+        self._update_dead_leg_windows(step.new, step.t1)
         if landing is not None and abs(landing[0] - step.t1) <= 1e-6:
             self._record_landing(landing)
         self._check_ledger(step.t1)
@@ -963,6 +966,45 @@ class Engine:
             w.t_end_s = t
             self._write_window(w)
 
+    def _factor(self, kind: str) -> float:
+        """Decision D53: the minimum ratio of duration to round trip of a valve stroke is its own
+        factor; a set-point step, a flow collapse and a path closure keep the factor of D22."""
+        name = vd.STROKE_FACTOR if kind == "valve_stroke" else "wave_criterion_factor"
+        return self.cfg[name]
+
+    def _update_dead_leg_windows(self, result: SteadyResult, t: float) -> None:
+        """Decision D54: a window opens when an isolated segment holds a pressure more than the
+        opening distance from its target and closes when it is within the closing distance; a
+        segment that is no longer isolated closes its window."""
+        st = self.state
+        rho_g = self.model.rho * self.model.g
+        opening = self.cfg["dead_leg_window_open_pa"] / rho_g
+        closing = self.cfg["dead_leg_window_close_pa"] / rho_g
+        gaps = result.dead_leg_gaps_m
+        for key, gap in gaps.items():
+            name = f"deadleg:{key}"
+            if name not in st.open_windows and gap > opening:
+                w = self._add_window(
+                    "dead_leg_unvalidated",
+                    key.split("+")[0],
+                    t,
+                    None,
+                    vd.REASON_DEAD_LEG,
+                    None,
+                    None,
+                )
+                st.open_windows[name] = w
+            elif name in st.open_windows and gap < closing:
+                self._close_window(name, t)
+        for name in [n for n in st.open_windows if n.startswith("deadleg:")]:
+            if name[len("deadleg:") :] not in gaps:
+                self._close_window(name, t)
+
+    def _close_window(self, name: str, t: float) -> None:
+        w = self.state.open_windows.pop(name)
+        w.t_end_s = t
+        self._write_window(w)
+
     def _update_branch_windows(self, plan: Plan, t0: float) -> None:
         st = self.state
         for key, branched in (
@@ -994,7 +1036,7 @@ class Engine:
         st = self.state
         trip = vd.round_trip_s(self.model, edges, self.speeds)
         st.events_evaluated += 1
-        if not vd.is_valid(duration, trip, self.cfg["wave_criterion_factor"]):
+        if not vd.is_valid(duration, trip, self._factor(kind)):
             self._add_window(
                 kind, element, t, t + duration, vd.REASON_DURATION, vd.ratio(duration, trip), trip
             )

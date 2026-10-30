@@ -69,6 +69,7 @@ not selected are represented as unresolved and raise an error when read.
 | `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api`, `transient` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
+| `tools/` | Scripts that compute the studies and tables the documents quote (decision D57) |
 
 ## Setup and tests
 

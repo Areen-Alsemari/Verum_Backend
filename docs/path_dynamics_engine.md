@@ -140,26 +140,32 @@ Segments without flow have a pressure: a segment open to a tank or the distribut
 its head; an isolated segment holds its head and relaxes to the head across its closed valve with
 60 s (`verum.sim.deadleg`). Every edge of the network therefore has end pressures at every row.
 
-## Validity windows (decisions D22 and D25)
+## Validity windows (decisions D22, D25, D53 and D54)
 
-The rigid-column model is valid for an event only if the event lasts at least 10 pressure-wave
-round trips of its path, `duration >= 10 * 2 sum(L_i/a_i)`, with the screening wave speeds of
-the audited package (1089.2, 1082.8 and 1078.2 m/s for DN200, DN250 and DN300). The factor is
-a proposal. A window is the interval in which the model does not represent the physics:
+The rigid-column model is valid for an event only if the event lasts at least a factor times the
+pressure-wave round trip of its path, `duration >= factor * 2 sum(L_i/a_i)`, with the screening
+wave speeds of the audited package (1089.2, 1082.8 and 1078.2 m/s for DN200, DN250 and DN300).
+The factor is 25 for a valve stroke and 10 for a receipt set-point step, a flow collapse and a
+path closure (D53; both are proposals, the first rests on one path, one valve law and one
+source). A window is the interval in which the model does not represent the physics:
 
 - `duration_below_wave_criterion`: a valve stroke or a set-point change (four controller time
   constants) shorter than the criterion;
 - `flow_collapse_within_wave_criterion`: the flow of a closing path falls from 90 to 10
   percent in less than the criterion; `path_closed_with_flow`: the path closes before the
   flow has fallen to 10 percent;
-- `rigid_column_unavailable`: a branched lineup.
+- `rigid_column_unavailable`: a branched lineup;
+- `dead_leg_held_pressure_unvalidated` (kind `dead_leg_unvalidated`): an isolated segment holds a
+  pressure more than 0.5 bar from its target; the window closes below 0.05 bar (D54).
 
 Each window has a start, an end, a reason and the ratio duration / round trip (null for a
-branched lineup). Windows are hidden records: the `validity_windows` dataset, the
-`active_validity_window_ids` of the solver diagnostics, and the episode record. They are
-never reachable from `verum.api`. In the shipped scenarios the only flagged window is the
-flow collapse when `XV-R000` closes under the cap (S0u-E): the 10 s stroke is long enough,
-the flow is not (about 0.19 s, 0.5 round trips of 0.36 s).
+branched lineup and for a dead-leg window). Windows are hidden records: the `validity_windows`
+dataset, the `active_validity_window_ids` of the solver diagnostics, and the episode record.
+They are never reachable from `verum.api`. In the shipped scenarios: S0u-E has the flow
+collapse when `XV-R000` closes under the cap (the 10 s stroke is long enough, the flow is not:
+about 0.19 s, 0.5 round trips of 0.36 s) and a dead-leg window of 329 s for the source side of
+the closed valve; S0u-D has a `valve_stroke` window, the 10 s opening of `XV-R000` on the path
+to TK-102 (23.5 round trips of 0.425 s against 25). The other scenarios have none.
 
 ## Gates
 

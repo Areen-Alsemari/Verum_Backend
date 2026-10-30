@@ -45,7 +45,8 @@
         "receipt_setpoint",
         "flow_collapse",
         "path_closed",
-        "branched_lineup"
+        "branched_lineup",
+        "dead_leg_unvalidated"
       ]
     },
     "element_id": {
@@ -65,7 +66,8 @@
         "duration_below_wave_criterion",
         "flow_collapse_within_wave_criterion",
         "path_closed_with_flow",
-        "rigid_column_unavailable"
+        "rigid_column_unavailable",
+        "dead_leg_held_pressure_unvalidated"
       ]
     },
     "ratio": {

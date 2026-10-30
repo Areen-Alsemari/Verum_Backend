@@ -3,12 +3,18 @@
 Inputs: the written episodes, and short custom scenarios run on the engine. Outputs:
 pass/fail.
 Key assumptions:
-    * Decision D22: an event is valid if its duration is at least 10 wave round trips of
-      its path, 2 sum(L/a). Hand values: receipt path to a tank 101 = 0.36087 s (valve
-      stroke of 10 s is 27.7 round trips, a set-point change of 8 s is 22.2, a 30 s stroke
-      is 83), delivery path 0.67 s or more (a 30 s stroke is more than 44 round trips).
-    * Hence the only flagged event in the shipped scenarios is the collapse of the flow when
-      XV-R000 closes under the cap (S0u-E): the stroke lasts long enough, the flow does not.
+    * Decisions D22 and D53: an event is valid if its duration is at least a factor times the
+      wave round trip of its path, 2 sum(L/a): 25 for a valve stroke, 10 for a set-point change,
+      a flow collapse and a path closure. Hand values: receipt path to tank 101 = 0.36087 s (a
+      10 s stroke is 27.7 round trips, a set-point change of 8 s is 22.2, a 30 s stroke is 83),
+      to tank 102 = 2 (150/1078.2 + 80/1089.2) = 0.42514 s (a 10 s stroke is 23.5), to tank 103
+      = 2 (150/1078.2 + 115/1089.2) = 0.48941 s (20.4); delivery path 0.67 s or more (a 30 s
+      stroke is more than 44 round trips).
+    * Hence the flagged events in the shipped scenarios are the collapse of the flow when XV-R000
+      closes under the cap (S0u-E: the stroke lasts long enough, the flow does not) and, since
+      the stroke factor of D53 is 25 and was 10, the 10 s opening of XV-R000 on the path to tank
+      102 in S0u-D (23.5 round trips). The dead-leg window of D54 is tested in
+      ``test_dead_leg_window.py``.
     * A branched lineup has no single column and is flagged ``rigid_column_unavailable``.
     * Every window carries a reason from a fixed list, and the dataset, the episode record
       and the engine outcome agree.
@@ -41,9 +47,12 @@ REASONS = {
     "flow_collapse_within_wave_criterion",
     "path_closed_with_flow",
     "rigid_column_unavailable",
+    "dead_leg_held_pressure_unvalidated",
 }
 RECEIPT_ROUND_TRIP = 2.0 * (150.0 / 1078.2 + 45.0 / 1089.2)
-CLEAN = ["S0-A", "S0-B", "S0-C", "S0u-D", "S0-F", "S0-G", "S0-A-inland"]
+CLEAN = ["S0-A", "S0-B", "S0-C", "S0-F", "S0-G", "S0-A-inland"]
+RECEIVE_102_ROUND_TRIP = 2.0 * (150.0 / 1078.2 + 80.0 / 1089.2)
+RECEIVE_103_ROUND_TRIP = 2.0 * (150.0 / 1078.2 + 115.0 / 1089.2)
 
 
 def _run(model: HydraulicModel, scenario: Any, cfg: Any = None) -> tuple[Engine, Any]:
@@ -71,21 +80,41 @@ def test_the_clean_scenarios_pass_by_the_hand_ratios() -> None:
     assert 8.0 / RECEIPT_ROUND_TRIP == pytest.approx(22.2, abs=0.1)
     assert 30.0 / RECEIPT_ROUND_TRIP == pytest.approx(83.1, abs=0.1)
     assert min(10.0 / RECEIPT_ROUND_TRIP, 8.0 / RECEIPT_ROUND_TRIP) > 10.0
+    assert 10.0 / RECEIPT_ROUND_TRIP > 25.0  # a 10 s stroke to tank 101 passes the stroke factor
 
 
-def test_the_esd_closure_leaves_exactly_one_flagged_window(
+def test_the_stroke_factor_by_hand_ratios() -> None:
+    assert RECEIVE_102_ROUND_TRIP == pytest.approx(0.42514, abs=1e-5)
+    assert 10.0 / RECEIVE_102_ROUND_TRIP == pytest.approx(23.52, abs=0.01)
+    assert 10.0 / RECEIVE_103_ROUND_TRIP == pytest.approx(20.43, abs=0.01)
+    assert 10.0 / RECEIVE_102_ROUND_TRIP < 25.0 and 8.0 / RECEIVE_102_ROUND_TRIP > 10.0
+
+
+def test_a_ten_second_stroke_to_tank_102_is_flagged_by_the_stroke_factor(
+    series: dict[str, Series],
+) -> None:
+    s = series["S0u-D"]
+    assert [w["kind"] for w in s.windows] == ["valve_stroke"]
+    w = s.windows[0]
+    assert (w["element_id"], w["t_start_s"], w["t_end_s"]) == ("XV-R000", 1200.0, 1210.0)
+    assert w["reason"] == "duration_below_wave_criterion"
+    assert w["ratio"] == pytest.approx(10.0 / RECEIVE_102_ROUND_TRIP, rel=1e-9)
+    assert s.episode["dataset_tier"] == "restricted_benchmark"
+
+
+def test_the_esd_closure_leaves_one_flow_collapse_and_one_dead_leg_window(
     episodes: dict[str, EpisodeResult], series: dict[str, Series]
 ) -> None:
     s = series["S0u-E"]
-    assert [w["kind"] for w in s.windows] == ["flow_collapse"]
+    assert [w["kind"] for w in s.windows] == ["flow_collapse", "dead_leg_unvalidated"]
     w = s.windows[0]
     assert (w["element_id"], w["reason"]) == ("XV-R000", "flow_collapse_within_wave_criterion")
     assert w["round_trip_s"] == pytest.approx(RECEIPT_ROUND_TRIP, rel=1e-12)
     assert w["ratio"] < 10.0 and w["t_end_s"] > w["t_start_s"]
     listed = s.episode["validity_windows"]
-    assert listed == [{k: w[k] for k in listed[0]}]  # the episode record lists the same window
-    assert len(episodes["S0u-E"].outcome.windows) == 1
-    active = [d for d in s.diagnostics if d["active_validity_window_ids"]]
+    assert listed == [{k: x[k] for k in listed[0]} for x in s.windows]  # the episode lists them
+    assert len(episodes["S0u-E"].outcome.windows) == 2
+    active = [d for d in s.diagnostics if w["window_id"] in d["active_validity_window_ids"]]
     assert active and all(w["t_start_s"] <= d["t_sim_s"] <= w["t_end_s"] for d in active)
 
 
@@ -149,7 +178,10 @@ def test_a_branched_lineup_is_flagged_as_unavailable(model: HydraulicModel) -> N
     }
     assert models[10.0] == "quasi" and models[80.0] == "inactive"
     rows = sink.rows["validity_windows"]
-    assert [r["window_id"] for r in rows] == [w.window_id]
+    # Since D54 the path that has just closed also leaves a dead-leg window for E001, which holds
+    # the pressure of the open path while its target is the tank side.
+    assert [r["window_id"] for r in rows if r["kind"] == "branched_lineup"] == [w.window_id]
+    assert [r["kind"] for r in rows] == ["branched_lineup", "dead_leg_unvalidated"]
 
 
 # Events judged against the wave criterion, counted by hand from the scenario files: a valve
@@ -169,7 +201,9 @@ EVENTS = {
 def test_the_number_of_events_judged_and_the_number_flagged(
     series: dict[str, Series], sid: str
 ) -> None:
-    """Valid = judged minus flagged: every judged event is valid except the S0u-E collapse.
+    """Windows listed: S0u-E the collapse (a flow event) and the dead-leg window of D54; S0u-D
+    the 10 s opening of XV-R000 to tank 102 (stroke factor 25). The set-point collapse of S0u-D
+    lasts 4.4 s, 12.2 round trips of 10 or more, and is valid.
 
     Hand ratios: 8 s set-point change 22.2 round trips, 10 s stroke 27.7, 30 s stroke 83.1
     (receipt); the collapse of S0u-E lasts 0.19 s, 0.51 round trips (a flow event, not a
@@ -178,4 +212,4 @@ def test_the_number_of_events_judged_and_the_number_flagged(
     episode = series[sid].episode
     assert episode["events_evaluated"] == EVENTS[sid]
     flagged = len(episode["validity_windows"])
-    assert flagged == (1 if sid == "S0u-E" else 0)
+    assert flagged == {"S0u-E": 2, "S0u-D": 1}.get(sid, 0)

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "description": "Coefficient c of the delivery boundary law dH_d = c (Q/300)^2, in metres, per fitting profile (decision D2 version 3.0). Solved by the study in local/tools/solve_boundary_law.py.",
+  "description": "Coefficient c of the delivery boundary law dH_d = c (Q/300)^2, in metres, per fitting profile (decision D2 version 3.0). Solved by the study in tools/boundary_law.py.",
   "parameters": {
     "pipe_only": {
       "value": 11.963444,

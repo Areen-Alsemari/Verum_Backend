@@ -17,7 +17,7 @@ Key assumptions:
       atmospheric pressure (94300 Pa); it never replaces the sea-level table.
 
 Source: ``docs/design_decisions.md`` D7 (version 2.0); the study script
-``local/tools/phase2_studies.py``.
+``tools/pumping_minimum_study.py``.
 """
 
 from __future__ import annotations

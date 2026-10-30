@@ -6,7 +6,7 @@
   "volatility_class": "RVP_9_5",
   "downstream_factor": 0.8,
   "atmosphere_pa_abs": 101325.0,
-  "source": "local/tools/strata_tables.py",
+  "source": "tools/strata_tables.py",
   "levels": {
     "TK-101": {
       "25": {

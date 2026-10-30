@@ -16,9 +16,11 @@ Key assumptions:
       name order; a neighbour that is itself a dead leg contributes its own head) with
       ``H = H_target + (H_0 - H_target) exp(-dt / tau)``. A segment with no neighbour at all
       takes zero gauge pressure at its elevation. No edge is left undetermined.
+    * The distance between the head an isolated segment holds and its target is reported for the
+      window of decision D54 (``dead_leg_unvalidated``).
     * Trapped-liquid thermal and compressibility effects are outside the model.
 
-Source: ``docs/design_decisions.md`` D39.
+Source: ``docs/design_decisions.md`` D39, D54.
 """
 
 from __future__ import annotations
@@ -98,11 +100,14 @@ def edge_heads(
     was_dead: Collection[str],
     dt_s: float,
     tau_s: float,
+    gaps: dict[str, float] | None = None,
 ) -> tuple[dict[str, float], frozenset[str]]:
     """Total head of every edge and the set of dead edges.
 
     Determined edges keep the mean of their end heads. An edge that was determined at the last
-    committed step and is dead now is isolated at this instant: it keeps its held head."""
+    committed step and is dead now is isolated at this instant: it keeps its held head. If
+    ``gaps`` is given it receives, for each isolated segment (key: its edge ids joined by ``+``),
+    the distance in metres of head between the pressure it holds and its target (decision D54)."""
     det = _determined_heads(model, result)
     heads = {eid: 0.5 * (a + b) for eid, (a, b) in det.items()}
     dead = [e for e in model.topology.edges if e.edge_id not in det]
@@ -128,7 +133,7 @@ def edge_heads(
             key=lambda n: (_barrier_rank(n), n),
         )
         pending.append((seg, barriers))
-    _resolve(model, pending, heads, det, held, decay, set(was_dead))
+    _resolve(model, pending, heads, det, held, decay, set(was_dead), gaps)
     return heads, frozenset(e.edge_id for e in dead)
 
 
@@ -151,6 +156,7 @@ def _resolve(
     model: HydraulicModel, pending: list[tuple[list[Edge], list[str]]],
     heads: dict[str, float], det: dict[str, tuple[float, float]],
     held: Mapping[str, float], decay: float, was_dead: set[str],
+    gaps: dict[str, float] | None = None,
 ) -> None:  # fmt: skip
     remaining = list(pending)
     while remaining:
@@ -167,13 +173,13 @@ def _resolve(
             )
             if target is None:
                 continue
-            _relax(seg, target, heads, held, decay, was_dead)
+            _relax(seg, target, heads, held, decay, was_dead, gaps)
             remaining.remove(item)
             progressed = True
         if not progressed:
             break
     for seg, _barriers in remaining:  # nothing connected: zero gauge pressure at the elevation
-        _relax(seg, seg[0].z_from_m, heads, held, decay, was_dead)
+        _relax(seg, seg[0].z_from_m, heads, held, decay, was_dead, gaps)
 
 
 def _relax(
@@ -183,8 +189,11 @@ def _relax(
     held: Mapping[str, float],
     decay: float,
     was_dead: set[str],
+    gaps: dict[str, float] | None = None,
 ) -> None:
     known = [held[e.edge_id] for e in seg if e.edge_id in held]
     h0 = sum(known) / len(known) if known else target  # one pressure for the whole segment
     for e in seg:
         heads[e.edge_id] = target + (h0 - target) * (decay if e.edge_id in was_dead else 1.0)
+    if gaps is not None:
+        gaps["+".join(e.edge_id for e in seg)] = abs(heads[seg[0].edge_id] - target)
