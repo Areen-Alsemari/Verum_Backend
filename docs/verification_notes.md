@@ -341,3 +341,13 @@ Key assumptions:
 ### Gauge readings agree between the strata while the absolute truth differs
 
 S0-A and S0-A-inland share the hydraulics defined in gauge terms (2 barg reservoir). The truth pressure is absolute (gauge + the stratum atmosphere), and every emitted pressure transmitter reports gauge against the episode atmosphere (decision D27), so the readings agree; no emitted tag is referenced to a fixed atmosphere. The hidden truth differs by 101325 - 94300 = 7025 Pa, and the conversion in the unit tests shows the 0.07025 bar a fixed-reference (absolute) sensor would carry.
+
+## Protection threshold crossings
+
+Key assumptions:
+
+- Under a constant receipt flow on the floating branch the level rises linearly, so the crossing time is exact by hand: t = (threshold - 12.3 m) x 706.858347 m2 / (1/6 m3/s). Hence 848.2300 s for 12.5 m and 2968.8051 s for 13 m.
+- The independent interpolation reads the written level series at the integer seconds on both sides of the event and interpolates linearly; its error is below 1 microsecond for these smooth series (second derivative of the level about 2e-10 m/s2 for the delivery).
+- An event time is not a multiple of the 1 s grid (no quantisation) and the error is below 1 ms.
+
+Independence: hand arithmetic and a linear interpolation of the written files; neither uses the engine's root finding.

@@ -1,15 +1,10 @@
-"""Hidden protection rows: the true level is labelled, the detector input is its own field.
+"""Hidden protection rows: the true level is labelled and the detector input is its own field.
 
-Inputs: the written S0u-E episode. Outputs: pass/fail.
-Key assumptions:
-    * The hidden field ``true_level_m`` of a ``protection_state`` row is the true tank level,
-      the same number as the ``tank_state`` row at the same instant; it is not what the alarm
-      sees (the level-transmitter chain, decision D40) or what the trip sees (the detector).
-    * ``independent_level_m`` is the level the independent detector sees: the true level plus
-      the fixed offset of the episode (decision D33), which the trip event records.
-Independence: the offset is read from the event record and the levels from separate rows.
+The true level in a protection row equals the tank level at the same instant and is not what the
+alarm or the trip sees. The independent level is the true level plus the fixed offset of the
+episode, which the trip event records.
 
-Source: ``docs/design_decisions.md`` D33, D40.
+See D33 and D40.
 """
 
 from __future__ import annotations
@@ -26,6 +21,9 @@ from verum.sim.episode import EpisodeResult
 def test_true_level_is_labelled_and_matches_the_tank_row(
     episodes: dict[str, EpisodeResult],
 ) -> None:
+    """The true level of each protection row equals the tank level of the row at the same instant.
+    Independent: yes, because the levels are read from separate rows.
+    """
     rows, tank_level = protection_rows(episodes["S0u-E"].directory, "TK-101")
     assert len(rows) > 3000
     for t, payload in rows:
@@ -36,6 +34,10 @@ def test_true_level_is_labelled_and_matches_the_tank_row(
 def test_independent_level_is_the_true_level_plus_the_detector_offset(
     episodes: dict[str, EpisodeResult],
 ) -> None:
+    """The independent level of each protection row equals the true level plus the detector offset
+    recorded in the trip event. Independent: yes, because the offset is read from the event record
+    and the levels from separate rows.
+    """
     directory = episodes["S0u-E"].directory
     with gzip.open(directory / "events.jsonl.gz", "rt") as handle:
         trip = next(

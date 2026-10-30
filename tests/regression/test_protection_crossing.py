@@ -1,20 +1,12 @@
-"""Protection threshold crossings are located inside the step (decision D26).
+"""Protection threshold crossings are located inside the step.
 
-Inputs: the S0u-E episode (rising crossings at 12.5 m and 13 m) and a delivery run that
-lowers a tank through the alarm-clearing level. Outputs: pass/fail.
-Key assumptions:
-    * Under a constant receipt flow on the floating branch the level rises linearly, so the
-      crossing time is exact by hand: t = (threshold - 12.3 m) x 706.858347 m2 / (1/6 m3/s).
-      Hence 848.2300 s for 12.5 m and 2968.8051 s for 13 m.
-    * The independent interpolation reads the written level series at the integer seconds on
-      both sides of the event and interpolates linearly; its error is below 1 microsecond for
-      these smooth series (second derivative of the level about 2e-10 m/s2 for the delivery).
-    * An event time is not a multiple of the 1 s grid (no quantisation) and the error is
-      below 1 ms.
-Independence: hand arithmetic and a linear interpolation of the written files; neither uses
-the engine's root finding.
+The crossing times of the rising levels in the isolation scenario are exact by hand under a constant
+receipt flow on the floating branch, and are compared with the event times and with an independent
+linear interpolation of the written level series. A delivery run checks the alarm-clearing crossing.
+The hand times and bounds are in the "Protection threshold crossings" section of the verification
+notes.
 
-Source: ``docs/design_decisions.md`` D26.
+See D26.
 """
 
 from __future__ import annotations
@@ -55,8 +47,10 @@ def _grid_levels(s: Series, tank: str) -> dict[float, float]:
 def test_the_trip_crossing_matches_hand_time_and_independent_interpolation(
     series: dict[str, Series],
 ) -> None:
-    """The trip is decided on the detector: it asserts when the true level is the trip level
-    minus the detector offset and the trip follows 0.2 s later (decision D33)."""
+    """The trip occurs 0.2 s after the true level reaches the threshold less the detector offset, at
+    the hand time and at the interpolated time. Independent: yes, because the time is hand
+    arithmetic and an interpolation of the written files.
+    """
     s = series["S0u-E"]
     event = next(e for e in s.events if e["payload"].get("kind") == "HIGH_HIGH_TRIP")
     threshold = 13.0 - event["payload"]["detector_offset_m"]
@@ -70,11 +64,10 @@ def test_the_trip_crossing_matches_hand_time_and_independent_interpolation(
 def test_the_alarm_follows_the_level_transmitter_samples(
     episodes: dict[str, EpisodeResult], series: dict[str, Series]
 ) -> None:
-    """Decision D40: HIGH_ALARM is raised by the first level sample at or above 12.5 m that has
-    arrived. Hand bounds: not before the true level reaches 12.5 m at 848.2300 s; at most one
-    sample interval (5 s) + comms 0.2 s + the lag delay (1 s x the level is 0.24 mm behind: 1 s)
-    + noise of three sigma (0.75 mm = 3.2 s) later, i.e. before 857.6 s. The alarm is
-    the t_available of the first LT-101 observation at or above 12.5 m (same draws)."""
+    """The high alarm is raised by the first level sample at or above 12.5 m that has arrived,
+    within the hand bounds. Independent: yes, because the bounds are hand arithmetic on the sample
+    interval, delay and noise.
+    """
     s = series["S0u-E"]
     alarm = next(e for e in s.events if e["payload"].get("kind") == "HIGH_ALARM")["t_sim_s"]
     crossing = (12.5 - 12.3) * AREA / RATE
@@ -94,6 +87,9 @@ def test_the_alarm_follows_the_level_transmitter_samples(
 def test_the_episode_record_lists_the_detector_crossing(
     episodes: dict[str, EpisodeResult], series: dict[str, Series]
 ) -> None:
+    """The episode record lists the detector crossing with the time of the trip event. Independent:
+    yes, because the check compares two written records.
+    """
     listed = series["S0u-E"].episode["protection_crossings"]
     trip_event = next(
         e for e in series["S0u-E"].events if e["payload"].get("kind") == "HIGH_HIGH_TRIP"
@@ -109,9 +105,9 @@ def test_the_episode_record_lists_the_detector_crossing(
 def test_the_alarm_clears_on_the_level_transmitter_after_the_level_falls(
     model: HydraulicModel,
 ) -> None:
-    """Delivery from 12.6 m: the level falls through 12.5 m minus the hysteresis; the alarm
-    clears on the first arrived sample below that level, between the true crossing and the
-    crossing + 5 s + 0.2 s + 1 s lag + 3.2 s noise (the same bound as for the rise)."""
+    """On a falling level the alarm clears on the first arrived sample below the clearing level,
+    within the same bound as for the rise. Independent: yes, because the bound is hand arithmetic.
+    """
     config = load_protection_config(model.topology, "TK-101", model.directory)
     clear = config.alarm_clear_m
     assert 12.0 < clear < 12.5
