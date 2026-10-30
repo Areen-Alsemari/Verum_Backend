@@ -166,6 +166,8 @@ Nothing about faults is reachable from `verum.api`; `verum.sensors` knows only a
 - A leak in the rigid-column engine is a sink evaluated from the last accepted solve (frozen over a step of at most 1 s); a leak that grows faster than a 30 s ramp, or a leak at the end of an edge, is outside the verified range. Its position within the edge is a share of length and of the local loss coefficient. The velocity head is neglected in its pressure.
 - A leak in the transient engine sits at a junction, not inside an edge; the rigid-column leak of the comparison test is 5.25 m from that junction.
 - Misrouting can create lineups the operator model does not expect (two suction branches, a receipt into two tanks). They are handled by the branched scheme, which is a validity window, or by a gate. A stuck-almost-closed valve on the duty path is outside the eligible set since D75 (it was rejected by gate SG0 or SG2 in the first audit, and is now refused before the run).
+- A leak on an idle branch that is connected to live fluid cannot be represented: the steady network does not solve dead-end edges, so such a candidate is rejected at every severity and is never labelled (D82).
+- The visible restriction and misrouting have a single class (clear) in the audit grid and cannot be balanced across classes (D82).
 - A stuck-at has no consequence on a tag whose true signal is constant over the episode.
 - Single faults only: the signatures of two simultaneous faults are not studied, a recovery is not modelled, and the sensor faults act on the 14 continuous tags only.
 - No fault law, range or threshold is validated; the audit says what the model produces, not what a real terminal would show.
@@ -208,63 +210,107 @@ Reading the table:
 - **Confusable signatures** (cosine above 0.95 between the mean change over the last 300 s of two runs, in noise sigmas): a restriction of the pump inlet valve and a pump head degradation (0.999, S0-A and S0-C; the valve contact of the restriction separates them); leaks at different places of the same hydraulic zone (E-D1 and E-PA3, 0.993; E002, E003 and E-R101a on the receipt side, 0.997 to 1.0); a leak on the receipt side and a stuck level transmitter (0.98 to 0.99); a restriction of the receipt inlet valve and a bias or drift of PT-001 (1.0, both move PT-001 only); a bias, a drift and a stuck-at of the same tag (1.0 in the end change; they differ in time); two misrouted receipt or suction valves in S0-C (0.994). Leak against flow-meter bias or drift is not confusable in this measure (cosine between -0.03 and 0.0), because the leak also moves the tank level and the pressures; valve restriction against pump degradation is.
 - **First detection.** At the largest severity the earliest tag leaves the noise band 30 to 250 s after the onset for a leak, 70 to 130 s for a restriction, 30 s for a pump fault and 10 s for a bias.
 
-## Agent-side detectability audit (D77, D78): results
+## Agent-side detectability audit (D77 to D82)
 
-The twin-based audit above compares a faulted run with its healthy twin. An agent has no twin: it has the observed tags and the design data.
+The twin audit above compares a faulted run with its healthy twin. An agent has no twin: it has the observed tags and the design model. This audit asks what an agent could see.
 
-`tools/fault_audit_v2.py` runs the grid again under the healthy-variability profiles v1 and v2 (the 6a grid with 8 severities, three assets per type, onset 900 s, 1800 s observed, ramp 300 s, both restriction modes, and misrouting (b) on `XV-R101` and `XV-R102` of `RECEIVE_101_102`, as D75 requires; 544 fault runs and 160 healthy runs with 20 seeds per profile and lineup, and 153 sensor cases per scenario and profile), and `tools/fault_audit_v2_report.py` computes the residual features of D77, the margins and the classes (full tables in `local/results/fault_audit_v2.md` and `fault_audit_v2_cells.md`, not committed; the class boundaries are in `config/severity_classes.json`).
+**Method.** Each run is reduced to residual features over windows of 60, 300 and 900 s ending on a 60 s grid (D80): mass balance (flow in minus flow out minus the least-squares slope of the summed tank volume), pump consistency, delivery law, delivery flow and receipt pressure against the design model, and a trend of each tag. The design model is perturbed over five draws (pump head, fitting loss, boundary coefficient). The threshold of a feature is the 99th percentile, over healthy runs and draws, of the largest deviation from the healthy mean over all windows (D79). The margin of a cell is the largest deviation over all windows divided by the threshold, best over the three window lengths and worst over the draws. A change of a valve contact or a pump status is a margin of 3. The held margin (three consecutive windows) is a second column and sets the time to detect (D81). Classes: invisible below 1, marginal from 1 to below 3, clear from 3.
 
-Latent cells (D76: the stopped pump B, restrictions of the closed valves `XV-R102` and `XV-R103`) are excluded from the counts below.
+**Calibration.** 200 healthy runs per lineup and profile fix the thresholds, with 3 to 5 percent median error of the percentile (a bootstrap over runs; 15 to 17 percent for the worst feature). 100 other healthy runs per lineup and profile give the false-alarm rates.
 
-**Healthy floor.** A margin is only meaningful against what healthy runs produce.
+| quantity | v1 | v2 |
+| --- | --- | --- |
+| mean false-alarm rate per feature | 1.1 to 1.5 percent | 1.1 to 1.4 percent |
+| features above 2 percent | 13 to 21 percent | 9 to 19 percent |
+| healthy runs with an alarm on any feature | 39 to 49 percent | 35 to 41 percent |
+| factor on all thresholds for 1 percent on any feature | 1.28 to 1.35 | 1.28 |
+| any feature after that factor | 1 to 3 percent | 1 to 2 percent |
 
-The largest single-window deviation exceeds the 3 sigma threshold in 51 of 80 healthy runs under v1 and 55 of 80 under v2 (the maximum of about 570 feature-window samples), so a single-window margin of 1 is no detection; the margin held over three windows is below 1 in 80 of 80 (v1) and 77 of 80 (v2) healthy runs and below 3 in all (latent cells, which are identical to a healthy run: 0 of 48 at or above 1 under either profile).
+The target of 1 percent holds for each feature. A cell takes the largest margin over about 50 features and three window lengths, so a margin of 1 is exceeded by about 40 percent of healthy runs (166 of 400 under v1, 148 of 400 under v2); a margin of 3 by none. The tables give the counts at the thresholds of D79 and at the thresholds scaled by the factor above, which restore 1 percent on any feature. Cells that equal a healthy run (latent faults) are excluded from the counts.
 
-The classes use the held margin.
+**Noise floor of the mass-balance rate** (m3/h, standard deviation over healthy windows). The hand value is the level noise of 0.25 mm on three tanks of 706.86 m2: 18.4, 1.64 and 0.316 for 60, 300 and 900 s.
 
-**Twin audit against agent-side residuals** (active cells; the number with a held margin of at least 1, and in brackets at least 3, out of the cells of the fault):
-
-| fault | 6a twin: consequence | agent v1 | agent v2 |
+| profile | 60 s | 300 s | 900 s |
 | --- | --- | --- | --- |
-| leak | 40/72 | 16/72 (6) | 13/72 (2) |
-| restriction, `position_visible` | 52/52 | 52/52 (52, by the contact) | 54/54 (54) |
-| restriction, `obstruction` | not run | 25/52 (16) | 14/54 (7) |
-| pump head loss | 16/16 | 12/16 (7) | 11/16 (6) |
-| sensor bias | 72/72 | 9/72 (1) | 7/72 (1) |
-| sensor drift | 67/72 | 37/72 (22) | 23/72 (15) |
-| sensor stuck-at | 7/9 | 3/9 (3) | 6/9 (3) |
-| misrouting (a) | 7/7 | 7/7 (7, by the contact) | 7/7 (7) |
-| misrouting (b), parallel branch | not comparable | 16/16 (16, by the contact) | 16/16 (16) |
+| v1 | 19.7 to 19.8 | 1.71 to 1.72 | 0.33 to 0.37 |
+| v2 | 19.5 to 19.8 | 1.90 to 2.62 | 1.40 to 3.71 |
 
-Most of what the twin audit called a consequence is below what an agent can see.
+Under v1 the measured values are 4 to 16 percent above the hand estimate (the flow meter noise and the position of a reading inside its 10 s block). Under v2 the longer windows are dominated by changes of flow inside the window: the slope of the volume weights the middle of the window and the mean of the flow weights it evenly, so a regime ramp leaves a residual. The spread has heavy tails (900 s on lineup A: 3.71 by standard deviation, 1.37 by median absolute deviation).
 
-A leak is seen from about 3 to 9 x 10^-4 m2 (a margin of 3 is not reached on every asset of any zone inside the range), a bias of a flow or level meter does not reach a margin of 1 on every asset inside the range, and under v2 every residual that depends on the downstream factor is less sensitive: the delivery-law and delivery-flow residuals have thresholds of 1.6 to 1.8 x 10^5 Pa and 126 to 137 m3/h.
+**Detection** (active cells with a margin of at least 1, and in brackets at least 3, of the cells of the fault):
 
-A restriction in mode `obstruction` is seen only through its flow and pressure effect (the contact stays open): 26 percent of its cells under v2 reach a held margin of 1 or more, against 100 percent for `position_visible`. A stuck-at is seen more often under v2 than under v1: the regimes move the true quantity away from the frozen reading.
+| fault | twin | three-sigma held margin, v1 / v2 | calibrated, v1 | calibrated, v2 | calibrated and scaled, v2 |
+| --- | --- | --- | --- | --- | --- |
+| leak | 40/72 | 16/72 / 13/72 | 54/72 (33) | 40/72 (10) | 19/72 (9) |
+| restriction, `position_visible` | 52/52 | 52/52 / 54/54 | 52/52 (52) | 54/54 (54) | 54/54 (54) |
+| restriction, `obstruction` | not run | 25/52 / 14/54 | 36/52 (26) | 19/54 (9) | 14/54 (9) |
+| pump head loss | 16/16 | 12/16 / 11/16 | 15/16 (10) | 12/16 (8) | 12/16 (8) |
+| sensor bias | 72/72 | 9/72 / 7/72 | 70/72 (62) | 60/72 (35) | 48/72 (34) |
+| sensor drift | 67/72 | 37/72 / 23/72 | 62/72 (53) | 52/72 (23) | 31/72 (20) |
+| sensor stuck-at | 7/9 | 3/9 / 6/9 | 8/9 (5) | 8/9 (7) | 7/9 (4) |
+| misrouting (a) | 7/7 | 7/7 / 7/7 | 7/7 (7) | 7/7 (7) | 7/7 (7) |
+| misrouting (b), parallel branch | not comparable | 16/16 / 16/16 | 16/16 (16) | 16/16 (16) | 16/16 (16) |
 
-**Classes** (profile v2, held margin; share of the active cells of the grid, which is log-uniform in severity, and the share under class-balanced sampling):
+Cells that change a contact (the visible restriction, misrouting) are clear by the contact. Under v2 leaks, bias, drift, the obstruction mode and pump faults are less detectable than under v1, because the regimes raise the variability of the residuals that depend on the downstream factor; a stuck-at is as detectable or more, because the regimes move the true quantity away from the frozen reading.
 
-| fault | invisible | marginal | clear | class-balanced sampling |
-| --- | --- | --- | --- | --- |
-| leak | 0.82 | 0.15 | 0.03 | one third each |
-| restriction, `position_visible` | 0.00 | 0.00 | 1.00 | only `clear` is populated |
-| restriction, `obstruction` | 0.74 | 0.13 | 0.13 | one third each |
-| pump head loss | 0.31 | 0.31 | 0.38 | one third each |
-| sensor bias | 0.90 | 0.08 | 0.01 | one third each |
-| sensor drift | 0.68 | 0.11 | 0.21 | one third each |
-| sensor stuck-at | 0.33 | 0.33 | 0.33 | one third each |
-| misrouting (a), (b) | 0.00 | 0.00 | 1.00 | only `clear` is populated |
+**Classes** (profile v2; share of the active cells of the grid, which is log-uniform in severity; the scaled columns use the scaled thresholds):
 
-Under the old sampling about four episodes in five are invisible for a leak and nine in ten for a bias; class-balanced sampling gives a third of each. Where the grid has no cell in a class (the restriction that changes its contact, misrouting) the class cannot be allocated. The same shares under profile v1 are in the report (leak 0.78 / 0.14 / 0.08, obstruction 0.52 / 0.17 / 0.31, drift 0.49 / 0.21 / 0.31).
+| fault | invisible | marginal | clear | scaled: invisible | marginal | clear |
+| --- | --- | --- | --- | --- | --- | --- |
+| leak | 0.44 | 0.42 | 0.14 | 0.74 | 0.14 | 0.12 |
+| restriction, `obstruction` | 0.65 | 0.19 | 0.17 | 0.74 | 0.09 | 0.17 |
+| pump head loss | 0.25 | 0.25 | 0.50 | 0.25 | 0.25 | 0.50 |
+| sensor bias | 0.17 | 0.35 | 0.49 | 0.33 | 0.19 | 0.47 |
+| sensor drift | 0.28 | 0.40 | 0.32 | 0.57 | 0.15 | 0.28 |
+| sensor stuck-at | 0.11 | 0.11 | 0.78 | 0.22 | 0.33 | 0.44 |
+| restriction, `position_visible` | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 1.00 |
+| misrouting (a), (b) | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 1.00 |
 
-**Boundaries** (`config/severity_classes.json`, profile v2, median over the assets of the class): a leak is marginal from 3.3 x 10^-4 m2 (discharge and pump branch), 6.1 x 10^-4 (receipt) and 8.8 x 10^-4 (suction), and is not clear inside the range on any zone; an obstruction of a receipt inlet valve is marginal from a closure of 0.31 and clear from 0.47, of an outlet valve marginal from 0.50 and not clear; a pump head loss is marginal from 0.043 and clear from 0.105; a flow-meter bias, a level-meter bias and a flow-meter drift never reach a margin of 1 on all assets.
+Class-balanced sampling gives a third of each class that a fault type populates. The visible restriction and misrouting populate only the clear class and cannot be balanced (D82). Profile v1 has more clear cells (leak 0.25, 0.29, 0.46; obstruction 0.31, 0.19, 0.50).
 
-A boundary that an asset of the class does not reach is an unresolved record.
+**Smallest detectable severity** (profile v2; median over the assets of the class that reach a margin of 1, with their number; severity as in the audit grid). Left: thresholds of D79. Right: scaled thresholds.
 
-**Confusable pairs** (cosine above 0.95 of the normalised signature over the residual features, cells with a held margin of at least 1, profile v2): a restriction in mode `obstruction` and a pump head degradation are confusable (12 cell pairs) and the contact does **not** separate them, because an obstruction leaves the contact open and a pump fault has none; a restriction in mode `position_visible` and a pump degradation (13 pairs) are separated by the contact; the two restriction modes (26 pairs), misrouting (a) and a visible restriction (17) are separated by their contacts; a bias, a drift and a stuck-at of one tag (3 to 13 pairs) and a leak against a stuck-at (7) are not separated by any contact.
+| fault | asset class | 60 s | 300 s | 900 s | scaled: 60 s | 300 s | 900 s |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| leak (m2) | discharge | 2.0e-4 | 1.2e-4 | 9.3e-5 | 2.9e-4 | 1.9e-4 | 2.0e-4 |
+| leak (m2) | pump branch | 2.0e-4 | 1.2e-4 | 9.1e-5 | 2.8e-4 | 1.9e-4 | 1.9e-4 |
+| leak (m2) | receipt | 2e-6 (3/3) | 7.8e-5 | 2.9e-5 | none | 1.2e-4 | 9.0e-5 |
+| leak (m2) | suction | 9.0e-4 (1/2) | 3.5e-4 | 2.4e-4 | none | 5.0e-4 | 5.0e-4 |
+| pump (head loss) | pump | 0.031 | 0.036 | 0.032 | 0.037 | 0.043 | 0.044 |
+| restriction `obstruction` (closure) | tank inlet | 0.18 | 0.21 | 0.19 | 0.30 | 0.25 | 0.26 |
+| restriction `obstruction` (closure) | tank outlet | 0.49 (1/2) | 0.56 | 0.49 | 0.61 (1/2) | 0.61 (1/2) | 0.52 (1/2) |
+| restriction `obstruction` (closure) | pump branch | 0.47 (2/3) | 0.50 (2/3) | 0.47 (2/3) | 0.50 (2/3) | 0.53 (2/3) | 0.51 (2/3) |
+| bias (fraction of span) | flow | 0.002 | 0.020 | 0.020 | 0.036 (1/3) | 0.028 | 0.029 |
+| bias (fraction of span) | level | 0.002 | 0.002 | 0.002 | 0.002 | 0.002 | 0.002 |
+| bias (fraction of span) | pressure | 0.0080 | 0.0058 | 0.0052 | 0.039 | 0.0075 | 0.0077 |
 
-Under the cosine measure leak against pump degradation is no longer confusable once only held margins are used.
+Where a value is the smallest in the range (2e-6 m2, 0.002) the margin already reaches 1 at the least severe point; for a flow meter and a receipt leak at 60 s that is the false-alarm floor, not detection, and the scaled columns show no detection there. On the discharge side a 900 s window halves the smallest detectable leak against a 60 s window (thresholds of D79).
 
-**Limits.** The nuisance ranges, the three windows and the 20 seeds are selections; the features use 60 s windows and the design model of the plant itself, so an agent with a worse model sees less. The thresholds are pooled over seeds and draws, and the margin of a run is that of the worst of five perturbed designs (the unperturbed design is used only for the signatures of the confusable pairs).
+**Time to detect** (profile v2; seconds after the onset at the end of three consecutive windows above the threshold; median over the detected cells, and the number at the most severe cells in the text below):
 
-The classes describe this model and these features, not a real terminal.
+| fault | 60 s | 300 s | 900 s |
+| --- | --- | --- | --- |
+| leak | 360 | 420 | 900 |
+| restriction, `obstruction` | 300 | 360 | 450 |
+| pump head loss | 270 | 390 | 570 |
+| sensor bias | 180 | 180 | 300 |
+| sensor drift | 180 | 180 | 360 |
+| sensor stuck-at | 390 | 300 | 600 |
+| misrouting (a) | 180 | 240 | 296 |
+| restriction, `position_visible` | 37 | 37 | 37 |
+| misrouting (b) | 11 | 11 | 11 |
+
+At the most severe cells a leak is found after 300 s at 60 s, 360 s at 300 s and 540 s at 900 s. A longer window finds smaller faults and finds them later.
+
+**Confusable pairs** (cosine above 0.95 of the normalised signature, cells with a margin of at least 1, profile v2). A restriction in mode `obstruction` and a pump head degradation are confusable in 12 cell pairs, and no contact separates them: an obstruction leaves the contact open and a pump fault has none. A restriction in mode `position_visible` against a pump degradation (13 pairs), against a leak (36), against the obstruction mode (80) and against misrouting (a) (19) is separated by the contact. A leak against an obstruction (36 pairs), a bias (230), a drift (148) or a stuck-at (22), and a bias against a drift (207), are not separated by any contact. Leak against pump degradation does not appear.
+
+**What changed against the three-sigma held-margin method (D77 version 1), and why.**
+
+- Detection rose for leaks, bias and drift. Longer windows and a regression slope lower the noise floor of the mass balance from 19.7 to 0.33 m3/h under v1 (table above), so a bias of a level or pressure transmitter is seen at 0.002 and 0.005 of span (900 s) where the held margin saw 9 of 72 bias cells. Under v2 the floor stays at 1.4 to 3.7 m3/h at 900 s because of regime ramps, and the 900 s threshold of the mass balance is 14 m3/h against 1.2 m3/h under v1.
+- The threshold is a percentile of the largest deviation, not three standard deviations pooled over windows, so it no longer depends on the number of windows.
+- The single-window margin has a false-alarm floor that the held margin hid. At a margin of 1 about 40 percent of healthy runs alarm. The counts at a margin of 1 therefore overstate detection, and the scaled columns and the margin of 3 are the safer reading.
+- A leak is smallest detectable at 8e-5 to 2.2e-4 m2 (best length; 1.9e-4 to 4.9e-4 m2 with the scaled thresholds), against 3.3e-4 to 8.8e-4 m2 with the held margin.
+- The confusable pairs lost leak against pump degradation and gained leak against obstruction, because the features and windows differ.
+- Time to detect is now a function of the window length, 180 s to 900 s for the faults that are seen.
+
+**Limits.** The nuisance ranges, the window lengths and the number of healthy runs are selections. The design model is the plant model itself, so an agent with a worse model sees less. A leak on an idle branch connected to live fluid cannot be represented, because the steady network does not solve dead-end edges (D82). The visible restriction and misrouting populate only the clear class (D82). The classes describe this model and these features, not a real terminal.

@@ -66,10 +66,13 @@ The transient engine has been compared with single-phase water-hammer experiment
 
 ## Known limitations
 
-- Agent-side detectability is low for small faults (decisions D77 and D78, `docs/fault_models.md`).
-  - From the observed tags and the design model alone, over 60 s windows and with a margin held for three windows, about four episodes in five of a log-uniform leak sampling and nine in ten of a sensor bias sampling are invisible under the healthy-variability profile v2; a leak is marginal from about 3 to 9 x 10^-4 m2 and never clear on every asset inside the range; a restriction in mode `obstruction` cannot be told from a pump head degradation by the contact, which stays open.
-  - Severity classes (`invisible`, `marginal`, `clear`) and their boundaries per fault type and asset class are in `config/severity_classes.json`; a later sampler is to allocate equally across the classes a fault type populates.
-  - A fault on an asset that is not active in the lineup is labelled `latent` in the episode record and is to be excluded from detection metrics (D76); the single-window margin of a healthy run reaches 1 in two runs out of three, so only the held margin is a detection.
+- Agent-side detectability is limited and depends on the window length (D77 to D82, `docs/fault_models.md`).
+  - From the observed tags and the design model, over windows of 60, 300 and 900 s, with thresholds at the 99th percentile of the largest healthy deviation, a leak is detected from about 9e-5 m2 on the discharge and pump-branch sides and 2e-4 m2 on the suction side (best length), and under the profile v2 and the scaled thresholds 19 of 72 leak cells and 14 of 54 obstruction cells are detected.
+  - Severity classes (`invisible`, `marginal`, `clear`) and their boundaries per fault type and asset class are in `config/severity_classes.json`. Under v2, 44 percent of a log-uniform leak sampling is invisible, 65 percent for an obstruction and 17 percent for a bias; a later sampler is to allocate equally across the classes a fault type populates.
+  - A margin of 1 is exceeded by about 40 percent of healthy runs because a cell takes the largest of about 50 features and three window lengths; a margin of 3 by none. Counts at the thresholds scaled to 1 percent on any feature are in the fault-model document.
+  - The visible restriction and misrouting populate only the clear class and cannot be balanced across classes. A restriction in mode `obstruction` cannot be told from a pump head degradation by the contact, which stays open.
+  - A fault on an asset that is not active in the lineup is labelled `latent` in the episode record and is to be excluded from detection metrics (D76).
+  - A leak on an idle branch connected to live fluid cannot be represented, because the steady network does not solve dead-end edges; such a candidate is rejected and never labelled.
   - None of this is validated against real data.
 - Severe restrictions of a valve on the suction side of the duty pump are not representable.
   - A closure above about 0.67 (`XV-S103`), 0.72 (`XV-S102`) or 0.75 (`XV-S101`, `XV-PAI`, `XV-PBI`) of the opening is rejected by the phase and NPSH screen, and a forced opening of `XV-PBO` while pump A delivers has no steady state; such candidates are written as `simulation_rejected` and are never labelled healthy (decisions D66 and D74; `docs/fault_models.md`, "Representable range").
