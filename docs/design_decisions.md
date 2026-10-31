@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 17 (2026-11-03). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 18 (2026-11-04). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -101,6 +101,12 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D89 | Scaled class margins | DESIGN | 1.0 |
 | D89b | Matched-weight mass balance | DESIGN | 1.0 |
 | D89c | Floor boundaries | DESIGN | 1.0 |
+| D150 | Dead-leg windows and the emitted tags | DESIGN | 1.0 |
+| D151 | Replacement of excluded candidates | DESIGN | 1.0 |
+| D152 | Branched family | DESIGN | 1.0 |
+| D153 | Receipt switch | DESIGN | 1.0 |
+| D154 | Classes of stuck-at and misrouting (a) | DESIGN | 1.0 |
+| D155 | Hold-out of strata and assets | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1197,6 +1203,70 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** A boundary at the start of the range is a statement about the range, not a measured threshold, and a reader must not take it for one.
 - **Sensitivity required.** None.
 - **Notes.** The parameter record has a fixed set of fields, so the marks are stored in a separate mapping of the class file and the records are unchanged.
+
+## D150 - Dead-leg windows and the emitted tags
+
+- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D54, D37
+- **Decision.**
+  - A window of kind `dead_leg_unvalidated` restricts an episode only if the measured variable reference of an emitted tag (an edge or a node) lies inside the dead segment during the window. Otherwise the window stays in the hidden validity-window records with `affects_emitted_tags` false, and the tier is unchanged.
+  - The field `affects_emitted_tags` is computed and recorded for every window kind. For the other kinds it does not change the tier.
+  - A node lies inside a segment if it is an end of one of its edges and is not a barrier (a closed valve, a check valve or a pump).
+- **Reason.** A dead leg that no tag reads cannot make an emitted value wrong, so it should not take an episode out of the main campaign.
+- **Sensitivity required.** None.
+- **Notes.** The segment is the group of dead edges that the solver joins; the idle branch of the standby pump is a segment whose edges carry no tag except `E-PB2` (PT-202B) or `E-PA2` (PT-202A), and the receipt header while a delivery runs holds the edges of FT-001 and PT-001.
+
+## D151 - Replacement of excluded candidates
+
+- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D83, D85
+- **Decision.**
+  - An excluded or rejected candidate is replaced by a new candidate in the same cell (family, atmosphere, temperature stratum, subtype, class) until the slot has a completed episode or the cell has failed 5 consecutive times; the gap is then recorded.
+  - N counts completed episodes: a campaign has N slots, and each slot ends in one completed episode or in a recorded gap.
+  - The manifest records the attempts, the exclusions and the rejections per cell.
+- **Reason.** Candidates are lost to windows and gates at a rate that depends on the cell; replacing them within the cell keeps the shares of the plan.
+- **Sensitivity required.** The attempts per cell and the number of gaps.
+- **Notes.** A candidate is identified by its slot and its attempt, and its seed follows the number slot times 5 plus attempt, so extending N appends new numbers and leaves the finished episodes unchanged. The plan is built in blocks, so that it does not change when N grows by whole blocks.
+
+## D152 - Branched family
+
+- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D83, D75
+- **Decision.**
+  - The branched family holds healthy episodes in the lineup `RECEIVE_101_102`, misrouting (b), and misrouting (a) of a valve that gives a second branch (a second suction branch, or a second receipt branch).
+  - It is at most 6 percent of N, its tier is `restricted_benchmark`, it is its own stratum in the splits, and it is reported apart from the main metrics.
+  - Misrouting (b) returns to the plan through this family.
+- **Reason.** These states are branched by construction and carry a validity window; they are kept as a separate, labelled part of the dataset.
+- **Sensitivity required.** None.
+- **Notes.** A branched episode is completed with its tier; it is not excluded for the window. The share of misrouting (a) that gives a second branch is decided by the valve and the lineup, not by the outcome of the run.
+
+## D153 - Receipt switch
+
+- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D22, D53
+- **Decision.**
+  - The flow collapse of a receipt switch is judged from the closing stroke of `XV-R000`: the time the flow needs to fall from 90 to 10 percent of its value at the start of the stroke is compared with 10 wave round trips of the receipt path to the receiving tank. After a set-point step to zero with a controller time constant of 2 s that time is 2 ln 9 = 4.39 s.
+  - A switch candidate ramps the set-point in two stages, to half at the start of the stroke and to zero 6 s later, so that the fall from 90 to 10 percent is spread over both stages. A receiving tank that still gives a window is excluded from switch candidates, and the gap is recorded.
+- **Reason.** The first tank of the pilot with a round trip above 0.439 s gives a collapse window for a single step; the two stages avoid it where the stroke allows.
+- **Sensitivity required.** The round trip of each receiving tank and the observed windows.
+- **Notes.** The table of the round trips and the check against the pilot are in the report of the phase.
+
+## D154 - Classes of stuck-at and misrouting (a)
+
+- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D84, D78
+- **Decision.**
+  - A stuck-at or a misrouting (a) takes its class from the cell of the audit for its asset and lineup: invisible, marginal or clear.
+  - A sampled combination with no audit cell, or whose audit cell was rejected, has the class `unaudited`. It is reported apart and never merged into another class.
+- **Reason.** These faults have no severity coordinate, so the class of the audit is the only measure of how visible they are, and it exists only for the audited assets and lineups.
+- **Sensitivity required.** The share of unaudited cells.
+- **Notes.** The audited lineups are `DELIVER_101_A`, `RECEIVE_101` and `RECEIVE_101_DELIVER_102_A`. The cells are stored in `config/audit_cells.json`.
+
+## D155 - Hold-out of strata and assets
+
+- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D86
+- **Decision.**
+  - Whole units are held out only among units with at least 2.5 percent of the plan, and the held-out units together hold at least 8 percent of the plan.
+  - For a subtype with fewer than 4 assets in the plan, an (asset, family) pair is held out instead of the asset.
+  - A pair episode follows the rule of D86: it is test if either fault is held out.
+- **Reason.** A held-out unit that is nearly empty tests nothing, and a subtype with few assets would lose all its episodes of one kind if its asset were held out.
+- **Sensitivity required.** The share of the plan in the held-out units.
+- **Notes.** With 32 units (4 families, 2 atmospheres, 4 temperatures) no single unit holds 8 percent of the plan; the largest holds about 7 percent. The 8 percent therefore applies to the held-out units together, and each unit must hold at least 2.5 percent.
 
 ## Episode profile
 
