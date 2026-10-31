@@ -145,16 +145,23 @@ def test_stratum_family_subtype_and_class_frequencies_follow_the_plan(sampled: l
     assert within(sum(e.strata["family"] == "delivery" for e in plain), len(plain), share)
     singles = Counter(f.subtype for e in sampled if e.slot.kind == "single" for f in e.faults)
     assert all(within(c, 1680, 1 / 8) for c in singles.values())
-    classes: dict[str, Counter[str]] = {}
+    classes: dict[tuple[str, str], Counter[str]] = {}
     for e in sampled:
         for subtype, cls in zip(e.cell.subtypes, e.cell.classes, strict=True):
             if e.slot.kind == "single" and not e.slot.latent:
-                classes.setdefault(subtype, Counter())[cls] += 1
+                classes.setdefault((subtype, e.cell.family), Counter())[cls] += 1
     names = ClassTable()
-    for subtype, counts in classes.items():
+    for (subtype, family), counts in classes.items():
+        # a valve restriction of a delivery lineup has only valves of the invisible class
+        expected = (
+            ["invisible"]
+            if (subtype, family) == ("restriction_obstruction", "delivery")
+            else (names.names(subtype))
+        )
         total = sum(counts.values())
-        assert set(counts) <= set(names.names(subtype))
-        assert all(within(c, total, 1 / len(names.names(subtype))) for c in counts.values())
+        assert set(counts) <= set(expected), (subtype, family)
+        if total >= 40:
+            assert all(within(c, total, 1 / len(expected)) for c in counts.values())
 
 
 def test_a_pair_never_shares_an_asset_and_its_onsets_obey_the_rules(sampled: list[Any]) -> None:

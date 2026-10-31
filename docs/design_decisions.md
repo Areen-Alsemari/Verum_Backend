@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 20 (2026-11-05). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 21 (2026-11-05). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -108,6 +108,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D154 | Classes of stuck-at and misrouting (a) | DESIGN | 1.0 |
 | D155 | Hold-out of strata and assets | DESIGN | 1.0 |
 | D156 | Inspection truth of an episode | DESIGN | 1.0 |
+| D157 | Classes of a cell that its lineups can carry | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1290,6 +1291,17 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** An inspection action returns a measurement of the true state at a place and a time that the observations do not cover, and the evaluator must be able to recompute that measurement and the fault that acted on it.
 - **Sensitivity required.** The size of the file for a 3600 s episode, which must stay below 250 KB compressed.
 - **Notes.** The file is built after the truth files and the observations are written, from the hydraulic-state rows, the fault specifications and the sensor chain, so no physics output changes. A pressure is the written absolute pressure less the atmosphere of the episode. The physical parameter of a fault is its baseline plus its severity times the difference between its value at severity one and its baseline, which is the mapping of every fault type in the fault-truth rows. A tag value is the chain output at the row time before noise, quantisation and dropout.
+
+## D157 - Classes of a cell that its lineups can carry
+
+- **Version:** 1.0 (2026-11-05)  **Status:** DESIGN  **Refines:** D84, D151
+- **Decision.**
+  - The class of a fault in a cell is drawn among the classes for which some asset of some lineup of the family exists.
+  - For a physical pair with one fault on the delivery path and one on the receipt path, each fault is judged on its own path.
+  - A leak with a restriction keeps the union of the paths, because its path is drawn inside the cell.
+- **Reason.** A valve restriction of a delivery lineup has only valves of the classes that the class file gives to the invisible class, so a cell that drew a marginal or clear obstruction there could never give an episode. The full-run check showed 2 gaps of this kind in the first 50 slots.
+- **Sensitivity required.** The number of gaps per cell.
+- **Notes.** The plan, the subtypes and the family of every slot are unchanged; only the class draw of a restriction in a delivery family or on the delivery path of a physical pair changes. The 60 cells and scenarios of the second pilot are identical before and after.
 
 ## Episode profile
 

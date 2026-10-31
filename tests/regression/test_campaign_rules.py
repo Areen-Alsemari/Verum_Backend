@@ -515,3 +515,31 @@ def test_a_main_family_misrouting_never_opens_a_second_branch() -> None:
                 assert not (delivering and f.asset.startswith("XV-S")), (slot.index, f.asset)
                 assert not (receiving and f.asset.startswith("XV-R1")), (slot.index, f.asset)
     assert checked > 100
+
+
+def test_the_class_of_a_cell_is_one_that_an_asset_of_its_lineups_can_carry() -> None:
+    """In 3000 slots no single-fault slot, no healthy slot and no pair other than a leak with a
+    restriction fails at all five attempts for want of an asset of the drawn class; the failures
+    of that pair type, whose path is drawn inside the cell, are fewer than 0.2 percent of the
+    slots. A valve restriction of a delivery lineup never draws a class that only a tank inlet has.
+
+    Independent: yes, because the lineups and the classes are read from the tables, not from the
+    sampler.
+    """
+    ctx = runner.context(CONFIG)
+    gaps: Counter[str | None] = Counter()
+    for slot in ctx.plan:
+        failed = 0
+        for attempt in range(5):
+            try:
+                ctx.sampler.sample(slot, attempt)
+                break
+            except NoCandidate:
+                failed += 1
+        gaps[slot.pair_type if failed == 5 else "ok"] += 1
+        cell = ctx.sampler.cell(slot)
+        for subtype, cls in zip(cell.subtypes, cell.classes, strict=True):
+            if cell.family == "delivery" and subtype == "restriction_obstruction":
+                assert cls in ("invisible", "latent"), cell.key
+    assert set(gaps) <= {"ok", "leak_restriction"}
+    assert gaps["leak_restriction"] < 0.002 * CONFIG.n

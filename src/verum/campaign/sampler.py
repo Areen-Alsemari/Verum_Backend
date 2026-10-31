@@ -50,6 +50,13 @@ STRESS_TEMPERATURE = 45.0
 FAMILIES = ("delivery", "receipt", "concurrent", "switch", "branched")
 FAMILY_WEIGHTS = {"delivery": 0.35, "receipt": 0.30, "concurrent": 0.25}
 CONCURRENT_MODES = ("RECEIVE_101_DELIVER_102_A", "RECEIVE_101_DELIVER_101_A")
+FAMILY_MODES: dict[str, tuple[str, ...]] = {
+    "delivery": tuple(f"DELIVER_{t}_{ab}" for t in ("101", "102", "103") for ab in "AB"),
+    "receipt": tuple(f"RECEIVE_{t}" for t in ("101", "102", "103")),
+    "concurrent": CONCURRENT_MODES,
+    "branched": (PARALLEL_BRANCH_MODE,),
+}
+FAMILY_MODES["switch"] = FAMILY_MODES["receipt"]
 DELIVERY_MARGIN_M = 0.5
 LEVEL_RANGE_M = (1.8, 12.0)
 ONSET_MIN_S = 600.0
@@ -157,6 +164,7 @@ class Sampler:
     ) -> None:
         self.config, self.classes = config, classes
         self.audit = audit if audit is not None else AuditCells()
+        self._reach: dict[tuple[str, str, str | None, str], bool] = {}
 
     def cell(self, slot: Slot) -> Cell:
         """The cell of a slot, drawn from the stream of its first attempt."""
@@ -170,7 +178,14 @@ class Sampler:
             if slot.stress
             else float(rng.choice(TEMPERATURES, p=TEMPERATURE_WEIGHTS))
         )
-        classes = tuple(self._class_of(slot, s, rng) for s in picks)
+        paths = (
+            ["delivery", "receipt"]
+            if slot.pair_type == "physical_physical"
+            else [None] * len(picks)
+        )
+        classes = tuple(
+            self._class_of(slot, s, family, p, rng) for s, p in zip(picks, paths, strict=True)
+        )
         return Cell(family, atmosphere, temperature, tuple(picks), classes)
 
     def sample(self, slot: Slot, attempt: int) -> EpisodeSpec:
@@ -230,14 +245,34 @@ class Sampler:
         weights = np.array([FAMILY_WEIGHTS[f] for f in names])
         return names[int(rng.choice(len(names), p=weights / weights.sum()))]
 
-    def _class_of(self, slot: Slot, subtype: str, rng: np.random.Generator) -> str:
-        """The class of the cell for a fault: latent, read from the audit, or drawn."""
+    def _class_of(
+        self, slot: Slot, subtype: str, family: str, path: str | None, rng: np.random.Generator
+    ) -> str:
+        """The class of the cell for a fault: latent, read from the audit, or drawn among the
+        classes that some asset of some lineup of the family can carry."""
         if slot.latent:
             return "latent"
         if subtype in NO_SEVERITY:
             return AUDIT_CELL
-        names = self.classes.names(subtype)
+        names = [
+            n for n in self.classes.names(subtype) if self._reachable(subtype, family, path, n)
+        ]
+        names = names or self.classes.names(subtype)
         return names[int(rng.integers(len(names)))]
+
+    def _reachable(self, subtype: str, family: str, path: str | None, name: str) -> bool:
+        """Whether an asset with the class ``name`` exists in a lineup of the family. A valve
+        restriction of a delivery lineup, for instance, has no valve of the classes that exist
+        only for a tank inlet."""
+        key = (subtype, family, path, name)
+        if key not in self._reach:
+            plain = Slot(0, "single")
+            self._reach[key] = any(
+                self.classes.has_class(subtype, a, name)
+                for mode in FAMILY_MODES[family]
+                for a in self._pool(subtype, path, lineup_info(mode), plain)
+            )
+        return self._reach[key]
 
     def _modes(self, slot: Slot, cell: Cell, rng: np.random.Generator) -> list[str]:
         tank = TANKS[int(rng.integers(3))][-3:]
