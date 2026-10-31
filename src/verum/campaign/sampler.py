@@ -339,6 +339,15 @@ class Sampler:
             return [path, path]
         return [None] * len(picks)
 
+    @staticmethod
+    def _second_branch(info: LineupInfo, valve: str) -> bool:
+        """Whether opening an idle valve gives a second suction or receipt branch (D152)."""
+        delivering = any(v.startswith("XV-S") for v in info.open_valves)
+        receiving = any(v.startswith("XV-R1") for v in info.open_valves)
+        return (delivering and valve.startswith(BRANCH_PREFIX["delivery"])) or (
+            receiving and valve.startswith(BRANCH_PREFIX["receipt"])
+        )
+
     def _pool(self, subtype: str, path: str | None, info: LineupInfo, slot: Slot) -> list[str]:
         latent = slot.latent
         if subtype == "leak":
@@ -352,10 +361,10 @@ class Sampler:
         if subtype == "misroute_a":
             if latent:
                 return info.receipt_valves + info.delivery_valves
+            second = [v for v in info.idle_valves if self._second_branch(info, v)]
             if slot.kind == "branched":
-                prefix = BRANCH_PREFIX["delivery" if info.mode.startswith("DELIVER") else "receipt"]
-                return [v for v in info.idle_valves if v.startswith(prefix)]
-            return info.idle_valves
+                return second
+            return [v for v in info.idle_valves if v not in second]
         if subtype == "pump":
             return info.idle_pumps if latent else sorted(info.pumps)
         if subtype == "misroute_b":

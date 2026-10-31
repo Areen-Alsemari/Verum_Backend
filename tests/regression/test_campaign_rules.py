@@ -488,3 +488,30 @@ def test_held_out_units_and_asset_pairs_follow_the_rule() -> None:
     pump, family = splits.held_assets["pump"]
     elsewhere = (next(f for f in ("delivery", "concurrent") if f != family), free[1], free[2])
     assert split_of(splits, elsewhere, [("pump", pump)]) in ("train", "validation")
+
+
+def test_a_main_family_misrouting_never_opens_a_second_branch() -> None:
+    """In the main families no active misrouting (a) is on a suction valve of a delivery lineup or
+    a receipt valve of a receiving lineup, because those valves give a second branch and belong
+    to the branched family.
+
+    Independent: yes, because the valves are named by hand from the lineup table.
+    """
+    ctx = runner.context(CONFIG)
+    checked = 0
+    for slot in ctx.plan:
+        if slot.kind == "branched" or slot.latent:
+            continue
+        try:
+            spec = ctx.sampler.sample(slot, 0)
+        except NoCandidate:
+            continue
+        info = lineup_info(spec.scenario["initial"]["mode"])
+        delivering = any(v.startswith("XV-S") for v in info.open_valves)
+        receiving = any(v.startswith("XV-R1") for v in info.open_valves)
+        for f in spec.faults:
+            if f.subtype == "misroute_a":
+                checked += 1
+                assert not (delivering and f.asset.startswith("XV-S")), (slot.index, f.asset)
+                assert not (receiving and f.asset.startswith("XV-R1")), (slot.index, f.asset)
+    assert checked > 100

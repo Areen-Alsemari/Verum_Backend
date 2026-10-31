@@ -437,7 +437,10 @@ def load_records(layout: Layout, indices: list[int]) -> list[dict[str, Any]]:
     for i in sorted(indices):
         path = layout.records / f"{i:06d}.json"
         if path.exists():
-            out.append(json.loads(path.read_text(encoding="utf-8")))
+            try:
+                out.append(json.loads(path.read_text(encoding="utf-8")))
+            except json.JSONDecodeError:
+                continue  # a torn record is run again
     return out
 
 
