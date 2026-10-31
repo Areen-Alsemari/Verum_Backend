@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 18 (2026-11-04). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 19 (2026-11-04). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -104,7 +104,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D150 | Dead-leg windows and the emitted tags | DESIGN | 1.0 |
 | D151 | Replacement of excluded candidates | DESIGN | 1.0 |
 | D152 | Branched family | DESIGN | 1.0 |
-| D153 | Receipt switch | DESIGN | 1.0 |
+| D153 | Receipt switch | DESIGN | 1.1 |
 | D154 | Classes of stuck-at and misrouting (a) | DESIGN | 1.0 |
 | D155 | Hold-out of strata and assets | DESIGN | 1.0 |
 
@@ -1239,13 +1239,22 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 
 ## D153 - Receipt switch
 
-- **Version:** 1.0 (2026-11-04)  **Status:** DESIGN  **Refines:** D22, D53
+- **Version:** 1.1 (2026-11-04)  **Status:** DESIGN  **Refines:** D22, D53  **Supersedes:** 1.0
+- **Decision.**
+  - The flow collapse of a receipt switch is judged from the closing stroke of `XV-R000`: the time the flow needs to fall from 90 to 10 percent of its value at the start of the stroke is compared with 10 wave round trips of the receipt path to the receiving tank. After a set-point step to zero with a controller time constant of 2 s that time is 2 ln 9 = 4.39 s.
+  - A switch candidate ramps the set-point in two stages: to 300 m3/h at the start of the stroke, the lowest permitted non-zero set-point, and to zero 4 s later. The fall from 90 to 10 percent is then about 7 s. A set-point of 300 m3/h has no intermediate value and keeps the single step.
+  - The first tank `TK-103`, whose receipt path has the longest round trip (0.489 s, criterion 4.89 s), keeps a collapse window for a single step at 300 m3/h. That combination is not drawn, and the gap is recorded. The other first tanks give no window at any set-point.
+- **Reason.** A half of the set-point is not a permitted set-point for 400 and 500 m3/h, and a pause of 6 s between the stages leaves 110 m3/h in the receipt path when the stroke has closed to an opening of 0.2, which is above the flow of 60 m3/h that makes a stroke window; with 4 s the flow there is at most 46 m3/h.
+- **Sensitivity required.** The round trip of each receiving tank and the observed windows.
+- **Notes.** The table of the round trips, falls and stroke flows, and its check against simulated switches, are in the report of the phase.
+
+### Version 1.0 (superseded by 1.1)
+
+- **Version:** 1.0 (2026-11-04)  **Superseded by:** 1.1  **Status:** DESIGN  **Refines:** D22, D53
 - **Decision.**
   - The flow collapse of a receipt switch is judged from the closing stroke of `XV-R000`: the time the flow needs to fall from 90 to 10 percent of its value at the start of the stroke is compared with 10 wave round trips of the receipt path to the receiving tank. After a set-point step to zero with a controller time constant of 2 s that time is 2 ln 9 = 4.39 s.
   - A switch candidate ramps the set-point in two stages, to half at the start of the stroke and to zero 6 s later, so that the fall from 90 to 10 percent is spread over both stages. A receiving tank that still gives a window is excluded from switch candidates, and the gap is recorded.
 - **Reason.** The first tank of the pilot with a round trip above 0.439 s gives a collapse window for a single step; the two stages avoid it where the stroke allows.
-- **Sensitivity required.** The round trip of each receiving tank and the observed windows.
-- **Notes.** The table of the round trips and the check against the pilot are in the report of the phase.
 
 ## D154 - Classes of stuck-at and misrouting (a)
 

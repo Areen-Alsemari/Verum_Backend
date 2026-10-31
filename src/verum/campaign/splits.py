@@ -1,49 +1,52 @@
 """Train, validation and test splits of a campaign.
 
-The unit of a split is the scenario family times the atmosphere times the temperature. Some whole
-units are held out for test, and in addition one asset of each fault subtype is held out. An episode
-is test if its unit is held out or if any of its faults is on a held-out asset; the other units are
-split between train and validation.
+The unit of a split is the scenario family times the atmosphere times the temperature. Units that
+hold at least 2.5 percent of the plan are held out, up to 8 percent together, and one asset of each
+subtype is held out (an asset and family pair if the subtype has fewer than four assets). The shares
+come from the cells of a reference prefix of the plan, so they do not depend on the target size.
 
-See D86.
+See D86 and D155.
 """
 
 from __future__ import annotations
 
+from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 
+import numpy as np
+
 from verum.campaign.eligibility import SENSOR_TAGS, leak_pool
-from verum.campaign.plan import CampaignConfig
-from verum.campaign.sampler import FAMILIES, FAMILY_WEIGHTS, TEMPERATURE_WEIGHTS, TEMPERATURES
+from verum.campaign.plan import SUBTYPES, CampaignConfig
+from verum.campaign.sampler import Cell
 from verum.faults.validate import ELIGIBLE_VALVES, PUMPS
 from verum.rng import RandomStreams
 
 Unit = tuple[str, str, float]
-TEST_UNIT_WEIGHT = 0.10
+REFERENCE_SLOTS = 2000
+MIN_UNIT_SHARE = 0.025
+HELD_OUT_SHARE = 0.08
 VALIDATION_SHARE = 0.30
-ATMOSPHERES = ("coastal", "inland")
-TEMPERATURE_CHOICES = (*TEMPERATURES, 45.0)
+MIN_ASSETS = 4
+PAIR_FAMILIES: dict[str, tuple[str, ...]] = {
+    "pump": ("delivery", "concurrent"),
+    "misroute_b": ("branched",),
+}
 
 
 @dataclass(frozen=True)
 class SplitPlan:
     test_units: frozenset[Unit]
     validation_units: frozenset[Unit]
-    held_assets: dict[str, str]
+    held_assets: dict[str, tuple[str, str | None]]
+    held_share: float
+    unit_shares: dict[Unit, float]
 
 
-def unit_weights() -> dict[Unit, float]:
-    """Expected share of the episodes in each unit."""
-    family = {**FAMILY_WEIGHTS, "switch": 0.09}
-    temperature = dict(zip(TEMPERATURES, TEMPERATURE_WEIGHTS, strict=True)) | {45.0: 0.0}
-    raw = {
-        (f, a, t): family[f] * 0.5 * (temperature[t] * 0.92 + (0.08 if t == 45.0 else 0.0))
-        for f in FAMILIES
-        for a in ATMOSPHERES
-        for t in TEMPERATURE_CHOICES
-    }
-    total = sum(raw.values())
-    return {u: w / total for u, w in raw.items()}
+def unit_shares(cells: Sequence[Cell]) -> dict[Unit, float]:
+    """Share of the slots in each unit, from their cells."""
+    counts = Counter(c.unit for c in cells)
+    return {u: n / len(cells) for u, n in sorted(counts.items())}
 
 
 def asset_pool(subtype: str) -> list[str]:
@@ -58,33 +61,51 @@ def asset_pool(subtype: str) -> list[str]:
     return sorted(ELIGIBLE_VALVES)
 
 
-def build_split_plan(config: CampaignConfig) -> SplitPlan:
-    """Held-out units and assets, drawn from the campaign seed."""
+def _held_assets(rng: np.random.Generator) -> dict[str, tuple[str, str | None]]:
+    held: dict[str, tuple[str, str | None]] = {}
+    for subtype in SUBTYPES:
+        pool = asset_pool(subtype)
+        asset = pool[int(rng.integers(len(pool)))]
+        if len(pool) >= MIN_ASSETS:
+            held[subtype] = (asset, None)
+        else:
+            families = PAIR_FAMILIES[subtype]
+            held[subtype] = (asset, families[int(rng.integers(len(families)))])
+    return held
+
+
+def build_split_plan(config: CampaignConfig, cells: Sequence[Cell]) -> SplitPlan:
+    """Held-out units and assets, drawn from the campaign seed, from the reference cells."""
     rng = RandomStreams(config.seed).stream("campaign/splits")
-    weights = unit_weights()
-    order = [u for u in sorted(weights)]
+    shares = unit_shares(cells)
+    order = sorted(shares)
     order = [order[i] for i in rng.permutation(len(order))]
+    eligible = [u for u in order if shares[u] >= MIN_UNIT_SHARE]
     test: set[Unit] = set()
-    for unit in order:
-        if test and sum(weights[u] for u in test) >= TEST_UNIT_WEIGHT:
+    for unit in eligible:
+        if sum(shares[u] for u in test) >= HELD_OUT_SHARE:
             break
         test.add(unit)
+    if sum(shares[u] for u in test) < HELD_OUT_SHARE:
+        raise ValueError("the units of at least 2.5 percent of the plan hold less than 8 percent")
     rest = [u for u in order if u not in test]
+    target = VALIDATION_SHARE * sum(shares[u] for u in rest)
     validation: set[Unit] = set()
-    target = VALIDATION_SHARE * sum(weights[u] for u in rest)
     for unit in rest:
-        if sum(weights[u] for u in validation) >= target:
+        if sum(shares[u] for u in validation) >= target:
             break
         validation.add(unit)
-    held = {}
-    for subtype in config.subtypes:
-        pool = asset_pool(subtype)
-        held[subtype] = pool[int(rng.integers(len(pool)))]
-    return SplitPlan(frozenset(test), frozenset(validation), held)
+    held_share = sum(shares[u] for u in test)
+    return SplitPlan(frozenset(test), frozenset(validation), _held_assets(rng), held_share, shares)
 
 
 def split_of(plan: SplitPlan, unit: Unit, faults: list[tuple[str, str]]) -> str:
     """Split of an episode from its unit and its (subtype, asset) pairs."""
-    if unit in plan.test_units or any(plan.held_assets[s] == a for s, a in faults):
+    if unit in plan.test_units or any(_is_held(plan, unit[0], s, a) for s, a in faults):
         return "test"
     return "validation" if unit in plan.validation_units else "train"
+
+
+def _is_held(plan: SplitPlan, family: str, subtype: str, asset: str) -> bool:
+    held_asset, held_family = plan.held_assets[subtype]
+    return asset == held_asset and held_family in (None, family)

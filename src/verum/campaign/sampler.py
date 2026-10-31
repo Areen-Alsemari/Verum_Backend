@@ -1,10 +1,12 @@
-"""Sampling of one episode: the scenario record and the faults.
+"""Sampling of one episode: the cell of its slot, then the scenario record and the faults.
 
-Temperature and atmosphere are drawn first, then the lineup, the set-point and the initial levels
-inside the band that the stratum allows, then the faults. Every draw comes from a named stream of
-the episode seed, so an episode is a function of the campaign seed and its index alone.
+The cell of a slot (family, atmosphere, temperature, subtypes and classes) is drawn from the stream
+of the first attempt and is the same for every attempt. An attempt then draws the lineup, the
+set-point, the initial levels inside the band that the cell allows, the assets and the severities.
+Every draw comes from a named stream of the attempt seed, so an attempt is a function of the
+campaign seed, the slot and the attempt number alone.
 
-See D83 to D86.
+See D83 to D86, D151, D152, D153 and D154.
 """
 
 from __future__ import annotations
@@ -14,14 +16,23 @@ from typing import Any
 
 import numpy as np
 
-from verum.campaign.classes import NONE_CLASS, RANGES, ClassInterval, ClassTable, asset_class
+from verum.campaign import switch
+from verum.campaign.classes import (
+    AUDIT_CELL,
+    NO_SEVERITY,
+    RANGES,
+    AuditCells,
+    ClassInterval,
+    ClassTable,
+    asset_class,
+)
 from verum.campaign.eligibility import (
     PARALLEL_BRANCH_MODE,
     SENSOR_TAGS,
     LineupInfo,
     lineup_info,
 )
-from verum.campaign.plan import CampaignConfig, Slot
+from verum.campaign.plan import EPISODE_STRIDE, CampaignConfig, Slot
 from verum.faults import FaultSpec
 from verum.faults.spec import RAMPS_S
 from verum.faults.validate import ELIGIBLE_VALVES
@@ -36,7 +47,7 @@ SETPOINTS = (300.0, 400.0, 500.0, 600.0)
 TEMPERATURES = (25.0, 35.0, 40.0)
 TEMPERATURE_WEIGHTS = (0.435, 0.326, 0.239)
 STRESS_TEMPERATURE = 45.0
-FAMILIES = ("delivery", "receipt", "concurrent", "switch")
+FAMILIES = ("delivery", "receipt", "concurrent", "switch", "branched")
 FAMILY_WEIGHTS = {"delivery": 0.35, "receipt": 0.30, "concurrent": 0.25}
 CONCURRENT_MODES = ("RECEIVE_101_DELIVER_102_A", "RECEIVE_101_DELIVER_101_A")
 DELIVERY_MARGIN_M = 0.5
@@ -46,12 +57,14 @@ SEPARATION_S = 300.0
 SWITCH_ONSET_MIN_S = 1300.0
 PHYSICAL = ("leak", "restriction_position_visible", "restriction_obstruction", "pump")
 SENSORS = ("bias", "drift", "stuck")
-PHYSICAL_ALL = (*PHYSICAL, "misroute_a", "misroute_b")
+PHYSICAL_ALL = (*PHYSICAL, "misroute_a")
 ALL_FAMILIES = ("delivery", "receipt", "concurrent")
-SUBTYPE_FAMILIES: dict[str, tuple[str, ...]] = {
-    "pump": ("delivery", "concurrent"),
-    "misroute_b": ("receipt",),
-}
+SUBTYPE_FAMILIES: dict[str, tuple[str, ...]] = {"pump": ("delivery", "concurrent")}
+BRANCH_PREFIX = {"delivery": "XV-S", "receipt": "XV-R1"}  # valves that give a second branch
+
+
+class NoCandidate(Exception):
+    """An attempt that cannot be built: no feasible levels, or no asset in the cell."""
 
 
 @dataclass
@@ -65,11 +78,31 @@ class FaultChoice:
     latent: bool
 
 
+@dataclass(frozen=True)
+class Cell:
+    family: str
+    atmosphere: str
+    temperature_c: float
+    subtypes: tuple[str, ...]
+    classes: tuple[str, ...]
+
+    @property
+    def key(self) -> str:
+        faults = "+".join(f"{s}:{c}" for s, c in zip(self.subtypes, self.classes, strict=True))
+        return f"{self.family}|{self.atmosphere}|{self.temperature_c:g}|{faults or 'healthy'}"
+
+    @property
+    def unit(self) -> tuple[str, str, float]:
+        return (self.family, self.atmosphere, self.temperature_c)
+
+
 @dataclass
 class EpisodeSpec:
     index: int
     seed: int
     slot: Slot
+    attempt: int
+    cell: Cell
     scenario: dict[str, Any]
     faults: list[FaultChoice]
     strata: dict[str, Any]
@@ -119,26 +152,45 @@ def level_bands(
 
 
 class Sampler:
-    def __init__(self, config: CampaignConfig, classes: ClassTable) -> None:
+    def __init__(
+        self, config: CampaignConfig, classes: ClassTable, audit: AuditCells | None = None
+    ) -> None:
         self.config, self.classes = config, classes
+        self.audit = audit if audit is not None else AuditCells()
 
-    def sample(self, slot: Slot) -> EpisodeSpec:
-        seed = episode_seed(self.config.seed, slot.index)
-        rng = RandomStreams(seed).stream("campaign/sampler")
+    def cell(self, slot: Slot) -> Cell:
+        """The cell of a slot, drawn from the stream of its first attempt."""
+        seed = episode_seed(self.config.seed, slot.index * EPISODE_STRIDE)
+        rng = RandomStreams(seed).stream("campaign/cell")
         picks = self._subtypes(slot, rng)
         family = self._family(slot, picks, rng)
         atmosphere = str(rng.choice(["coastal", "inland"]))
-        modes = self._modes(family, picks, rng)
-        setpoint = float(rng.choice(SETPOINTS))
-        temperature, levels, stress = self._levels(slot, modes, atmosphere, setpoint, rng)
-        raw = self._scenario(slot, seed, modes, temperature, atmosphere, levels, setpoint)
+        temperature = (
+            STRESS_TEMPERATURE
+            if slot.stress
+            else float(rng.choice(TEMPERATURES, p=TEMPERATURE_WEIGHTS))
+        )
+        classes = tuple(self._class_of(slot, s, rng) for s in picks)
+        return Cell(family, atmosphere, temperature, tuple(picks), classes)
+
+    def sample(self, slot: Slot, attempt: int) -> EpisodeSpec:
+        """Attempt ``attempt`` of a slot; raises ``NoCandidate`` if the cell gives no episode."""
+        cell = self.cell(slot)
+        index = slot.index * EPISODE_STRIDE + attempt
+        seed = episode_seed(self.config.seed, index)
+        rng = RandomStreams(seed).stream("campaign/sampler")
+        modes = self._modes(slot, cell, rng)
+        setpoint = self._setpoint(modes, cell, rng)
+        levels = self._levels(modes, cell, setpoint, rng)
+        raw = self._scenario(slot, seed, modes, cell, levels, setpoint)
         info = lineup_info(modes[-1])
-        faults, gaps = self._faults(slot, picks, info, rng)
+        faults, gaps = self._faults(slot, cell, info, rng)
         strata = {
-            "family": family, "atmosphere": atmosphere, "temperature_c": temperature,
-            "stress": stress, "mode": modes[0], "setpoint_m3h": setpoint,
+            "family": cell.family, "atmosphere": cell.atmosphere,
+            "temperature_c": cell.temperature_c, "stress": cell.temperature_c == STRESS_TEMPERATURE,
+            "mode": modes[0], "setpoint_m3h": setpoint,
         }  # fmt: skip
-        return EpisodeSpec(slot.index, seed, slot, raw, faults, strata, gaps)
+        return EpisodeSpec(index, seed, slot, attempt, cell, raw, faults, strata, gaps)
 
     # --- what the episode contains ----------
     def _subtypes(self, slot: Slot, rng: np.random.Generator) -> list[str]:
@@ -147,17 +199,14 @@ class Sampler:
         if slot.kind == "single":
             assert slot.subtype is not None
             return [slot.subtype]
+        if slot.kind == "branched":
+            return [] if slot.branch == "healthy" else [str(slot.branch)]
 
         def pick(options: tuple[str, ...]) -> str:
             return options[int(rng.integers(len(options)))]
 
         pair = str(slot.pair_type)
-        physical = tuple(
-            t
-            for t in PHYSICAL_ALL
-            if not (slot.switch and t in ("pump", "misroute_b"))
-            and (t != "misroute_b" or self.config.parallel_branch)
-        )
+        physical = tuple(t for t in PHYSICAL_ALL if not (slot.switch and t == "pump"))
         if pair == "physical_physical":
             return [pick(PHYSICAL), pick(PHYSICAL[:3])]
         if pair == "physical_sensor":
@@ -167,6 +216,8 @@ class Sampler:
         return ["leak", pick(PHYSICAL[1:3])]
 
     def _family(self, slot: Slot, picks: list[str], rng: np.random.Generator) -> str:
+        if slot.kind == "branched":
+            return "branched"
         if slot.switch:
             return "switch"
         allowed = set(ALL_FAMILIES)
@@ -179,60 +230,62 @@ class Sampler:
         weights = np.array([FAMILY_WEIGHTS[f] for f in names])
         return names[int(rng.choice(len(names), p=weights / weights.sum()))]
 
-    def _modes(self, family: str, picks: list[str], rng: np.random.Generator) -> list[str]:
+    def _class_of(self, slot: Slot, subtype: str, rng: np.random.Generator) -> str:
+        """The class of the cell for a fault: latent, read from the audit, or drawn."""
+        if slot.latent:
+            return "latent"
+        if subtype in NO_SEVERITY:
+            return AUDIT_CELL
+        names = self.classes.names(subtype)
+        return names[int(rng.integers(len(names)))]
+
+    def _modes(self, slot: Slot, cell: Cell, rng: np.random.Generator) -> list[str]:
         tank = TANKS[int(rng.integers(3))][-3:]
+        family = cell.family
         if family == "delivery":
             return [f"DELIVER_{tank}_{'AB'[int(rng.integers(2))]}"]
         if family == "concurrent":
             return [CONCURRENT_MODES[int(rng.integers(2))]]
         if family == "receipt":
-            if "misroute_b" in picks:
+            return [f"RECEIVE_{tank}"]
+        if family == "branched":
+            if slot.branch != "misroute_a":
                 return [PARALLEL_BRANCH_MODE]
+            if rng.random() < 0.5:
+                return [f"DELIVER_{tank}_{'AB'[int(rng.integers(2))]}"]
             return [f"RECEIVE_{tank}"]
         other = [t[-3:] for t in TANKS if t[-3:] != tank]
         return [f"RECEIVE_{tank}", f"RECEIVE_{other[int(rng.integers(2))]}"]
 
+    def _setpoint(self, modes: list[str], cell: Cell, rng: np.random.Generator) -> float:
+        options: tuple[float, ...] = SETPOINTS
+        if cell.family == "switch":
+            options = switch.setpoints_for(f"TK-{modes[0][-3:]}", SETPOINTS)
+        return float(options[int(rng.integers(len(options)))])
+
     def _levels(
-        self,
-        slot: Slot,
-        modes: list[str],
-        atmosphere: str,
-        setpoint: float,
-        rng: np.random.Generator,
-    ) -> tuple[float, dict[str, float], bool]:
-        planned = (
-            STRESS_TEMPERATURE
-            if slot.stress
-            else float(rng.choice(TEMPERATURES, p=TEMPERATURE_WEIGHTS))
-        )
-        for attempt in range(8):
-            temperature = planned if attempt == 0 else float(rng.choice(TEMPERATURES[:2]))
-            bands = level_bands(modes, atmosphere, temperature, setpoint)
-            if bands is not None:
-                levels = {t: float(rng.uniform(lo, hi)) for t, (lo, hi) in bands.items()}
-                return temperature, levels, temperature == STRESS_TEMPERATURE
-        raise RuntimeError(f"no feasible levels for {modes} at {atmosphere}")
+        self, modes: list[str], cell: Cell, setpoint: float, rng: np.random.Generator
+    ) -> dict[str, float]:
+        bands = level_bands(modes, cell.atmosphere, cell.temperature_c, setpoint)
+        if bands is None:
+            raise NoCandidate(f"no feasible levels for {modes} in {cell.key}")
+        return {t: float(rng.uniform(lo, hi)) for t, (lo, hi) in bands.items()}
 
     def _scenario(
-        self, slot: Slot, seed: int, modes: list[str], temperature: float, atmosphere: str,
-        levels: dict[str, float], setpoint: float,
+        self, slot: Slot, seed: int, modes: list[str], cell: Cell, levels: dict[str, float],
+        setpoint: float,
     ) -> dict[str, Any]:  # fmt: skip
         receiving = bool(receiving_tanks(lineup_info(modes[0])))
         schedule: list[dict[str, Any]] = []
-        if receiving:
-            schedule.append({"t_s": 0.0, "command": "receipt_setpoint", "value_m3h": setpoint})
         if len(modes) == 2:
-            schedule += [
-                {"t_s": 600.0, "command": "receipt_setpoint", "value_m3h": 0.0},
-                {"t_s": 600.0, "command": "lineup", "mode": "SWITCH_RECEIPT_HOLD"},
-                {"t_s": 1200.0, "command": "lineup", "mode": modes[1]},
-                {"t_s": 1200.0, "command": "receipt_setpoint", "value_m3h": setpoint},
-            ]
+            schedule = switch.schedule(f"RECEIVE_{modes[0][-3:]}", modes[1], setpoint)
+        elif receiving:
+            schedule.append({"t_s": 0.0, "command": "receipt_setpoint", "value_m3h": setpoint})
         return {
             "scenario_id": f"C{slot.index:06d}", "description": "Campaign episode.", "seed": seed,
-            "duration_s": self.config.duration_s, "temperature_c": temperature,
+            "duration_s": self.config.duration_s, "temperature_c": cell.temperature_c,
             "fitting_profile": "reference_fittings", "healthy_envelope": True,
-            "atmosphere_stratum": atmosphere, "volatility_class": "RVP_9_0",
+            "atmosphere_stratum": cell.atmosphere, "volatility_class": "RVP_9_0",
             "demand_process": True, "variability_profile": "v2",
             "initial": {
                 "mode": modes[0], "tank_levels_m": levels, "receipt_flow_m3h": 0.0,
@@ -243,8 +296,9 @@ class Sampler:
 
     # --- faults ----------
     def _faults(
-        self, slot: Slot, picks: list[str], info: LineupInfo, rng: np.random.Generator
+        self, slot: Slot, cell: Cell, info: LineupInfo, rng: np.random.Generator
     ) -> tuple[list[FaultChoice], list[dict[str, Any]]]:
+        picks = list(cell.subtypes)
         if not picks:
             return [], []
         lo = SWITCH_ONSET_MIN_S if slot.switch else ONSET_MIN_S
@@ -253,8 +307,8 @@ class Sampler:
         paths = self._paths(slot, picks, info, rng)
         taken: set[str] = set()
         faults, gaps = [], []
-        for subtype, onset, path in zip(picks, onsets, paths, strict=True):
-            choice, gap = self._fault(subtype, onset, path, info, slot.latent, taken, rng)
+        for subtype, cls, onset, path in zip(picks, cell.classes, onsets, paths, strict=True):
+            choice, gap = self._fault(slot, subtype, cls, onset, path, info, taken, rng)
             taken.add(choice.asset)
             faults.append(choice)
             gaps += gap
@@ -285,7 +339,8 @@ class Sampler:
             return [path, path]
         return [None] * len(picks)
 
-    def _pool(self, subtype: str, path: str | None, info: LineupInfo, latent: bool) -> list[str]:
+    def _pool(self, subtype: str, path: str | None, info: LineupInfo, slot: Slot) -> list[str]:
+        latent = slot.latent
         if subtype == "leak":
             edges = {"receipt": info.receipt_edges, "delivery": info.delivery_edges}
             return edges[path] if path else sorted(info.edges)
@@ -295,7 +350,12 @@ class Sampler:
             valves = {"receipt": info.receipt_valves, "delivery": info.delivery_valves}
             return valves[path] if path else info.receipt_valves + info.delivery_valves
         if subtype == "misroute_a":
-            return info.receipt_valves + info.delivery_valves if latent else info.idle_valves
+            if latent:
+                return info.receipt_valves + info.delivery_valves
+            if slot.kind == "branched":
+                prefix = BRANCH_PREFIX["delivery" if info.mode.startswith("DELIVER") else "receipt"]
+                return [v for v in info.idle_valves if v.startswith(prefix)]
+            return info.idle_valves
         if subtype == "pump":
             return info.idle_pumps if latent else sorted(info.pumps)
         if subtype == "misroute_b":
@@ -303,25 +363,39 @@ class Sampler:
         return list(SENSOR_TAGS)
 
     def _fault(
-        self, subtype: str, onset: float, path: str | None, info: LineupInfo, latent: bool,
+        self, slot: Slot, subtype: str, cls: str, onset: float, path: str | None, info: LineupInfo,
         taken: set[str], rng: np.random.Generator,
     ) -> tuple[FaultChoice, list[dict[str, Any]]]:  # fmt: skip
-        pool = [a for a in self._pool(subtype, path, info, latent) if a not in taken]
+        anyclass = cls in ("latent", AUDIT_CELL)
+        pool = [
+            a
+            for a in self._pool(subtype, path, info, slot)
+            if a not in taken and (anyclass or self.classes.has_class(subtype, a, cls))
+        ]
         if not pool:
-            raise RuntimeError(f"no asset for {subtype} in {info.mode}")
+            raise NoCandidate(f"no asset for {subtype} of class {cls} in {info.mode}")
         asset = pool[int(rng.integers(len(pool)))]
         aclass = asset_class(subtype, asset)
-        if latent and subtype in RANGES:
-            lo, hi = RANGES[subtype]
-            options = [ClassInterval("latent", lo, hi)]
-        else:
-            options = self.classes.intervals(subtype, aclass)
-        interval = options[int(rng.integers(len(options)))]
-        severity = None if interval.name == NONE_CLASS else interval.draw(float(rng.random()))
+        severity, name = self._severity(subtype, aclass, cls, asset, info, rng)
         gaps = self.classes.gaps(subtype, aclass)
         gap = [{"subtype": subtype, "asset_class": aclass, "missing": gaps}] if gaps else []
         spec = make_spec(subtype, asset, severity, onset, rng)
-        return FaultChoice(subtype, asset, aclass, interval.name, severity, spec, latent), gap
+        return FaultChoice(subtype, asset, aclass, name, severity, spec, slot.latent), gap
+
+    def _severity(
+        self, subtype: str, aclass: str, cls: str, asset: str, info: LineupInfo,
+        rng: np.random.Generator,
+    ) -> tuple[float | None, str]:  # fmt: skip
+        """Severity and class name: from the interval of the cell class, or from the audit."""
+        if subtype in NO_SEVERITY:
+            name = "latent" if cls == "latent" else self.audit.class_of(subtype, info.mode, asset)
+            return None, name
+        if cls == "latent":
+            lo, hi = RANGES[subtype]
+            interval = ClassInterval("latent", lo, hi)
+        else:
+            interval = next(iv for iv in self.classes.intervals(subtype, aclass) if iv.name == cls)
+        return interval.draw(float(rng.random())), interval.name
 
 
 def make_spec(

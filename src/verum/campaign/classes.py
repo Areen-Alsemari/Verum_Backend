@@ -3,9 +3,11 @@
 The class file gives, for each subtype and asset class, the severity from which the marginal and the
 clear class begin. This module turns those boundaries into intervals of the fault range and says
 which classes exist. An unresolved boundary removes the classes above it, and a boundary at the
-start of the range leaves no room for the class below it.
+start of the range leaves no room for the class below it. A stuck-at or a misrouting (a) has no
+severity coordinate, so its class comes from the audit cell of its lineup and asset, or is
+unaudited.
 
-See D78, D84, D89 and D89c.
+See D78, D84, D89, D89c and D154.
 """
 
 from __future__ import annotations
@@ -19,6 +21,9 @@ from verum.contracts.paths import config_dir
 from verum.params import ParamValue
 
 CLASS_FILE = "severity_classes.json"
+AUDIT_FILE = "audit_cells.json"
+UNAUDITED = "unaudited"
+AUDIT_CELL = "audit"  # the cell class of a subtype whose class is read from the audit cells
 # Severity range of each subtype, from the least severe end to the most severe, in the units of the
 # audit grid: leak area (m2), closure fraction, head loss fraction, fraction of span (per hour for a
 # drift), and the stuck opening, which grows in severity as it falls.
@@ -33,6 +38,15 @@ RANGES: dict[str, tuple[float, float]] = {
 }
 NO_SEVERITY = ("stuck", "misroute_a")
 NONE_CLASS = "none"
+ASSET_CLASSES: dict[str, tuple[str, ...]] = {
+    "leak": ("suction", "pump_branch", "discharge", "receipt"),
+    "restriction_position_visible": ("pump_branch", "tank_outlet", "tank_inlet"),
+    "restriction_obstruction": ("pump_branch", "tank_outlet", "tank_inlet"),
+    "pump": ("pump",),
+    "bias": ("flow", "pressure", "level"),
+    "drift": ("flow", "pressure", "level"),
+    "misroute_b": ("tank_inlet",),
+}
 
 
 @dataclass(frozen=True)
@@ -106,3 +120,28 @@ class ClassTable:
         if marginal is None:
             return ["marginal", "clear"]
         return [] if clear is not None else ["clear"]
+
+    def names(self, subtype: str) -> list[str]:
+        """Class names that exist for some asset class of a subtype, least severe first."""
+        if subtype in NO_SEVERITY:
+            return [AUDIT_CELL]
+        found = {iv.name for a in ASSET_CLASSES[subtype] for iv in self.intervals(subtype, a)}
+        return sorted(found, key=("invisible", "marginal", "clear").index)
+
+    def has_class(self, subtype: str, asset: str, name: str) -> bool:
+        """Whether the asset class of an asset has a class interval of this name."""
+        if subtype in NO_SEVERITY:
+            return True
+        return any(iv.name == name for iv in self.intervals(subtype, asset_class(subtype, asset)))
+
+
+class AuditCells:
+    """Audit class of each stuck-at and misrouting (a) cell, keyed by subtype, lineup and asset."""
+
+    def __init__(self, directory: Path | None = None) -> None:
+        raw = json.loads(((directory or config_dir()) / AUDIT_FILE).read_text(encoding="utf-8"))
+        self.cells: dict[str, str] = {k: v["class"] for k, v in raw["cells"].items()}
+
+    def class_of(self, subtype: str, mode: str, asset: str) -> str:
+        """The class of the audit cell; unaudited if there is no cell or the audit rejected it."""
+        return self.cells.get(f"{subtype}/{mode}/{asset}", UNAUDITED)

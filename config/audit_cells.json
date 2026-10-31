@@ -1,0 +1,73 @@
+{
+  "description": "Audit class of the stuck-at and misrouting (a) cells, by lineup and asset.",
+  "profile": "v2",
+  "cells": {
+    "misroute_a/DELIVER_101_A/XV-PBI": {
+      "class": "clear",
+      "margin": 3.0
+    },
+    "misroute_a/DELIVER_101_A/XV-S102": {
+      "class": "clear",
+      "margin": 42.768
+    },
+    "misroute_a/DELIVER_101_A/XV-S103": {
+      "class": "clear",
+      "margin": 295.161
+    },
+    "misroute_a/RECEIVE_101/XV-R102": {
+      "class": "clear",
+      "margin": 1175.486
+    },
+    "misroute_a/RECEIVE_101/XV-R103": {
+      "class": "clear",
+      "margin": 1090.455
+    },
+    "misroute_a/RECEIVE_101_DELIVER_102_A/XV-R102": {
+      "class": "clear",
+      "margin": 10.529
+    },
+    "misroute_a/RECEIVE_101_DELIVER_102_A/XV-S101": {
+      "class": "clear",
+      "margin": 9.524
+    },
+    "stuck/DELIVER_101_A/FT-201": {
+      "class": "clear",
+      "margin": 37.054
+    },
+    "stuck/DELIVER_101_A/LT-101": {
+      "class": "clear",
+      "margin": 218.239
+    },
+    "stuck/DELIVER_101_A/PT-202A": {
+      "class": "clear",
+      "margin": 3.528
+    },
+    "stuck/RECEIVE_101/FT-001": {
+      "class": "clear",
+      "margin": 12.609
+    },
+    "stuck/RECEIVE_101/LT-101": {
+      "class": "clear",
+      "margin": 429.523
+    },
+    "stuck/RECEIVE_101/PT-001": {
+      "class": "invisible",
+      "margin": 0.788
+    },
+    "stuck/RECEIVE_101_DELIVER_102_A/FT-201": {
+      "class": "clear",
+      "margin": 17.776
+    },
+    "stuck/RECEIVE_101_DELIVER_102_A/LT-102": {
+      "class": "clear",
+      "margin": 181.159
+    },
+    "stuck/RECEIVE_101_DELIVER_102_A/PT-001": {
+      "class": "invisible",
+      "margin": 0.764
+    }
+  },
+  "rejected": {
+    "misroute_a/RECEIVE_101_DELIVER_102_A/XV-PBO": "SG2"
+  }
+}
