@@ -23,7 +23,7 @@ This repository is the backend of a larger system. A frontend will live in a sep
 - **Faults**
   - Single faults can be injected into an episode through `verum.faults`: a pipe leak, a valve restriction, a pump head degradation, sensor faults and valve misrouting (see `docs/fault_models.md`).
   - A restriction is `position_visible` or `obstruction`, and a fault on an asset that is not active in the lineup is labelled latent.
-  - An audit asks what an agent could see of each fault from the observed tags and the design model, over windows of 60, 300 and 900 s, with calibrated thresholds and severity classes (`verum.evaluation.agent_audit`, `config/severity_classes.json`; see `docs/fault_models.md`).
+  - An audit asks what an agent could see of each fault from the observed tags and the design model, over windows of 60, 300 and 900 s, with calibrated and scaled thresholds and severity classes (`verum.evaluation.agent_audit`, `config/severity_classes.json`; see `docs/fault_models.md`).
 - **Transient engine**
   - A standalone first-order method of characteristics on the 28 edges (`verum.transient`; see `docs/transient_engine.md`), with its own verification ladder.
   - The episode engine does not call it, and it changes no dataset tier.
