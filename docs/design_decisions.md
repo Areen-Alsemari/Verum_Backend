@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 19 (2026-11-04). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 20 (2026-11-05). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -107,6 +107,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D153 | Receipt switch | DESIGN | 1.1 |
 | D154 | Classes of stuck-at and misrouting (a) | DESIGN | 1.0 |
 | D155 | Hold-out of strata and assets | DESIGN | 1.0 |
+| D156 | Inspection truth of an episode | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1276,6 +1277,19 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** A held-out unit that is nearly empty tests nothing, and a subtype with few assets would lose all its episodes of one kind if its asset were held out.
 - **Sensitivity required.** The share of the plan in the held-out units.
 - **Notes.** With 32 units (4 families, 2 atmospheres, 4 temperatures) no single unit holds 8 percent of the plan; the largest holds about 7 percent. The 8 percent therefore applies to the held-out units together, and each unit must hold at least 2.5 percent.
+
+## D156 - Inspection truth of an episode
+
+- **Version:** 1.0 (2026-11-05)  **Status:** DESIGN  **Refines:** D87, D88
+- **Decision.**
+  - Every completed episode writes the evaluator-only file `inspection_truth.jsonl.gz`, which holds the true state that the inspection actions need.
+  - Rows are written on a 60 s grid and at every event time and at every knot of a fault trajectory. A discontinuity (an event, or the onset of a step fault) has a pre-event and a post-event row.
+  - Each row holds the time; the level, temperature and volume of each tank; the flow at the downstream end and the gauge pressure at both ends of each of the 28 edges; the commanded state, the actual opening and the contact state of each of the 11 valves; the run state, the speed ratio and the head scale of each pump; the leak flow, the leak edge and the leak position of each leak; the current severity and the value of the physical parameter of each fault; and, for each emitted continuous tag, the noise-free sampled value and the offset that the fault adds to it.
+  - Values are in SI units: m, K, m3, m3/s and Pa gauge. A tag value and its offset are converted from the engineering unit of the tag.
+  - The file is never visible to agents, is described by a closed schema, and its hash is listed in the manifest with the other evaluator files.
+- **Reason.** An inspection action returns a measurement of the true state at a place and a time that the observations do not cover, and the evaluator must be able to recompute that measurement and the fault that acted on it.
+- **Sensitivity required.** The size of the file for a 3600 s episode, which must stay below 250 KB compressed.
+- **Notes.** The file is built after the truth files and the observations are written, from the hydraulic-state rows, the fault specifications and the sensor chain, so no physics output changes. A pressure is the written absolute pressure less the atmosphere of the episode. The physical parameter of a fault is its baseline plus its severity times the difference between its value at severity one and its baseline, which is the mapping of every fault type in the fault-truth rows. A tag value is the chain output at the row time before noise, quantisation and dropout.
 
 ## Episode profile
 
