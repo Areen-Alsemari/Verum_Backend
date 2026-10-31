@@ -60,7 +60,12 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path("data/campaign"))
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--n", type=int, default=TARGET, help="target number of slots")
-    parser.add_argument("--workers", type=int, default=None)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="worker processes; the default and the limit are the cores minus 2, at most 6",
+    )
     parser.add_argument("--stop-after-hours", type=float, default=None)
     parser.add_argument("--report", type=Path, default=REPORT)
     args = parser.parse_args()

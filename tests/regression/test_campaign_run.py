@@ -138,3 +138,24 @@ def test_the_command_keeps_the_seed_of_a_started_campaign_and_extends_its_target
     with pytest.raises(SystemExit):
         tool.config_for(tmp_path, 14, 160)
     assert tool.config_for(tmp_path / "new", 20261101, 3000) == CampaignConfig(20261101, 3000)
+
+
+def test_the_help_lists_the_workers_option_with_its_limit() -> None:
+    """The help of the command lists the option for the workers and states the limit, and a
+    request above the limit, or none, gives the number of workers of the machine rule: at most six
+    and at most the cores minus two.
+
+    Independent: yes, because the help text is read from the running command and the limit is
+    stated in the rule.
+    """
+    import os
+    import subprocess
+    import sys
+
+    path = repo_root() / "tools" / "campaign_run.py"
+    out = subprocess.run([sys.executable, str(path), "--help"], capture_output=True, text=True)
+    text = " ".join(out.stdout.split())
+    assert out.returncode == 0 and "--workers" in text and "cores minus 2, at most 6" in text
+    limit = min(6, max(1, (os.cpu_count() or 1) - 2))
+    assert runner.worker_count() == limit == runner.worker_count(64)
+    assert runner.worker_count(1) == 1

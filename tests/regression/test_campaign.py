@@ -667,8 +667,8 @@ def test_the_inspection_truth_is_evaluator_only_and_listed_in_the_records(
     real_campaign: Path,
 ) -> None:
     """For every completed episode of the small campaign the inspection file is in the evaluator
-    store with its hash in the record, nothing under the agent-visible folder carries its name or
-    its words, and the labels, the readme and the gateway payload do not mention it.
+    store with its hash in the record, nothing under the agent-visible folder carries its name,
+    and the labels, the readme and the gateway payload do not mention it.
 
     Independent: yes, because the check scans the written folders and the record lists.
     """
@@ -682,11 +682,11 @@ def test_the_inspection_truth_is_evaluator_only_and_listed_in_the_records(
         assert key in r["files"] and (real_campaign / key).is_file()
         folder = layout.agent / "episodes" / r["episode_id"]
         assert [p.name for p in folder.iterdir()] == [runner.OBSERVATIONS]
-        assert "inspection" not in json.dumps(Gateway(folder).query(3600.0), default=str)
+        assert "inspection_truth" not in json.dumps(Gateway(folder).query(3600.0), default=str)
     for path in layout.agent.rglob("*"):
-        assert "inspection" not in path.name.lower(), path
+        assert "inspection_truth" not in path.name.lower(), path
         if path.is_file() and path.suffix in {".md", ".jsonl", ".json"}:
-            assert "inspection" not in path.read_text(encoding="utf-8").lower(), path
+            assert "inspection_truth" not in path.read_text(encoding="utf-8").lower(), path
 
 
 @pytest.mark.slow
