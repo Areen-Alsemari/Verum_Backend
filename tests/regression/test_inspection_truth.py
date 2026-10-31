@@ -10,6 +10,7 @@ See D156.
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -412,8 +413,12 @@ def test_the_other_outputs_are_byte_identical_to_the_stored_digests(
     manifest = root / "evaluator" / "episodes" / episode / "truth" / "MANIFEST.sha256"
     lines = [x.split("  ") for x in manifest.read_text(encoding="utf-8").splitlines()]
     stored = [x.split("  ") for x in MANIFEST_TEXT[slot].splitlines()]
-    assert {n: h for h, n in lines if n != "provenance.json"} == {n: h for h, n in stored}
-    assert inspection.FILE not in {n for _h, n in lines}
+    listed = {n: h for h, n in lines}
+    assert {n: h for n, h in listed.items() if n not in ("provenance.json", inspection.FILE)} == {
+        n: h for h, n in stored
+    }
+    path = root / "evaluator" / "episodes" / episode / inspection.FILE
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == listed[inspection.FILE]
 
 
 @pytest.mark.slow

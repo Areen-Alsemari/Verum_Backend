@@ -4,8 +4,8 @@ Rows are taken from the written hydraulic-state rows at a 60 s grid and the last
 event time and at every knot of a fault trajectory, with a pre-event and a post-event row at a
 discontinuity. Each row adds the faults and the noise-free tag values from the fault
 specifications and the sensor chain.
-The file is evaluator data, is built after the truth files and the observations are written, and
-changes no other output.
+The file is evaluator data and is built after the truth files and the observations are written.
+It changes no other output; the manifest of the directory is written again to list it.
 
 See D156.
 """
@@ -26,7 +26,7 @@ from verum.sensors import chain
 from verum.sensors.adapter import SIDE_RANK, _contact_changes, _nodes, _series
 from verum.sensors.specs import SensorConfig, TagSpec, load_sensor_config
 from verum.sim import rows as rw
-from verum.truth import read_rows
+from verum.truth import MANIFEST, file_hashes, read_rows
 
 DATASET = "inspection_truth"
 FILE = "inspection_truth.jsonl.gz"
@@ -246,4 +246,6 @@ def write_inspection_truth(
             for row in rows:
                 validate(DATASET, row)
                 gz.write((json.dumps(row, separators=(",", ":"), allow_nan=False) + "\n").encode())
+    lines = [f"{digest}  {name}" for name, digest in file_hashes(directory).items()]
+    (directory / MANIFEST).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return rows

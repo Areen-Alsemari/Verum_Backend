@@ -81,7 +81,7 @@ def test_manifest_lists_every_file_with_its_hash(
         "hydraulic_state.jsonl.gz", "solver_diagnostics.jsonl.gz", "mass_ledger.jsonl.gz",
         "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
         "observations.jsonl.gz", "observation_audit.jsonl.gz", "fault_truth.jsonl.gz",
-        "episode.json", "provenance.json",
+        "episode.json", "provenance.json", "inspection_truth.jsonl.gz",
     }  # fmt: skip
     for name, digest in listed.items():
         assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == digest
@@ -183,6 +183,7 @@ def test_audit_detects_an_injected_double_subtraction(
     """The audit detects a delivered mass that is doubled in the written rows. Independent: yes,
     because the error is injected by the test.
     """
+
     def twice(row: dict[str, Any]) -> dict[str, Any]:
         if row["scope"] == "network" and row["t_sim_s"] >= 1800.0:
             row = {**row, "cumulative_delivered_kg": 2 * row["cumulative_delivered_kg"]}
@@ -200,6 +201,7 @@ def test_audit_detects_an_injected_unbalanced_step(
     """The audit detects a tank row that was changed without a matching flow. Independent: yes,
     because the error is injected by the test.
     """
+
     def bump(row: dict[str, Any]) -> dict[str, Any]:
         if (
             row["record_type"] == "tank_state"
@@ -224,6 +226,7 @@ def test_audit_detects_a_ledger_that_disagrees_with_the_tank_state(
     """The audit detects a ledger that disagrees with the tank state by one kilogram. Independent:
     yes, because the error is injected by the test.
     """
+
     def skew(row: dict[str, Any]) -> dict[str, Any]:
         if row["scope"] == "TK-102" and row["t_sim_s"] == 100.0:
             row = {**row, "liquid_kg": row["liquid_kg"] + 1.0}

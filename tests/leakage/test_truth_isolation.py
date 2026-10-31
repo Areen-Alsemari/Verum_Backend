@@ -182,7 +182,7 @@ EPISODE_FILES = {
     "events.jsonl.gz", "boundary_state.jsonl.gz", "validity_windows.jsonl.gz",
     "fault_truth.jsonl.gz",
     "episode.json", "provenance.json", "MANIFEST.sha256", "simulation_rejected.json",
-    "observations.jsonl.gz", "observation_audit.jsonl.gz",
+    "observations.jsonl.gz", "observation_audit.jsonl.gz", "inspection_truth.jsonl.gz",
 }  # fmt: skip
 
 
