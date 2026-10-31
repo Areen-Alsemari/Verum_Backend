@@ -6,7 +6,7 @@ unresolved and raises when read. A fault has a marginal and a clear boundary for
 the clear boundary is not less severe than the marginal one, and a resolved value lies inside the
 severity range of the fault. The ranges are written here as hand arithmetic.
 
-See D60 to D64, D78 and D79.
+See D60 to D64, D78, D89 and D89c.
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ RANGES = {
     "misroute_b": (0.005, 0.02),
 }
 TOL = 1e-9
+START = {fault: lo for fault, (lo, _hi) in RANGES.items()} | {"misroute_b": 0.02}
+LEVEL = {"marginal_from": 1.0, "clear_from": 3.0}
 
 
 def _load() -> dict[str, ParamValue]:
@@ -68,7 +70,7 @@ def test_an_unreached_boundary_is_unresolved_and_raises() -> None:
                     _ = value.value
             else:
                 assert value.status == "provisional" and value.evidence_tag == "SIM"
-                assert value.provenance_id == "VERUM-DD-D79-v1.0"
+                assert value.provenance_id == "VERUM-DD-D89-v1.0"
 
 
 def test_boundaries_lie_in_the_range_and_are_ordered() -> None:
@@ -88,3 +90,30 @@ def test_boundaries_lie_in_the_range_and_are_ordered() -> None:
                 assert m <= c + TOL, (fault, aclass)
         if "marginal_from" not in resolved:
             assert "clear_from" not in resolved  # a class cannot be clear if never marginal
+
+
+def _marks() -> dict[str, dict[str, Any]]:
+    raw: dict[str, Any] = json.loads((config_dir() / "severity_classes.json").read_text("utf-8"))
+    marks: dict[str, dict[str, Any]] = raw["boundary_marks"]
+    return marks
+
+
+def test_every_boundary_at_the_range_start_is_marked_as_a_floor_or_as_reached() -> None:
+    """A resolved boundary equal to the start of its range is a floor, or the scaled margin there
+    reaches its level for every asset; no other boundary is marked.
+
+    Independent: yes, because the start of each range is written here by hand.
+    """
+    marks = _marks()
+    at_start = set()
+    for (fault, aclass), pair in _groups().items():
+        for name, value in pair.items():
+            if value.status != "unresolved" and abs(value.value - START[fault]) <= TOL:
+                at_start.add(f"{fault}/{aclass}/{name}")
+    assert at_start == set(marks)
+    for key, mark in marks.items():
+        level = LEVEL[key.rsplit("/", 1)[1]]
+        if mark["floor"]:
+            assert mark["smallest_margin_at_start"] < level, key
+        else:
+            assert mark["smallest_margin_at_start"] >= level, key

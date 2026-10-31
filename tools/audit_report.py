@@ -11,6 +11,7 @@ See D77 to D81.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from collections import defaultdict
 from itertools import combinations
@@ -132,16 +133,16 @@ def share(rows: list[dict[str, Any]], fault: str, key: str, level: float) -> str
 
 
 def comparison(rows: list[dict[str, Any]]) -> list[str]:
-    """The twin method, the earlier agent-side method and the calibrated one, by fault."""
+    """The twin method, the held margin, the unscaled calibrated margin and the scaled one."""
     previous = json.loads((RESULTS / "fault_audit_v2.json").read_text(encoding="utf-8"))["rows"]
+    unscaled = json.loads((RESULTS / "phase6c" / "audit_rows.json").read_text(encoding="utf-8"))
     twin = json.loads((RESULTS / "fault_audit.json").read_text(encoding="utf-8"))["runs"]
-    head = "| fault | 6a twin | v1 old held>=1 | v1 new m>=1 | v1 new m>=3 | v1 new held>=1 "
+    head = "| fault | twin | v1: held margin | unscaled | scaled m>=1 | scaled m>=3 "
     lines = [
-        head + "| v2 old held>=1 | v2 new m>=1 | v2 new m>=3 | v2 new held>=1 |",
+        head + "| v2: held margin | unscaled | scaled m>=1 | scaled m>=3 |",
         "| --- |" + " --- |" * 9,
     ]
-    faults = sorted({r["fault"] for r in rows if not r["healthy"]})
-    for f in faults:
+    for f in sorted({r["fault"] for r in rows if not r["healthy"]}):
         base = "restriction" if f.startswith("restriction") else f
         t = [r for r in twin if r["kind"] == base and not r.get("rejected")]
         if f == "restriction_obstruction":
@@ -151,24 +152,28 @@ def comparison(rows: list[dict[str, Any]]) -> list[str]:
             tw = f"{sum(bool(r['consequence']) for r in keep)}/{len(keep)}"
         cells = [tw]
         for profile in PROFILES:
-            prev = [
-                r
-                for r in previous
-                if not r.get("healthy")
-                and r["profile"] == profile
-                and r["fault"] == f
-                and r["activity"] == "active"
-                and not r["rejected"]
-            ]
+            old = [r for r in previous if selected(r, profile, f)]
+            mid = [r for r in unscaled if selected(r, profile, f)]
             new = active(rows, profile)
             cells += [
-                f"{sum(r['held_margin'] >= 1 for r in prev)}/{len(prev)}",
+                f"{sum(r['held_margin'] >= 1 for r in old)}/{len(old)}",
+                f"{sum(r['margin'] >= 1 for r in mid)}/{len(mid)}",
                 share(new, f, "margin", 1.0),
                 share(new, f, "margin", CLEAR),
-                share(new, f, "held", 1.0),
             ]
         lines.append(f"| {f} | " + " | ".join(cells) + " |")
     return lines
+
+
+def selected(row: dict[str, Any], profile: str, fault: str) -> bool:
+    """An active, completed fault cell of a profile in an earlier result file."""
+    return (
+        not row.get("healthy")
+        and row["profile"] == profile
+        and row["fault"] == fault
+        and row["activity"] == "active"
+        and not row["rejected"]
+    )
 
 
 def activity_ok(twin_row: dict[str, Any], fault: str) -> bool:
@@ -178,8 +183,8 @@ def activity_ok(twin_row: dict[str, Any], fault: str) -> bool:
 
 def healthy_floor(rows: list[dict[str, Any]]) -> list[str]:
     lines = [
-        "| group | profile | runs | m>=1 | m>=3 | held>=1 | scaled m>=1 |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| group | profile | runs | scaled m>=1 | scaled m>=3 | held>=1 |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for profile in PROFILES:
         for name, sel in (
@@ -201,10 +206,9 @@ def healthy_floor(rows: list[dict[str, Any]]) -> list[str]:
         ):
             m = np.array([r["margin"] for r in sel])
             h = np.array([r["held"] for r in sel])
-            f = np.array([r["family_margin"] for r in sel])
             lines.append(
                 f"| {name} | {profile} | {len(sel)} | {(m >= 1).sum()} | {(m >= 3).sum()} | "
-                f"{(h >= 1).sum()} | {(f >= 1).sum()} |"
+                f"{(h >= 1).sum()} |"
             )
     return lines
 
@@ -233,8 +237,8 @@ def class_fractions(rows: list[dict[str, Any]], profile: str, key: str = "margin
     return lines
 
 
-def confusables(rows: list[dict[str, Any]], profile: str) -> list[str]:
-    live = [r for r in active(rows, profile) if not r["rejected"] and r["margin"] >= 1.0]
+def confusables(rows: list[dict[str, Any]], profile: str, minimum: float) -> list[str]:
+    live = [r for r in active(rows, profile) if not r["rejected"] and r["margin"] >= minimum]
     tally: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
     for a, b in combinations(live, 2):
         if a["fault"] == b["fault"] or a["family"] != b["family"]:
@@ -259,14 +263,8 @@ def confusables(rows: list[dict[str, Any]], profile: str) -> list[str]:
 
 
 def metric(row: dict[str, Any], key: str) -> float:
-    """A margin of a cell: the best over lengths, one length, or the family-wise versions."""
-    if key == "margin":
-        return float(row["margin"])
-    if key in ("family", "family_margin"):
-        return float(row["family_margin"])
-    if key.startswith("family:"):
-        return float(row["family_by_length"][key.split(":")[1]])
-    return float(row["by_length"][key])
+    """The scaled margin of a cell: the best over window lengths, or that of one length."""
+    return float(row["margin"] if key == "margin" else row["by_length"][key])
 
 
 def curves(
@@ -289,16 +287,15 @@ def curves(
     return {k: {a: sorted(v) for a, v in d.items()} for k, d in out.items()}
 
 
-def smallest_detectable(rows: list[dict[str, Any]], family: bool) -> list[str]:
-    """Smallest severity with a margin of 1, per window length and over the best length."""
-    lengths = [f"family:{w}" if family else str(w) for w in WINDOWS_S]
-    keys = [*lengths, "family" if family else "margin"]
+def smallest_detectable(rows: list[dict[str, Any]]) -> list[str]:
+    """Smallest severity with a scaled margin of 1, per window length and over the best length."""
+    keys = [*(str(w) for w in WINDOWS_S), "margin"]
     lines = [
         "| fault | asset class | assets | 60 s | 300 s | 900 s | best length |",
         "| --- |" + " --- |" * 6,
     ]
     per = {k: curves(rows, k) for k in keys}
-    for (fault, aclass), assets in sorted(per[keys[-1]].items()):
+    for (fault, aclass), assets in sorted(per["margin"].items()):
         cells = []
         for k in keys:
             found = [crossing(per[k][(fault, aclass)][a], 1.0) for a in assets]
@@ -307,18 +304,6 @@ def smallest_detectable(rows: list[dict[str, Any]], family: bool) -> list[str]:
                 f"{np.median(ok):.3g} ({len(ok)}/{len(found)})" if ok else f"none (0/{len(found)})"
             )
         lines.append(f"| {fault} | {aclass} | {len(assets)} | " + " | ".join(cells) + " |")
-    return lines
-
-
-def family_counts(rows: list[dict[str, Any]]) -> list[str]:
-    """Cells detected when the thresholds are scaled to a 1 percent alarm rate on any feature."""
-    lines = ["| fault | v1 m>=1 | v1 m>=3 | v2 m>=1 | v2 m>=3 |", "| --- | --- | --- | --- | --- |"]
-    for f in sorted({r["fault"] for r in rows if not r["healthy"]}):
-        cells = []
-        for profile in PROFILES:
-            sel = active(rows, profile)
-            cells += [share(sel, f, "family_margin", 1.0), share(sel, f, "family_margin", CLEAR)]
-        lines.append(f"| {f} | " + " | ".join(cells) + " |")
     return lines
 
 
@@ -364,22 +349,26 @@ def diagnose(points: list[tuple[float, float]], level: float) -> str:
     return f"borderline: largest margin {peak:.2f} of {level:g}"
 
 
-def class_file(rows: list[dict[str, Any]], key: str = "margin") -> tuple[dict[str, Any], list[str]]:
+def class_file(rows: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
+    """Boundary records, the marks of boundaries at the range start (D89c), and notes."""
     params: dict[str, Any] = {}
+    marks: dict[str, Any] = {}
     notes: list[str] = []
-    for (fault, aclass), assets in sorted(curves(rows, key).items()):
+    for (fault, aclass), assets in sorted(curves(rows, "margin").items()):
         for name, level in (("marginal", INVISIBLE), ("clear", CLEAR)):
             found = {a: crossing(p, level) for a, p in assets.items()}
             values = [abs(x) for x in found.values() if x is not None]
             key = f"{fault}/{aclass}/{name}_from"
             if len(values) == len(found):
+                value = float(np.median(values))
                 params[key] = {
-                    "value": float(np.median(values)),
-                    "unit": "1",
-                    "status": "provisional",
-                    "evidence_tag": "SIM",
-                    "provenance_id": "VERUM-DD-D79-v1.0",
-                }
+                    "value": value, "unit": "1", "status": "provisional",
+                    "evidence_tag": "SIM", "provenance_id": "VERUM-DD-D89-v1.0",
+                }  # fmt: skip
+                start = min(abs(p[0][0]) for p in assets.values())
+                if math.isclose(value, start, rel_tol=1e-9):
+                    at_start = min(p[0][1] for p in assets.values())
+                    marks[key] = {"floor": at_start < level, "smallest_margin_at_start": at_start}
                 continue
             missing = [a for a, x in found.items() if x is None]
             reasons = "; ".join(diagnose(assets[a], level) for a in missing[:1])
@@ -388,24 +377,23 @@ def class_file(rows: list[dict[str, Any]], key: str = "margin") -> tuple[dict[st
                 f"{reasons}"
             )
             params[key] = {
-                "value": None,
-                "unit": "1",
-                "status": "unresolved",
-                "evidence_tag": "OPEN",
+                "value": None, "unit": "1", "status": "unresolved", "evidence_tag": "OPEN",
                 "unresolved_reason": reason,
-            }
+            }  # fmt: skip
             notes.append(f"- `{key}`: {reason}")
     doc = {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "description": "Severity class boundaries of the agent-side audit under profile v2 (D78, "
-        "D79): the severity coordinate from which the single-window margin, best over the three "
-        "window lengths "
+        "D89): the severity coordinate from which the scaled margin, best over the window lengths "
         "and worst over the design draws, reaches 1 (marginal) and 3 (clear); the median over the "
-        "assets of the class. A value at the lower end of the range of the fault means that the "
-        "class begins at or below that end. A boundary that any asset of the class does not reach "
-        "inside the range is unresolved.",
+        "assets of the class. A boundary that any asset of the class does not reach inside the "
+        "range is unresolved. A boundary equal to the lower end of the range appears in "
+        "boundary_marks (D89c): floor true means that the class begins at or below the range "
+        "start and the value is not a detection threshold; floor false means that the scaled "
+        "margin reaches the level at the start for every asset, with the smallest margin there.",
         "source": "tools/audit_report.py",
         "parameters": params,
+        "boundary_marks": marks,
     }
     return doc, notes
 
@@ -419,30 +407,21 @@ def main(write_classes: bool) -> None:
         results = evaluate_all(th)
         cache.write_text(json.dumps(results), encoding="utf-8")
     rows = annotate(results)
-    out = ["# Agent-side audit, calibrated margins", "", "## Comparison (active cells)", ""]
+    out = ["# Agent-side audit, scaled margins", "", "## Comparison (active cells)", ""]
     out += comparison(rows) + ["", "## Healthy floor", ""] + healthy_floor(rows)
-    out += ["", "## Detection with thresholds scaled to a 1 percent alarm rate on any feature", ""]
-    out += family_counts(rows)
     for profile in PROFILES:
         out += ["", f"## Class fractions, profile {profile}", ""] + class_fractions(rows, profile)
-        title = f"## Class fractions with the scaled thresholds, profile {profile}"
-        out += ["", title, ""] + class_fractions(rows, profile, "family_margin")
     for profile in PROFILES:
-        out += ["", f"## Confusable pairs, profile {profile}", ""] + confusables(rows, profile)
+        for minimum in (3.0, 1.0):
+            title = f"## Confusable pairs, profile {profile}, scaled margin at least {minimum:g}"
+            out += ["", title, ""] + confusables(rows, profile, minimum)
         out += ["", f"## Time to detect (s), profile {profile}", ""] + detect_times(rows, profile)
     title = "## Smallest detectable severity, profile v2 (median over assets; assets reaching 1)"
-    out += ["", title, ""] + smallest_detectable(rows, False)
-    out += ["", title + ", scaled thresholds", ""] + smallest_detectable(rows, True)
+    out += ["", title, ""] + smallest_detectable(rows)
     doc, notes = class_file(rows)
     out += ["", "## Unresolved boundaries", ""] + notes
-    scaled, scaled_notes = class_file(rows, "family_margin")
-    out += ["", "## Boundaries with the scaled thresholds", ""]
-    for name, rec in scaled["parameters"].items():
-        was = doc["parameters"][name]
-        value = "unresolved" if rec["value"] is None else f"{rec['value']:.4g}"
-        before = "unresolved" if was["value"] is None else f"{was['value']:.4g}"
-        out.append(f"- `{name}`: scaled {value}, per-feature {before}")
-    out += [""] + scaled_notes
+    out += ["", "## Boundaries at the range start", ""]
+    out += [f"- `{k}`: {v}" for k, v in doc["boundary_marks"].items()]
     (RESULTS / "audit_tables.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     (RESULTS / "audit_rows.json").write_text(json.dumps(rows), encoding="utf-8")
     print("\n".join(out))

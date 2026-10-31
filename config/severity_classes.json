@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0.0",
-  "description": "Severity class boundaries of the agent-side audit under profile v2 (D78, D79): the severity coordinate from which the single-window margin, best over the three window lengths and worst over the design draws, reaches 1 (marginal) and 3 (clear); the median over the assets of the class. A value at the lower end of the range of the fault means that the class begins at or below that end. A boundary that any asset of the class does not reach inside the range is unresolved.",
+  "schema_version": "1.1.0",
+  "description": "Severity class boundaries of the agent-side audit under profile v2 (D78, D89): the severity coordinate from which the scaled margin, best over the window lengths and worst over the design draws, reaches 1 (marginal) and 3 (clear); the median over the assets of the class. A boundary that any asset of the class does not reach inside the range is unresolved. A boundary equal to the lower end of the range appears in boundary_marks (D89c): floor true means that the class begins at or below the range start and the value is not a detection threshold; floor false means that the scaled margin reaches the level at the start for every asset, with the smallest margin there.",
   "source": "tools/audit_report.py",
   "parameters": {
     "bias/flow/marginal_from": {
@@ -8,252 +8,306 @@
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "bias/flow/clear_from": {
-      "value": null,
+      "value": 0.0072726600058233065,
       "unit": "1",
-      "status": "unresolved",
-      "evidence_tag": "OPEN",
-      "unresolved_reason": "2 of 3 assets do not reach 3 inside the range: the range ends below the level: largest margin 2.07 of 3"
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "bias/level/marginal_from": {
       "value": 0.002,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "bias/level/clear_from": {
       "value": 0.002,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "bias/pressure/marginal_from": {
-      "value": 0.0051602301403453265,
+      "value": 0.007292797632755455,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "bias/pressure/clear_from": {
-      "value": 0.017755242981964132,
+      "value": 0.022848397932455692,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "drift/flow/marginal_from": {
-      "value": 0.002,
+      "value": 0.006579043032196284,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "drift/flow/clear_from": {
-      "value": null,
+      "value": 0.021220272508839268,
       "unit": "1",
-      "status": "unresolved",
-      "evidence_tag": "OPEN",
-      "unresolved_reason": "2 of 3 assets do not reach 3 inside the range: the range ends below the level: largest margin 1.13 of 3"
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "drift/level/marginal_from": {
       "value": 0.002,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "drift/level/clear_from": {
-      "value": 0.0029885225341652914,
+      "value": 0.002,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "drift/pressure/marginal_from": {
-      "value": 0.0199334736959516,
+      "value": 0.042418931338776424,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "drift/pressure/clear_from": {
       "value": null,
       "unit": "1",
       "status": "unresolved",
       "evidence_tag": "OPEN",
-      "unresolved_reason": "3 of 3 assets do not reach 3 inside the range: borderline: largest margin 2.78 of 3"
+      "unresolved_reason": "3 of 3 assets do not reach 3 inside the range: the range ends below the level: largest margin 2.17 of 3"
     },
     "leak/discharge/marginal_from": {
-      "value": 8.362846167992704e-05,
+      "value": 1.3591426869656063e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/discharge/clear_from": {
-      "value": 0.0005596960945975176,
+      "value": 5.4294379683797524e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/pump_branch/marginal_from": {
-      "value": 8.561166821808013e-05,
+      "value": 1.360736460955287e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/pump_branch/clear_from": {
-      "value": 0.0005503980957410875,
+      "value": 5.3655807866573646e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/receipt/marginal_from": {
-      "value": 2e-06,
+      "value": 1.7994854814413177e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/receipt/clear_from": {
-      "value": 0.00029551770964061355,
+      "value": 9.035114039161671e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/suction/marginal_from": {
-      "value": 0.0002212191164518223,
+      "value": 3.405409610914953e-05,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "leak/suction/clear_from": {
-      "value": null,
+      "value": 0.00014206719828384925,
       "unit": "1",
-      "status": "unresolved",
-      "evidence_tag": "OPEN",
-      "unresolved_reason": "2 of 2 assets do not reach 3 inside the range: the range ends below the level: largest margin 2.45 of 3"
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "misroute_b/tank_inlet/marginal_from": {
       "value": 0.02,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "misroute_b/tank_inlet/clear_from": {
       "value": 0.02,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "pump/pump/marginal_from": {
-      "value": 0.03021074128880513,
+      "value": 0.036834436591625885,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "pump/pump/clear_from": {
-      "value": 0.07210871142115044,
+      "value": 0.08877854578707153,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_obstruction/pump_branch/marginal_from": {
       "value": null,
       "unit": "1",
       "status": "unresolved",
       "evidence_tag": "OPEN",
-      "unresolved_reason": "1 of 3 assets do not reach 1 inside the range: borderline: largest margin 0.99 of 1"
+      "unresolved_reason": "1 of 3 assets do not reach 1 inside the range: the range ends below the level: largest margin 0.79 of 1"
     },
     "restriction_obstruction/pump_branch/clear_from": {
       "value": null,
       "unit": "1",
       "status": "unresolved",
       "evidence_tag": "OPEN",
-      "unresolved_reason": "2 of 3 assets do not reach 3 inside the range: the range ends below the level: largest margin 0.99 of 3"
+      "unresolved_reason": "2 of 3 assets do not reach 3 inside the range: the range ends below the level: largest margin 0.79 of 3"
     },
     "restriction_obstruction/tank_inlet/marginal_from": {
-      "value": 0.14465747600404666,
+      "value": 0.24967036849717245,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_obstruction/tank_inlet/clear_from": {
-      "value": 0.37031823305923134,
+      "value": 0.4024704074895098,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_obstruction/tank_outlet/marginal_from": {
-      "value": 0.4849188038318323,
+      "value": null,
       "unit": "1",
-      "status": "provisional",
-      "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "status": "unresolved",
+      "evidence_tag": "OPEN",
+      "unresolved_reason": "1 of 2 assets do not reach 1 inside the range: the range ends below the level: largest margin 0.83 of 1"
     },
     "restriction_obstruction/tank_outlet/clear_from": {
       "value": null,
       "unit": "1",
       "status": "unresolved",
       "evidence_tag": "OPEN",
-      "unresolved_reason": "1 of 2 assets do not reach 3 inside the range: the range ends below the level: largest margin 1.06 of 3"
+      "unresolved_reason": "1 of 2 assets do not reach 3 inside the range: the range ends below the level: largest margin 0.83 of 3"
     },
     "restriction_position_visible/pump_branch/marginal_from": {
       "value": 0.1,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_position_visible/pump_branch/clear_from": {
       "value": 0.1,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_position_visible/tank_inlet/marginal_from": {
       "value": 0.1,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_position_visible/tank_inlet/clear_from": {
       "value": 0.1,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_position_visible/tank_outlet/marginal_from": {
       "value": 0.1,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
     },
     "restriction_position_visible/tank_outlet/clear_from": {
       "value": 0.1,
       "unit": "1",
       "status": "provisional",
       "evidence_tag": "SIM",
-      "provenance_id": "VERUM-DD-D79-v1.0"
+      "provenance_id": "VERUM-DD-D89-v1.0"
+    }
+  },
+  "boundary_marks": {
+    "bias/flow/marginal_from": {
+      "floor": true,
+      "smallest_margin_at_start": 0.9464957550611981
+    },
+    "bias/level/marginal_from": {
+      "floor": false,
+      "smallest_margin_at_start": 105.37414576909924
+    },
+    "bias/level/clear_from": {
+      "floor": false,
+      "smallest_margin_at_start": 105.37414576909924
+    },
+    "drift/level/marginal_from": {
+      "floor": false,
+      "smallest_margin_at_start": 18.053793884641426
+    },
+    "drift/level/clear_from": {
+      "floor": false,
+      "smallest_margin_at_start": 18.053793884641426
+    },
+    "misroute_b/tank_inlet/marginal_from": {
+      "floor": false,
+      "smallest_margin_at_start": 20.23193589794457
+    },
+    "misroute_b/tank_inlet/clear_from": {
+      "floor": false,
+      "smallest_margin_at_start": 20.23193589794457
+    },
+    "restriction_position_visible/pump_branch/marginal_from": {
+      "floor": false,
+      "smallest_margin_at_start": 3.0
+    },
+    "restriction_position_visible/pump_branch/clear_from": {
+      "floor": false,
+      "smallest_margin_at_start": 3.0
+    },
+    "restriction_position_visible/tank_inlet/marginal_from": {
+      "floor": false,
+      "smallest_margin_at_start": 3.0
+    },
+    "restriction_position_visible/tank_inlet/clear_from": {
+      "floor": false,
+      "smallest_margin_at_start": 3.0
+    },
+    "restriction_position_visible/tank_outlet/marginal_from": {
+      "floor": false,
+      "smallest_margin_at_start": 3.0
+    },
+    "restriction_position_visible/tank_outlet/clear_from": {
+      "floor": false,
+      "smallest_margin_at_start": 3.0
     }
   }
 }
