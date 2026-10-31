@@ -320,6 +320,9 @@ class Engine:
         }
         sensors = load_sensor_config(model.directory)
         self._lt = {t: self._level_chain(sensors, streams, t) for t in model.topology.tank_ids}
+        refs = [spec.ref for spec in sensors.tags.values()]
+        self._tag_edges = {r["element_id"] for r in refs if r["record_type"] == "edge_state"}
+        self._tag_nodes = {r["element_id"] for r in refs if r["record_type"] == "node_state"}
         self._law_c = load_boundary_law_coefficient(scenario.fitting_profile, model.directory).value
         self.state = state if state is not None else self._initial_state()
 
@@ -1157,17 +1160,29 @@ class Engine:
     # --- validity windows (D25) ----------
     def _add_window(
         self, kind: str, element: str, t0: float, t1: float | None, reason: str,
-        ratio: float | None, trip: float | None,
+        ratio: float | None, trip: float | None, scope: tuple[str, ...] = (),
     ) -> vd.ValidityWindow:  # fmt: skip
         st = self.state
         st.window_counter += 1
         w = vd.ValidityWindow(
-            f"VW-{st.window_counter:04d}", kind, element, t0, t1, reason, ratio, trip
-        )
+            f"VW-{st.window_counter:04d}", kind, element, t0, t1, reason, ratio, trip,
+            self._affects_emitted_tags(kind, scope, t0),
+        )  # fmt: skip
         st.windows.append(w)
         if t1 is not None:
             self._write_window(w)
         return w
+
+    def _affects_emitted_tags(self, kind: str, scope: tuple[str, ...], t: float) -> bool:
+        """Whether a tag reads an edge or an inside node of the dead segment of a dead-leg window
+        (D150); every other window counts as yes."""
+        if kind != "dead_leg_unvalidated" or not scope:
+            return True
+        open_valves = {
+            v for v, valve in self.state.valves.items() if not valve.is_physically_closed(t)
+        }
+        nodes = deadleg.inside_nodes(self.model, scope, open_valves)
+        return bool(set(scope) & self._tag_edges) or bool(nodes & self._tag_nodes)
 
     def _write_window(self, w: vd.ValidityWindow) -> None:
         row = {
@@ -1227,6 +1242,7 @@ class Engine:
                     vd.REASON_DEAD_LEG,
                     None,
                     None,
+                    tuple(key.split("+")),
                 )
                 st.open_windows[name] = w
             elif name in st.open_windows and gap < closing:

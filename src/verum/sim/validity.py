@@ -41,6 +41,13 @@ class ValidityWindow:
     reason: str
     ratio: float | None
     round_trip_s: float | None
+    affects_emitted_tags: bool = True
+
+    @property
+    def restricts(self) -> bool:
+        """Whether the window takes the episode out of the main tier (D150): a dead-leg window
+        that no emitted tag reads does not."""
+        return self.kind != "dead_leg_unvalidated" or self.affects_emitted_tags
 
     def as_row(self) -> dict[str, object]:
         return {
@@ -52,6 +59,7 @@ class ValidityWindow:
             "reason": self.reason,
             "ratio": self.ratio,
             "round_trip_s": self.round_trip_s,
+            "affects_emitted_tags": self.affects_emitted_tags,
         }
 
 

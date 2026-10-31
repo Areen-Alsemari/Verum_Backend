@@ -42,6 +42,17 @@ def _is_barrier(model: HydraulicModel, node: str, open_valves: Collection[str]) 
     return node.startswith("CV-") or node in model.topology.pumps
 
 
+def inside_nodes(
+    model: HydraulicModel, edge_ids: Collection[str], open_valves: Collection[str]
+) -> set[str]:
+    """Nodes inside a segment: the ends of its edges that are not barriers (D150)."""
+    nodes = set()
+    for e in model.topology.edges:
+        if e.edge_id in edge_ids:
+            nodes |= {n for n in (e.from_node, e.to_node) if not _is_barrier(model, n, open_valves)}
+    return nodes
+
+
 def _barrier_rank(node: str) -> int:
     return 0 if node.startswith("XV-") else 1 if node.startswith("CV-") else 2
 

@@ -36,8 +36,9 @@ RESTRICTED_TIER = "restricted_benchmark"
 
 
 def tier_of(outcome: EpisodeOutcome) -> str:
-    """Decision D37: an episode with a flagged validity window is restricted."""
-    return RESTRICTED_TIER if outcome.windows else TIER
+    """Decision D37: an episode with a flagged validity window is restricted, except that a
+    dead-leg window no emitted tag reads does not restrict it (D150)."""
+    return RESTRICTED_TIER if any(w.restricts for w in outcome.windows) else TIER
 
 
 @dataclass(frozen=True)

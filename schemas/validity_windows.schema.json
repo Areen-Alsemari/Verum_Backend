@@ -18,7 +18,8 @@
     "t_end_s",
     "reason",
     "ratio",
-    "round_trip_s"
+    "round_trip_s",
+    "affects_emitted_tags"
   ],
   "properties": {
     "schema_version": {
@@ -83,6 +84,10 @@
         "null"
       ],
       "description": "2 sum(L/a) of the path, null for a branched lineup"
+    },
+    "affects_emitted_tags": {
+      "type": "boolean",
+      "description": "false for a dead-leg window whose segment holds no point that an emitted tag reads (D150); true for every other window"
     }
   }
 }

@@ -146,7 +146,8 @@
           "t_end_s",
           "reason",
           "ratio",
-          "round_trip_s"
+          "round_trip_s",
+          "affects_emitted_tags"
         ],
         "properties": {
           "window_id": {
@@ -183,6 +184,9 @@
               "number",
               "null"
             ]
+          },
+          "affects_emitted_tags": {
+            "type": "boolean"
           }
         }
       }

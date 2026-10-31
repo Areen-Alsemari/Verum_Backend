@@ -118,6 +118,7 @@ WINDOW: Doc = {
     "reason": "flow_collapse_within_wave_criterion",
     "ratio": 0.514,
     "round_trip_s": 0.3609,
+    "affects_emitted_tags": True,
 }
 LEDGER: Doc = {
     **BASE,
@@ -179,6 +180,7 @@ EPISODE: Doc = {
                 "reason",
                 "ratio",
                 "round_trip_s",
+                "affects_emitted_tags",
             )
         }
     ],
