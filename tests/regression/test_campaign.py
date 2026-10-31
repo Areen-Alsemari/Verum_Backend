@@ -639,3 +639,24 @@ def repo_scenarios() -> Path:
     from verum.contracts.paths import config_dir
 
     return config_dir() / "scenarios"
+
+
+@pytest.mark.slow
+def test_the_report_counts_agree_with_the_records(real_campaign: Path) -> None:
+    """The report of the small campaign names every section, and its counts of completed
+    episodes, gaps and attempts equal the counts taken from the records.
+
+    Independent: yes, because the numbers are recounted here from the record files.
+    """
+    from verum.campaign import report
+
+    text = report.build(REAL, real_campaign)
+    records = runner.load_records(runner.Layout(real_campaign), list(range(REAL.n)))
+    done = sum(r["status"] == "completed" for r in records)
+    attempts = sum(len(r["attempts"]) for r in records)
+    assert f"{len(records)} finished, {done} completed" in text
+    assert f"{attempts} attempts" in text
+    for section in ("Family", "Subtype (faults)", "Class (faults)", "Pair type", "Split", "Tier",
+                    "Reason", "Cells of the gaps", "Temperature and initial level",
+                    "Healthy tag statistics"):  # fmt: skip
+        assert f"### {section}" in text, section
