@@ -120,6 +120,48 @@ WINDOW: Doc = {
     "round_trip_s": 0.3609,
     "affects_emitted_tags": True,
 }
+EDGE_IDS = (
+    "E001 E002 E003 E-R101a E-R101b E-S101a E-S101b E-R102a E-R102b E-S102a E-S102b E-R103a "
+    "E-R103b E-S103a E-S103b E-SH E-PA0 E-PA1 E-PA2 E-PA3 E-PA4 E-PB0 E-PB1 E-PB2 E-PB3 E-PB4 "
+    "E-D1 E-D2"
+).split()
+VALVE_IDS = "XV-R000 XV-R101 XV-R102 XV-R103 XV-S101 XV-S102 XV-S103 XV-PAI XV-PAO XV-PBI XV-PBO"
+TAG_IDS = (
+    "FT-001 PT-001 TT-001 LT-101 TT-101 LT-102 TT-102 LT-103 TT-103 PT-201 PT-202A PT-202B "
+    "FT-201 PT-203"
+)
+INSPECTION: Doc = {
+    **BASE,
+    "dataset": "inspection_truth",
+    "t_sim_s": 60.0,
+    "side": None,
+    "tanks": {
+        t: {"level_m": 9.0, "temperature_K": 298.15, "volume_m3": 6343.25}
+        for t in ("TK-101", "TK-102", "TK-103")
+    },
+    "edges": {
+        e: {"flow_m3s": 0.08, "p_from_pa_gauge": 150000.0, "p_to_pa_gauge": 149000.0}
+        for e in EDGE_IDS
+    },
+    "valves": {
+        v: {"commanded_open": True, "position_frac": 1.0, "contact_open": 1}
+        for v in VALVE_IDS.split()
+    },
+    "pumps": {
+        p: {"run_state": "running", "speed_ratio": 1.0, "head_scale": 1.0}
+        for p in ("P-101A", "P-101B")
+    },
+    "leaks": [
+        {"fault_instance_id": "FI-EP-00", "edge_id": "E-D1", "fraction": 0.4, "flow_m3s": 0.001}
+    ],
+    "faults": [
+        {
+            "fault_instance_id": "FI-EP-00", "fault_type": "PIPE_LEAK", "asset_id": "E-D1",
+            "severity": 0.5, "parameter": "leak_area", "unit": "m2", "parameter_value": 1e-4,
+        }
+    ],
+    "tags": {t: {"value": 1.0, "fault_offset": 0.0} for t in TAG_IDS.split()},
+}  # fmt: skip
 LEDGER: Doc = {
     **BASE,
     "dataset": "mass_ledger",
@@ -275,6 +317,9 @@ POSITIVE: list[tuple[str, str, Doc]] = [
     ("events", "event", EVENT),
     ("episode", "episode", EPISODE),
     ("fault_spec", "leak", FAULT_SPEC),
+    ("inspection_truth", "grid row", INSPECTION),
+    ("inspection_truth", "pre-event row", _edit(INSPECTION, "side", "pre_event")),
+    ("inspection_truth", "no leak and no fault", {**INSPECTION, "leaks": [], "faults": []}),
     (
         "fault_spec",
         "restriction",
@@ -402,6 +447,25 @@ NEGATIVE: list[tuple[str, str, Doc]] = [
     ("episode", "fault ids absent", _edit(EPISODE, "fault_instance_ids", _DROP)),
     ("fault_spec", "unknown variant", _edit(FAULT_SPEC, "variant", "pinhole")),
     ("fault_spec", "unknown field", {**FAULT_SPEC, "severity_label": "high"}),
+    ("inspection_truth", "unknown field", {**INSPECTION, "label": "leak"}),
+    ("inspection_truth", "missing edge", _edit(INSPECTION, "edges.E001", _DROP)),
+    (
+        "inspection_truth",
+        "contact state of two",
+        _edit(INSPECTION, "valves.XV-R000.contact_open", 2),
+    ),
+    (
+        "inspection_truth",
+        "severity above one",
+        {**INSPECTION, "faults": [{**INSPECTION["faults"][0], "severity": 1.5}]},
+    ),
+    ("inspection_truth", "unknown side", _edit(INSPECTION, "side", "mid_event")),
+    ("inspection_truth", "not hidden", _edit(INSPECTION, "hidden", False)),
+    (
+        "inspection_truth",
+        "negative leak flow",
+        {**INSPECTION, "leaks": [{**INSPECTION["leaks"][0], "flow_m3s": -1.0}]},
+    ),
     ("fault_spec", "severity above one", _edit(FAULT_SPEC, "peak_severity", 1.5)),
     ("fault_spec", "ramp of zero", _edit(FAULT_SPEC, "ramp_s", 0.0)),
     ("simulation_rejected", "unknown gate", _edit(REJECTED, "gate", "SG9")),

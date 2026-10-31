@@ -1,0 +1,1450 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Evaluator-only truth data: never served to agents. Values are in SI units.",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "urn:verum:inspection_truth:0.7.0",
+  "title": "inspection_truth (hidden, evaluator-only)",
+  "required": [
+    "schema_version",
+    "dataset",
+    "episode_id",
+    "t_sim_s",
+    "side",
+    "tanks",
+    "edges",
+    "valves",
+    "pumps",
+    "leaks",
+    "faults",
+    "tags",
+    "hidden"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.7\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "inspection_truth"
+    },
+    "episode_id": {
+      "type": "string"
+    },
+    "t_sim_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "side": {
+      "enum": [
+        null,
+        "pre_event",
+        "post_event"
+      ],
+      "description": "null on a grid row; pre_event and post_event on the two rows at a discontinuity"
+    },
+    "tanks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "TK-101",
+        "TK-102",
+        "TK-103"
+      ],
+      "properties": {
+        "TK-101": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "level_m",
+            "temperature_K",
+            "volume_m3"
+          ],
+          "properties": {
+            "level_m": {
+              "type": "number"
+            },
+            "temperature_K": {
+              "type": "number"
+            },
+            "volume_m3": {
+              "type": "number"
+            }
+          }
+        },
+        "TK-102": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "level_m",
+            "temperature_K",
+            "volume_m3"
+          ],
+          "properties": {
+            "level_m": {
+              "type": "number"
+            },
+            "temperature_K": {
+              "type": "number"
+            },
+            "volume_m3": {
+              "type": "number"
+            }
+          }
+        },
+        "TK-103": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "level_m",
+            "temperature_K",
+            "volume_m3"
+          ],
+          "properties": {
+            "level_m": {
+              "type": "number"
+            },
+            "temperature_K": {
+              "type": "number"
+            },
+            "volume_m3": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "description": "true state of each tank"
+    },
+    "edges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "E001",
+        "E002",
+        "E003",
+        "E-R101a",
+        "E-R101b",
+        "E-S101a",
+        "E-S101b",
+        "E-R102a",
+        "E-R102b",
+        "E-S102a",
+        "E-S102b",
+        "E-R103a",
+        "E-R103b",
+        "E-S103a",
+        "E-S103b",
+        "E-SH",
+        "E-PA0",
+        "E-PA1",
+        "E-PA2",
+        "E-PA3",
+        "E-PA4",
+        "E-PB0",
+        "E-PB1",
+        "E-PB2",
+        "E-PB3",
+        "E-PB4",
+        "E-D1",
+        "E-D2"
+      ],
+      "properties": {
+        "E001": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E002": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E003": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-R101a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-R101b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-S101a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-S101b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-R102a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-R102b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-S102a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-S102b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-R103a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-R103b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-S103a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-S103b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-SH": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PA0": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PA1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PA2": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PA3": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PA4": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PB0": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PB1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PB2": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PB3": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-PB4": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-D1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        },
+        "E-D2": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flow_m3s",
+            "p_from_pa_gauge",
+            "p_to_pa_gauge"
+          ],
+          "properties": {
+            "flow_m3s": {
+              "type": "number",
+              "description": "flow at the downstream end of the edge"
+            },
+            "p_from_pa_gauge": {
+              "type": "number"
+            },
+            "p_to_pa_gauge": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "description": "flow and gauge pressures of each edge"
+    },
+    "valves": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "XV-R000",
+        "XV-R101",
+        "XV-R102",
+        "XV-R103",
+        "XV-S101",
+        "XV-S102",
+        "XV-S103",
+        "XV-PAI",
+        "XV-PAO",
+        "XV-PBI",
+        "XV-PBO"
+      ],
+      "properties": {
+        "XV-R000": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-R101": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-R102": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-R103": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-S101": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-S102": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-S103": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-PAI": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-PAO": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-PBI": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        },
+        "XV-PBO": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commanded_open",
+            "position_frac",
+            "contact_open"
+          ],
+          "properties": {
+            "commanded_open": {
+              "type": "boolean"
+            },
+            "position_frac": {
+              "type": "number",
+              "description": "actual opening"
+            },
+            "contact_open": {
+              "enum": [
+                0,
+                1
+              ],
+              "description": "state of the open contact"
+            }
+          }
+        }
+      },
+      "description": "state of each isolation valve"
+    },
+    "pumps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "P-101A",
+        "P-101B"
+      ],
+      "properties": {
+        "P-101A": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "run_state",
+            "speed_ratio",
+            "head_scale"
+          ],
+          "properties": {
+            "run_state": {
+              "enum": [
+                "running",
+                "stopped"
+              ]
+            },
+            "speed_ratio": {
+              "type": "number"
+            },
+            "head_scale": {
+              "type": "number",
+              "description": "head scale of the pump fault, 1 without a fault"
+            }
+          }
+        },
+        "P-101B": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "run_state",
+            "speed_ratio",
+            "head_scale"
+          ],
+          "properties": {
+            "run_state": {
+              "enum": [
+                "running",
+                "stopped"
+              ]
+            },
+            "speed_ratio": {
+              "type": "number"
+            },
+            "head_scale": {
+              "type": "number",
+              "description": "head scale of the pump fault, 1 without a fault"
+            }
+          }
+        }
+      },
+      "description": "state of each pump"
+    },
+    "leaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fault_instance_id",
+          "edge_id",
+          "fraction",
+          "flow_m3s"
+        ],
+        "properties": {
+          "fault_instance_id": {
+            "type": "string"
+          },
+          "edge_id": {
+            "type": "string"
+          },
+          "fraction": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "flow_m3s": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "description": "one entry per leak fault"
+    },
+    "faults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fault_instance_id",
+          "fault_type",
+          "asset_id",
+          "severity",
+          "parameter",
+          "unit",
+          "parameter_value"
+        ],
+        "properties": {
+          "fault_instance_id": {
+            "type": "string"
+          },
+          "fault_type": {
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "parameter_value": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "one entry per fault"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "FT-001",
+        "PT-001",
+        "TT-001",
+        "LT-101",
+        "TT-101",
+        "LT-102",
+        "TT-102",
+        "LT-103",
+        "TT-103",
+        "PT-201",
+        "PT-202A",
+        "PT-202B",
+        "FT-201",
+        "PT-203"
+      ],
+      "properties": {
+        "FT-001": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "PT-001": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "TT-001": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "LT-101": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "TT-101": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "LT-102": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "TT-102": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "LT-103": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "TT-103": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "PT-201": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "PT-202A": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "PT-202B": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "FT-201": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        },
+        "PT-203": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "fault_offset"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "noise-free sampled value, before the fault offset"
+            },
+            "fault_offset": {
+              "type": "number",
+              "description": "offset that the fault adds to the value"
+            }
+          }
+        }
+      },
+      "description": "emitted continuous tags in SI units: m, m3/s, Pa gauge and K"
+    },
+    "hidden": {
+      "const": true
+    }
+  }
+}

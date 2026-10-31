@@ -40,6 +40,19 @@ PARAMETERS: dict[tuple[str, str], tuple[str, str, float, str, str]] = {
 }  # fmt: skip
 
 
+def parameter_value(spec: fs.FaultSpec, t: float) -> float:
+    """The physical parameter of a fault at time ``t``: its baseline plus the severity times the
+    difference between its value at severity one and its baseline."""
+    base = PARAMETERS[(spec.fault_type, spec.variant)][2]
+    return base + spec.severity(t) * (spec.magnitude - base)
+
+
+def parameter_name(spec: fs.FaultSpec) -> tuple[str, str]:
+    """Name and unit of the physical parameter that a fault changes."""
+    name, unit = PARAMETERS[(spec.fault_type, spec.variant)][:2]
+    return name, unit
+
+
 def instance_ids(episode_id: str, specs: Sequence[fs.FaultSpec]) -> list[str]:
     return [f"FI-{episode_id}-{i:02d}" for i in range(len(specs))]
 

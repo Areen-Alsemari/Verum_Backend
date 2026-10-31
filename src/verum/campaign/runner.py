@@ -45,6 +45,7 @@ from verum.sim.scenario import parse_scenario
 MIN_FREE_GB = 20.0
 MAX_WORKERS = 6
 OBSERVATIONS = "observations.jsonl.gz"
+INSPECTION = "inspection_truth.jsonl.gz"
 PAIR_SEPARATION_S = 300.0
 CONFIG_FILE = "campaign_config.json"
 PROGRESS_FILE = "progress.json"
@@ -179,7 +180,12 @@ def store_files(
     (evaluator / "scenario.json").write_text(
         json.dumps(spec.scenario, sort_keys=True), encoding="utf-8"
     )
-    keep = ["observation_audit.jsonl.gz", "fault_truth.jsonl.gz", "validity_windows.jsonl.gz"]
+    keep = [
+        "observation_audit.jsonl.gz",
+        "fault_truth.jsonl.gz",
+        "validity_windows.jsonl.gz",
+        INSPECTION,
+    ]
     for name in keep:
         if (result.directory / name).exists():
             shutil.copy2(result.directory / name, evaluator / name)
@@ -567,13 +573,17 @@ def write_readme(layout: Layout) -> None:
     (layout.agent / "README.md").write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
 
 
-def regenerate(config: CampaignConfig, record: dict[str, Any], scratch: Path) -> str:
-    """Rebuild the observations of a stored episode from its seed; return their hash."""
+def regenerate(config: CampaignConfig, record: dict[str, Any], scratch: Path) -> dict[str, str]:
+    """Rebuild a stored episode from its seed; return the hash of its observations and of its
+    inspection truth."""
     work = scratch / f"{record['index']:06d}"
     shutil.rmtree(work, ignore_errors=True)
     try:
         _spec, result = simulate(config, record["index"], record["attempt"], work)
-        return sha256(result.directory / OBSERVATIONS)
+        return {
+            "agent_visible": sha256(result.directory / OBSERVATIONS),
+            "evaluator": sha256(result.directory / INSPECTION),
+        }
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -585,8 +595,12 @@ def read_observations(path: Path) -> list[dict[str, Any]]:
 
 def _regenerate_one(args: tuple[CampaignConfig, dict[str, Any], Path]) -> tuple[str, bool]:
     config, record, scratch = args
-    key = f"agent_visible/episodes/{record['episode_id']}/{OBSERVATIONS}"
-    return record["episode_id"], record["files"][key] == regenerate(config, record, scratch)
+    episode = record["episode_id"]
+    stored = {
+        "agent_visible": record["files"][f"agent_visible/episodes/{episode}/{OBSERVATIONS}"],
+        "evaluator": record["files"][f"evaluator/episodes/{episode}/{INSPECTION}"],
+    }
+    return episode, stored == regenerate(config, record, scratch)
 
 
 def verify_sample(

@@ -40,6 +40,7 @@ PROPOSED_SCHEMA_NAMES: Final = (
     "boundary_state",
     "validity_windows",
     "fault_spec",
+    "inspection_truth",
 )
 ALL_SCHEMA_NAMES: Final = (*SCHEMA_NAMES, *PROPOSED_SCHEMA_NAMES)
 

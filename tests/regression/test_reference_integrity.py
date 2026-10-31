@@ -88,11 +88,12 @@ PROPOSED_SCHEMAS = [
     "boundary_state",
     "validity_windows",
     "fault_spec",
+    "inspection_truth",
 ]
 
 
-def test_schema_directory_holds_the_six_audited_and_nine_proposed_schemas(root: Path) -> None:
-    """The schema directory holds the six audited and the nine proposed schemas and no others.
+def test_schema_directory_holds_the_six_audited_and_ten_proposed_schemas(root: Path) -> None:
+    """The schema directory holds the six audited and the ten proposed schemas and no others.
     Independent: yes, because the expected names are written out in the test.
     """
     names = sorted(p.name for p in (root / "schemas").glob("*.json"))

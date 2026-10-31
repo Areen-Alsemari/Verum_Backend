@@ -27,6 +27,7 @@ from verum.sensors import observe_episode
 from verum.sensors.specs import load_sensor_config
 from verum.sim.config import SimConfig, load_sim_config
 from verum.sim.engine import Engine, EpisodeOutcome
+from verum.sim.inspection import write_inspection_truth
 from verum.sim.scenario import Scenario, load_scenario
 from verum.truth import DirectorySink, file_hashes
 
@@ -191,5 +192,6 @@ def run_episode(
             }
             hook = faults.sensor_hook(spans)
         observe_episode(out_dir / episode, hook=hook)  # agent-visible rows, next to the truth
+        write_inspection_truth(out_dir / episode, faults, model.directory)
         hashes = file_hashes(out_dir / episode)
     return EpisodeResult(episode, out_dir / episode, outcome, wall, hashes)
