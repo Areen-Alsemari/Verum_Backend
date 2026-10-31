@@ -39,9 +39,7 @@ def structure(source: str) -> str:
 
 
 def _git(root: Path, *args: str) -> str:
-    done = subprocess.run(
-        ["git", *args], cwd=root, check=True, capture_output=True, text=True
-    )
+    done = subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, text=True)
     return done.stdout
 
 
