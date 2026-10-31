@@ -115,6 +115,8 @@ def run_episode(
     model: HydraulicModel | None = None,
     scenario: Scenario | None = None,
     faults: FaultSet | None = None,
+    max_faults: int = 1,
+    min_separation_s: float = 0.0,
 ) -> EpisodeResult:
     assert_release_allowed(TIER)
     model = model or HydraulicModel.load()
@@ -130,11 +132,22 @@ def run_episode(
             scenario.initial_mode, scenario.receipt_setpoint_m3h, scenario.schedule,
             table.modes, faults.specs[0].onset_s,
         )  # fmt: skip
-        check_faults(faults.specs, edges, continuous, scenario.duration_s, states)
-        notes = {
-            "modes": [s.fault_mode for s in faults.specs],
-            "activity": [activity(s, states) for s in faults.specs],
-        }
+        check_faults(
+            faults.specs,
+            edges,
+            continuous,
+            scenario.duration_s,
+            states,
+            max_faults,
+            min_separation_s,
+        )
+        notes = {"modes": [s.fault_mode for s in faults.specs], "activity": []}
+        for spec in faults.specs:  # each fault is judged in the lineup in force from its own onset
+            own = lineup_states(
+                scenario.initial_mode, scenario.receipt_setpoint_m3h, scenario.schedule,
+                table.modes, spec.onset_s,
+            )  # fmt: skip
+            notes["activity"].append(activity(spec, own))
     chash = config_hash(model.directory)
     episode = episode_id(scenario.seed, scenario.scenario_id, chash)
     sink = DirectorySink(out_dir / episode)

@@ -110,10 +110,19 @@ def violations(
     continuous_tags: Collection[str],
     duration_s: float,
     states: Sequence[LineupState] | None = None,
+    max_faults: int = 1,
+    min_separation_s: float = 0.0,
 ) -> list[str]:
     problems: list[str] = []
-    if len(specs) > 1:
-        problems.append("one fault per episode in this phase")
+    if len(specs) > max_faults:
+        problems.append(
+            "one fault per episode in this phase"
+            if max_faults == 1
+            else f"at most {max_faults} faults per episode"
+        )
+    onsets = sorted(s.onset_s for s in specs)
+    if any(b - a < min_separation_s for a, b in zip(onsets, onsets[1:], strict=False)):
+        problems.append(f"onsets must be at least {min_separation_s:g} s apart")
     seen: set[str] = set()
     for spec in specs:
         if spec.variant not in fs.VARIANTS.get(spec.fault_type, ()):
@@ -138,7 +147,11 @@ def check(
     continuous_tags: Collection[str],
     duration_s: float,
     states: Sequence[LineupState] | None = None,
+    max_faults: int = 1,
+    min_separation_s: float = 0.0,
 ) -> None:
-    problems = violations(specs, edges, continuous_tags, duration_s, states)
+    problems = violations(
+        specs, edges, continuous_tags, duration_s, states, max_faults, min_separation_s
+    )
     if problems:
         raise ContractError("fault specification rejected: " + "; ".join(problems))
