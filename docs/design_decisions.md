@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 16 (2026-11-02). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 17 (2026-11-03). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -92,6 +92,12 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D80 | Window lengths and slope features | DESIGN | 1.0 |
 | D81 | Held margin as a secondary column | DESIGN | 1.0 |
 | D82 | Limits carried to the dataset card | DESIGN | 1.0 |
+| D83 | Composition of a campaign | DESIGN | 1.0 |
+| D84 | Single-fault allocation | DESIGN | 1.0 |
+| D85 | Fault pairs | DESIGN | 1.0 |
+| D86 | Splits | DESIGN | 1.0 |
+| D87 | Storage of a campaign | DESIGN | 1.0 |
+| D88 | Labels and their visibility | DESIGN | 1.0 |
 | D89 | Scaled class margins | DESIGN | 1.0 |
 | D89b | Matched-weight mass balance | DESIGN | 1.0 |
 | D89c | Floor boundaries | DESIGN | 1.0 |
@@ -1088,6 +1094,75 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** The limits follow from the model and from the grid; a reader of the dataset needs them stated.
 - **Sensitivity required.** None.
 - **Notes.** The first limit is a property of the steady network solve, not of the leak law.
+
+## D83 - Composition of a campaign
+
+- **Version:** 1.0 (2026-11-03)  **Status:** DESIGN
+- **Decision.**
+  - A campaign has a target of N episodes, 6000 by default and 3000 as the fallback. Counts scale with N: healthy 20 percent, single faults 60 percent, pairs of faults 20 percent. A campaign may state other shares; the pilot has 50 percent healthy episodes.
+  - Every episode lasts 3600 s under the profile v2 of D73, with the reference fittings, an NPSH3 of 4 m and the volatility class RVP_9_0.
+  - The atmosphere is coastal or inland with equal weight. The temperature is 25, 35 or 40 C, and 45 C is a labelled stress subset of at most 10 percent.
+  - The families are delivery, receipt, and concurrent receipt and delivery, and a receipt switch is at most 10 percent.
+  - An episode with a flagged validity window, for example an emergency closure, is not part of the main campaign; it is recorded as excluded.
+- **Reason.** The shares fix a mix in which most episodes carry a fault and a fifth have none, and the strata keep the conditions that the audit covered.
+- **Sensitivity required.** None.
+- **Notes.** The shares of the families are 35 percent delivery, 30 percent receipt, 25 percent concurrent and 10 percent switch for healthy episodes; a faulted episode takes its family from those that admit its fault, so the family shares of faulted episodes differ. The weights of the temperatures are 40, 30, 22 and 8 percent. All shares are selections.
+
+## D84 - Single-fault allocation
+
+- **Version:** 1.0 (2026-11-03)  **Status:** DESIGN  **Refines:** D60, D61, D62, D63, D64, D65, D74, D75, D76, D78
+- **Decision.**
+  - A single-fault episode takes one subtype: leak; restriction in mode position visible; restriction in mode obstruction; pump degradation; sensor bias; sensor drift; sensor stuck-at; misrouting (a); misrouting (b) where eligible (D75). Subtypes are allocated equally.
+  - Within a subtype the asset is drawn among the assets that are active in the lineup. The class is drawn equally among the severity classes of the class file that the subtype populates for the asset class, and the severity is log-uniform inside the class.
+  - A boundary marked as a floor in the class file means that the class begins at or below the start of the fault range. A boundary that is unresolved means that the class is absent for that subtype and asset class: the sampler skips it and the manifest records the gap.
+  - Latent faults (D76) are at most 5 percent of the fault episodes and are labelled latent.
+- **Reason.** Equal allocation across subtypes and classes gives each cell of the evaluation a usable number of episodes, and the class file says which classes exist.
+- **Sensitivity required.** None.
+- **Notes.** Sensor stuck-at and misrouting (a) have no severity coordinate in the class file and carry the class none. Temperature tags have no class boundaries and are not sampled. Latent faults are drawn among the pump degradation, restriction and misrouting (a) subtypes, on an asset that the lineup leaves idle.
+
+## D85 - Fault pairs
+
+- **Version:** 1.0 (2026-11-03)  **Status:** DESIGN  **Refines:** D66
+- **Decision.**
+  - A pair episode holds two faults in one physics run, with equal shares of four types: (a) two physical faults on different paths, the receipt path and the delivery path; (b) a physical fault and a sensor fault; (c) two sensor faults on different tags; (d) a leak and a restriction on the same path.
+  - Each fault has its own instance identifier and no causal parent. The onsets are in the range of D65 and at least 300 s apart, and no two faults share an asset.
+  - A candidate that violates any gate is written as `simulation_rejected` and is never relabelled. The severity class of each fault is recorded.
+- **Reason.** Pairs test whether a diagnosis separates two causes, and the gates decide which combinations the model can represent.
+- **Sensitivity required.** None.
+- **Notes.** Type (a) needs both paths, so it uses the concurrent family. The class boundaries of D84 are those of single faults; the audit did not cover pairs, so the class of a fault in a pair describes the fault alone.
+
+## D86 - Splits
+
+- **Version:** 1.0 (2026-11-03)  **Status:** DESIGN
+- **Decision.**
+  - The split unit is the scenario family times the atmosphere times the temperature. At least one whole combination is held out for test.
+  - In addition one asset per fault subtype is held out for test (configuration hold-out). A pair episode follows its assets: if either asset is held out the episode is test.
+  - The remaining combinations are split 70 to 30 into train and validation, and test is about 20 percent of the episodes overall.
+- **Reason.** Held-out strata test transfer to conditions not seen, and held-out assets test transfer to other equipment.
+- **Sensitivity required.** The share of test episodes in the manifest against the target of 20 percent.
+- **Notes.** The held-out combinations and assets are drawn from the campaign seed. The shares are reached by the choice of units and are reported, not enforced per episode.
+
+## D87 - Storage of a campaign
+
+- **Version:** 1.0 (2026-11-03)  **Status:** DESIGN
+- **Decision.**
+  - Every completed episode keeps its agent-visible observations and its hidden labels, the scenario record and the file hashes.
+  - The full hidden truth is kept for a 10 percent audit subset chosen by seed. The truth of the other episodes is regenerated on demand from the seed and the configuration hash, and the regenerated observations must match the stored hash.
+  - Episode files are written outside the repository.
+- **Reason.** The truth of an episode is large and is rarely read; it can be rebuilt exactly.
+- **Sensitivity required.** The agreement of regenerated and stored hashes for a sample of episodes.
+- **Notes.** The audit subset is a function of the campaign seed and the episode index alone.
+
+## D88 - Labels and their visibility
+
+- **Version:** 1.0 (2026-11-03)  **Status:** DESIGN
+- **Decision.**
+  - The labels of train and validation episodes (fault type, subtype, asset, severity, class, onset, mode, activity) are written to a labels file for those splits.
+  - The labels of test episodes stay in the evaluator store and appear in no agent-visible folder.
+  - The agent-visible folder holds observations, the labels file of train and validation, and a description of the layout; it holds no scenario name, stratum, tier, validity window or fault field in any observation.
+- **Reason.** Agents learn from labelled episodes and are scored on unlabelled ones.
+- **Sensitivity required.** None.
+- **Notes.** An episode that is in the agent-visible folder and not in the labels file is a test episode; the split of a labelled episode is its entry in the labels file.
 
 ## D89 - Scaled class margins
 
