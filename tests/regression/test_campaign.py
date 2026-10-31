@@ -5,7 +5,7 @@ frequencies can be compared with binomial bounds. The runner checks use a stub e
 resume and worker independence, and a small campaign of real episodes tests regeneration, storage
 and the leakage rules.
 
-See D83 to D88.
+See D83 to D88, D151, D152 and D155.
 """
 
 from __future__ import annotations
@@ -24,9 +24,9 @@ import pytest
 from verum.api import Gateway, check_allowlist
 from verum.campaign import runner
 from verum.campaign.classes import ClassTable
-from verum.campaign.plan import CampaignConfig, build_plan
-from verum.campaign.sampler import Sampler
-from verum.campaign.splits import build_split_plan, split_of
+from verum.campaign.plan import MAIN_SUBTYPES, SUBTYPES, CampaignConfig, build_plan
+from verum.campaign.sampler import NoCandidate, Sampler
+from verum.campaign.splits import REFERENCE_SLOTS, split_of
 from verum.contracts import load_schema
 from verum.faults import FaultSet, lineup_states, violations
 from verum.gates import assert_release_allowed
@@ -61,8 +61,15 @@ def within(count: int, trials: int, p: float) -> bool:
 
 @pytest.fixture(scope="module")
 def sampled() -> list[Any]:
+    """The first attempt of every slot of the plan; a slot whose cell gives none is left out."""
     sampler = Sampler(CONFIG, ClassTable())
-    return [sampler.sample(slot) for slot in build_plan(CONFIG)]
+    out = []
+    for slot in build_plan(CONFIG):
+        try:
+            out.append(sampler.sample(slot, 0))
+        except NoCandidate:
+            continue
+    return out
 
 
 def on_receipt_path(asset: str) -> bool:
@@ -75,32 +82,35 @@ def without_time(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 # --- plan ----------
 def test_the_plan_has_the_exact_composition_and_marks() -> None:
-    """The plan of 1000 episodes has 200 healthy, 600 single and 200 pair episodes, equal subtypes
-    and pair types, at most 5 percent latent faults and 10 percent switch, stress and audit marks.
+    """The plan of 1000 slots has 180 healthy, 560 single, 200 pair and 60 branched slots, equal
+    subtypes, pair types and branched kinds, and the marks of ten whole blocks.
 
-    Independent: yes, because the counts follow from the shares by arithmetic.
+    Independent: yes, because the counts follow from the block composition by arithmetic.
     """
     plan = build_plan(CampaignConfig(7, 1000))
-    assert Counter(s.kind for s in plan) == {"healthy": 200, "single": 600, "pair": 200}
+    assert Counter(s.kind for s in plan) == {
+        "healthy": 180, "single": 560, "pair": 200, "branched": 60,
+    }  # fmt: skip
     subtypes = Counter(s.subtype for s in plan if s.kind == "single")
-    assert (
-        set(subtypes) == set(CampaignConfig(7, 1000).subtypes)
-        and max(subtypes.values()) - min(subtypes.values()) <= 1
-    )
+    assert set(subtypes) == set(MAIN_SUBTYPES) and set(subtypes.values()) == {70}
     pairs = Counter(s.pair_type for s in plan if s.kind == "pair")
-    assert len(pairs) == 4 and max(pairs.values()) == min(pairs.values()) == 50
-    assert sum(s.latent for s in plan) <= 0.05 * 800
-    assert sum(s.switch for s in plan) <= 100 and sum(s.stress for s in plan) <= 100
-    assert sum(s.audit for s in plan) == 100
+    assert len(pairs) == 4 and set(pairs.values()) == {50}
+    assert set(Counter(s.branch for s in plan if s.kind == "branched").values()) == {20}
+    assert sum(s.latent for s in plan) == 30 and sum(s.switch for s in plan) == 90
+    assert sum(s.stress for s in plan) == 80 and sum(s.audit for s in plan) == 100
+    assert not any(s.switch or s.stress for s in plan if s.kind == "branched")
 
 
-def test_the_plan_is_a_function_of_the_seed_and_the_size() -> None:
-    """The same seed and size give the same plan; another seed gives another.
+def test_the_plan_is_a_function_of_the_seed_and_a_prefix_of_every_larger_plan() -> None:
+    """The same seed gives the same plan, another seed another, and a plan of 300 slots is the
+    first 300 slots of a plan of 500.
 
-    Independent: no, because it compares the function with itself; it guards against hidden state.
+    Independent: no, because it compares the function with itself; it guards against hidden state
+    and against a plan that depends on the target size.
     """
     assert build_plan(CampaignConfig(7, 300)) == build_plan(CampaignConfig(7, 300))
     assert build_plan(CampaignConfig(7, 300)) != build_plan(CampaignConfig(8, 300))
+    assert build_plan(CampaignConfig(7, 500))[:300] == build_plan(CampaignConfig(7, 300))
 
 
 def test_no_two_episodes_of_a_campaign_share_a_seed(sampled: list[Any]) -> None:
@@ -121,21 +131,30 @@ def test_stratum_family_subtype_and_class_frequencies_follow_the_plan(sampled: l
     """
     n = len(sampled)
     assert within(sum(e.strata["atmosphere"] == "inland" for e in sampled), n, 0.5)
-    assert sum(e.strata["temperature_c"] == 45.0 for e in sampled) <= 0.10 * n
-    assert sum(e.strata["family"] == "switch" for e in sampled) <= 0.10 * n
-    healthy = [e for e in sampled if e.slot.kind == "healthy"]
-    assert within(sum(e.strata["family"] == "delivery" for e in healthy), len(healthy), 0.35 / 0.91)
+    assert sum(e.strata["temperature_c"] == 45.0 for e in sampled) == sum(
+        e.slot.stress for e in sampled
+    )
+    assert sum(e.strata["family"] == "switch" for e in sampled) == sum(
+        e.slot.switch for e in sampled
+    )
+    plain = [
+        e for e in sampled
+        if e.slot.kind == "healthy" and not e.slot.switch
+    ]  # fmt: skip
+    share = 0.35 / 0.90
+    assert within(sum(e.strata["family"] == "delivery" for e in plain), len(plain), share)
     singles = Counter(f.subtype for e in sampled if e.slot.kind == "single" for f in e.faults)
-    assert all(within(c, 1800, 1 / 8) for c in singles.values())
-    cells: dict[tuple[str, str], Counter[str]] = {}
+    assert all(within(c, 1680, 1 / 8) for c in singles.values())
+    classes: dict[str, Counter[str]] = {}
     for e in sampled:
-        for f in e.faults:
-            if e.slot.kind == "single" and not f.latent:
-                cells.setdefault((f.subtype, f.asset_class), Counter())[f.cls] += 1
-    for counts in cells.values():
+        for subtype, cls in zip(e.cell.subtypes, e.cell.classes, strict=True):
+            if e.slot.kind == "single" and not e.slot.latent:
+                classes.setdefault(subtype, Counter())[cls] += 1
+    names = ClassTable()
+    for subtype, counts in classes.items():
         total = sum(counts.values())
-        if total >= 40:
-            assert all(within(c, total, 1 / len(counts)) for c in counts.values())
+        assert set(counts) <= set(names.names(subtype))
+        assert all(within(c, total, 1 / len(names.names(subtype))) for c in counts.values())
 
 
 def test_a_pair_never_shares_an_asset_and_its_onsets_obey_the_rules(sampled: list[Any]) -> None:
@@ -231,33 +250,56 @@ def test_the_class_intervals_follow_the_class_file() -> None:
 # --- splits ----------
 def test_held_out_strata_and_assets_never_reach_train_or_validation(sampled: list[Any]) -> None:
     """A train or validation episode is in no held-out unit and has no fault on a held-out asset,
-    a whole unit and one asset of each subtype are held out, and the test share is 10 to 35 percent.
+    the held-out units are units of at least 2.5 percent and hold at least 8 percent of the plan,
+    and one asset of each subtype is held out.
 
     Independent: yes, because the rule is applied to the sampled episodes by direct comparison.
     """
-    plan = build_split_plan(CONFIG)
-    assert plan.test_units and set(plan.held_assets) == set(CONFIG.subtypes)
+    plan = runner.context(CONFIG).splits
+    assert plan.test_units and set(plan.held_assets) == set(SUBTYPES)
+    assert all(plan.unit_shares[u] >= 0.025 for u in plan.test_units)
+    assert sum(plan.unit_shares[u] for u in plan.test_units) >= 0.08
     counts: Counter[str] = Counter()
     for e in sampled:
         unit = (e.strata["family"], e.strata["atmosphere"], e.strata["temperature_c"])
         faults = [(f.subtype, f.asset) for f in e.faults]
         which = split_of(plan, unit, faults)
         counts[which] += 1
+        held = [
+            plan.held_assets[s][0] == a and plan.held_assets[s][1] in (None, unit[0])
+            for s, a in faults
+        ]
         if which != "test":
-            assert unit not in plan.test_units
-            assert all(plan.held_assets[s] != a for s, a in faults)
+            assert unit not in plan.test_units and not any(held)
         else:
-            assert unit in plan.test_units or any(plan.held_assets[s] == a for s, a in faults)
-    assert 0.10 <= counts["test"] / len(sampled) <= 0.35
+            assert unit in plan.test_units or any(held)
+    assert 0.08 <= counts["test"] / len(sampled) <= 0.35
     assert counts["train"] > counts["validation"] > 0
+
+
+def test_the_held_out_share_is_measured_on_the_reference_prefix() -> None:
+    """The shares of the units are those of the first 2000 slots of the plan, and a campaign of
+    another size with the same seed has the same held-out units.
+
+    Independent: yes, because the shares are counted from the cells of the plan.
+    """
+    a = runner.context(CampaignConfig(20261101, 300)).splits
+    b = runner.context(CONFIG).splits
+    assert a.test_units == b.test_units and a.held_assets == b.held_assets
+    assert sum(b.unit_shares.values()) == pytest.approx(1.0) and REFERENCE_SLOTS == 2000
 
 
 # --- runner with a stub episode ----------
 def stub_executor(config: CampaignConfig, index: int, root: Path) -> dict[str, Any]:
-    """An episode that writes two small files, for the tests of resume and worker order."""
+    """A slot that writes two small files, for the tests of resume and worker order."""
     ctx = runner.context(config)
-    spec = ctx.sampler.sample(ctx.plan[index])
-    record = runner.base_record(config, spec)
+    slot = ctx.plan[index]
+    record = runner.slot_record(config, slot)
+    try:
+        spec = ctx.sampler.sample(slot, 0)
+    except NoCandidate:
+        return {**record, "status": "gap", "attempts": [{"attempt": 0, "status": "rejected",
+                "gate": "SAMPLING", "episode_index": index * 5}], "wall_s": 0.0}  # fmt: skip
     episode = f"EP-{index:012X}"
     layout = runner.Layout(root)
     agent = layout.agent / "episodes" / episode
@@ -277,8 +319,13 @@ def stub_executor(config: CampaignConfig, index: int, root: Path) -> dict[str, A
         {"subtype": f.subtype, "asset_id": f.asset, "class": f.cls, "severity": f.severity}
         for f in spec.faults
     ]
+    pairs = [(f.subtype, f.asset) for f in spec.faults]
     return {**record, "episode_id": episode, "status": "completed", "tier": "analytic_verification",
-            "faults": faults, "files": files, "wall_s": 0.1 * index}  # fmt: skip
+            "attempts": [{"attempt": 0, "episode_index": index * 5, "status": "completed"}],
+            "attempt": 0, "strata": spec.strata, "faults": faults, "files": files,
+            "seed": spec.seed,
+            "split": split_of(ctx.splits, runner.unit_of(spec.strata), pairs),
+            "wall_s": 0.1 * index}  # fmt: skip
 
 
 SMALL = CampaignConfig(11, 60)
@@ -334,7 +381,7 @@ def test_labels_of_test_episodes_stay_in_the_evaluator_store(tmp_path: Path) -> 
     runner.run_campaign(SMALL, tmp_path, workers=1, executor=stub_executor)
     layout = runner.Layout(tmp_path)
     records = runner.load_records(layout, list(range(SMALL.n)))
-    test_ids = {r["episode_id"] for r in records if r["split"] == "test"}
+    test_ids = {r["episode_id"] for r in records if r.get("split") == "test"}
     rows = [
         json.loads(x)
         for x in (layout.agent / "labels_train_validation.jsonl").read_text().splitlines()
@@ -417,19 +464,29 @@ def test_regeneration_from_the_seed_matches_the_stored_hashes(real_campaign: Pat
 
 @pytest.mark.slow
 def test_every_candidate_passes_the_gates_or_is_recorded_as_rejected(real_campaign: Path) -> None:
-    """Each episode of the small campaign is completed, excluded for a validity window, or rejected
-    with a gate and a parameter, and only completed episodes have files.
+    """Each attempt of the small campaign is completed, excluded for a validity window, or rejected
+    with a gate, a slot ends in a completed attempt or in a gap after five failures, and only
+    completed slots have files.
 
     Independent: yes, because the statuses are read from the records the runner wrote.
     """
-    for r in runner.load_records(runner.Layout(real_campaign), list(range(REAL.n))):
-        assert r["status"] in {"completed", "excluded", "rejected", "error"}
-        if r["status"] == "rejected":
-            assert r["rejection"]["gate"] and not r.get("files")
+    records = runner.load_records(runner.Layout(real_campaign), list(range(REAL.n)))
+    assert records
+    for r in records:
+        assert r["status"] in {"completed", "gap"} and r["attempts"]
+        for a in r["attempts"]:
+            assert a["status"] in {"completed", "excluded", "rejected", "error"}
+            assert a["episode_index"] == r["index"] * 5 + a["attempt"]
+            if a["status"] == "rejected":
+                assert a["gate"]
+            if a["status"] == "error":
+                pytest.fail(a["error"])
         if r["status"] == "completed":
-            assert r["files"] and r["tier"] == "analytic_verification"
-        if r["status"] == "error":
-            pytest.fail(r["error"])
+            assert r["attempts"][-1]["status"] == "completed" and r["files"]
+            assert all(a["status"] != "completed" for a in r["attempts"][:-1])
+            assert r["tier"] in {"analytic_verification", "restricted_benchmark"}
+        else:
+            assert len(r["attempts"]) == 5 and not r.get("files")
 
 
 FORBIDDEN = (
@@ -520,3 +577,65 @@ def test_one_and_three_workers_give_the_same_real_episodes(
     mine = runner.load_records(runner.Layout(tmp_path), indices)
     theirs = runner.load_records(runner.Layout(real_campaign), indices)
     assert without_time(mine) == without_time(theirs)
+
+
+FAULT_FIELDS = {
+    "instance_id", "fault_type", "subtype", "asset_id", "severity", "class", "onset_s", "ramp_s",
+    "magnitude", "mode", "activity",
+}  # fmt: skip
+
+
+@pytest.mark.slow
+def test_the_agent_folder_names_no_scenario_stratum_tier_family_or_window(
+    real_campaign: Path,
+) -> None:
+    """Over the agent-visible folder of the small campaign: no scenario name, atmosphere, tier,
+    family, cell or window identifier appears in a file name, in the description or in the
+    observations; the labels file has only its closed set of keys; every completed episode, a
+    healthy one included, has a row in the agent labels or in the evaluator test labels.
+
+    Independent: yes, because the check scans the written files for names taken from the
+    configuration, not from the generator.
+    """
+    layout = runner.Layout(real_campaign)
+    names = [p.stem for p in (repo_scenarios()).glob("*.json")]
+    hidden = [
+        *names, "coastal", "inland", "analytic_verification", "restricted_benchmark", "VW-",
+        "branched", "switch", "concurrent", "family", "stratum", "cell", "window",
+    ]  # fmt: skip
+    done = [
+        r for r in runner.load_records(layout, list(range(REAL.n))) if r["status"] == "completed"
+    ]
+    assert done
+    for path in layout.agent.rglob("*"):
+        assert not any(h in path.name for h in hidden), path
+    readme = (layout.agent / "README.md").read_text(encoding="utf-8")
+    assert "family" not in readme and "VW-" not in readme
+    for r in done:
+        folder = layout.agent / "episodes" / r["episode_id"]
+        rows = runner.read_observations(folder / runner.OBSERVATIONS)
+        text = "\n".join(json.dumps(row, sort_keys=True) for row in rows[::37])
+        assert not any(h in text for h in hidden if h not in {"switch", "window"}), r["episode_id"]
+    labelled = [
+        json.loads(x)
+        for x in (layout.agent / "labels_train_validation.jsonl").read_text().splitlines()
+    ]
+    for row in labelled:
+        assert set(row) == {"episode_id", "split", "healthy", "faults"}
+        assert all(set(f) <= FAULT_FIELDS for f in row["faults"])
+        assert row["healthy"] == (not row["faults"])
+        assert not any(h in json.dumps(row) for h in hidden), row
+    held = [
+        json.loads(x) for x in (layout.evaluator / "labels_test.jsonl").read_text().splitlines()
+    ]
+    ids = [r["episode_id"] for r in labelled] + [r["episode_id"] for r in held]
+    assert sorted(ids) == sorted(r["episode_id"] for r in done)
+    healthy = {r["episode_id"] for r in done if not r["faults"]}
+    assert healthy and healthy <= set(ids)
+    assert all({"family", "tier", "cell"} <= set(r) for r in held)
+
+
+def repo_scenarios() -> Path:
+    from verum.contracts.paths import config_dir
+
+    return config_dir() / "scenarios"
