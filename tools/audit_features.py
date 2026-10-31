@@ -22,7 +22,14 @@ from typing import Any
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
-from verum.evaluation.agent_audit import GRID_S, N_ENDS, mass_balance, window_ends, window_stats
+from verum.evaluation.agent_audit import (
+    GRID_S,
+    N_ENDS,
+    mass_balance,
+    matched_mass_balance,
+    window_ends,
+    window_stats,
+)
 from verum.hydraulics import (
     DeliveryBoundary,
     HydraulicModel,
@@ -225,6 +232,13 @@ def features(run: Run, fam: str, d: int) -> dict[tuple[int, str], np.ndarray]:
         rows: dict[str, np.ndarray] = {}
         rows["mass_balance"] = mass_balance(
             mean["FT-001"], mean["FT-201"], [slope[t] for t in TANK_TAGS], area
+        )
+        rows["mass_balance_matched"] = matched_mass_balance(
+            (run.sums["FT-001"], run.counts["FT-001"]),
+            (run.sums["FT-201"], run.counts["FT-201"]),
+            [(run.sums[t], run.counts[t]) for t in TANK_TAGS],
+            area,
+            length,
         )
         if deliver:
             h = np.array(

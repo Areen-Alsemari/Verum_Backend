@@ -1,11 +1,13 @@
-"""Threshold calibration of the agent-side audit, and its check on a separate healthy set.
+"""Threshold calibration of the agent-side audit, its scale factor and the check on held-out runs.
 
-For each profile and lineup the features of the calibration runs fix the healthy mean and the 99th
-percentile threshold of every feature and window length; the features of the held-out runs give the
-false-alarm rate of those thresholds. The noise floor of the mass-balance slope is compared with the
-hand estimate from the level noise. Results are written to the store and printed as tables.
+For each profile and lineup the features of the 200 calibration runs fix the healthy mean and the
+99th percentile threshold of every feature and window length, and the scale factor that keeps at
+most 1 percent of those runs from an alarm on any feature. Five folds of the calibration runs show
+how much the factor varies, and the 100 held-out runs, which no derivation uses, give the
+false-alarm rates. The noise floor of the mass balance is compared with the hand estimate from
+the level noise.
 
-See D79 and D80.
+See D79, D80, D89 and D89b.
 """
 
 from __future__ import annotations
@@ -29,11 +31,20 @@ from audit_features import (
     load_run,
 )
 
-from verum.evaluation.agent_audit import calibrate, deviation_maxima
+from verum.evaluation.agent_audit import (
+    calibrate,
+    check_calibration_labels,
+    deviation_maxima,
+    folds,
+    run_margin,
+    scale_factor,
+)
+from verum.rng import RandomStreams
 from verum.sensors import load_sensor_config
 from verum.tanks import load_tank_geometry
 
 RESULTS = Path("local/results")
+FOLDS = 5
 Matrix = dict[tuple[int, str], np.ndarray]
 
 
@@ -62,59 +73,71 @@ def group(
     return stacked
 
 
-def thresholds(cal: dict[tuple[int, str], np.ndarray]) -> dict[tuple[int, str], dict[str, Any]]:
+def thresholds(
+    cal: dict[tuple[int, str], np.ndarray], rows: np.ndarray | None = None, boot: int = 200
+) -> dict[tuple[int, str], dict[str, Any]]:
+    """Healthy mean and 99th percentile threshold of every feature, from the chosen runs."""
     out = {}
     for key, series in cal.items():
-        t = calibrate(series[:, 1:, :])
+        chosen = series if rows is None else series[rows]
+        t = calibrate(chosen[:, 1:, :], boot=boot)
         if np.isfinite(t.value) and t.value > 0.0:
             out[key] = {"mean": t.mean, "value": t.value, "error": t.error, "runs": t.runs}
     return out
 
 
-def false_alarms(
-    held: dict[tuple[int, str], np.ndarray], th: dict[tuple[int, str], dict[str, Any]]
-) -> dict[str, Any]:
-    """Per feature and window length, and over all features, the share of held-out runs above 1."""
-    ratios: dict[tuple[int, str], np.ndarray] = {}
+def ratios(
+    data: dict[tuple[int, str], np.ndarray],
+    th: dict[tuple[int, str], dict[str, Any]],
+    rows: np.ndarray | None = None,
+) -> np.ndarray:
+    """Deviation over threshold for each feature, run and design draw: (features, runs, draws)."""
+    out = []
     for key, t in th.items():
-        ratios[key] = deviation_maxima(held[key][:, 1:, :], t["mean"]) / t["value"]
-    per = {f"{k[0]}|{k[1]}": float(np.nanmean(r > 1.0)) for k, r in ratios.items()}
-    by_length = {}
-    for length in WINDOWS_S:
-        stack = np.stack([r for k, r in ratios.items() if k[0] == length])
-        by_length[str(length)] = float(np.mean(np.nanmax(stack, axis=0) > 1.0))
-    every = np.stack(
-        [
-            np.nanmax(np.stack([r for k, r in ratios.items() if k[0] == length]), axis=0)
-            for length in WINDOWS_S
-        ]
-    )
+        series = data[key] if rows is None else data[key][rows]
+        out.append(deviation_maxima(series[:, 1:, :], t["mean"]) / t["value"])
+    return np.stack(out)
+
+
+def derive_scale(
+    cal: dict[tuple[int, str], np.ndarray], labels: list[str], seed_name: str
+) -> dict[str, Any]:
+    """Thresholds, scale factor and the cross-check by folds, from the calibration runs only."""
+    check_calibration_labels(labels)
+    th = thresholds(cal)
+    scale = scale_factor(run_margin(ratios(cal, th)))
+    count = len(labels)
+    rng = RandomStreams(20261201).stream(seed_name)
+    factors, out_of_fold = [], []
+    for held in folds(count, FOLDS, rng):
+        train = np.setdiff1d(np.arange(count), held)
+        th_k = thresholds(cal, train, boot=0)
+        c_k = scale_factor(run_margin(ratios(cal, th_k, train)))
+        factors.append(c_k)
+        out_of_fold += list(run_margin(ratios(cal, th_k, held)) > c_k)
     return {
-        "per_feature": per,
-        "any_by_length": by_length,
-        "any": float(np.mean(every.max(axis=0) > 1.0)),
-    }
+        "thresholds": th, "scale": scale, "fold_scales": factors,
+        "out_of_fold_rate": float(np.mean(out_of_fold)),
+        "in_sample_rate": float(np.mean(run_margin(ratios(cal, th)) > scale)),
+    }  # fmt: skip
 
 
-def family_scale(
-    cal: dict[tuple[int, str], np.ndarray],
+def held_out_rates(
     held: dict[tuple[int, str], np.ndarray],
     th: dict[tuple[int, str], dict[str, Any]],
-) -> dict[str, float]:
-    """Common factor on all thresholds that gives 1 percent of healthy runs an alarm on any feature.
-
-    The factor is the 99th percentile, over calibration runs and draws, of the largest ratio over
-    all features and window lengths; the rate on the held-out runs is then checked against it.
-    """
-
-    def worst(data: dict[tuple[int, str], np.ndarray]) -> np.ndarray:
-        ratios = [
-            deviation_maxima(data[k][:, 1:, :], t["mean"]) / t["value"] for k, t in th.items()
-        ]
-        return np.nanmax(np.stack(ratios), axis=0)
-
-    scale = float(np.percentile(worst(cal), 99.0))
-    return {"scale": scale, "held_out_rate": float(np.mean(worst(held) > scale))}
+    scale: float,
+) -> dict[str, Any]:
+    """False-alarm rates on the held-out runs: per feature (scaled and not) and on any feature."""
+    r = ratios(held, th)
+    per_run = np.nanmax(r, axis=0)
+    per_feature = {f"{k[0]}|{k[1]}": float(np.nanmean(r[i] > 1.0)) for i, k in enumerate(th)}
+    scaled = {f"{k[0]}|{k[1]}": float(np.nanmean(r[i] > scale)) for i, k in enumerate(th)}
+    return {
+        "per_feature": per_feature, "per_feature_scaled": scaled,
+        "any_unscaled": float(np.mean(run_margin(r) > 1.0)),
+        "any_scaled": float(np.mean(run_margin(r) > scale)),
+        "worst_draw_ignored_any_scaled": float(np.mean(per_run.max(axis=-1) > scale)),
+    }  # fmt: skip
 
 
 def hand_floor(length_s: int) -> float:
@@ -135,26 +158,33 @@ def main() -> None:
             for fam in LAYOUT:
                 cal = group(profile, fam, "cal", CALIBRATION_RUNS, pool)
                 held = group(profile, fam, "held", HELD_OUT_RUNS, pool)
-                th = thresholds(cal)
-                fa = false_alarms(held, th)
-                fa.update(family_scale(cal, held, th))
-                rates = np.array(list(fa["per_feature"].values()))
-                fa["mean_per_feature"] = float(rates.mean())
-                fa["share_above_2_percent"] = float(np.mean(rates > 0.02))
+                labels = [f"cal|{fam}|{profile}|{k}" for k in range(CALIBRATION_RUNS)]
+                derived = derive_scale(cal, labels, f"audit_folds/{profile}/{fam}")
+                th, scale = derived["thresholds"], derived["scale"]
+                fa = held_out_rates(held, th, scale)
+                rates = np.array(list(fa["per_feature_scaled"].values()))
+                fa.update(
+                    scale=scale, fold_scales=derived["fold_scales"],
+                    out_of_fold_rate=derived["out_of_fold_rate"],
+                    in_sample_rate=derived["in_sample_rate"],
+                    mean_per_feature_scaled=float(rates.mean()),
+                    share_above_2_percent_scaled=float(np.mean(rates > 0.02)),
+                    mean_per_feature=float(np.mean(list(fa["per_feature"].values()))),
+                )  # fmt: skip
                 floor = {
-                    str(length): float(np.nanstd(cal[(length, "mass_balance")][:, 1, :]))
-                    for length in WINDOWS_S
+                    name: {
+                        str(length): float(np.nanstd(cal[(length, name)][:, 1, :]))
+                        for length in WINDOWS_S
+                    }
+                    for name in ("mass_balance", "mass_balance_matched")
                 }
                 summary[f"{profile}|{fam}"] = {
                     "thresholds": {f"{k[0]}|{k[1]}": v for k, v in th.items()},
-                    "false_alarm": fa,
-                    "mass_balance_std": floor,
-                    "runs": [
-                        int(next(iter(cal.values())).shape[0]),
-                        int(next(iter(held.values())).shape[0]),
-                    ],
-                }
-                print(profile, fam, "any-feature false alarm", fa["any"], flush=True)
+                    "false_alarm": fa, "mass_balance_std": floor["mass_balance"],
+                    "matched_std": floor["mass_balance_matched"],
+                    "runs": [CALIBRATION_RUNS, HELD_OUT_RUNS],
+                }  # fmt: skip
+                print(profile, fam, f"scale {scale:.3f}", "held-out", fa["any_scaled"], flush=True)
     summary["hand_floor"] = {str(length): hand_floor(length) for length in WINDOWS_S}
     (RESULTS / "audit_calibration.json").write_text(json.dumps(summary), encoding="utf-8")
 
@@ -163,42 +193,52 @@ def report() -> None:
     """Tables of the calibration from the stored summary."""
     d = json.loads((RESULTS / "audit_calibration.json").read_text(encoding="utf-8"))
     hand = d.pop("hand_floor")
-    out = ["# Calibration of the thresholds", ""]
-    head = "| profile | lineup | calibration runs | held-out runs | threshold error, median | max |"
-    out += ["## Runs and percentile error", "", head, "| --- | --- | --- | --- | --- | --- |"]
+    out = ["# Calibration, scale factor and held-out check", ""]
+    head = "| profile | lineup | scale | folds: min | max | spread (std) | out-of-fold rate "
+    head += "| in-sample rate | held-out, any feature |"
+    out += ["## Scale factor", "", head, "| --- |" + " --- |" * 8]
     for key, v in d.items():
         profile, fam = key.split("|")
-        rel = [t["error"] / t["value"] for t in v["thresholds"].values()]
+        fa = v["false_alarm"]
+        f = np.array(fa["fold_scales"])
         out.append(
-            f"| {profile} | {fam} | {v['runs'][0]} | {v['runs'][1]} | "
-            f"{100 * np.median(rel):.1f} percent | {100 * max(rel):.1f} percent |"
+            f"| {profile} | {fam} | {fa['scale']:.3f} | {f.min():.3f} | {f.max():.3f} | "
+            f"{f.std(ddof=1):.3f} | {100 * fa['out_of_fold_rate']:.1f} percent | "
+            f"{100 * fa['in_sample_rate']:.1f} percent | {100 * fa['any_scaled']:.0f} percent |"
         )
-    head = "| profile | lineup | mean per feature | features above 2 percent | any feature "
-    head += "| scale | any feature, scaled |"
-    out += ["", "## False-alarm rates on the held-out runs", "", head, "| --- |" + " --- |" * 6]
+    head = "| profile | lineup | any feature, unscaled | per feature, unscaled (mean) "
+    head += "| per feature, scaled (mean) | features above 2 percent, scaled |"
+    out += ["", "## False-alarm rates on the held-out runs", "", head, "| --- |" + " --- |" * 5]
     for key, v in d.items():
         profile, fam = key.split("|")
         fa = v["false_alarm"]
         out.append(
-            f"| {profile} | {fam} | {100 * fa['mean_per_feature']:.2f} percent | "
-            f"{100 * fa['share_above_2_percent']:.0f} percent | {100 * fa['any']:.0f} percent | "
-            f"{fa['scale']:.2f} | {100 * fa['held_out_rate']:.0f} percent |"
+            f"| {profile} | {fam} | {100 * fa['any_unscaled']:.0f} percent | "
+            f"{100 * fa['mean_per_feature']:.2f} percent | "
+            f"{100 * fa['mean_per_feature_scaled']:.2f} percent | "
+            f"{100 * fa['share_above_2_percent_scaled']:.0f} percent |"
         )
-    out += ["", "## Mass-balance noise floor (m3/h)", ""]
-    out += ["| profile | lineup | 60 s | 300 s | 900 s |", "| --- | --- | --- | --- | --- |"]
-    out.append(f"| hand | all | {hand['60']:.2f} | {hand['300']:.2f} | {hand['900']:.3f} |")
+    out += ["", "## Mass-balance noise floor (m3/h, standard deviation over healthy windows)", ""]
+    out += ["| profile | lineup | feature | 60 s | 300 s | 900 s |", "| --- |" + " --- |" * 5]
+    out.append(
+        f"| hand | all | level noise | {hand['60']:.2f} | {hand['300']:.2f} | {hand['900']:.3f} |"
+    )
     for key, v in d.items():
-        m = v["mass_balance_std"]
         profile, fam = key.split("|")
-        out.append(f"| {profile} | {fam} | {m['60']:.2f} | {m['300']:.2f} | {m['900']:.3f} |")
+        for name, field in (("difference", "mass_balance_std"), ("matched", "matched_std")):
+            m = v[field]
+            out.append(
+                f"| {profile} | {fam} | {name} | {m['60']:.2f} | {m['300']:.2f} | {m['900']:.3f} |"
+            )
     for key, v in d.items():
         out += ["", f"## Features of {key.replace('|', ' ')}", ""]
         out += ["| window | feature | healthy mean | threshold | threshold error | false alarms |"]
         out += ["| --- | --- | --- | --- | --- | --- |"]
         trends: list[float] = []
-        for name, t in sorted(v["thresholds"].items(), key=lambda kv: feature_order(kv[0])):
+        ordered = sorted(v["thresholds"].items(), key=lambda kv: feature_order(kv[0]))
+        for name, t in ordered:
             length, feature = name.split("|")
-            rate = v["false_alarm"]["per_feature"][name]
+            rate = v["false_alarm"]["per_feature_scaled"][name]
             if feature.startswith("trend:"):
                 trends.append(rate)
                 continue

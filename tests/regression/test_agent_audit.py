@@ -20,12 +20,17 @@ from verum.evaluation.agent_audit import (
     BLOCK_S,
     N_ENDS,
     calibrate,
+    check_calibration_labels,
     crossing,
     deviation_maxima,
     exceedance,
+    folds,
     held,
     klass,
     mass_balance,
+    matched_mass_balance,
+    run_margin,
+    scale_factor,
     window_ends,
     window_stats,
 )
@@ -220,3 +225,110 @@ def test_a_boundary_at_the_first_point_and_a_flipped_severity() -> None:
     assert crossing([(0.02, 5.0), (0.01, 6.0)], 3.0) == 0.02
     flipped = crossing([(-0.02, 0.5), (-0.005, 2.0)], 1.0)
     assert flipped is not None and -0.02 < flipped < -0.005
+
+
+def flow_trapezoid() -> np.ndarray:
+    """Block flows of 300 m3/h that ramp to 500 m3/h between 1200 s and 1260 s and stay there."""
+    t = (np.arange(int(DURATION_S / BLOCK_S)) + 0.5) * BLOCK_S
+    return np.asarray(np.clip(300.0 + 200.0 * (t - 1200.0) / 60.0, 300.0, 500.0))
+
+
+def tank_of(flow_in: np.ndarray) -> np.ndarray:
+    """Block mean level of a tank that receives ``flow_in`` and nothing leaves it."""
+    inflow_m3 = np.cumsum(flow_in * BLOCK_S / 3600.0) - 0.5 * flow_in * BLOCK_S / 3600.0
+    return 7.0 + inflow_m3 / AREA_M2
+
+
+def test_the_matched_weight_balance_cancels_a_linear_ramp_of_flow() -> None:
+    """A flow that rises linearly through the run and fills a tank gives a balance of zero.
+
+    The volume is quadratic in time and all three regressions weight it alike.
+    Independent: yes, because a balanced plant has a balance of zero by definition.
+    """
+    n = int(DURATION_S / BLOCK_S)
+    flow_in = 100.0 + 0.1 * (np.arange(n) + 0.5) * BLOCK_S
+    ones = np.full(n, 2.0)
+    counts_flow, counts_tank = np.full(n, 10.0), np.full(n, 2.0)
+    tank = tank_of(flow_in)
+    for length in (60, 300, 900):
+        balance = matched_mass_balance(
+            (flow_in * counts_flow, counts_flow),
+            (np.zeros(n), counts_flow),
+            [
+                (tank * counts_tank, counts_tank),
+                (7.0 * ones, counts_tank),
+                (7.0 * ones, counts_tank),
+            ],
+            AREA_M2,
+            length,
+        )
+        assert np.nanmax(np.abs(balance)) < 1e-6
+
+
+def test_the_matched_balance_cancels_a_ramp_inside_the_window_and_the_plain_one_does_not() -> None:
+    """A ramp of flow between two plateaus leaves the plain balance off by tens of m3/h.
+
+    The matched balance stays near zero. Independent: yes, because the plant is balanced by
+    construction, so every residual is an artefact.
+    """
+    n = int(DURATION_S / BLOCK_S)
+    flow_in = flow_trapezoid()
+    tank = tank_of(flow_in)
+    counts_flow, counts_tank = np.full(n, 10.0), np.full(n, 2.0)
+    flat = (np.full(n, 14.0), counts_tank)
+    matched = matched_mass_balance(
+        (flow_in * counts_flow, counts_flow), (np.zeros(n), counts_flow),
+        [(tank * counts_tank, counts_tank), flat, flat], AREA_M2, 900,
+    )  # fmt: skip
+    mean_in, _ = window_stats(flow_in * counts_flow, counts_flow, 900)
+    _, slope = window_stats(tank * counts_tank, counts_tank, 900)
+    plain = mass_balance(
+        mean_in, np.zeros(N_ENDS), [slope, np.zeros(N_ENDS), np.zeros(N_ENDS)], AREA_M2
+    )
+    ends = window_ends()
+    inside = (ends > 1260.0) & (
+        ends < 1200.0 + 900.0
+    )  # windows that contain the ramp and a plateau
+    assert np.nanmax(np.abs(plain[inside])) > 10.0
+    assert np.nanmax(np.abs(matched[inside])) < 0.02 * np.nanmax(np.abs(plain[inside]))
+
+
+def test_the_scale_factor_is_the_margin_that_at_most_one_percent_of_runs_exceed() -> None:
+    """With 200 runs of margins 1 to 200 the factor is 198, because two runs may exceed it.
+
+    Independent: yes, because the count of allowed alarms is 1 percent of 200 by hand.
+    """
+    margins = np.arange(1.0, 201.0)
+    factor = scale_factor(margins)
+    assert factor == 198.0 and np.sum(margins > factor) == 2
+
+
+def test_the_same_seeds_give_the_same_folds_and_scale_factor() -> None:
+    """Folds and the scale factor derived again with the same stream name are the same.
+
+    Independent: no, because it compares the function with itself; it guards against hidden state.
+    """
+    from verum.rng import RandomStreams
+
+    def derive(name: str) -> tuple[list[list[int]], float]:
+        rng = RandomStreams(20261201).stream(name)
+        parts = [p.tolist() for p in folds(200, 5, rng)]
+        series = np.random.default_rng(2).standard_normal((200, 5, 30))
+        ratio = np.abs(series).max(axis=-1)[None]
+        return parts, scale_factor(run_margin(ratio))
+
+    assert derive("audit_folds/v1/A") == derive("audit_folds/v1/A")
+    assert derive("audit_folds/v1/A")[0] != derive("audit_folds/v2/A")[0]
+    parts = derive("audit_folds/v1/A")[0]
+    assert sorted(sum(parts, [])) == list(range(200)) and {len(p) for p in parts} == {40}
+
+
+def test_a_held_out_run_cannot_enter_a_derivation() -> None:
+    """The derivation refuses any input whose label is a held-out run.
+
+    Independent: yes, because the rule is that no held-out label may appear in the inputs.
+    """
+    calibration = [f"cal|A|v1|{k}" for k in range(200)]
+    check_calibration_labels(calibration)
+    with pytest.raises(ValueError, match="held-out"):
+        check_calibration_labels([*calibration, "held|A|v1|3"])

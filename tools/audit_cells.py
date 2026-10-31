@@ -1,12 +1,12 @@
 """Margins, classes and time to detect of the cells of the fault grid.
 
 A cell is one fault of one type on one asset at one severity. Its features are compared with the
-calibrated thresholds of its profile and lineup. The margin is the largest deviation over all
-windows divided by the threshold, best over the three window lengths and worst over the five design
-draws. The held margin and the time to detect use three consecutive windows. A contact or run
-status that changes after the onset is a margin of 3 at once.
+calibrated thresholds of its profile and lineup, multiplied by the scale factor. The margin is the
+largest deviation over all windows divided by the scaled threshold, best over the window lengths
+and worst over the five design draws. The held margin and the time to detect use three consecutive
+windows. A contact or run status that changes after the onset is a margin of 3 at once.
 
-See D79 to D81.
+See D79 to D81 and D89.
 """
 
 from __future__ import annotations
@@ -84,12 +84,14 @@ def activity_of(cell: Cell, modes: Any) -> str:
     )
 
 
-def per_draw(feats: dict[tuple[int, str], np.ndarray], th: Thresholds) -> dict[int, dict[str, Any]]:
-    """Largest and held margin per window length, with the exceedance series of every feature."""
+def per_draw(
+    feats: dict[tuple[int, str], np.ndarray], th: Thresholds, scale: float
+) -> dict[int, dict[str, Any]]:
+    """Largest and held scaled margin per window length, with the exceedance of every feature."""
     out: dict[int, dict[str, Any]] = {}
     for length in WINDOWS_S:
         z = {
-            n: exceedance(s, th[f"{k}|{n}"]["mean"], th[f"{k}|{n}"]["value"])
+            n: exceedance(s, th[f"{k}|{n}"]["mean"], th[f"{k}|{n}"]["value"] * scale)
             for (k, n), s in feats.items()
             if k == length and f"{k}|{n}" in th
         }
@@ -117,50 +119,52 @@ def detect_time(z: dict[str, np.ndarray]) -> float | None:
 def evaluate(
     label: str, th: Thresholds, scale: float = 1.0, onset_s: float = ONSET_S
 ) -> dict[str, Any]:
-    """Margins of one stored run (a fault cell or a healthy run) against the thresholds."""
+    """Scaled margins of one stored run (a fault cell or a healthy run).
+
+    The margin is the largest over window lengths for the worst of the design draws, the same
+    quantity that fixes the scale factor on healthy runs. ``unscaled_margin`` is the margin of the
+    thresholds before the factor.
+    """
     cell = parse(label)
     fam = label.split("|")[1] if cell is None else cell.family
     run = load_run(path_of(label))
     if run.rejected:
         return {"label": label, "rejected": run.rejected}
-    draws = [per_draw(features(run, fam, d), th) for d in range(1, len(DRAWS))]
-    out: dict[str, Any] = {"label": label, "rejected": None}
-    by_length: dict[str, float] = {}
-    held_by_length: dict[str, float] = {}
-    detect: dict[str, float | None] = {}
-    for length in WINDOWS_S:
-        margins = [d[length]["margin"] for d in draws]
-        worst = int(np.argmin(margins))
-        by_length[str(length)] = margins[worst]
-        held_by_length[str(length)] = min(d[length]["held"] for d in draws)
-        detect[str(length)] = (
-            detect_time(draws[worst][length]["z"]) if margins[worst] >= 1.0 else None
-        )
-    best = max(by_length, key=lambda k: by_length[k])
+    draws = [per_draw(features(run, fam, d), th, scale) for d in range(1, len(DRAWS))]
+    by_draw = [max(d[length]["margin"] for length in WINDOWS_S) for d in draws]
+    worst = int(np.argmin(by_draw))
+    by_length = {str(w): min(d[w]["margin"] for d in draws) for w in WINDOWS_S}
+    held_by_length = {str(w): min(d[w]["held"] for d in draws) for w in WINDOWS_S}
+    detect = {
+        str(w): detect_time(draws[int(np.argmin([d[w]["margin"] for d in draws]))][w]["z"])
+        if by_length[str(w)] >= 1.0
+        else None
+        for w in WINDOWS_S
+    }
+    best = max(WINDOWS_S, key=lambda w: draws[worst][w]["margin"])
     changes = contact_changes(run.events, onset_s)
-    discrete = bool(changes)
+    margin, held_margin, discrete = by_draw[worst], max(held_by_length.values()), bool(changes)
+    out: dict[str, Any] = {"label": label, "rejected": None, "scale": scale}
     out.update(
-        margin=max(by_length.values()),
+        unscaled_margin=margin * scale,
+        margin=margin,
         by_length=by_length,
-        held=max(held_by_length.values()),
+        held=held_margin,
         held_by_length=held_by_length,
         detect=detect,
         discrete=discrete,
-        dominant="contact" if discrete else draws[0][int(best)]["dominant"],
+        dominant="contact" if discrete else draws[worst][best]["dominant"],
         changed_tags=sorted({tag for _, tag in changes}),
         signature=signature(features(run, fam, 0), th),
     )
-    family = {k: v / scale for k, v in by_length.items()}  # alarm rate 1 percent on any feature
     if discrete:
-        out["margin"] = max(out["margin"], CLEAR)
-        out["held"] = max(out["held"], CLEAR)
+        out["margin"] = max(margin, CLEAR)
+        out["held"] = max(held_margin, CLEAR)
         out["by_length"] = {k: max(v, CLEAR) for k, v in by_length.items()}
-        family = {k: max(v, CLEAR) for k, v in family.items()}
         out["detect"] = {
             k: min([x for x in (v, changes[0][0] - onset_s) if x is not None])
             for k, v in detect.items()
         }
-    out.update(scale=scale, family_by_length=family, family_margin=max(family.values()))
     return out
 
 

@@ -97,7 +97,10 @@ def calibrate(
         for _ in range(boot)
     ]
     return Threshold(
-        mean, float(np.nanpercentile(maxima, percentile)), float(np.std(resampled, ddof=1)), runs
+        mean,
+        float(np.nanpercentile(maxima, percentile)),
+        float(np.std(resampled, ddof=1)) if boot > 1 else 0.0,
+        runs,
     )
 
 
@@ -138,3 +141,77 @@ def crossing(points: list[tuple[float, float]], level: float) -> float | None:
             sign = -1.0 if x0 < 0 else 1.0
             return sign * math.exp(math.log(abs(x0)) + f * (math.log(abs(x1)) - math.log(abs(x0))))
     return None
+
+
+HELD_OUT_PREFIX = "held|"
+
+
+def block_series(sums: np.ndarray, counts: np.ndarray) -> np.ndarray:
+    """Block means with the empty blocks filled by linear interpolation in time."""
+    mean = np.divide(sums, counts, out=np.full(len(sums), np.nan), where=counts > 0)
+    index = np.arange(len(mean))
+    valid = np.isfinite(mean)
+    return np.asarray(np.interp(index, index[valid], mean[valid]))
+
+
+def equal_weight_slopes(y: np.ndarray, length_s: int) -> np.ndarray:
+    """Least-squares slope per second of a block series in each window, equal weights."""
+    k = int(length_s / BLOCK_S)
+    t = (np.arange(len(y)) + 0.5) * BLOCK_S
+    out = np.full(N_ENDS, np.nan)
+    for i, hi in enumerate((window_ends() / BLOCK_S).astype(int)):
+        lo = hi - k
+        if lo >= 0:
+            tw, yw = t[lo:hi] - t[lo:hi].mean(), y[lo:hi]
+            out[i] = float(np.sum(tw * (yw - yw.mean())) / np.sum(tw * tw))
+    return out
+
+
+def passed_volume_m3(flow_m3h: np.ndarray) -> np.ndarray:
+    """Volume that has passed up to the centre of each block, from block mean flows."""
+    increment = flow_m3h * BLOCK_S / 3600.0
+    return np.cumsum(increment) - 0.5 * increment
+
+
+def matched_mass_balance(
+    inflow: tuple[np.ndarray, np.ndarray],
+    outflow: tuple[np.ndarray, np.ndarray],
+    tanks: list[tuple[np.ndarray, np.ndarray]],
+    area_m2: float,
+    length_s: int,
+) -> np.ndarray:
+    """Inflow minus outflow minus tank volume rate, with the three volumes regressed alike.
+
+    Each argument is a (sums, counts) pair per block. The result is in m3/h; a change of flow
+    inside the window enters the three slopes with the same weights and cancels.
+    """
+    v_in = passed_volume_m3(block_series(*inflow))
+    v_out = passed_volume_m3(block_series(*outflow))
+    v_tank = area_m2 * np.sum([block_series(*t) for t in tanks], axis=0)
+    return equal_weight_slopes(v_in - v_out - v_tank, length_s) * 3600.0
+
+
+def run_margin(ratios: np.ndarray) -> np.ndarray:
+    """Margin of each healthy run: largest ratio over features, smallest over the design draws.
+
+    ``ratios`` has shape (features, runs, draws), each entry a deviation over its threshold.
+    """
+    return np.asarray(np.min(np.max(ratios, axis=0), axis=-1))
+
+
+def scale_factor(margins: np.ndarray, max_rate: float = 0.01) -> float:
+    """Smallest factor for which at most ``max_rate`` of the runs have a margin above it."""
+    allowed = int(np.floor(max_rate * len(margins)))
+    return float(np.sort(margins)[::-1][allowed])
+
+
+def check_calibration_labels(labels: list[str]) -> None:
+    """Refuse a derivation whose inputs include a held-out run."""
+    held_out = [label for label in labels if label.startswith(HELD_OUT_PREFIX)]
+    if held_out:
+        raise ValueError(f"held-out runs are not inputs of a threshold or a scale: {held_out[:3]}")
+
+
+def folds(count: int, number: int, rng: np.random.Generator) -> list[np.ndarray]:
+    """A random partition of ``count`` run indices into ``number`` folds."""
+    return [np.sort(part) for part in np.array_split(rng.permutation(count), number)]
