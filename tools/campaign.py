@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 from collections import Counter
 from pathlib import Path
 
@@ -23,24 +22,19 @@ PILOT = CampaignConfig(PILOT_SEED, 200, Shares(0.5, 0.4, 0.1))
 
 
 def config_of(args: argparse.Namespace) -> CampaignConfig:
+    """The pilot, the stored configuration of an existing campaign, or a new one."""
     if args.command == "pilot":
         return PILOT
+    if args.command in ("verify", "summary"):
+        return runner.load_config(args.root)
     return CampaignConfig(args.seed, args.n)
 
 
-def verify(config: CampaignConfig, root: Path, count: int) -> int:
-    layout = runner.Layout(root)
-    records = [
-        r for r in runner.load_records(layout, list(range(config.n))) if r["status"] == "completed"
-    ]
-    sample = random.Random(config.seed).sample(records, min(count, len(records)))
-    bad = 0
-    for r in sample:
-        stored = r["files"][f"agent_visible/episodes/{r['episode_id']}/{runner.OBSERVATIONS}"]
-        again = runner.regenerate(config, r, layout.work)
-        bad += int(stored != again)
-        print(r["episode_id"], "match" if stored == again else "DIFFERENT", flush=True)
-    return bad
+def verify(config: CampaignConfig, root: Path, count: int, workers: int | None) -> int:
+    results = runner.verify_sample(config, root, count, workers)
+    for episode, ok in results:
+        print(episode, "match" if ok else "DIFFERENT")
+    return sum(1 for _, ok in results if not ok)
 
 
 def summary(config: CampaignConfig, root: Path) -> None:
@@ -71,7 +65,7 @@ def main() -> None:
         print(json.dumps(runner.accounting(runner.Layout(args.root), list(range(config.n)))))
         print(len(manifest["episodes"]), "records")
     elif args.command == "verify":
-        raise SystemExit(verify(config, args.root, args.sample))
+        raise SystemExit(verify(config, args.root, args.sample, args.workers))
     else:
         summary(config, args.root)
 

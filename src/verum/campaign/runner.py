@@ -15,6 +15,7 @@ import gzip
 import hashlib
 import json
 import os
+import random
 import shutil
 import time
 from collections.abc import Callable
@@ -26,7 +27,7 @@ from typing import Any
 
 from verum.campaign.classes import ClassTable
 from verum.campaign.eligibility import model_and_table
-from verum.campaign.plan import CampaignConfig, Slot, build_plan
+from verum.campaign.plan import CampaignConfig, Shares, Slot, build_plan
 from verum.campaign.sampler import EpisodeSpec, Sampler
 from verum.campaign.splits import SplitPlan, build_split_plan, split_of
 from verum.contracts.errors import ContractError
@@ -40,6 +41,7 @@ MIN_FREE_GB = 20.0
 MAX_WORKERS = 6
 OBSERVATIONS = "observations.jsonl.gz"
 PAIR_SEPARATION_S = 300.0
+CONFIG_FILE = "campaign_config.json"
 Executor = Callable[[CampaignConfig, int, Path], dict[str, Any]]
 
 
@@ -80,7 +82,10 @@ def check_disk(root: Path, minimum_gb: float = MIN_FREE_GB) -> float:
 
 
 def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """Hash of the content of a file; a gzip file is hashed after decompression, because the
+    compressed bytes carry the time at which they were written."""
+    data = gzip.decompress(path.read_bytes()) if path.suffix == ".gz" else path.read_bytes()
+    return hashlib.sha256(data).hexdigest()
 
 
 @dataclass
@@ -241,6 +246,12 @@ def execute_episode(config: CampaignConfig, index: int, root: Path) -> dict[str,
     return record
 
 
+def load_config(root: Path) -> CampaignConfig:
+    """The configuration a campaign was run with, as stored at its root."""
+    raw = json.loads((root / CONFIG_FILE).read_text(encoding="utf-8"))
+    return CampaignConfig(**{**raw, "shares": Shares(**raw["shares"])})
+
+
 def record_valid(layout: Layout, index: int) -> bool:
     """A record exists and every file it lists is present with the stored hash."""
     path = layout.records / f"{index:06d}.json"
@@ -274,6 +285,7 @@ def run_campaign(
     check_disk(root)
     layout = Layout(root)
     layout.records.mkdir(parents=True, exist_ok=True)
+    (root / CONFIG_FILE).write_text(json.dumps(asdict(config), sort_keys=True), encoding="utf-8")
     wanted = list(range(config.n)) if indices is None else indices
     pending = [i for i in wanted if not record_valid(layout, i)]
     n = worker_count(workers)
@@ -425,3 +437,24 @@ def regenerate(config: CampaignConfig, record: dict[str, Any], scratch: Path) ->
 def read_observations(path: Path) -> list[dict[str, Any]]:
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         return [json.loads(line) for line in handle]
+
+
+def _regenerate_one(args: tuple[CampaignConfig, dict[str, Any], Path]) -> tuple[str, bool]:
+    config, record, scratch = args
+    key = f"agent_visible/episodes/{record['episode_id']}/{OBSERVATIONS}"
+    return record["episode_id"], record["files"][key] == regenerate(config, record, scratch)
+
+
+def verify_sample(
+    config: CampaignConfig, root: Path, count: int, workers: int | None = None
+) -> list[tuple[str, bool]]:
+    """Rebuild ``count`` completed episodes, chosen by the campaign seed, and compare the hashes."""
+    layout = Layout(root)
+    done = [r for r in load_records(layout, list(range(config.n))) if r["status"] == "completed"]
+    chosen = random.Random(config.seed).sample(done, min(count, len(done)))
+    jobs = [(config, r, layout.work) for r in chosen]
+    n = worker_count(workers)
+    if n == 1 or len(jobs) <= 1:
+        return [_regenerate_one(j) for j in jobs]
+    with Pool(n) as pool:
+        return pool.map(_regenerate_one, jobs, chunksize=1)
