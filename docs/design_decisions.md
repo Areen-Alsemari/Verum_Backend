@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 15 (2026-11-01). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 16 (2026-11-02). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -87,11 +87,14 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D75 | Misrouting (b) eligibility | SIM | 1.0 |
 | D76 | Latent faults | DESIGN | 1.0 |
 | D77 | Agent-side detectability audit | DESIGN | 2.0 (supersedes 1.0) |
-| D78 | Severity classes | DESIGN | 2.0 (supersedes 1.0) |
+| D78 | Severity classes | DESIGN | 3.0 (supersedes 2.0) |
 | D79 | Calibrated feature thresholds and single-window margin | DESIGN | 1.0 |
 | D80 | Window lengths and slope features | DESIGN | 1.0 |
 | D81 | Held margin as a secondary column | DESIGN | 1.0 |
 | D82 | Limits carried to the dataset card | DESIGN | 1.0 |
+| D89 | Scaled class margins | DESIGN | 1.0 |
+| D89b | Matched-weight mass balance | DESIGN | 1.0 |
+| D89c | Floor boundaries | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -992,7 +995,18 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 
 ## D78 - Severity classes
 
-- **Version:** 2.0 (2026-11-01)  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D68
+- **Version:** 3.0 (2026-11-02)  **Status:** DESIGN  **Supersedes:** 2.0  **Refines:** D68
+- **Decision.**
+  - For an episode the margin m is the scaled margin of D89. The class is `invisible` for m below 1, `marginal` for m from 1 to below 3 and `clear` for m from 3.
+  - A later sampler allocates equally across the classes that the fault type populates and draws log-uniformly within a class.
+  - The boundaries per (fault type, asset class) are stored in `config/severity_classes.json` as the severity coordinate from which the margin reaches 1 and 3 (the median over the assets of the class, log-log interpolation across the 8 severities); a boundary that the margin of any asset of the class does not reach inside the range is an unresolved record. Floor boundaries are marked as in D89c.
+- **Reason.** Sampling log-uniformly over the whole range puts most episodes in one class; the classes make the share of hard and impossible cases explicit. Version 2.0 used the margin of D79, which a healthy run exceeds in about 40 percent of cases.
+- **Sensitivity required.** The share of episodes per class under the old and the class-balanced sampling; the boundaries under profile v1.
+- **Notes.** No severity range is changed to improve the shares.
+
+## D78 - Severity classes (version 2.0, superseded)
+
+- **Version:** 2.0 (2026-11-01)  **Superseded by:** 3.0  **Status:** DESIGN  **Supersedes:** 1.0  **Refines:** D68
 - **Decision.**
   - For an episode the margin m is the single-window margin of D79. The class is `invisible` for m below 1, `marginal` for m from 1 to below 3 and `clear` for m from 3.
   - A later sampler allocates equally across the classes that the fault type populates and draws log-uniformly within a class.
@@ -1074,6 +1088,40 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** The limits follow from the model and from the grid; a reader of the dataset needs them stated.
 - **Sensitivity required.** None.
 - **Notes.** The first limit is a property of the steady network solve, not of the leak law.
+
+## D89 - Scaled class margins
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D79
+- **Decision.**
+  - For each lineup and profile the thresholds of D79 are multiplied by one scale factor, the smallest factor for which at most 1 percent of the calibration runs raise an alarm on any feature.
+  - The margin of a run, healthy or faulted, is the largest ratio of deviation to threshold over features and window lengths, taken for the worst of the five design draws; a run raises an alarm when this margin exceeds the factor.
+  - The scaled margin of a cell is its margin divided by the factor. Classes, boundaries, detection counts and times to detect use the scaled margin.
+  - The factor is derived on the 200 calibration runs only. It is cross-checked by 5 folds of those runs, in which the thresholds and the factor are derived on four fifths and the alarm rate is measured on the remaining fifth, and the spread of the factor over the folds is reported. Its false-alarm rate is then measured on the 100 held-out runs, per feature and on any feature.
+- **Reason.** The thresholds of D79 give each feature a false-alarm rate of 1 percent, but a cell takes the largest margin over about 50 features and three window lengths, and about 40 percent of healthy runs then reach a margin of 1. A single factor restores 1 percent on any feature.
+- **Sensitivity required.** The spread of the factor over the folds; the false-alarm rate on the held-out runs; the 1 percent level.
+- **Notes.** The earlier report derived the factor on the calibration runs and described the resulting rate as 1 percent on any feature; that rate holds on those runs. The rate on other runs is the one measured on the held-out set, and that statement is superseded. No held-out run is used to derive a threshold or the factor.
+
+## D89b - Matched-weight mass balance
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D80
+- **Decision.**
+  - A second mass-balance feature is added. The volume that passed the inlet meter, the volume that passed the outlet meter and the summed tank volume from LT are each formed on the 10 s block grid and regressed over the window by least squares with the same weights.
+  - The feature is the slope of the inflow volume minus the slope of the outflow volume minus the slope of the tank volume, in m3/h. A change of flow inside the window is then weighted in the three terms alike and cancels.
+  - The feature joins the set of features; the margin of a cell is the largest over features as before. The mass balance of D80 stays in the set.
+- **Reason.** The mass balance of D80 compares the mean of a flow with the slope of a volume, which weight the window differently; under the regimes of D73 a ramp inside the window leaves a residual that raises the noise floor at 300 and 900 s well above the level noise.
+- **Sensitivity required.** The noise floor of the feature at 60, 300 and 900 s under both profiles against the mass balance of D80.
+- **Notes.** A missing block is filled by linear interpolation in time before the volumes are formed.
+
+## D89c - Floor boundaries
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D78
+- **Decision.**
+  - A class boundary that equals the lower end of the range of its fault is a floor boundary: the class begins at or below the start of the range.
+  - It is marked as a floor in the class file, unless the scaled margin reaches the level of the boundary at that end for every asset of the class; in that case the file records the smallest scaled margin at that end instead.
+  - A sampler treats a floor boundary as "the class begins at or below the range start" and does not count it as a detection threshold.
+- **Reason.** A boundary at the start of the range is a statement about the range, not a measured threshold, and a reader must not take it for one.
+- **Sensitivity required.** None.
+- **Notes.** The parameter record has a fixed set of fields, so the marks are stored in a separate mapping of the class file and the records are unchanged.
 
 ## Episode profile
 
