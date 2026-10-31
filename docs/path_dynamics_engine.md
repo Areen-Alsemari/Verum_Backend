@@ -95,7 +95,7 @@ A stroke is judged only if the flow through the valve is at least 10 percent of 
 - `rigid_column_unavailable`: a branched lineup;
 - `dead_leg_held_pressure_unvalidated` (kind `dead_leg_unvalidated`): an isolated segment holds a pressure more than 0.5 bar from its target; the window closes below 0.05 bar (D54).
 
-Each window has a start, an end, a reason and the ratio duration / round trip (null for a branched lineup and for a dead-leg window). Windows are hidden records: the `validity_windows` dataset, the `active_validity_window_ids` of the solver diagnostics, and the episode record. They are never reachable from `verum.api`.
+Each window has a start, an end, a reason and the ratio duration / round trip (null for a branched lineup and for a dead-leg window). Each window also has the boolean `affects_emitted_tags`, which is false only for a dead-leg window whose isolated segment holds no edge or inside node that an emitted tag reads; such a window does not change the tier (D150). Windows are hidden records: the `validity_windows` dataset, the `active_validity_window_ids` of the solver diagnostics, and the episode record. They are never reachable from `verum.api`.
 
 In the shipped scenarios: S0u-E has the 10 s closure of `XV-R000` (27.7 round trips of 0.361 s against 50), the flow collapse under the cap (about 0.19 s, 0.5 round trips) and a dead-leg window of 329 s for the source side of the closed valve; S0u-D has none: the 10 s closure of `XV-R000` at 600 s is judged when its opening has fallen to 0.2, by which time the receipt flow is below 60 m3/h, and its 10 s opening at 1200 s starts at zero flow and is not judged.
 
