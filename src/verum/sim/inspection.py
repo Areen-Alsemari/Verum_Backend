@@ -1,8 +1,9 @@
 """The inspection truth of an episode: the true state that the inspection actions need.
 
-Rows are taken from the written hydraulic-state rows at a 60 s grid, at every event time and at
-every knot of a fault trajectory, with a pre-event and a post-event row at a discontinuity. Each row
-adds the faults and the noise-free tag values from the fault specifications and the sensor chain.
+Rows are taken from the written hydraulic-state rows at a 60 s grid and the last time, at every
+event time and at every knot of a fault trajectory, with a pre-event and a post-event row at a
+discontinuity. Each row adds the faults and the noise-free tag values from the fault
+specifications and the sensor chain.
 The file is evaluator data, is built after the truth files and the observations are written, and
 changes no other output.
 
@@ -47,7 +48,7 @@ def _times(rows: list[dict[str, Any]], duration: float, specs: tuple[FaultSpec, 
     events = {r["t_sim_s"] for r in rows if r["side"] == PRE}
     steps = {s.onset_s for s in specs if s.ramp_s is None}
     keys: set[Key] = set()
-    grid = [k * GRID_S for k in range(int(duration // GRID_S) + 1)]
+    grid = [k * GRID_S for k in range(int(duration // GRID_S) + 1)] + [duration]
     knots = {t for s in specs for t in s.knot_times_s() if t <= duration}
     for t in sorted({*grid, *events, *knots}):
         if t in events or t in steps:

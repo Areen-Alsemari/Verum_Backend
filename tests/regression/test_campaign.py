@@ -660,3 +660,58 @@ def test_the_report_counts_agree_with_the_records(real_campaign: Path) -> None:
                     "Reason", "Cells of the gaps", "Temperature and initial level",
                     "Healthy tag statistics"):  # fmt: skip
         assert f"### {section}" in text, section
+
+
+@pytest.mark.slow
+def test_the_inspection_truth_is_evaluator_only_and_listed_in_the_records(
+    real_campaign: Path,
+) -> None:
+    """For every completed episode of the small campaign the inspection file is in the evaluator
+    store with its hash in the record, nothing under the agent-visible folder carries its name or
+    its words, and the labels, the readme and the gateway payload do not mention it.
+
+    Independent: yes, because the check scans the written folders and the record lists.
+    """
+    layout = runner.Layout(real_campaign)
+    done = [
+        r for r in runner.load_records(layout, list(range(REAL.n))) if r["status"] == "completed"
+    ]
+    assert done
+    for r in done:
+        key = f"evaluator/episodes/{r['episode_id']}/{runner.INSPECTION}"
+        assert key in r["files"] and (real_campaign / key).is_file()
+        folder = layout.agent / "episodes" / r["episode_id"]
+        assert [p.name for p in folder.iterdir()] == [runner.OBSERVATIONS]
+        assert "inspection" not in json.dumps(Gateway(folder).query(3600.0), default=str)
+    for path in layout.agent.rglob("*"):
+        assert "inspection" not in path.name.lower(), path
+        if path.is_file() and path.suffix in {".md", ".jsonl", ".json"}:
+            assert "inspection" not in path.read_text(encoding="utf-8").lower(), path
+
+
+@pytest.mark.slow
+def test_a_resumed_and_an_extended_run_keep_the_finished_episodes(
+    real_campaign: Path, tmp_path: Path
+) -> None:
+    """Running the same slots again redoes none of them, and adding one slot writes one new record
+    with its inspection hash and leaves the finished records byte for byte as they were.
+
+    Independent: yes, because the reference is the state of the folder before the second run.
+    """
+    root = tmp_path / "copy"
+    shutil.copytree(real_campaign, root)
+    layout = runner.Layout(root)
+    indices = selected_indices(REAL, 20)
+    before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in layout.records.glob("*.json")}
+    runner.run_campaign(REAL, root, workers=1, indices=indices)
+    assert {
+        p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in layout.records.glob("*.json")
+    } == before
+    extra = next(i for i in range(REAL.n) if i not in indices)
+    runner.run_campaign(REAL, root, workers=1, indices=[*indices, extra])
+    after = {p.name: p.read_bytes() for p in layout.records.glob("*.json")}
+    assert all(after[name] == data for name, (data, _stamp) in before.items())
+    new = json.loads(after[f"{extra:06d}.json"])
+    assert new["status"] in {"completed", "gap"}
+    if new["status"] == "completed":
+        assert f"evaluator/episodes/{new['episode_id']}/{runner.INSPECTION}" in new["files"]
