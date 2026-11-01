@@ -4,6 +4,7 @@ The checks use evaluator directories written by hand with a small test helper, s
 expected outcome is arithmetic on the true quantities that the test sets. Statistical checks use
 many draws and four-sigma bounds. The checks on real episodes with known faults are in the file
 of the slow tests.
+Historical extrapolation tests explicitly opt into the archived research workflow.
 
 See D100 to D109.
 """
@@ -463,7 +464,8 @@ def test_the_timeline_has_the_stated_delays_and_order(tmp_path: Path) -> None:
     """
     truth = truth_of(tmp_path, grid())
     plans = [
-        workflow.plan(CATALOG, ASSETS, truth, f"REQ-INSP-{i:05d}", "ACT-INSP-05", "TK-101", 100.0)
+        workflow.plan(CATALOG, ASSETS, truth, f"REQ-INSP-{i:05d}", "ACT-INSP-05", "TK-101",
+                      100.0, allow_extrapolated_research=True)
         for i in range(3000)
     ]
     approval = np.array([p.t_decision_s - 100.0 for p in plans])
@@ -486,9 +488,9 @@ def test_a_request_has_the_same_timeline_whatever_the_other_requests_are(tmp_pat
     Independent: yes, because the comparison is between runs of the same request.
     """
     folder = write(tmp_path, grid())
-    alone = InspectionService(folder)
+    alone = InspectionService(folder, allow_extrapolated_research=True)
     alone.submit(request(7, "ACT-INSP-05", "TK-101"), 100.0)
-    busy = InspectionService(folder)
+    busy = InspectionService(folder, allow_extrapolated_research=True)
     for n, (action, target) in enumerate(
         (("ACT-INSP-05", "TK-102"), ("ACT-INSP-02", "XV-S101")), 1
     ):
@@ -508,7 +510,7 @@ def test_no_result_is_visible_before_the_performed_time_plus_the_delivery(tmp_pa
 
     Independent: yes, because the instants are those of the timeline that the test reads.
     """
-    service = InspectionService(write(tmp_path, grid()))
+    service = InspectionService(write(tmp_path, grid()), allow_extrapolated_research=True)
     approved = rejected = None
     for n in range(1, 60):
         service.submit(request(n, "ACT-INSP-05", "TK-101"), 100.0)
@@ -541,7 +543,8 @@ def test_no_result_is_visible_before_the_performed_time_plus_the_delivery(tmp_pa
     views = {r["request_id"]: r for r in service.requests(rejected.t_decision_s)}
     assert views[rejected.request_id]["human_approval"]["status"] == "REJECTED"
     assert views[rejected.request_id]["human_approval"]["rejection_reason"] == rejected.reason
-    assert not InspectionService(write(tmp_path / "other", grid())).results(1e6)
+    empty = InspectionService(write(tmp_path / "other", grid()), allow_extrapolated_research=True)
+    assert not empty.results(1e6)
 
 
 def test_a_failed_precondition_rejects_the_request_with_its_code(tmp_path: Path) -> None:
@@ -553,7 +556,7 @@ def test_a_failed_precondition_rejects_the_request_with_its_code(tmp_path: Path)
     """
     rows = grid()
     edit(rows, "tanks.TK-103.level_m", 1.5)
-    service = InspectionService(write(tmp_path, rows))
+    service = InspectionService(write(tmp_path, rows), allow_extrapolated_research=True)
     reasons = set()
     for n in range(1, 40):
         service.submit(request(n, "ACT-INSP-01", "TK-103"), 100.0)
@@ -575,7 +578,7 @@ def test_the_request_validator_refuses_what_the_rules_forbid(tmp_path: Path) -> 
 
     Independent: yes, because the bounds are evaluated by hand.
     """
-    service = InspectionService(write(tmp_path, grid()))
+    service = InspectionService(write(tmp_path, grid()), allow_extrapolated_research=True)
 
     def code(req: dict[str, Any], t: float = 100.0) -> str:
         with pytest.raises(RequestError) as info:
@@ -617,7 +620,7 @@ def test_the_history_does_not_depend_on_the_faults_of_the_episode(tmp_path: Path
     Independent: yes, because the two episodes differ only in their truth and the comparison is
     equality of the records.
     """
-    healthy = InspectionService(write(tmp_path / "h", grid()))
+    healthy = InspectionService(write(tmp_path / "h", grid()), allow_extrapolated_research=True)
     rows = grid()
     edit(rows, "leaks", [{"fault_instance_id": "FI-x", "edge_id": "E-D1", "fraction": 0.4,
                           "flow_m3s": 0.01}], since=1000.0)  # fmt: skip
@@ -626,9 +629,10 @@ def test_the_history_does_not_depend_on_the_faults_of_the_episode(tmp_path: Path
             tmp_path / "f",
             rows,
             faults=[fault_truth("E-D1", "PIPE_LEAK", 1000.0, 300.0, 0.0, 1e-4)],
-        )
+        ), allow_extrapolated_research=True,
     )
-    other = InspectionService(write(tmp_path / "o", grid(), seed=SEED + 1))
+    other = InspectionService(write(tmp_path / "o", grid(), seed=SEED + 1),
+                              allow_extrapolated_research=True)
     assert healthy.history(0.0) == faulted.history(0.0) != other.history(0.0)
     records = healthy.history(0.0)
     assert len(records) > 50 and all(r["t_recorded_s"] < 0 for r in records)
@@ -653,7 +657,7 @@ def test_the_history_is_time_gated_and_a_performed_inspection_adds_a_record(
 
     Independent: yes, because the instants are read from the timeline.
     """
-    service = InspectionService(write(tmp_path, grid()))
+    service = InspectionService(write(tmp_path, grid()), allow_extrapolated_research=True)
     for n in range(1, 30):
         service.submit(request(n, "ACT-INSP-05", "TK-101"), 100.0)
     tl = next(r.timeline for r in map(service.record, [f"REQ-INSP-{n:05d}" for n in range(1, 30)])
@@ -697,7 +701,8 @@ def test_lk_gateway_functions_return_schema_rows_and_no_hidden_text(tmp_path: Pa
                            "asset_id": "E-D1", "severity": 1.0, "parameter": "leak_area",
                            "unit": "m2", "parameter_value": 1e-4}])  # fmt: skip
     faults = [fault_truth("E-D1", "PIPE_LEAK", 0.0, 1.0, 0.0, 1e-4)]
-    service = InspectionService(write(tmp_path, rows, faults=faults))
+    service = InspectionService(write(tmp_path, rows, faults=faults),
+                                allow_extrapolated_research=True)
     gateway = agent_gateway(tmp_path, service)
     targets = [("ACT-INSP-01", "TK-101"), ("ACT-INSP-02", "XV-S101"), ("ACT-INSP-03", "P-101A"),
                ("ACT-INSP-04", "E-D1"), ("ACT-INSP-05", "TK-101"), ("ACT-INSP-06", "TK-102"),
@@ -762,7 +767,7 @@ def test_the_outcome_keeps_the_true_quantity_out_of_the_serialised_result(tmp_pa
 
     Independent: yes, because the keys of the views are compared with the closed schema.
     """
-    service = InspectionService(write(tmp_path, grid()))
+    service = InspectionService(write(tmp_path, grid()), allow_extrapolated_research=True)
     for n in range(1, 25):
         service.submit(request(n, "ACT-INSP-05", "TK-101"), 100.0)
     done = [service.record(f"REQ-INSP-{n:05d}") for n in range(1, 25)]
@@ -781,12 +786,12 @@ def test_the_service_is_deterministic(tmp_path: Path) -> None:
     folder = write(tmp_path, grid())
     outputs = []
     for _ in range(2):
-        s = InspectionService(folder)
+        s = InspectionService(folder, allow_extrapolated_research=True)
         for n in (3, 4):
             s.submit(request(n, "ACT-INSP-02", "XV-S101"), 100.0)
         outputs.append((s.requests(1e6), s.results(1e6), s.history(1e6)))
     assert outputs[0] == outputs[1]
-    s = InspectionService(folder)
+    s = InspectionService(folder, allow_extrapolated_research=True)
     for n in range(1, 40):
         s.submit(request(n, "ACT-INSP-05", "TK-101"), 100.0)
     values = {s.record(f"REQ-INSP-{n:05d}").outcome.value for n in range(1, 40)  # type: ignore[union-attr]

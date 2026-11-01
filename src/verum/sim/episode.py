@@ -11,18 +11,20 @@ See D20, D24 to D26, D37 and D73.
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from verum.contracts import validate
+from verum.contracts import ContractError, validate
 from verum.faults import FaultSet, activity, fault_truth_rows, instance_ids, lineup_states
 from verum.faults import check as check_faults
+from verum.faults.validate import TIMING_PROFILES
 from verum.gates import assert_release_allowed
 from verum.hydraulics import HydraulicModel
 from verum.lineups import load_lineup_table
-from verum.provenance import config_hash, episode_id, git_state, lockfile_hash
+from verum.provenance import canonical_json, config_hash, episode_id, git_state, lockfile_hash
 from verum.sensors import observe_episode
 from verum.sensors.specs import load_sensor_config
 from verum.sim.config import SimConfig, load_sim_config
@@ -119,7 +121,11 @@ def run_episode(
     faults: FaultSet | None = None,
     max_faults: int = 1,
     min_separation_s: float = 0.0,
+    *,
+    fault_timing_profile: str = "legacy",
 ) -> EpisodeResult:
+    if fault_timing_profile not in TIMING_PROFILES:
+        raise ContractError(f"unknown fault timing profile: {fault_timing_profile}")
     assert_release_allowed(TIER)
     model = model or HydraulicModel.load()
     cfg = load_sim_config(model.directory)
@@ -134,6 +140,10 @@ def run_episode(
             scenario.initial_mode, scenario.receipt_setpoint_m3h, scenario.schedule,
             table.modes, faults.specs[0].onset_s,
         )  # fmt: skip
+        contexts = {spec.asset_id: lineup_states(
+            scenario.initial_mode, scenario.receipt_setpoint_m3h, scenario.schedule,
+            table.modes, spec.onset_s,
+        ) for spec in faults.specs}
         check_faults(
             faults.specs,
             edges,
@@ -142,6 +152,8 @@ def run_episode(
             states,
             max_faults,
             min_separation_s,
+            fault_timing_profile,
+            contexts,
         )
         notes = {"modes": [s.fault_mode for s in faults.specs], "activity": []}
         for spec in faults.specs:  # each fault is judged in the lineup in force from its own onset
@@ -151,7 +163,13 @@ def run_episode(
             )  # fmt: skip
             notes["activity"].append(activity(spec, own))
     chash = config_hash(model.directory)
-    episode = episode_id(scenario.seed, scenario.scenario_id, chash)
+    identity = scenario.scenario_id
+    if fault_timing_profile != "legacy":
+        identity = canonical_json({
+            "scenario": scenario.scenario_id, "fault_timing_profile": fault_timing_profile,
+            "fault_specs": [spec.as_record() for spec in faults.specs] if faults else [],
+        })
+    episode = episode_id(scenario.seed, identity, chash)
     sink = DirectorySink(out_dir / episode)
     engine = Engine(model, table, scenario, cfg, sink, episode, faults=faults)
     start = time.perf_counter()
@@ -184,6 +202,20 @@ def run_episode(
     sink.write_json("provenance.json", {"git_commit": commit, "git_dirty": dirty})
     hashes = sink.finalize()
     if not outcome.rejection:
+        if fault_timing_profile != "legacy":
+            window = {
+                "schema_version": "1.0.0", "hidden": True,
+                "fault_timing_profile": fault_timing_profile,
+                "left_censored_fault_instance_ids": [
+                    ident for ident, spec in zip(ids, specs, strict=True)
+                    if spec.onset_s == 0 and spec.ramp_s is None and spec.peak_severity > 0
+                ],
+                "interpretation": "Initial faults were present when observation began; "
+                                  "their historical onset is not known.",
+            }
+            (out_dir / episode / "fault_window.json").write_text(
+                json.dumps(window, sort_keys=True), encoding="utf-8"
+            )
         hook = None
         if faults is not None and faults.specs:
             spans = {

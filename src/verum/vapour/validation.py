@@ -73,15 +73,24 @@ def validate_extension(base: Path, root: Path) -> dict[str, Any]:
             raise ValueError("mechanical truth does not match the fault specification")
         for row in truth:
             validate("fault_truth", row)
-        if episode["kind"] == "cascade":
+        if episode["kind"] in ("cascade", "cascade_trial"):
             rows = read_rows(evaluator / "inspection_truth.jsonl.gz")
             tank = episode["tank_id"]
             levels = {r["t_sim_s"]: r["tanks"][tank]["level_m"] for r in rows}
             expected_child = cascade_child(faults[0], sorted(levels.items()), p)
-            if len(faults) != 2 or faults[1] != expected_child:
+            expected_faults = [faults[0]] if expected_child is None else [faults[0], expected_child]
+            if faults != expected_faults:
                 raise ValueError("cascade child does not follow the travel rule")
-            causal_edges += 1
-        service = InspectionService(evaluator)
+            if episode["kind"] == "cascade" and expected_child is None:
+                raise ValueError("legacy cascade case has no secondary failure")
+            if episode["kind"] == "cascade_trial":
+                expected_outcome = "not_triggered" if expected_child is None else "triggered"
+                if episode["cascade_outcome"] != expected_outcome:
+                    raise ValueError("cascade trial outcome differs from the physical rule")
+            causal_edges += expected_child is not None
+        service = InspectionService(
+            evaluator, allow_extrapolated_research=manifest.get("sampling_protocol") is None
+        )
         gateway = Gateway(agent, service)
         replay = json.loads((evaluator / "inspection_replay.json").read_text())
         for index, snapshot in enumerate(replay, 1):

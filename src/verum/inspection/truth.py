@@ -50,6 +50,9 @@ class Truth:
         self.seed: int = int(scenario["seed"])
         self.horizon_s: float = float(scenario["duration_s"])
         self.rows = _read(directory / FILE)
+        if not self.rows:
+            raise ValueError("inspection truth has no recorded process states")
+        self.coverage_end_s = min(self.horizon_s, float(self.rows[-1]["t_sim_s"]))
         self._faults = _read(directory / FAULT_TRUTH) if (directory / FAULT_TRUTH).exists() else []
         self.mechanical_faults: list[MechanicalFault] | None = None
         self.mechanical_parameters: Parameters | None = None

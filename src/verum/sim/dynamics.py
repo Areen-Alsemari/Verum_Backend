@@ -34,6 +34,7 @@ class ReceiptColumn:
     setpoint_m3s: float
     layout: LeakLayout | None = None
     setpoint_fn: Callable[[float], float] | None = None  # profile v2: set-point in m3/s at t
+    level_from_net_volume: Callable[[float], float] | None = None
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class DeliveryColumn:
     q_ref_m3h: float
     demand: Callable[[float], float]
     layout: LeakLayout | None = None
+    level_from_net_volume: Callable[[float], float] | None = None
 
 
 @dataclass(frozen=True)
@@ -80,13 +82,17 @@ def make_rhs(
         q_r, q_d, c_r, c_d = float(y[0]), float(y[1]), float(y[2]), float(y[3])
         dq_r = dq_d = 0.0
         if receipt is not None:
-            level = receipt.level_m + (c_r - (c_d if shared else 0.0)) / receipt.area_m2
+            net = c_r - (c_d if shared else 0.0)
+            level = (receipt.level_from_net_volume(net) if receipt.level_from_net_volume else
+                     receipt.level_m + net / receipt.area_m2)
             h_source = level + receipt.path.loss(q_r, _alphas(valves, r_valves, t), receipt.layout)
             setpoint = receipt.setpoint_fn(t) if receipt.setpoint_fn else receipt.setpoint_m3s
             free = (setpoint - q_r) / receipt.tau_c_s
             dq_r = min(free, (receipt.head_cap_m - h_source) / i_r)
         if delivery is not None:
-            level = delivery.level_m + ((c_r if shared else 0.0) - c_d) / delivery.area_m2
+            net = (c_r if shared else 0.0) - c_d
+            level = (delivery.level_from_net_volume(net) if delivery.level_from_net_volume else
+                     delivery.level_m + net / delivery.area_m2)
             q_h = max(q_d, 0.0) * 3600.0
             deduct = delivery.layout.boundary_deduct if delivery.layout else 0.0
             q_b = max(q_d - deduct, 0.0) * 3600.0

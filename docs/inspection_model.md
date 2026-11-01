@@ -36,7 +36,7 @@ An approved request is scheduled after a delay that is uniform from 0 to 15 minu
 
 The model reads the true state of the episode at the performed time from the evaluator file of true quantities, and the measured value is that true value plus a Gaussian error with standard deviation U divided by 2. Numbers are interpolated between the rows of the file. Across an event, where the file has a row just before and a row just after, the value is that of the side on which the time falls.
 
-An action is often performed after the end of the 3600 s episode, because it takes 45 to 120 minutes after an approval delay. After the last row the process state is held at the last row, and a fault follows its own trajectory and keeps its last value. An inspection after the horizon therefore reports the state at the end of the episode.
+An action often needs more than the 3600 s episode, because it takes 45 to 120 minutes after an approval delay. The default workflow refuses a planned measurement beyond recorded process coverage with `INSUFFICIENT_SIMULATED_HORIZON`; declaring a longer scenario duration without supplying additional process states is insufficient. Result delivery may occur later than the process horizon if the measurement itself is covered. Replaying archived research requires explicit `allow_extrapolated_research=True`, which preserves the historical held-state emulation but is not qualified inspection evidence.
 
 - The valve check reports the pressure drop across the valve body, from the loss coefficient of the valve law at the actual opening and the flow, and the measured stem travel. It also states the commanded state and whether the open contact reads open, so a valve that is commanded open but is only partly open, with a contact that still reads open, can be told from one whose contact follows it.
 - The pump check reports an overall vibration velocity that rises with the head loss of the pump by a declared law. No other vibration physics is modelled.
@@ -57,7 +57,7 @@ Each asset has a synthetic history of prior inspections, calibrations and work o
 
 The probabilities of detection, the vibration law, the localisation error and the thresholds are selections of a simulation. They are not field performance and are not validated against inspection data. The detection limit of 15 L/min is an assumption of the source document that it states as unvalidated.
 
-The process state is held after the horizon of the episode. The vibration law claims no physics beyond a monotone rise with the head loss. The history is independent of the faults by choice, so it carries no information about them.
+The workflow checks process preconditions at the approval decision only; it does not demonstrate maintained work conditions throughout a long inspection. A realistic inspection campaign requires process continuation through the work interval and work-condition enforcement. The vibration law claims no physics beyond a monotone rise with the head loss. The history is independent of the faults by choice, so it carries no information about them.
 
 
 ## Mechanical extension

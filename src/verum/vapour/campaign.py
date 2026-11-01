@@ -19,6 +19,7 @@ from verum.contracts import validate
 from verum.inspection.catalog import load_catalog
 from verum.inspection.service import InspectionService
 from verum.provenance import git_state
+from verum.rng import RandomStreams
 from verum.vapour.model import (
     TANKS,
     MechanicalFault,
@@ -27,7 +28,8 @@ from verum.vapour.model import (
     reference_window,
 )
 
-KINDS = ("healthy", "seal", "fitting", "roof", "cascade")
+KINDS = ("healthy", "seal", "fitting", "roof", "cascade_trial")
+SAMPLING_PROTOCOL = "prospective_experimental_v2"
 
 
 def read_rows(path: Path) -> list[dict[str, Any]]:
@@ -65,16 +67,15 @@ def _faults(
     if kind == "healthy":
         return []
     kind_id = {"seal": "RIM_SEAL_DETERIORATION", "fitting": "FITTING_DAMAGE",
-               "roof": "ROOF_LANDING_ABNORMAL", "cascade": "ROOF_LANDING_ABNORMAL"}[kind]
+               "roof": "ROOF_LANDING_ABNORMAL",
+               "cascade_trial": "ROOF_LANDING_ABNORMAL"}[kind]
     root = MechanicalFault(f"FI-{episode}-00", kind_id, tank, 600.0, 300.0, peak,
                            "access_hatch" if kind == "fitting" else None)
-    if kind != "cascade":
+    if kind != "cascade_trial":
         return [root]
     levels = {r["t_sim_s"]: r["tanks"][tank]["level_m"] for r in rows}
     child = cascade_child(root, sorted(levels.items()), p)
-    if child is None:
-        raise ValueError("selected parent has insufficient tank travel for a cascade")
-    return [root, child]
+    return [root] if child is None else [root, child]
 
 
 def _truth(episode: str, faults: list[MechanicalFault]) -> list[dict[str, Any]]:
@@ -122,10 +123,12 @@ def _episode(
     base: Path, output: Path, parent: dict[str, Any], kind: str, peak: float, p: Parameters
 ) -> dict[str, Any]:
     source = base / "evaluator" / "episodes" / parent["episode_id"]
+    scenario = json.loads((source / "scenario.json").read_text())
+    # Prospective experimental assignment must not inspect the realised level trajectory.
+    rng = RandomStreams(int(scenario["seed"])).stream("mechanical/prospective_target")
+    tank = TANKS[int(rng.integers(len(TANKS)))]
     rows = read_rows(source / "inspection_truth.jsonl.gz")
-    # A cascade needs travel on the selected tank; choose using evaluator quantities only.
-    tank, _ = _target(rows)
-    identity = json.dumps([parent["episode_id"], kind, peak, tank, p.hash])
+    identity = json.dumps([SAMPLING_PROTOCOL, parent["episode_id"], kind, peak, tank, p.hash])
     episode = "EP-" + hashlib.sha256(identity.encode()).hexdigest()[:12].upper()
     agent = output / "agent_visible" / "episodes" / episode
     evaluator = output / "evaluator" / "episodes" / episode
@@ -142,7 +145,6 @@ def _episode(
     for row in observations:
         row["episode_id"] = episode
     write_rows(agent / "observations.jsonl.gz", observations)
-    scenario = json.loads((source / "scenario.json").read_text())
     (evaluator / "scenario.json").write_text(json.dumps(scenario, sort_keys=True))
     sidecar = {"schema_version": "1.0.0", "hidden": True, "parameter_hash": p.hash,
                "faults": [asdict(f) for f in faults]}
@@ -174,6 +176,9 @@ def _episode(
     labels = {"episode_id": episode, "parent_episode_id": parent["episode_id"],
               "split": parent["split"], "kind": kind, "peak": peak, "tank_id": tank,
               "dataset_tier": "restricted_benchmark", "faults": [asdict(f) for f in faults],
+              "sampling_protocol": SAMPLING_PROTOCOL, "training_qualified": False,
+              "cascade_outcome": ("triggered" if len(faults) == 2 else "not_triggered")
+              if kind == "cascade_trial" else "not_applicable",
               "limitations": ["reduced_mechanics_no_hydraulic_force_feedback",
                               "not_for_physical_fault_training",
                               "monthly_reference_not_episode_loss"]}
@@ -194,16 +199,11 @@ def generate(base: Path, output: Path, n: int) -> dict[str, Any]:
     if not parents:
         raise ValueError("campaign has no eligible healthy parents")
     p = Parameters()
-    selected = []
-    for parent in parents:
-        path = base / "evaluator" / "episodes" / parent["episode_id"]
-        _, travel = _target(read_rows(path / "inspection_truth.jsonl.gz"))
-        if travel >= p["seal_tear_displacement_m"]:
-            selected.append(parent)
-        if len(selected) == n // 5:
-            break
-    if len(selected) < n // 5:
-        raise ValueError("not enough distinct healthy parents with travel for the cascade design")
+    if len(parents) < n // 5:
+        raise ValueError("not enough distinct healthy parents")
+    order = sorted(parents, key=lambda parent: parent["episode_id"])
+    rng = RandomStreams(int(manifest["campaign_seed"])).stream("mechanical/parent_order")
+    selected = [order[int(index)] for index in rng.permutation(len(order))[:n // 5]]
     episodes = []
     # Blocks share a healthy parent and therefore its split; no child crosses a split.
     for block in range(n // 5):
@@ -211,7 +211,8 @@ def generate(base: Path, output: Path, n: int) -> dict[str, Any]:
         peak = (0.25, 0.5, 1.0)[block % 3]
         for kind in KINDS:
             episodes.append(_episode(base, output, parent, kind, peak, p))
-    result = {"schema_version": "1.0.0", "dataset": "mechanical_extension", "hidden": True,
+    result = {"schema_version": "1.1.0", "dataset": "mechanical_extension", "hidden": True,
+              "sampling_protocol": SAMPLING_PROTOCOL, "training_qualified": False,
               "base_manifest_sha256": digest(manifest_path), "parameter_hash": p.hash,
               "code_commit": git_state()[0], "episodes": episodes}
     (output / "evaluator" / "manifest.json").write_text(json.dumps(result, sort_keys=True))

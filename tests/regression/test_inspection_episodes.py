@@ -84,7 +84,7 @@ def episodes(tmp_path_factory: pytest.TempPathFactory) -> dict[str, InspectionSe
         )
         assert not result.rejected, (name, result.outcome.rejection)
         (result.directory / "scenario.json").write_text(json.dumps(raw), encoding="utf-8")
-        out[name] = InspectionService(result.directory)
+        out[name] = InspectionService(result.directory, allow_extrapolated_research=True)
     return out
 
 

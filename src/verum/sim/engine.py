@@ -16,7 +16,7 @@ import copy
 import dataclasses
 import heapq
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -80,7 +80,8 @@ from verum.sim.variability import (
 )
 from verum.tanks import load_tank_geometry
 from verum.tanks.envelope import HeadroomScreen, LevelEnvelope
-from verum.tanks.geometry import load_tank_parameters
+from verum.tanks.geometry import TankGeometry, load_tank_parameters
+from verum.tanks.hangup import RoofHangup
 from verum.truth import TruthSink
 
 RANK_COMMAND, RANK_DETECTOR, RANK_VALVE = 0, 1, 2
@@ -285,6 +286,7 @@ class Engine:
         episode_id: str,
         state: EngineState | None = None,
         faults: FaultInjection | None = None,
+        roof_constraints: Mapping[str, RoofHangup] | None = None,
     ) -> None:
         self.faults = faults
         self.model = model.for_stratum(scenario.atmosphere_stratum)
@@ -295,6 +297,19 @@ class Engine:
         self.closed_alpha = model.config["valve_closed_alpha"]
         self.temperature_k = scenario.temperature_c + 273.15
         self.geometry = load_tank_geometry(model.directory)
+        self.roof_constraints = dict(roof_constraints or {})
+        self._tank_geometries = {}
+        for tank, constraint in self.roof_constraints.items():
+            if tank not in model.topology.tank_ids:
+                raise ValueError(f"unknown constrained tank: {tank}")
+            if constraint.base_geometry != self.geometry or constraint.density_kg_m3 != self.rho:
+                raise ValueError("roof constraint and hydraulic geometry or density disagree")
+            if constraint.gravity_m_s2 != self.model.g:
+                raise ValueError("roof constraint and hydraulic gravity disagree")
+            if not math.isclose(constraint.anchor_level_m, scenario.tank_levels_m[tank],
+                                rel_tol=0., abs_tol=config["level_accuracy_target_m"]):
+                raise ValueError("roof anchor must match the initial floating condition")
+            self._tank_geometries[tank] = constraint.calibration
         self._pconfig = {t: self._protection_config(t) for t in model.topology.tank_ids}
         self._isolation_valves = {t: c.isolation_valves for t, c in self._pconfig.items()}
         ou = DemandProcess(
@@ -378,7 +393,7 @@ class Engine:
         sc, m = self.scenario, self.model
         mode = self.table.mode(sc.initial_mode)
         tanks = m.topology.tank_ids
-        volumes = {t: self.geometry.volume_m3(sc.tank_levels_m[t], self.rho) for t in tanks}
+        volumes = {t: self._geometry(t).volume_m3(sc.tank_levels_m[t], self.rho) for t in tanks}
         valves = {
             v: make_valve(v, self.cfg.stroke_time_s(v), self.closed_alpha, v in mode.open_valves)
             for v in rw.VALVES
@@ -407,7 +422,7 @@ class Engine:
             for t_knot in self.faults.knot_times(self.closed_alpha):
                 self._push(state, t_knot, RANK_VALVE, "fault_knot", None)
         for tank, lt in self._lt.items():
-            state.lt_y[tank] = self.geometry.level_m(volumes[tank], self.rho)
+            state.lt_y[tank] = self._geometry(tank).level_m(volumes[tank], self.rho)
             state.lt_visible[tank] = None
             for k, t in enumerate(lt.times):
                 self._push(state, float(t), RANK_DETECTOR, "lt_sample", (tank, k))
@@ -424,9 +439,19 @@ class Engine:
             memo[id(self.state.current)] = self.state.current
         return copy.deepcopy(self.state, memo)
 
+    def _geometry(self, tank: str) -> TankGeometry:
+        return self._tank_geometries.get(tank, self.geometry)
+
+    def _level_from_net_volume(self, tank: str) -> Callable[[float], float] | None:
+        if tank not in self.roof_constraints:
+            return None
+        calibration = self._geometry(tank)
+        initial = self.state.volumes[tank]
+        return lambda net: calibration.level_m(initial + net, self.rho)
+
     # --- steady solve ----------
     def _levels(self, volumes: dict[str, float]) -> dict[str, float]:
-        return {t: self.geometry.level_m(v, self.rho) for t, v in volumes.items()}
+        return {t: self._geometry(t).level_m(v, self.rho) for t, v in volumes.items()}
 
     def _inputs(
         self,
@@ -633,8 +658,9 @@ class Engine:
         )
         if not st.running or tank is None:
             return None
-        level = self.geometry.level_m(st.volumes[tank], self.rho) - cfg["regime_level_allowance_m"]
-        volumes = {**st.volumes, tank: self.geometry.volume_m3(level, self.rho)}
+        level = (self._geometry(tank).level_m(st.volumes[tank], self.rho) -
+                 cfg["regime_level_allowance_m"])
+        volumes = {**st.volumes, tank: self._geometry(tank).volume_m3(level, self.rho)}
         low = max(value * cfg["demand_factor_min"], cfg["demand_total_factor_min_v2"])
         high = value * cfg["demand_factor_max"]
         for factor, largest in ((low, True), (high, False)):
@@ -706,7 +732,7 @@ class Engine:
         v = self.state.volumes[tank]
         lo, hi = max(v - 0.5, 0.0), v + 0.5
         return (hi - lo) / (
-            self.geometry.level_m(hi, self.rho) - self.geometry.level_m(lo, self.rho)
+            self._geometry(tank).level_m(hi, self.rho) - self._geometry(tank).level_m(lo, self.rho)
         )
 
     def _plan(self, t0: float, t1: float) -> Plan:
@@ -729,7 +755,7 @@ class Engine:
 
     def _receipt_column(self, tank: str, t: float) -> dyn.ReceiptColumn:
         st, m = self.state, self.model
-        level = self.geometry.level_m(st.volumes[tank], self.rho)
+        level = self._geometry(tank).level_m(st.volumes[tank], self.rho)
         head_cap = m.node_z[SOURCE_NODE] + m.config["receipt_pressure_cap_pa_gauge"] / (m.rho * m.g)
         path = self._path("receipt", tank, None, t)
         return dyn.ReceiptColumn(
@@ -742,6 +768,7 @@ class Engine:
             st.receipt_setpoint_m3h / 3600.0,
             self._layout(path, t),
             self._setpoint_fn(st.receipt_setpoint_m3h),
+            self._level_from_net_volume(tank),
         )
 
     def _effective_setpoint(self, nominal_m3h: float, t: float) -> float:
@@ -758,7 +785,7 @@ class Engine:
 
     def _delivery_column(self, tank: str, pump: str, t: float) -> dyn.DeliveryColumn:
         st, m = self.state, self.model
-        level = self.geometry.level_m(st.volumes[tank], self.rho)
+        level = self._geometry(tank).level_m(st.volumes[tank], self.rho)
         reservoir = m.node_z[BOUNDARY_NODE] + m.config["reservoir_pressure_pa_gauge"] / (
             m.rho * m.g
         )
@@ -774,6 +801,7 @@ class Engine:
             m.config["pump_reference_flow_m3h"],
             self.demand.factor,
             self._layout(path, t),
+            self._level_from_net_volume(tank),
         )
 
     # --- one step ----------
@@ -947,8 +975,8 @@ class Engine:
         """Exact first-order lag of each level transmitter over a step of linear input."""
         st, h = self.state, step.t1 - step.t0
         for tank, lt in self._lt.items():
-            x0 = self.geometry.level_m(st.volumes[tank], self.rho)
-            x1 = self.geometry.level_m(step.volumes[tank], self.rho)
+            x0 = self._geometry(tank).level_m(st.volumes[tank], self.rho)
+            x1 = self._geometry(tank).level_m(step.volumes[tank], self.rho)
             tau = lt.spec.lag_s
             a, s = math.exp(-h / tau), (x1 - x0) / h
             st.lt_y[tank] = a * st.lt_y[tank] + (1.0 - a) * (x0 - s * tau) + s * h
@@ -1024,6 +1052,10 @@ class Engine:
 
     def _record_landing(self, landing: tuple[float, str, str, float]) -> None:
         t, tank, name, thr = landing
+        if name == "roof_emerged":
+            if abs(t / self.dt - round(t / self.dt)) >= 1e-9 and t < self.scenario.duration_s:
+                self._write_snapshot(self._snapshot(t), None)
+            return
         if name == "high_high":
             # The detector asserts here and its output reaches the protection logic after
             # its delay (decision D33); the trip is decided on that signal only.
@@ -1039,13 +1071,15 @@ class Engine:
     def _candidates(self, tank: str) -> list[tuple[str, float, int]]:
         cfg, state = self._pconfig[tank], self.state.protections[tank].state.value
         out: list[tuple[str, float, int]] = []
+        if tank in self.roof_constraints:
+            out.append(("roof_emerged", self._geometry(tank).support_height_m, -1))
         if state in ("NORMAL", "HIGH_ALARM") and tank not in self.state.detector_due:
             # The detector sees level plus its offset: it asserts at this true level.
             out.append(("high_high", cfg.high_high_m - self.detector_offset[tank], 1))
         return out
 
     def _level_at(self, step: Stepped, tank: str, t: float) -> float:
-        return self.geometry.level_m(step.volume_at(tank, t), self.rho)
+        return self._geometry(tank).level_m(step.volume_at(tank, t), self.rho)
 
     def _locate(self, step: Stepped, tank: str, threshold: float) -> float:
         """Time in the step at which the interpolated level of ``tank`` equals ``threshold``."""
@@ -1331,7 +1365,7 @@ class Engine:
         if tank is None:
             return
         minimum, label = self._minimum_level(tank)
-        level = self.geometry.level_m(self.state.volumes[tank], self.rho)
+        level = self._geometry(tank).level_m(self.state.volumes[tank], self.rho)
         if minimum is None:
             raise Rejected(
                 "SG0", t, label, "no level in the normal range passes the screen", level, None
@@ -1356,12 +1390,12 @@ class Engine:
             raise Rejected(
                 "SG0", t0, label, "no level in the normal range passes the screen", None, None
             )
-        level1 = self.geometry.level_m(st.volumes[tank], self.rho)
+        level1 = self._geometry(tank).level_m(st.volumes[tank], self.rho)
         if level1 >= minimum:
             return
         v1 = st.volumes[tank]
         v0 = v1 - 0.5 * h * (s0.tank_net_inflow_m3s[tank] + s1.tank_net_inflow_m3s[tank])
-        target = self.geometry.volume_m3(minimum, self.rho)
+        target = self._geometry(tank).volume_m3(minimum, self.rho)
         t_cross = t0 + h * _hermite_root(
             v0, v1, h * s0.tank_net_inflow_m3s[tank], h * s1.tank_net_inflow_m3s[tank], target
         )
@@ -1419,11 +1453,17 @@ class Engine:
             )
 
     def _check_envelope(self, t: float) -> None:
+        for tank, constraint in self.roof_constraints.items():
+            level = self._geometry(tank).level_m(self.state.volumes[tank], self.rho)
+            if level - constraint.anchor_level_m > self.cfg["level_accuracy_target_m"]:
+                raise Rejected("SG3", t, f"roof_domain[{tank}]",
+                               "rising liquid exceeds the one-sided roof hang-up domain",
+                               level, constraint.anchor_level_m)
         if not self.scenario.healthy_envelope:
             return
         st = self.state
         for tank, v in st.volumes.items():
-            level = self.geometry.level_m(v, self.rho)
+            level = self._geometry(tank).level_m(v, self.rho)
             if not 1.8 <= level <= 12.0:
                 raise Rejected(
                     "SG3",
@@ -1577,7 +1617,7 @@ class Engine:
             result=result if result is not None else st.current,
             volumes=dict(volumes),
             levels=levels,
-            roof={k: self.geometry.roof_state(lv, self.rho) for k, lv in levels.items()},
+            roof={k: self._geometry(k).roof_state(lv, self.rho) for k, lv in levels.items()},
             valves=valves,
             protection=prot,
             running=st.running,

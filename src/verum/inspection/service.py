@@ -40,10 +40,13 @@ class InspectionService:
         evaluator_directory: Path,
         catalog: Catalog | None = None,
         assets: Assets | None = None,
+        *,
+        allow_extrapolated_research: bool = False,
     ) -> None:
         self.truth = Truth(evaluator_directory)
         self._catalog = catalog or load_catalog()
         self._assets = assets or load_assets()
+        self._allow_extrapolated_research = allow_extrapolated_research
         self._records: dict[str, Record] = {}
         self._prior = history.prior_history(self.truth.seed, self._catalog, self._assets)
 
@@ -61,7 +64,8 @@ class InspectionService:
         rid, action, target = request["request_id"], request["action_id"], request["target_asset"]
         t_requested = request["t_requested_sim_s"]
         timeline = workflow.plan(
-            self._catalog, self._assets, self.truth, rid, action, target, t_requested
+            self._catalog, self._assets, self.truth, rid, action, target, t_requested,
+            allow_extrapolated_research=self._allow_extrapolated_research,
         )
         outcome = None
         if timeline.approved:
