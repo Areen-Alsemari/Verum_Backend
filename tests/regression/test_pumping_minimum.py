@@ -62,6 +62,7 @@ def test_levels_never_decrease_with_temperature_or_npsh3(model: HydraulicModel) 
     """The stored levels never fall as the temperature or the NPSH3 coefficient rises. Independent:
     yes, because only monotonicity is checked.
     """
+
     def value(t: str, s: float, p: str, c: float) -> float:
         record = pumping_minimum_level(t, s, p, c)
         return record.value if record.is_resolved else float("inf")

@@ -15,10 +15,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from verum.contracts import validate
 from verum.inspection import history, models, workflow
 from verum.inspection.assets import Assets, load_assets
 from verum.inspection.catalog import Catalog, load_catalog
+from verum.inspection.checks import check
 from verum.inspection.truth import Truth
 from verum.inspection.validation import validate_request
 from verum.rng import RandomStreams
@@ -91,7 +91,7 @@ class InspectionService:
                     rec.timeline.t_visible_s,
                 ))  # fmt: skip
         for row in rows:
-            validate("inspection_history", row)
+            check("inspection_history", row)
         return rows
 
     def _request_view(self, rec: Record, t: float) -> dict[str, Any]:
@@ -105,7 +105,7 @@ class InspectionService:
                 approval = {"status": "REJECTED", "approver_id": tl.approver_id,
                             "rejection_reason": tl.reason}  # fmt: skip
         view = {**rec.request, "human_approval": approval}
-        validate("inspection_request", view)
+        check("inspection_request", view)
         return view
 
     def _result_view(self, rec: Record, t: float) -> dict[str, Any]:
@@ -133,5 +133,5 @@ class InspectionService:
                 },
                 "validation_status": "PASSED_QA",
             }  # fmt: skip
-        validate("inspection_result", view)
+        check("inspection_result", view)
         return view

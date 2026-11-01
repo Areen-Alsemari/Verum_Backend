@@ -219,6 +219,7 @@ def test_the_valve_contact_has_hysteresis_and_the_initial_state() -> None:
     state of the first sample. Independent: yes, because the thresholds are the stated contact
     values.
     """
+
     def series(alphas: list[float]) -> list[tuple[float, str | None, dict[str, float]]]:
         return [(float(i), None, {"position_frac": a}) for i, a in enumerate(alphas)]
 

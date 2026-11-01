@@ -20,6 +20,7 @@ import jsonschema
 from verum.contracts import validate, validator
 from verum.inspection.assets import load_assets
 from verum.inspection.catalog import load_catalog
+from verum.inspection.checks import check
 
 ASSET_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -163,7 +164,7 @@ class Gateway:
         self, key: str, schema: str, rows: list[dict[str, Any]], as_of_s: float
     ) -> dict[str, Any]:
         for row in rows:
-            validate(schema, row)
+            check(schema, row)
         payload: dict[str, Any] = {"episode_id": self.episode_id, "as_of_s": as_of_s, key: rows}
         check_allowlist(payload)
         return payload

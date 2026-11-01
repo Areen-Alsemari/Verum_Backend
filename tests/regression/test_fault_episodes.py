@@ -339,6 +339,7 @@ def test_a_noisy_faulted_series_differs_from_the_twin_by_the_offset_and_one_step
     quantisation step, because the noise draws are the same. Independent: yes, because the reference
     is the healthy twin and a closed form.
     """
+
     def tag_rows(result: EpisodeResult, tag: str) -> list[dict[str, Any]]:
         path = result.directory / "observations.jsonl.gz"
         with gzip.open(path, "rt") as handle:

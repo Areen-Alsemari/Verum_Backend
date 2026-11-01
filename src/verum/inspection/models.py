@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from functools import cache
 from typing import Any
 
 import numpy as np
 
+from verum.hydraulics import HydraulicModel
+from verum.hydraulics.valves import loss_coefficient
 from verum.inspection.assets import Assets
 from verum.inspection.catalog import Catalog
 from verum.inspection.truth import State
@@ -24,6 +27,7 @@ from verum.sensors import load_sensor_config
 
 BAR_PA = 1.0e5
 M3H = 3600.0
+AGREEMENT = 1.5  # three standard deviations of a difference, in units of expanded uncertainty
 NORMAL, MINOR = "NORMAL_INTACT", "MINOR_DEGRADATION"
 CRITICAL, INCONCLUSIVE = "CRITICAL_DEFECT", "TEST_INCONCLUSIVE"
 VAPOUR_NOTE = (
@@ -42,6 +46,42 @@ class Outcome:
     notes: list[str]
     evidence: str = "valid"
     true: dict[str, Any] = field(default_factory=dict)  # evaluator side, never serialised
+
+
+@cache
+def _valve_law() -> tuple[float, float, float, float]:
+    """Full-open loss coefficient, characteristic opening, rangeability and fluid density."""
+    model = HydraulicModel.load()
+    c = model.config
+    return c["valve_full_open_k"], c["valve_alpha_c"], c["valve_rangeability"], model.rho
+
+
+def valve_drop_bar(a: Assets, s: State, valve: str) -> float:
+    """Pressure drop across the body of an isolation valve in bar.
+
+    The edge pressures are continuous at an open valve because its loss sits in the edge law, so
+    the drop is the loss K(alpha) rho v^2 / 2 of the valve law at the actual opening and the flow of
+    the outbound edge, plus the difference of the edge pressures at the valve. A closed valve has
+    no loss term and shows the difference of the pressures on its two sides.
+    """
+    inbound, outbound = a.valve_edges(valve)
+    edges = s["edges"]
+    nodal = edges[inbound.edge_id]["p_to_pa_gauge"] - edges[outbound.edge_id]["p_from_pa_gauge"]
+    alpha = s["valves"][valve]["position_frac"]
+    if alpha <= 0.0:
+        return float(nodal / BAR_PA)
+    k_open, alpha_c, rangeability, rho = _valve_law()
+    k = loss_coefficient(alpha, k_open, alpha_c, rangeability)
+    area = math.pi * outbound.inner_diameter_m**2 / 4.0
+    speed = abs(edges[outbound.edge_id]["flow_m3s"]) / area
+    return float((nodal + k * rho * speed**2 / 2.0) / BAR_PA)
+
+
+@cache
+def _span_bar(tag: str) -> float:
+    """Span of a pressure transmitter in bar, from the sensor specification."""
+    spec = load_sensor_config().tags[tag]
+    return float(spec.range_hi - spec.range_lo)  # type: ignore[operator]
 
 
 def _draws(rng: np.random.Generator) -> tuple[float, float, float, float]:
@@ -70,11 +110,7 @@ def rim_survey(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Gene
 def valve_check(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator) -> Outcome:
     z1, z2, *_ = _draws(rng)
     act = c.action("ACT-INSP-02")
-    inbound, outbound = a.valve_edges(target)
-    drop_bar = (
-        s["edges"][inbound.edge_id]["p_to_pa_gauge"]
-        - s["edges"][outbound.edge_id]["p_from_pa_gauge"]
-    ) / BAR_PA
+    drop_bar = valve_drop_bar(a, s, target)
     u_dp, u_travel = act.u("measured_differential_pressure"), act.u("stem_travel")
     measured = drop_bar + z1 * u_dp / 2.0
     valve = s["valves"][target]
@@ -83,6 +119,9 @@ def valve_check(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Gen
         measured, c.param("thresholds", "valve_dp_normal_max_bar"),
         c.param("thresholds", "valve_dp_critical_min_bar"),
     )  # fmt: skip
+    expected = 100.0 if valve["commanded_open"] else 0.0
+    if category == NORMAL and abs(travel - expected) > AGREEMENT * u_travel:
+        category = MINOR  # the stem does not follow the command beyond the uncertainty
     notes = [
         f"Commanded state: {'open' if valve['commanded_open'] else 'closed'}.",
         f"Measured stem travel: {travel:.1f} percent (expanded uncertainty {u_travel:g} percent).",
@@ -152,7 +191,7 @@ def dip_sounding(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Ge
     tag = s["tags"][f"LT-{target[-3:]}"]
     reported_mm = (tag["value"] + tag["fault_offset"]) * 1000.0
     u_lt = c.param("models", "level_transmitter_uncertainty_mm")
-    agree = abs(measured - reported_mm) <= math.hypot(u, u_lt)
+    agree = abs(measured - reported_mm) <= AGREEMENT * math.hypot(u, u_lt)
     notes = ["The water bottom cut is not modelled."]
     category, evidence = (NORMAL, "valid") if agree else (INCONCLUSIVE, "low_confidence")
     if not agree:
@@ -177,13 +216,12 @@ def loop_calibration(
     z1, *_ = _draws(rng)
     act = c.action("ACT-INSP-07")
     u = act.u("calibration_error")
-    spec = load_sensor_config().tags[target]
-    span_bar = spec.range_hi - spec.range_lo  # type: ignore[operator]
+    span_bar = _span_bar(target)
     offset_pa = s["tags"][target]["fault_offset"]
     true_pct = 100.0 * (-offset_pa / BAR_PA) / span_bar  # true pressure less the reported value
     measured = true_pct + z1 * u / 2.0
     u_pt = c.param("models", "pressure_transmitter_uncertainty_percent_span")
-    agree = abs(measured) <= math.hypot(u, u_pt)
+    agree = abs(measured) <= AGREEMENT * math.hypot(u, u_pt)
     category, evidence = (NORMAL, "valid") if agree else (INCONCLUSIVE, "low_confidence")
     notes = ["Five-point calibration summarised as the mean error."]
     if not agree:

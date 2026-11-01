@@ -162,6 +162,7 @@ def test_the_contact_reads_open_for_an_obstruction_and_not_open_for_a_visible_re
     """An obstruction leaves the open contact asserted while a visible restriction releases it.
     Independent: yes, because the expected contact states follow from the contact thresholds.
     """
+
     def contact(mode: str) -> list[tuple[float, int]]:
         e, _, _ = _restricted_delivery(model, mode)
         rows: Any = e.sink.rows["hydraulic_state"]

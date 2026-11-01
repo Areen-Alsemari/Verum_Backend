@@ -14,9 +14,10 @@ import math
 from collections.abc import Collection
 from typing import Any
 
-from verum.contracts import ContractError, validate
+from verum.contracts import ContractError
 from verum.inspection.assets import Assets
 from verum.inspection.catalog import Catalog
+from verum.inspection.checks import check
 
 TOLERANCE_BITS = 1e-9
 
@@ -35,7 +36,7 @@ def validate_request(
 ) -> None:  # fmt: skip
     """Raise ``RequestError`` unless the request may enter the workflow."""
     try:
-        validate("inspection_request", request)
+        check("inspection_request", request)
     except ContractError as exc:
         raise RequestError("SCHEMA", str(exc)) from exc
     if request["human_approval"] != {"status": "PENDING"}:
