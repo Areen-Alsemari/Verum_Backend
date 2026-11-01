@@ -27,15 +27,24 @@ def inventory(root: Path) -> dict[str, Any]:
             continue
         if episode["status"] != "completed":
             raise ValueError(f"unknown slot status: {episode['status']}")
+        scenario: dict[str, Any] | None = None
         for fault in episode["faults"]:
             if fault["class"] != "unaudited":
                 continue
-            key = (fault["subtype"], episode["strata"]["mode"], fault["asset_id"])
+            if scenario is None:
+                path = root / "evaluator" / "episodes" / episode["episode_id"] / "scenario.json"
+                scenario = json.loads(path.read_text(encoding="utf-8"))
+            mode = scenario["initial"]["mode"]
+            for command in sorted(scenario["schedule"], key=lambda c: c["t_s"]):
+                if command["t_s"] <= fault["onset_s"] and command["command"] == "lineup":
+                    mode = command["mode"]
+            key = (fault["subtype"], mode, fault["asset_id"])
             cells[key] += 1
             queue.append({
                 "episode_id": episode["episode_id"], "slot_index": episode["index"],
                 "fault_instance_id": fault["instance_id"], "subtype": fault["subtype"],
                 "asset_id": fault["asset_id"], "mode": key[1], "split": episode["split"],
+                "mode_basis": "scheduled_lineup_at_fault_onset",
                 "dataset_tier": episode["tier"], "original_class": fault["class"],
                 "audit_status": "pending", "audited_class": None,
                 "label_rule_fit_eligible": episode["split"] == "train",

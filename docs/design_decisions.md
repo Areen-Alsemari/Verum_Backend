@@ -119,7 +119,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D107 | Synthetic history store | DESIGN | 1.0 |
 | D108 | The inspection catalog is outside the configuration hash | DESIGN | 1.0 |
 | D109 | Actions that depend on the vapour track | DESIGN | 1.0 |
-| D120 | Evaluator probability scores and audit inventory | DESIGN | 1.0 |
+| D120 | Evaluator probability scores and audit inventory | DESIGN | 1.1 |
 | D121 | Restricted mechanical and vapour reference extension | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
@@ -1475,3 +1475,12 @@ These are choices that the audited documents do not state. They are implemented,
 - **Reason.** The physical references do not close the missing facility coefficient mappings or supply a calibrated failure law. Explicit reduced SIM cases permit software and interface studies without misrepresenting the original hydraulic campaign or the uncertainty of damaged-tank estimates.
 - **Sensitivity required.** Three damage peaks, the 0.05 m travel trigger and the unmatched fitting/seam coefficients. Threshold and proxy sensitivity do not establish physical validity.
 - **Notes.** Source: https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf, Tables 7.1-2, 7.1-8 and 7.1-12. This extension does not close the production release gates or the missing empirical validation of mechanical forces and emission factors.
+
+
+## D120 - Evaluator probability scores and audit inventory
+
+- **Version:** 1.1 (2026-11-01)  **Status:** DESIGN  **Refines:** D120 version 1.0
+- **Decision.** The audit queue groups faults by the scheduled lineup in force at their onset, obtained from the scenario's initial mode and lineup commands at or before the onset. The initial stratum mode alone is not the fault's audit cell when receipt switching has occurred. Queue rows state their mode basis explicitly.
+- **Reason.** The sampler selects the post-switch lineup for fault eligibility and visibility classes. Using the initial stratum mode incorrectly groups switch cases, while the stored labels can still be correct.
+- **Sensitivity required.** Lineup-command timing relative to fault onset; transition-period cases require separate treatment if introduced.
+- **Notes.** This changes audit metadata only and does not relabel stored faults or change observations.

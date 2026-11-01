@@ -23,13 +23,21 @@ def campaign(root: Path) -> Path:
             "strata": {"mode": "DELIVER_101_A"}, "split": split,
             "tier": "analytic_verification", "faults": [
                 {"instance_id": f"FI-{index}", "subtype": "stuck", "asset_id": "LT-101",
-                 "class": "unaudited"},
+                 "class": "unaudited", "onset_s": 1300.0},
                 {"instance_id": f"FI-known-{index}", "class": "clear"},
             ],
         })
     episodes.append({"status": "gap", "index": 3, "cell": "missing", "attempts": []})
     path = root / "evaluator" / "manifest.json"
     path.parent.mkdir(parents=True)
+    for episode in episodes:
+        if episode["status"] != "completed":
+            continue
+        folder = root / "evaluator" / "episodes" / episode["episode_id"]
+        folder.mkdir(parents=True)
+        (folder / "scenario.json").write_text(json.dumps({
+            "initial": {"mode": "DELIVER_101_A"}, "schedule": []
+        }))
     path.write_text(json.dumps({"episodes": episodes, "config_hash": "config",
                                 "code_commit": "commit"}), encoding="utf-8")
     return path
@@ -72,3 +80,21 @@ def test_output_cannot_replace_campaign_data_or_an_existing_artifact(tmp_path: P
     with pytest.raises(FileExistsError):
         write_inventory(root, output)
     assert output.read_bytes() == before
+
+
+def test_switch_cases_use_the_lineup_at_fault_onset(tmp_path: Path) -> None:
+    """A fault beginning after a scheduled switch is grouped under the receiving lineup.
+
+    Independent: yes, because the literal switch precedes every fixture onset by 100 seconds.
+    """
+    root = tmp_path / "campaign"
+    campaign(root)
+    for path in (root / "evaluator" / "episodes").glob("*/scenario.json"):
+        path.write_text(json.dumps({"initial": {"mode": "DELIVER_101_A"}, "schedule": [
+            {"t_s": 1200.0, "command": "lineup", "mode": "RECEIVE_103"}
+        ]}))
+    result = inventory(root)
+    assert result["coverage_cells"] == [
+        {"subtype": "stuck", "mode": "RECEIVE_103", "asset_id": "LT-101", "faults": 3}
+    ]
+    assert all(r["mode"] == "RECEIVE_103" for r in result["queue"])
