@@ -16,6 +16,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from verum.vapour.model import MechanicalFault, Parameters, mechanical_state, validate_graph
+
 FILE = "inspection_truth.jsonl.gz"
 FAULT_TRUTH = "fault_truth.jsonl.gz"
 SCENARIO = "scenario.json"
@@ -49,6 +51,21 @@ class Truth:
         self.horizon_s: float = float(scenario["duration_s"])
         self.rows = _read(directory / FILE)
         self._faults = _read(directory / FAULT_TRUTH) if (directory / FAULT_TRUTH).exists() else []
+        self.mechanical_faults: list[MechanicalFault] | None = None
+        self.mechanical_parameters: Parameters | None = None
+        mechanical_path = directory / "mechanical_faults.json"
+        if mechanical_path.exists():
+            mechanical = json.loads(mechanical_path.read_text(encoding="utf-8"))
+            if set(mechanical) != {"schema_version", "hidden", "parameter_hash", "faults"}:
+                raise ValueError("unknown or missing mechanical sidecar fields")
+            if mechanical["hidden"] is not True or mechanical["schema_version"] != "1.0.0":
+                raise ValueError("invalid mechanical fault sidecar")
+            parameters = Parameters()
+            if mechanical["parameter_hash"] != parameters.hash:
+                raise ValueError("mechanical parameter hash differs from the episode")
+            self.mechanical_parameters = parameters
+            self.mechanical_faults = [MechanicalFault(**r) for r in mechanical["faults"]]
+            validate_graph(self.mechanical_faults)
 
     # --- time ----------
     def _bracket(self, t: float) -> tuple[dict[str, Any], dict[str, Any] | None]:
@@ -73,6 +90,10 @@ class Truth:
         if t > self.horizon_s:
             self._follow_trajectories(state, t)
         state["t_sim_s"] = t
+        if self.mechanical_faults is not None and self.mechanical_parameters is not None:
+            state["mechanical"] = mechanical_state(
+                self.mechanical_faults, t, self.mechanical_parameters
+            )
         return dict(state)
 
     # --- faults ----------

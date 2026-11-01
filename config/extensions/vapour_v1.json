@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.0.0",
+  "method": "synthetic_reference_components",
+  "source_url": "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf",
+  "parameters": {
+    "rim_factor": {
+      "value": 0.6,
+      "unit": "lbmol/(ft yr)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-8-mechanical-shoe-rim-secondary-average"
+    },
+    "hatch_factor": {
+      "value": 1.6,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-12-bolted-gasketed-hatch"
+    },
+    "gauge_factor": {
+      "value": 2.8,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-12-bolted-gasketed-gauge-well"
+    },
+    "vacuum_factor": {
+      "value": 6.2,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-12-gasketed-vacuum-breaker"
+    },
+    "suspension_factor": {
+      "value": 1.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "seam_factor": {
+      "value": 1.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "vapour_molecular_mass": {
+      "value": 66.0,
+      "unit": "kg/kmol",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-2-generic-RVP10"
+    },
+    "rim_gap_at_full_damage_m": {
+      "value": 0.02,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "seal_tear_displacement_m": {
+      "value": 0.05,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "seal_damage_ramp_s": {
+      "value": 300.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "minimum_estimation_days": {
+      "value": 30.0,
+      "unit": "day",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D121-1.0"
+    },
+    "reference_year_days": {
+      "value": 365.0,
+      "unit": "day",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D121-1.0"
+    },
+    "density_kg_m3": {
+      "value": 750.0,
+      "unit": "kg/m3",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "M2-FLUID-REFERENCE"
+    },
+    "vapour_pressure_a": {
+      "value": 11.724,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-2-generic-RVP10"
+    },
+    "vapour_pressure_b_rankine": {
+      "value": 5237.3,
+      "unit": "degR",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-7.1-table-2-generic-RVP10"
+    },
+    "atmosphere_pa_abs": {
+      "value": 101325.0,
+      "unit": "Pa_abs",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "M1-VENTED-ROOF"
+    },
+    "damage_multiplier_max": {
+      "value": 2.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "M3-FL-01-FL-02"
+    },
+    "rim_normal_max_mm": {
+      "value": 2.0,
+      "unit": "mm",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "rim_critical_min_mm": {
+      "value": 10.0,
+      "unit": "mm",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    },
+    "fitting_critical_severity": {
+      "value": 0.5,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "D121-1.0"
+    }
+  }
+}

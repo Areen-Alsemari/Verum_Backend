@@ -120,6 +120,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D108 | The inspection catalog is outside the configuration hash | DESIGN | 1.0 |
 | D109 | Actions that depend on the vapour track | DESIGN | 1.0 |
 | D120 | Evaluator probability scores and audit inventory | DESIGN | 1.0 |
+| D121 | Restricted mechanical and vapour reference extension | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1457,3 +1458,20 @@ These are choices that the audited documents do not state. They are implemented,
 - **Reason.** Entropy can fall when confidence moves to a wrong hypothesis. Unknown audit coverage must remain explicit without changing the original observations or silently assigning a severity class.
 - **Sensitivity required.** Probability calibration and observability coverage by subtype, lineup and asset.
 - **Notes.** These utilities define scores and an audit work queue. They do not implement a diagnostic agent, fit a label rule or close the evaluation protocol.
+
+
+## D121 - Restricted mechanical and vapour reference extension
+
+- **Version:** 1.0 (2026-11-01)  **Status:** SIM  **Refines:** D109, D156
+- **Decision.**
+  - A separate extension adds persistent rim-seal deterioration, individual fitting damage, a reduced roof hang-up state and an explicit roof-hang-up to seal-tear cascade. Original hydraulic records remain unchanged. Every child retains its healthy parent split and receives a new opaque episode identifier.
+  - Mechanical severity ramps from zero to a selected peak of 0.25, 0.5 or 1.0, beginning at 600 s over 300 s. The synthetic maximum seal gap is 20 mm. Inspections use the existing 1 mm expanded gap uncertainty; normal and critical selections are 2 and 10 mm. A fitting seating defect is reported deterministically when damage is nonzero and becomes critical at severity 0.5. These are uncalibrated SIM rules, not defect probabilities or field thresholds.
+  - The roof-hang-up proxy permits a secondary seal tear only after a fully established parent and at least 0.05 m of subsequent relative liquid-level travel. The child begins at the first stored sample crossing and ramps over 300 s. The cascade records an actual new damage variable and a parent instance identifier. No child is created solely because pressure or level responds normally. Persistent damage does not heal automatically.
+  - Roof reaction forces and displacement feedback are outside this reduced mechanical model. Its observed hydraulic signals remain those of the healthy parent. All extension records therefore stay restricted_benchmark, excluded from physical-fault training and industrial performance claims. Normal geometric roof landing remains a state regime and creates no fault.
+  - Constant-condition reference estimates use windows of at least 30 days, separately from the one-hour hydraulic episode. They are not sensor observations or liquid-inventory sinks. The reported component sum omits withdrawal and is not a complete facility loss estimate.
+  - The June 2026 EPA Chapter 7.1 tables were checked for average-fitting mechanical-shoe seals with rim-mounted secondary (KRa 0.6), bolted gasketed hatch (KFa 1.6), bolted gasketed gauge well (2.8) and gasketed vacuum breaker (6.2), in customary coefficient units. Generic motor-gasoline RVP-10 A 11.724, B 5237.3 degR and molar mass 66 kg/kmol remain a named reference rather than a PG95 assay. Wind is zero for the internal floating roof. Convert coefficient results from pounds to kilograms after evaluation.
+  - The six suspension penetrations use a declared SIM proxy of 1 lbmol/yr each; the unmatched deck seams use a separate SIM proxy of 1 lbmol/yr. Neither is presented as an EPA equipment mapping. Damage multiplies only the affected rim term or one specified fitting term by 1 to 2, following the engineering package's FL-01 and FL-02 stress design. Uncertainty remains explicitly unresolved without calibration data.
+  - The extension parameter file is in a separately hashed subdirectory. Its hash is required by each mechanical sidecar and manifest, so it does not alter existing hydraulic episode identifiers. New artifacts are not allowed to replace an existing dataset directory. Visible folders contain observations only; mechanical truth, windows, split metadata and stored inspection replay remain evaluator-only.
+- **Reason.** The physical references do not close the missing facility coefficient mappings or supply a calibrated failure law. Explicit reduced SIM cases permit software and interface studies without misrepresenting the original hydraulic campaign or the uncertainty of damaged-tank estimates.
+- **Sensitivity required.** Three damage peaks, the 0.05 m travel trigger and the unmatched fitting/seam coefficients. Threshold and proxy sensitivity do not establish physical validity.
+- **Notes.** Source: https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf, Tables 7.1-2, 7.1-8 and 7.1-12. This extension does not close the production release gates or the missing empirical validation of mechanical forces and emission factors.

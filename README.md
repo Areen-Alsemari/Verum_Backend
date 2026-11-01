@@ -65,3 +65,10 @@ uv run pytest
 ```
 
 Repository conventions are described in `CONTRIBUTING.md`.
+
+
+## Mechanical and vapour extension
+
+The restricted mechanical extension adds persistent rim-seal and fitting defects, a reduced roof hang-up state and a travel-triggered secondary seal-tear cascade. Inspection results use these states through the existing approval workflow. The extension preserves its healthy parent's split and hydraulic observations; it does not model mechanical forces feeding back into hydraulics.
+
+Generate a new directory with `python tools/vapour_campaign.py --base data/campaign --output data/mechanical_extension_v1 --n 180`, then validate it with `python tools/validate_vapour_campaign.py --base data/campaign --root data/mechanical_extension_v1 --report local/mechanical_extension_validation.json`. The output remains restricted_benchmark. Its 30-day constant-condition vapour component estimates include explicit SIM proxies and are not complete facility emissions or observations (D121).

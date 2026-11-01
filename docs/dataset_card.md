@@ -25,9 +25,9 @@ The rule applies to every episode whose record lists a validity window (`validit
 
 ## Composition
 
-Families: hydraulic, with single injected faults available (a pipe leak, a valve restriction, a pump head degradation, sensor bias, drift and stuck-at, and valve misrouting; `docs/fault_models.md`), but no episode of the shipped scenarios carries a fault and no campaign of faulted episodes has been defined.
+Families: hydraulic, including healthy, single-fault, paired-fault and branched cases. The campaign manifest records counts, fault classes, validity tiers, splits and unsuccessful slots. A separate restricted extension adds synthetic roof, seal, fitting and causal-cascade cases linked to healthy parents (D121).
 
-Scenario classes: healthy delivery, healthy receipt, concurrent receipt and delivery, receipt switch, fill to high-high with isolation, set-point step, delivery with a downstream demand process, delivery in the inland stratum, and two rejected starts. Episode count and horizon: **unresolved** (a campaign has not been defined); the shipped scenarios last 3600 s.
+Scenario classes: healthy delivery, healthy receipt, concurrent receipt and delivery, receipt switch, fill to high-high with isolation, set-point step, delivery with a downstream demand process, delivery in the inland stratum, and two rejected starts. Campaign counts are recorded in the generated manifest and accounting report; hydraulic episodes last 3600 s. The mechanical extension uses the same horizon for inspections and separate stationary reference windows of at least 30 days for vapour components.
 
 ## Healthy variability profiles
 
@@ -111,4 +111,11 @@ Agent-visible: assets, observations, history, the inspection catalog, performed 
 
 ## Splits and evaluation protocol
 
-Unit and proportions: **unresolved**. Evaluation protocol: section 6.8 of the simulation document.
+The campaign manifest records held-out strata, assets and the train/validation/test membership of every completed episode (D155). Mechanical children inherit the parent split; variants of one source episode cannot cross splits. Evaluation protocol: section 6.8 of the simulation document. Unaudited observability labels remain explicit rather than being guessed.
+
+
+## Mechanical and vapour reference limits
+
+The D121 extension is restricted_benchmark and is excluded from physical-fault training. Its mechanical states are reduced synthetic variables without hydraulic force feedback. Seal gaps, fitting outcomes and the travel-triggered cascade are uncalibrated selections. Their software checks do not establish a validated roof failure model.
+
+Vapour output is a constant-condition 30-day reference component sum, not complete facility emissions. Suspension and seam factors remain explicit SIM proxies; withdrawal is omitted and uncertainty is unresolved. No continuous VOC channel is added and no reference vapour mass is subtracted from liquid inventory. Production generation remains disabled.

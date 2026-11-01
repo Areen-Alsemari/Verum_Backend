@@ -58,3 +58,10 @@ Each asset has a synthetic history of prior inspections, calibrations and work o
 The probabilities of detection, the vibration law, the localisation error and the thresholds are selections of a simulation. They are not field performance and are not validated against inspection data. The detection limit of 15 L/min is an assumption of the source document that it states as unvalidated.
 
 The process state is held after the horizon of the episode. The vibration law claims no physics beyond a monotone rise with the head loss. The history is independent of the faults by choice, so it carries no information about them.
+
+
+## Mechanical extension
+
+An episode with a versioned mechanical sidecar supplies rim gaps and fitting seating state to the existing inspection workflow. A rim inspection reports a noisy gap and a roof-position anomaly when present; a fitting check reports the selected synthetic seating-defect code. Both retain low-confidence evidence and plain model-limit notes. Episodes without the sidecar keep the earlier placeholder behaviour for reproducibility.
+
+The mechanical extension is a restricted synthetic model (D121). It does not model roof forces or change hydraulic observations. The associated 30-day constant-condition vapour reference is evaluator-only, carries unresolved uncertainty and is not a complete tank loss or an observation.

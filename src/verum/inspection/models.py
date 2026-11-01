@@ -3,8 +3,8 @@
 Each model reads the true state at the performed time and returns the measured quantity: the true
 quantity plus a Gaussian error with standard deviation U/2, where U is the expanded uncertainty of
 the catalog. Every model draws the same four random numbers in the same order whatever the
-outcome, so a result does not depend on a branch. The models of the rim seal and the fittings
-return an intact result until the vapour track exists, and say so.
+outcome, so a result does not depend on a branch. Rim and fitting models use a versioned mechanical
+state when present; legacy episodes retain their documented intact placeholders.
 
 See D102, D103, D105 and D109.
 """
@@ -24,6 +24,7 @@ from verum.inspection.assets import Assets
 from verum.inspection.catalog import Catalog
 from verum.inspection.truth import State
 from verum.sensors import load_sensor_config
+from verum.vapour.model import Parameters
 
 BAR_PA = 1.0e5
 M3H = 3600.0
@@ -102,6 +103,20 @@ def rim_survey(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Gene
     z1, *_ = _draws(rng)
     act = c.action("ACT-INSP-01")
     u = act.u("maximum_rim_seal_gap")
+    if "mechanical" in s:
+        parameters = Parameters()
+        state = s["mechanical"][target]
+        true_mm = 1000.0 * state["rim_gap_m"]
+        measured = max(0.0, true_mm + z1 * u / 2.0)
+        category = _three_way(measured, parameters["rim_normal_max_mm"],
+                              parameters["rim_critical_min_mm"])
+        notes = ["Synthetic seal-gap model; no field damage calibration."]
+        if state["roof_hang_up"] > 0:
+            notes.append("Roof-position anomaly observed; roof forces are outside this model.")
+            if category == NORMAL:
+                category = MINOR
+        return Outcome("maximum_rim_seal_gap", measured, "mm", u, category, notes,
+                       "low_confidence", {"true_value": true_mm})
     value = max(0.0, z1 * u / 2.0)
     return Outcome("maximum_rim_seal_gap", value, "mm", u, NORMAL, [VAPOUR_NOTE], "low_confidence",
                    {"true_value": 0.0})  # fmt: skip
@@ -205,6 +220,15 @@ def fitting_check(
     c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator
 ) -> Outcome:
     _draws(rng)
+    if "mechanical" in s:
+        damage = s["mechanical"][target]["fitting_damage"]
+        code = float(damage > 0)
+        category = NORMAL if code == 0 else (
+            CRITICAL if damage >= Parameters()["fitting_critical_severity"] else MINOR
+        )
+        return Outcome("seating_integrity", code, "1", 0.0, category,
+                       ["Synthetic seating-state check; cracking pressure is not modelled."],
+                       "low_confidence", {"true_value": code})
     notes = [VAPOUR_NOTE, "The cracking pressure is not modelled."]
     return Outcome("seating_integrity", 0.0, "1", 0.0, NORMAL, notes, "low_confidence",
                    {"true_value": 0.0})  # fmt: skip
