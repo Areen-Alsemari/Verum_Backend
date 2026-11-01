@@ -119,6 +119,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D107 | Synthetic history store | DESIGN | 1.0 |
 | D108 | The inspection catalog is outside the configuration hash | DESIGN | 1.0 |
 | D109 | Actions that depend on the vapour track | DESIGN | 1.0 |
+| D120 | Evaluator probability scores and audit inventory | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1442,3 +1443,17 @@ These are choices that the audited documents do not state. They are implemented,
 | P3 | A latched trip is reset only by an authorised event from operations or protection, with the independent signal valid and below the trip level minus the hysteresis of D16. | `verum.protection.machine` |
 | P4 | The factor 10 of D22 and the event-duration definitions (stroke time; four controller time constants). | `verum.sim.validity` |
 | P5 | The operations controller closes `XV-R000` and the tank inlet valve in response to a protection request (reactive command with a configured delay). | `verum.ops` |
+
+
+## D120 - Evaluator probability scores and audit inventory
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN  **Refines:** D106, D154
+- **Decision.**
+  - Inspection entropy reduction is the prior Shannon entropy minus the posterior Shannon entropy, in bits, over identical exhaustive mutually exclusive hypotheses. A negative value is retained. It is not evidence that the posterior is correct.
+  - Report the change in log probability of the true hypothesis separately, alongside the unnormalised multiclass Brier score. If truth has zero support before or after the inspection, the log-score change is undefined and is represented by null rather than clipping probabilities.
+  - Probability records must be finite, bounded and normalised. They are neither completed with defaults nor renormalised by the evaluator. A multiclass distribution is not a set of independent marginal probabilities for simultaneous faults; concurrent-fault hypotheses must describe joint states.
+  - An evaluator-only inventory lists unaudited fault instances, their original labels, splits and coverage cells. It records the source-manifest hash and leaves every audited class unresolved until evidence is computed. The inventory is written outside the original campaign and refuses to replace an existing artifact.
+  - Held-out observations cannot fit a label rule or calibrate thresholds. Healthy training records, rather than faulted queue entries, are required for healthy threshold calibration.
+- **Reason.** Entropy can fall when confidence moves to a wrong hypothesis. Unknown audit coverage must remain explicit without changing the original observations or silently assigning a severity class.
+- **Sensitivity required.** Probability calibration and observability coverage by subtype, lineup and asset.
+- **Notes.** These utilities define scores and an audit work queue. They do not implement a diagnostic agent, fit a label rule or close the evaluation protocol.

@@ -34,7 +34,7 @@ This repository is the backend of a larger system. A frontend will live in a sep
 - **Tests and decisions**
   - Tests for all of the above, and a record of design decisions in `docs/design_decisions.md`.
 
-Multi-fault episodes, a campaign generator and agents are not implemented.
+Paired-fault episodes and a resumable campaign generator are implemented. Agents are not implemented. Evaluator probability scores and an evaluator-only inventory of unaudited campaign faults are available; the complete scoring and relabelling protocol remains in progress.
 
 ## Data provenance
 
