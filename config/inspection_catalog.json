@@ -1,0 +1,524 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Inspection catalog, workflow constants, outcome models, thresholds and preconditions (D100 to D109). Costs, durations and uncertainties are from section 6.3 of the instrumentation document; the constants marked SIM in the models and thresholds sections are selections of the decisions named in their provenance.",
+  "source": "vendor/verum_audited/revised/04_instrumentation_inspection.md, sections 6.3, 7.2, 7.3 and 9.2",
+  "actions": {
+    "ACT-INSP-01": {
+      "name": "Floating Roof Rim Seal and Deck Survey",
+      "target_kind": "tank",
+      "targets": "Tanks TK-101 to TK-103",
+      "preconditions": [
+        "Tank level above 1.8 m",
+        "Authorised permit issued by the approval"
+      ],
+      "cost_usd": {
+        "value": 280.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 90.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "maximum_rim_seal_gap",
+          "unit": "mm",
+          "modelled": true,
+          "uncertainty": {
+            "value": 1.0,
+            "unit": "mm",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        }
+      ]
+    },
+    "ACT-INSP-02": {
+      "name": "Isolation Valve Mechanical Travel and Pressure Drop Verification",
+      "target_kind": "isolation_valve",
+      "targets": "Isolation valves XV-*",
+      "preconditions": [
+        "Pipeline flowing or pressurised at the target valve",
+        "Cold work permit issued by the approval"
+      ],
+      "cost_usd": {
+        "value": 90.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 45.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "measured_differential_pressure",
+          "unit": "bar",
+          "modelled": true,
+          "uncertainty": {
+            "value": 0.01,
+            "unit": "bar",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        },
+        {
+          "name": "stem_travel",
+          "unit": "percent",
+          "modelled": true,
+          "uncertainty": {
+            "value": 2.0,
+            "unit": "percent",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        }
+      ]
+    },
+    "ACT-INSP-03": {
+      "name": "Pump Vibration Spectral Analysis",
+      "target_kind": "pump",
+      "targets": "Pumps P-101A and P-101B",
+      "preconditions": [
+        "Pump running under load for at least 20 min"
+      ],
+      "cost_usd": {
+        "value": 140.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 60.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "overall_velocity_rms",
+          "unit": "mm/s",
+          "modelled": true,
+          "uncertainty": {
+            "value": 0.1,
+            "unit": "mm/s",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        },
+        {
+          "name": "spectral_peak_ratios",
+          "unit": "1",
+          "modelled": false,
+          "uncertainty": {
+            "value": null,
+            "unit": "1",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "the document states no uncertainty for this output (section 6.3) and the release has no model of it"
+          },
+          "kind": "measured"
+        }
+      ]
+    },
+    "ACT-INSP-04": {
+      "name": "Ultrasonic Pipeline Acoustic Leak Survey",
+      "target_kind": "pipe",
+      "targets": "Pipe edges of the topology",
+      "preconditions": [
+        "Gauge pressure above 3 bar at the target edge",
+        "Ground access issued by the approval"
+      ],
+      "cost_usd": {
+        "value": 350.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 120.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "leak_detected",
+          "unit": "1",
+          "modelled": true,
+          "uncertainty": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "categorical"
+        },
+        {
+          "name": "leak_station_along_edge",
+          "unit": "m",
+          "modelled": true,
+          "uncertainty": {
+            "value": null,
+            "unit": "m",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "the localisation error is a model distribution (D103) and not a stated uncertainty of the instrument"
+          },
+          "kind": "measured"
+        },
+        {
+          "name": "acoustic_level",
+          "unit": "dB",
+          "modelled": false,
+          "uncertainty": {
+            "value": 1.0,
+            "unit": "dB",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        },
+        {
+          "name": "wall_thickness",
+          "unit": "mm",
+          "modelled": false,
+          "uncertainty": {
+            "value": 0.05,
+            "unit": "mm",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        }
+      ]
+    },
+    "ACT-INSP-05": {
+      "name": "Manual Dip-Tape Sounding and Water Bottom Check",
+      "target_kind": "tank",
+      "targets": "Tanks TK-101 to TK-103",
+      "preconditions": [
+        "Gauging access issued by the approval"
+      ],
+      "cost_usd": {
+        "value": 110.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 45.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "manual_innage_level",
+          "unit": "mm",
+          "modelled": true,
+          "uncertainty": {
+            "value": 1.5,
+            "unit": "mm",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        },
+        {
+          "name": "water_bottom_cut",
+          "unit": "mm",
+          "modelled": false,
+          "uncertainty": {
+            "value": null,
+            "unit": "mm",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "the document states no uncertainty for this output (section 6.3) and the release has no model of it"
+          },
+          "kind": "measured"
+        }
+      ]
+    },
+    "ACT-INSP-06": {
+      "name": "Vent and Deck Fitting Inspection",
+      "target_kind": "tank",
+      "targets": "Tanks TK-101 to TK-103",
+      "preconditions": [
+        "Tank out of receipt mode"
+      ],
+      "cost_usd": {
+        "value": 160.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 60.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "seating_integrity",
+          "unit": "1",
+          "modelled": true,
+          "uncertainty": {
+            "value": 0.0,
+            "unit": "1",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "categorical"
+        },
+        {
+          "name": "cracking_pressure",
+          "unit": "bar",
+          "modelled": false,
+          "uncertainty": {
+            "value": null,
+            "unit": "bar",
+            "status": "unresolved",
+            "evidence_tag": "OPEN",
+            "unresolved_reason": "the document states no uncertainty for this output (section 6.3) and the release has no model of it"
+          },
+          "kind": "measured"
+        }
+      ]
+    },
+    "ACT-INSP-07": {
+      "name": "Field Pressure Transmitter Loop Calibration",
+      "target_kind": "pressure_transmitter",
+      "targets": "Pressure transmitters PT-001, PT-201, PT-202A, PT-202B and PT-203",
+      "preconditions": [
+        "Manifold isolation permitted by the approval"
+      ],
+      "cost_usd": {
+        "value": 120.0,
+        "unit": "USD",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "duration_min": {
+        "value": 45.0,
+        "unit": "min",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-DD-D100-v1.0"
+      },
+      "outputs": [
+        {
+          "name": "calibration_error",
+          "unit": "percent of span",
+          "modelled": true,
+          "uncertainty": {
+            "value": 0.025,
+            "unit": "percent of span",
+            "status": "provisional",
+            "evidence_tag": "DESIGN",
+            "provenance_id": "VERUM-DD-D100-v1.0"
+          },
+          "kind": "measured"
+        }
+      ]
+    }
+  },
+  "workflow": {
+    "approval_delay_min_s": {
+      "value": 300.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D101-v1.0"
+    },
+    "approval_delay_max_s": {
+      "value": 1800.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D101-v1.0"
+    },
+    "rejection_probability": {
+      "value": 0.05,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D101-v1.0"
+    },
+    "scheduling_delay_min_s": {
+      "value": 0.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D101-v1.0"
+    },
+    "scheduling_delay_max_s": {
+      "value": 900.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D101-v1.0"
+    },
+    "result_delay_s": {
+      "value": 120.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D101-v1.0"
+    }
+  },
+  "preconditions": {
+    "tank_level_min_m": {
+      "value": 1.8,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D104-v1.0"
+    },
+    "pump_load_min_s": {
+      "value": 1200.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D104-v1.0"
+    },
+    "edge_pressure_min_bar": {
+      "value": 3.0,
+      "unit": "bar",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D104-v1.0"
+    },
+    "flow_tolerance_m3s": {
+      "value": 1e-06,
+      "unit": "m3/s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D104-v1.0"
+    }
+  },
+  "models": {
+    "acoustic_q50_m3h": {
+      "value": 0.9,
+      "unit": "m3/h",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D103-v1.0"
+    },
+    "localisation_sigma_m": {
+      "value": 5.0,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D103-v1.0"
+    },
+    "vibration_baseline_mm_s": {
+      "value": 1.5,
+      "unit": "mm/s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D103-v1.0"
+    },
+    "vibration_anchor_mm_s": {
+      "value": 7.1,
+      "unit": "mm/s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D103-v1.0"
+    },
+    "vibration_anchor_head_loss": {
+      "value": 0.3,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D103-v1.0"
+    }
+  },
+  "thresholds": {
+    "valve_dp_normal_max_bar": {
+      "value": 0.05,
+      "unit": "bar",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D105-v1.0"
+    },
+    "valve_dp_critical_min_bar": {
+      "value": 0.5,
+      "unit": "bar",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D105-v1.0"
+    },
+    "vibration_normal_max_mm_s": {
+      "value": 2.8,
+      "unit": "mm/s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D105-v1.0"
+    },
+    "vibration_critical_min_mm_s": {
+      "value": 7.1,
+      "unit": "mm/s",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D105-v1.0"
+    }
+  },
+  "history": {
+    "prior_normal_probability": {
+      "value": 0.9,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D107-v1.0"
+    },
+    "calibration_within_tolerance_probability": {
+      "value": 0.95,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "SIM",
+      "provenance_id": "VERUM-DD-D107-v1.0"
+    },
+    "horizon_days": {
+      "value": 1825.0,
+      "unit": "day",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D107-v1.0"
+    }
+  }
+}

@@ -2,7 +2,8 @@
 
 The configuration hash is the SHA-256 of the canonical JSON of every resolved configuration file, so
 it covers values and not formatting. Reference copies and patch files are left out because the
-patched working files already contain their effect. The git commit sits in a separate block so that
+patched working files already contain their effect, and so is the inspection catalog, which fixes
+no simulated or observed value. The git commit sits in a separate block so that
 the episode record itself does not depend on it. If git is unavailable the commit is recorded as
 unknown and is never invented.
 
@@ -28,8 +29,12 @@ def canonical_json(value: Any) -> str:
     )
 
 
+NOT_HASHED = ("inspection_catalog.json",)  # fixes no simulated or observed value (D108)
+
+
 def _config_files(directory: Path) -> list[Path]:
-    return sorted([*directory.glob("*.json"), *directory.glob("scenarios/*.json")])
+    found = [*directory.glob("*.json"), *directory.glob("scenarios/*.json")]
+    return sorted(p for p in found if p.name not in NOT_HASHED)
 
 
 def config_hash(directory: Path | None = None) -> str:

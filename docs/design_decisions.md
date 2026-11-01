@@ -7,7 +7,7 @@ This log records the modelling and numerical decisions that fix the simulator co
 - **Status.** `SIM` marks a selected synthetic model parameter or law. `DESIGN` marks a selection of method or scope. Neither is a measurement, a manufacturer value or a field-validated result. Every value below is a simulation selection for a representative terminal.
 - **Sensitivity required.** The sweep or comparison that must accompany any result that depends on the decision. Where the decision log specified the sweep, it is stated as specified. Where it did not, the entry is marked *proposed* and is open to revision by the decision owner.
 - **Notes.** Observations made while recording the decision that bear on its implementation. They are not part of the decision.
-- Log version 21 (2026-11-05). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
+- Log version 22 (2026-11-06). Records are version 1.0 unless stated. A record with a later version states the version it supersedes and keeps the earlier version below it, marked superseded.
 - Source documents are cited by file and section in the audited package under `vendor/verum_audited/`.
 
 ## Index
@@ -109,6 +109,16 @@ This log records the modelling and numerical decisions that fix the simulator co
 | D155 | Hold-out of strata and assets | DESIGN | 1.0 |
 | D156 | Inspection truth of an episode | DESIGN | 1.0 |
 | D157 | Classes of a cell that its lineups can carry | DESIGN | 1.0 |
+| D100 | Inspection catalog | DESIGN | 1.0 |
+| D101 | Inspection workflow and approval emulator | DESIGN | 1.0 |
+| D102 | Outcome rule of an inspection | SIM | 1.0 |
+| D103 | Models of the seven inspection actions | SIM | 1.0 |
+| D104 | Preconditions of the inspection actions | DESIGN | 1.0 |
+| D105 | Outcome categories | SIM | 1.0 |
+| D106 | Information gain in a request | DESIGN | 1.0 |
+| D107 | Synthetic history store | DESIGN | 1.0 |
+| D108 | The inspection catalog is outside the configuration hash | DESIGN | 1.0 |
+| D109 | Actions that depend on the vapour track | DESIGN | 1.0 |
 
 ## D1 - Solver architecture and time step
 
@@ -1302,6 +1312,120 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Reason.** A valve restriction of a delivery lineup has only valves of the classes that the class file gives to the invisible class, so a cell that drew a marginal or clear obstruction there could never give an episode. The full-run check showed 2 gaps of this kind in the first 50 slots.
 - **Sensitivity required.** The number of gaps per cell.
 - **Notes.** The plan, the subtypes and the family of every slot are unchanged; only the class draw of a restriction in a delivery family or on the delivery path of a physical pair changes. The 60 cells and scenarios of the second pilot are identical before and after.
+
+## D100 - Inspection catalog
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D88
+- **Decision.**
+  - The catalog has the seven actions `ACT-INSP-01` to `ACT-INSP-07` of section 6.3 of the instrumentation document, with name, target kind, preconditions, cost, duration, output fields and expanded uncertainty U (k = 2). Costs are 280, 90, 140, 350, 110, 160 and 120 USD, and durations are 90, 45, 60, 120, 45, 60 and 45 minutes.
+  - U is read from the document: 1.0 mm (maximum rim gap), 0.01 bar and 2 percent (valve pressure drop and stem travel), 0.1 mm/s (overall velocity), 1.0 dB and 0.05 mm (acoustic level and wall thickness), 1.5 mm (manual innage level) and 0.025 percent of span (calibration error).
+  - A value that the document does not state is an unresolved parameter: the uncertainty of the spectral peak ratios, of the water bottom cut and of the cracking pressure, which have no model in this release.
+  - The catalog is written to `config/inspection_catalog.json` as parameter records with the tag DESIGN and the provenance of this decision. The gateway returns the agent-visible part of it: name, target kind, preconditions, cost, duration, output fields and U. The models, thresholds and workflow constants of the file are not returned.
+- **Reason.** The catalog was empty because no audited catalog was available; the instrumentation document in the audited package states it.
+- **Sensitivity required.** None.
+- **Notes.** The document is a simulation catalog and not a field procedure. The request schema of the document has a maximum of 1 bit for the information gain, which the audited schema of the repository does not have; D106 gives the bound that is applied.
+
+## D101 - Inspection workflow and approval emulator
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D100
+- **Decision.**
+  - A request goes through the states requested, approved or rejected, scheduled, performed and result available. In the audited schemas the states approved and scheduled are both `approved`, and a rejection is a result `cancelled` with the request status `REJECTED`.
+  - The approval delay is uniform from 5 to 30 min. A request is rejected for a non-safety reason with probability 5 percent (SIM), and is also rejected, with a reason code, if a precondition of D104 fails at the time of the decision. The scheduling delay is uniform from 0 to 15 min. The performed time is the scheduled start plus the duration of the catalog, and the result is visible 2 min after it.
+  - No agent can dispatch. The approval emulator is the only actor, and it decides at the approval time and at no other.
+  - Every delay and every draw comes from a named stream of the episode seed, keyed by the request identifier, so a request has the same timeline whatever the other requests are.
+- **Reason.** The document requires human approval before any field action, and the delays make the cost of an inspection a cost in time as well as in money.
+- **Sensitivity required.** The mean time from request to result for each action.
+- **Notes.** The delays and the rejection probability are selections. A result becomes visible only when its time has passed, and an unperformed request has no findings.
+
+## D102 - Outcome rule of an inspection
+
+- **Version:** 1.0 (2026-11-06)  **Status:** SIM  **Refines:** D101, D156
+- **Decision.**
+  - The measured quantity is the true quantity at the performed time plus a Gaussian error with standard deviation U/2.
+  - True quantities are read from the evaluator file `inspection_truth.jsonl.gz`. Between two rows the value is the linear interpolation of the numbers, and a state (a commanded position, a run state, a contact) is the value of the last row at or before the time. Across a pre-event and post-event pair the value is that of the side on which the time falls: the pre-event row for a time before the event and the post-event row from the event time on.
+  - After the last row of the episode the process state is held at its last row. The parameters of the faults follow their trajectories and hold their last value.
+- **Reason.** U is an expanded uncertainty with coverage factor 2, so the standard deviation is half of it, and the truth file is the only source of true values.
+- **Sensitivity required.** None.
+- **Notes.** Holding the process state after the horizon is a stated limitation: an inspection performed after the end of the episode reports the state at the end. The performed time of an action of 45 to 120 min often lies after a 3600 s episode.
+
+## D103 - Models of the seven inspection actions
+
+- **Version:** 1.0 (2026-11-06)  **Status:** SIM  **Refines:** D100, D102
+- **Decision.**
+  - `ACT-INSP-01` and `ACT-INSP-06` follow D109.
+  - `ACT-INSP-02` returns the pressure drop across the valve in bar, the actual opening in percent and the commanded and contact states. The drop is the pressure at the downstream end of the inbound edge less the pressure at the upstream end of the outbound edge. The actual opening is the opening of the truth, so a restriction of mode obstruction shows an actual opening below the commanded one while the contact reads open.
+  - `ACT-INSP-03` returns the overall velocity, which rises with the head loss fraction h of the pump (one less the head scale) as v = v0 + (v1 - v0) h / h1, with v0 = 1.5 mm/s, v1 = 7.1 mm/s and h1 = 0.30. No other vibration physics is claimed: the 7.1 mm/s is the value that the document gives for a pump with a degraded impeller, h1 is the largest head loss of the fault range, and v0 is a selection.
+  - `ACT-INSP-04` detects a leak of the target edge with probability P = 1/(1 + (q50/q)^2), where q is the leak flow of the edge at the performed time and q50 = 0.9 m3/h, the minimum detectable leak of 15 L/min of the document (unvalidated). The localisation error is normal with a standard deviation of 5 m and is applied to the position of the leak along the edge, clipped to the edge. The acoustic level and the wall thickness are not modelled.
+  - `ACT-INSP-05` returns the true level of the tank plus the error, in mm, and the discrepancy with the reported level is left to the agent.
+  - `ACT-INSP-07` returns the calibration error of the transmitter in percent of span: the true pressure at the transmitter less its reported noise-free value, plus the error. The true pressure is the noise-free sampled value of the tag before the fault offset, and the reported value is that value plus the offset.
+- **Reason.** Each model uses the true quantity that the action measures and the uncertainty of the document, and claims nothing else.
+- **Sensitivity required.** The detection curve against q50, and the velocity law against its three constants.
+- **Notes.** The constants v0, h1 and the standard deviation of the localisation error are selections, and q50 is unvalidated. Probabilities of detection are properties of the model and not field performance.
+
+## D104 - Preconditions of the inspection actions
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D100, D101
+- **Decision.**
+  - The preconditions are evaluated against the truth at the time of the approval decision: 01 the tank level is above 1.8 m; 02 the pipeline is flowing or pressurised at the target valve; 03 the pump has been running under load for at least 20 min; 04 the gauge pressure at the target edge is above 3 bar; 05 gauging access; 06 the tank is out of receipt mode; 07 manifold isolation is permitted.
+  - Flowing is a flow of more than 1e-6 m3/s in the inbound or outbound edge, pressurised is a gauge pressure above zero at either end, and under load is a running pump with a flow through its discharge edge. The pressure at an edge is the mean of its end pressures. A tank is in receipt mode if a flow of more than 1e-6 m3/s enters through one of its receipt edges. A pump that is running at the start of the episode is counted as started at 0 s.
+  - Permits (01, 05, 07) are issued by the approval and are not state of the process, so they cannot fail for want of state.
+  - A failed precondition gives a rejection of the request with a plain reason code.
+- **Reason.** The document states the prerequisites of each action, and only those that concern the state of the process can be checked against the truth.
+- **Sensitivity required.** None.
+- **Notes.** The reason codes are `LEVEL_BELOW_1_8_M`, `VALVE_NOT_FLOWING_OR_PRESSURISED`, `PUMP_NOT_UNDER_LOAD_20_MIN`, `EDGE_BELOW_3_BAR` and `TANK_IN_RECEIPT_MODE`, and `NON_SAFETY_REASON` for the random rejection.
+
+## D105 - Outcome categories
+
+- **Version:** 1.0 (2026-11-06)  **Status:** SIM  **Refines:** D103
+- **Decision.**
+  - The categories are `NORMAL_INTACT`, `MINOR_DEGRADATION`, `CRITICAL_DEFECT` and `TEST_INCONCLUSIVE`, taken from thresholds that are stored in the catalog file with their provenance.
+  - Valve pressure drop: normal at or below 0.05 bar (the limit of the document for a fully open valve), critical at or above 0.5 bar (selected), minor between. Pump velocity: normal at or below 2.8 mm/s (selected), critical at or above 7.1 mm/s (the document), minor between. Acoustic survey: a detection is critical and a non-detection is inconclusive, because the probability of detection is below 1. Dip and calibration: normal if the measured quantity agrees with the reported one within the expanded uncertainty, and otherwise inconclusive, because no threshold of severity exists.
+  - Where no threshold exists, the result carries the metric and its uncertainty only, with the category `TEST_INCONCLUSIVE`.
+- **Reason.** The categories of the schema need thresholds, and the document gives few of them.
+- **Sensitivity required.** The share of each category for each fault class.
+- **Notes.** The thresholds marked selected are not from the document or a standard and are not a field limit.
+
+## D106 - Information gain in a request
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D101
+- **Decision.**
+  - The information gain that a request reports is at most the base-2 logarithm of the number of distinct competing hypotheses. A request that reports more is refused at submission.
+  - The evaluator computes the realised gain itself from its own record of the hypotheses and does not use the reported one.
+- **Reason.** An outcome with n equally weighted hypotheses cannot remove more than log2 n bits, and the reported value is only an intention of the agent.
+- **Sensitivity required.** None.
+- **Notes.** The audited request schema has no maximum for the reported gain, so the bound is enforced by the validator and not by the schema.
+
+## D107 - Synthetic history store
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D88
+- **Decision.**
+  - The history of an episode holds prior inspections, calibrations and work orders of each asset, generated from the episode seed with named streams, in negative seconds before the start of the episode.
+  - The history does not depend on the faults of the episode (a stated choice of version 1): a faulted and a healthy episode with the same seed have the same history, and no causal link between the history and a fault exists.
+  - A record states a kind, a date, the action or the work type, the outcome category (an inspection), whether the as-found calibration was within tolerance (a calibration) and a text from a fixed list. It holds no measured value.
+  - The history is checked against a closed schema and is returned by the gateway with time gating: a record is visible from its recorded time on.
+- **Reason.** A history lets an agent weigh prior condition, and independence from the faults keeps it from carrying the label.
+- **Sensitivity required.** None.
+- **Notes.** Prior outcomes are normal with probability 0.9 and a minor degradation otherwise, and a calibration is within tolerance with probability 0.95; both are selections. An inspection performed in the episode appends a record at the time its result becomes visible.
+
+## D108 - The inspection catalog is outside the configuration hash
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D100
+- **Decision.**
+  - The file `config/inspection_catalog.json` is not part of the configuration hash. The hash covers the files that fix the simulation and the observations of an episode.
+  - A test lists the files that the hash leaves out.
+- **Reason.** The catalog changes no simulated or observed value, and a change of the hash changes every episode identifier, which would break the resumption of a campaign that was started before the catalog existed.
+- **Sensitivity required.** None.
+- **Notes.** An inspection result states the version of the catalog it used through the schema version of the file.
+
+## D109 - Actions that depend on the vapour track
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D103
+- **Decision.**
+  - The actions `ACT-INSP-01` and `ACT-INSP-06` depend on the state of the rim seal and of the tank fittings, which the vapour track will provide. Until it exists they return an intact result: the category `NORMAL_INTACT`, a gap of 0 mm and a seating code of 0, and a note in the result that the vapour-track state is not available.
+  - The result of `ACT-INSP-01` is the maximum rim gap, clipped at zero, and that of `ACT-INSP-06` is the seating code with no measurement error.
+- **Reason.** A value that no model supplies is not invented, and an intact result states the missing model.
+- **Sensitivity required.** None.
+- **Notes.** The intact result is a placeholder and not a finding. The two actions need their models when the vapour track is merged.
 
 ## Episode profile
 

@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 from verum.provenance import (
+    NOT_HASHED,
     canonical_json,
     config_hash,
     episode_id,
@@ -141,9 +142,13 @@ def test_the_hash_ignores_layout_but_not_values(root: Path, tmp_path: Path) -> N
     assert config_hash(tmp_path / "config") == base
 
 
+STORED_HASH_BEFORE_THE_CATALOG = "beb8429deee00870c6a33c3d34c36bc34c6c637f1c67a0adc584744e2c20ac96"
+
+
 def _all_config_files(root: Path) -> list[str]:
     base = root / "config"
     names = [p.relative_to(base).as_posix() for p in sorted(base.glob("*.json"))]
+    names = [n for n in names if n not in NOT_HASHED]
     return names + [p.relative_to(base).as_posix() for p in sorted(base.glob("scenarios/*.json"))]
 
 
@@ -198,7 +203,24 @@ def test_reference_and_patch_files_do_not_enter_the_hash(root: Path, tmp_path: P
     assert config_hash(tmp_path / "config") == base
 
 
-def test_canonical_json_is_order_independent() -> None:
+def test_the_inspection_catalog_does_not_enter_the_hash_and_the_other_files_do(
+    root: Path, tmp_path: Path
+) -> None:
+    """The only configuration file that the hash leaves out is the inspection catalog, a change of
+    it leaves the hash as it is, and the hash equals the one stored in an episode record.
+
+    Independent: yes, because the list of left-out files is stated in the decision and the stored
+    hash was written before the catalog existed.
+    """
+    shutil.copytree(root / "config", tmp_path / "config")
+    base = config_hash(tmp_path / "config")
+    path = tmp_path / "config" / "inspection_catalog.json"
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["description"] = "changed"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    assert config_hash(tmp_path / "config") == base
+    assert NOT_HASHED == ("inspection_catalog.json",)
+    assert base == STORED_HASH_BEFORE_THE_CATALOG
     """The canonical JSON form does not depend on key order. Independent: yes, because the two
     inputs differ only in order.
     """
