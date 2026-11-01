@@ -362,16 +362,18 @@ def test_the_gateway_refuses_a_row_outside_the_closed_schema(
         Gateway(copy).query(3600.0)
 
 
-def test_lk12_the_episode_id_is_opaque_and_the_catalog_is_empty_not_invented(
+def test_lk12_the_episode_id_is_opaque_and_the_catalog_is_the_seven_actions(
     episodes: dict[str, EpisodeResult],
 ) -> None:
-    """The episode identifier is opaque, and the inspection catalog is empty because none exists in
-    the audited input. Independent: yes, because the expected pattern and the empty catalog are the
-    stated rules.
+    """The episode identifier is opaque, and the inspection catalog holds the seven actions of the
+    instrumentation document (D100). Independent: yes, because the expected pattern and the action
+    identifiers are the stated rules.
     """
     payload = Gateway(episodes["S0-A"].directory).query(10.0)
     assert re.fullmatch(r"EP-[0-9A-F]{12}", payload["episode_id"])
-    assert payload["inspection_catalog"] == []  # no catalog exists in the audited package
+    assert [c["action_id"] for c in payload["inspection_catalog"]] == [
+        f"ACT-INSP-0{i}" for i in range(1, 8)
+    ]
     kinds = {a["kind"] for a in payload["assets"]}
-    assert kinds == {"tank", "pump", "isolation_valve"}
-    assert len(payload["assets"]) == 3 + 2 + 11
+    assert kinds == {"tank", "pump", "isolation_valve", "pipe", "pressure_transmitter"}
+    assert len(payload["assets"]) == 3 + 2 + 11 + 28 + 5

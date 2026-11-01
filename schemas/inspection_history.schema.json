@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-status": "backend-proposed",
+  "description": "Proposed by the backend for review by the schema owner. Agent-visible synthetic history of an asset: prior inspections, calibrations and work orders. It holds no measured value and is independent of the faults of the episode.",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "urn:verum:inspection_history:0.7.0",
+  "title": "inspection_history (agent-visible)",
+  "required": [
+    "schema_version",
+    "dataset",
+    "record_id",
+    "asset_id",
+    "kind",
+    "t_recorded_s",
+    "description"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.7\\.[0-9]+$"
+    },
+    "dataset": {
+      "const": "inspection_history"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^HIST-[0-9]{6}$"
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "inspection",
+        "calibration",
+        "work_order"
+      ]
+    },
+    "t_recorded_s": {
+      "type": "number",
+      "description": "seconds from the start of the episode; negative for a prior record"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action_id": {
+      "enum": [
+        "ACT-INSP-01",
+        "ACT-INSP-02",
+        "ACT-INSP-03",
+        "ACT-INSP-04",
+        "ACT-INSP-05",
+        "ACT-INSP-06",
+        "ACT-INSP-07"
+      ]
+    },
+    "outcome_category": {
+      "enum": [
+        "NORMAL_INTACT",
+        "MINOR_DEGRADATION",
+        "CRITICAL_DEFECT",
+        "TEST_INCONCLUSIVE"
+      ]
+    },
+    "within_tolerance": {
+      "type": "boolean"
+    },
+    "work_type": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "inspection"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "action_id",
+          "outcome_category"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "within_tolerance"
+              ]
+            },
+            {
+              "required": [
+                "work_type"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "calibration"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "within_tolerance"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "action_id"
+              ]
+            },
+            {
+              "required": [
+                "outcome_category"
+              ]
+            },
+            {
+              "required": [
+                "work_type"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "work_order"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "work_type"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "action_id"
+              ]
+            },
+            {
+              "required": [
+                "outcome_category"
+              ]
+            },
+            {
+              "required": [
+                "within_tolerance"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

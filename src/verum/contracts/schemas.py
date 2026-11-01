@@ -42,7 +42,8 @@ PROPOSED_SCHEMA_NAMES: Final = (
     "fault_spec",
     "inspection_truth",
 )
-ALL_SCHEMA_NAMES: Final = (*SCHEMA_NAMES, *PROPOSED_SCHEMA_NAMES)
+PROPOSED_VISIBLE_SCHEMA_NAMES: Final = ("inspection_history",)  # proposed, and shown to agents
+ALL_SCHEMA_NAMES: Final = (*SCHEMA_NAMES, *PROPOSED_SCHEMA_NAMES, *PROPOSED_VISIBLE_SCHEMA_NAMES)
 
 
 def _read_json(path: Path) -> dict[str, Any]:

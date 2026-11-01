@@ -90,14 +90,17 @@ PROPOSED_SCHEMAS = [
     "fault_spec",
     "inspection_truth",
 ]
+VISIBLE_PROPOSED_SCHEMAS = ["inspection_history"]
 
 
-def test_schema_directory_holds_the_six_audited_and_ten_proposed_schemas(root: Path) -> None:
-    """The schema directory holds the six audited and the ten proposed schemas and no others.
+def test_schema_directory_holds_the_audited_and_the_proposed_schemas(root: Path) -> None:
+    """The schema directory holds the six audited schemas, the ten hidden proposed ones and the
+    visible proposed one, and no others.
     Independent: yes, because the expected names are written out in the test.
     """
     names = sorted(p.name for p in (root / "schemas").glob("*.json"))
-    assert names == sorted(f"{n}.schema.json" for n in [*SCHEMA_FILES, *PROPOSED_SCHEMAS])
+    expected = [*SCHEMA_FILES, *PROPOSED_SCHEMAS, *VISIBLE_PROPOSED_SCHEMAS]
+    assert names == sorted(f"{n}.schema.json" for n in expected)
 
 
 @pytest.mark.parametrize("name", PROPOSED_SCHEMAS)

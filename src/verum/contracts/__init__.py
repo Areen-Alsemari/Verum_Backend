@@ -10,6 +10,7 @@ from verum.contracts.policy import ReleasePolicy, load_policy
 from verum.contracts.schemas import (
     ALL_SCHEMA_NAMES,
     PROPOSED_SCHEMA_NAMES,
+    PROPOSED_VISIBLE_SCHEMA_NAMES,
     SCHEMA_NAMES,
     load_schema,
     validate,
@@ -21,6 +22,7 @@ from verum.contracts.topology import Topology, load_topology
 __all__ = [
     "ALL_SCHEMA_NAMES",
     "PROPOSED_SCHEMA_NAMES",
+    "PROPOSED_VISIBLE_SCHEMA_NAMES",
     "SCHEMA_NAMES",
     "ContractError",
     "FluidContract",
