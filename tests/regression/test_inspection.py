@@ -1,6 +1,6 @@
 """The inspection package: catalog, models, preconditions, workflow, validator, history, gateway.
 
-The checks use evaluator directories written by hand (tests/_inspection_cases.py), so every
+The checks use evaluator directories written by hand with a small test helper, so every
 expected outcome is arithmetic on the true quantities that the test sets. Statistical checks use
 many draws and four-sigma bounds. The checks on real episodes with known faults are in the file
 of the slow tests.
@@ -186,15 +186,14 @@ def test_after_the_horizon_the_process_is_held_and_the_faults_follow_their_traje
 
 # --- actions on known truths ----------
 def test_valve_check_separates_the_commanded_actual_and_contact_states(tmp_path: Path) -> None:
-    """A fully open valve passing 0.05 m3/s through an edge of 0.20274 m has a loss of
-    0.1 * 750 * (0.05 / 0.032284)^2 / 2 = 90 Pa, so about 0.0009 bar and the category normal. The
-    same flow through a valve open to 0.5, where the loss coefficient is 5.0, gives 0.045 bar, the
-    notes of the three states (commanded open, travel near 50 percent, contact open) and the
-    category minor because the stem does not follow the command. A closed valve with 3.0 bar on one
-    side and 2.9 or 1.55 bar on the other shows 0.1 bar (minor) or 1.45 bar (critical).
+    """A fully open valve passing 0.05 m3/s through an edge of 0.20274 m has a loss of 90 Pa
+    (0.1 * 750 * (0.05 / 0.032284)^2 / 2), so about 0.0009 bar and the category normal. Open to 0.5,
+    with the loss coefficient 5.0, it shows 0.045 bar and the category minor because the stem does
+    not follow the command. A closed valve with 3.0 bar on one side shows 0.1 bar (minor) with 2.9
+    bar and 1.45 bar (critical) with 1.55 bar on the other.
 
-    Independent: yes, because the drops are hand arithmetic; the loss coefficient 5.0 at an opening
-    of 0.5 is the value of the valve law of the hydraulic model.
+    Independent: yes, because the drops are hand arithmetic; the coefficient 5.0 at an opening of
+    0.5 is the value of the valve law of the hydraulic model.
     """
     rows = grid()
     for edge in ("E-S101a", "E-S101b"):

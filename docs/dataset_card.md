@@ -84,7 +84,7 @@ The transient engine has been compared with single-phase water-hammer experiment
   - In the transient engine after the step 600 to 300 m3/h (TK-101 at 9.28 m) the true PT-001 departs from its 2 s mean by up to 0.68 bar (135 noise standard deviations of 0.005 bar) between 1 and 5 s after the step, 0.41 bar (83 sigma) from 5 to 10 s, 0.26 bar (52 sigma) from 10 to 20 s and 0.15 bar (30 sigma) from 20 to 30 s, with periods of 1.0 s and 0.41 s.
   - The episodes contain only the mean (the inertial head of D22); a 1 s sample of a real PT-001 would carry the oscillation.
 - The pumping-minimum tables make the feasible initial level depend on the fluid temperature (D35). For the baseline (RVP_9_0, NPSH3 4 m, reference fittings, f_d 0.8) the minimum level rises by 0.22, 0.26 and 0.30 m per degree (TK-101, TK-102, TK-103, coastal) or 0.28, 0.33 and 0.36 m per degree (inland) between 25 and 45 C, so that sampling the level uniformly in the feasible band gives a correlation of temperature and initial level of 0.31, 0.38 and 0.45 (coastal) and 0.43, 0.50 and 0.57 (inland): a high temperature goes with a high starting level, and an agent can read that from the data (`tools/feasibility_correlation.py`).
-- Faults exist only as single, persistent faults of five types; damaged-seal and fitting multipliers, multi-fault episodes, recovery, vapor-related faults and inspection outcomes do not exist yet.
+- Faults exist only as single, persistent faults of five types; damaged-seal and fitting multipliers, multi-fault episodes, recovery, vapor-related faults do not exist yet.
   - The fault laws, ranges and thresholds are selections (D60 to D65).
   - Some severities are not realisable (a valve stuck almost closed on the duty path is rejected by a gate at every severity of its range), some faults leave no trace (a restriction of a closed valve, a degraded stopped pump, a stuck-at on a constant signal), and several pairs of faults have almost the same signature in the emitted tags (a restriction of the pump inlet valve and a pump degradation, leaks in the same zone); the audit of `docs/fault_models.md` gives the numbers.
   - A leak is a rigid-column sink evaluated from the last accepted solve and valid above 10 kPa gauge only.
@@ -97,7 +97,12 @@ The transient engine has been compared with single-phase water-hammer experiment
 - The receipt branch velocity of 5.2 m/s and the suction branch velocity of 2.6 m/s exceed common design guidance (an unsourced recollection); inlet-jet and static-charge effects are not modelled (D48).
 - The meter loss coefficient K = 1 is probably low (D48; the sweep of D50 is in the sensitivity study).
 - There are no pump strainers, vapor handling, vent or vapor-recovery hardware, and no pump start, trip or changeover (D48).
-- The inspection catalog is empty: no catalog exists in the audited package.
+- Inspection actions and their outcomes are a simulation model (D100 to D109, `docs/inspection_model.md`).
+  - The probabilities of detection, the vibration law, the localisation error and the category thresholds are selections, and the rest comes from the instrumentation document. They are not field performance and are not validated against inspection data.
+  - The process state is held at its last row after the end of the episode, and an action of 45 to 120 minutes is usually performed after that end.
+  - There is no vibration physics: the overall velocity is a monotone function of the head loss of the pump.
+  - The history is generated from the seed and is independent of the faults of the episode, so it carries no information about them.
+  - The rim survey and the fitting check return an intact result until the vapour track is merged, and the result says so.
 - Pressure convention (velocity head): static pressure is `rho g (H - z) - rho v^2 / 2` at the end of an edge, as described in `docs/steady_hydraulics.md`.
 
 ## Visibility policy

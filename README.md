@@ -20,6 +20,8 @@ This repository is the backend of a larger system. A frontend will live in a sep
   - A scenario names a healthy variability profile: `off`, `v1`, or `v2` with demand regimes and a moving receipt set-point (see `docs/dataset_card.md`).
 - **Observations**
   - The sensor chain from truth to observations (`verum.sensors`; see `docs/observation_chain.md`) and the read-only gateway (`verum.api`).
+- **Inspection**
+  - The catalog of seven inspection actions, the request and approval workflow with an approval emulator, the outcome models, a synthetic history and the gateway functions that serve them (`verum.inspection`, `verum.api`; see `docs/inspection_model.md`). The outcome models are simulation selections and not field performance.
 - **Faults**
   - Single faults can be injected into an episode through `verum.faults`: a pipe leak, a valve restriction, a pump head degradation, sensor faults and valve misrouting (see `docs/fault_models.md`).
   - A restriction is `position_visible` or `obstruction`, and a fault on an asset that is not active in the lineup is labelled latent.
@@ -45,7 +47,7 @@ All physical values are synthetic simulation or design selections. They do not d
 | `vendor/` | Audited input package, read-only, with hash manifest |
 | `config/` | Machine-readable contracts used by the loaders |
 | `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api`, `transient`, `faults` |
+| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api`, `transient`, `faults`, `inspection` |
 | `tests/` | `analytic`, `schema`, `leakage`, `regression` |
 | `docs/` | Design records |
 | `tools/` | Scripts that compute the studies and tables the documents quote (decision D57) |
