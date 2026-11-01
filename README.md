@@ -69,12 +69,14 @@ Repository conventions are described in `CONTRIBUTING.md`.
 
 ## Mechanical and vapour extension
 
-The restricted mechanical extension adds persistent rim-seal and fitting defects, a reduced roof hang-up state and a travel-triggered secondary seal-tear cascade. Inspection results use these states through the existing approval workflow. The extension preserves its healthy parent's split and hydraulic observations; it does not model mechanical forces feeding back into hydraulics.
+The historical research-only mechanical extension adds persistent rim-seal and fitting defects, a reduced roof hang-up state and a travel-triggered secondary seal-tear cascade. Inspection results use these states through the existing approval workflow. The extension preserves its healthy parent's split and hydraulic observations; it does not model mechanical forces feeding back into hydraulics.
 
-Generate a new directory with `python tools/vapour_campaign.py --base data/campaign --output data/mechanical_extension_v1 --n 180`, then validate it with `python tools/validate_vapour_campaign.py --base data/campaign --root data/mechanical_extension_v1 --report local/mechanical_extension_validation.json`. The output remains restricted_benchmark. Its 30-day constant-condition vapour component estimates include explicit SIM proxies and are not complete facility emissions or observations (D121).
+Generate a new directory with `python tools/vapour_campaign.py --base data/campaign --output data/mechanical_extension_v1 --n 180 --legacy-sim-research`, then validate it with `python tools/validate_vapour_campaign.py --base data/campaign --root data/mechanical_extension_v1 --report local/mechanical_extension_validation.json`. The output remains restricted_benchmark. Its 30-day constant-condition vapour component estimates include explicit SIM proxies and are not complete facility emissions or observations (D121).
 
 New extension runs use prospective seeded tank assignment and retain cascade trials without a child. Previously stored extensions keep their original identities and limitations; they are not repaired by a generator change. The separately tested one-sided roof support model changes the engine's liquid displacement and head during withdrawal, but is not used by the archived mechanical extension and supplies no structural rupture law.
 
 ## Training qualification
 
 The stored datasets are not qualified for physical diagnostic training. Run `python tools/training_readiness.py --root data/campaign --report local/training_audit/campaign_readiness.json` to inspect the blockers; an unqualified dataset returns exit status 2. Software verification, valid schemas and a completed generation count do not establish physical validity. See `docs/training_qualification.md` for the supported scope and unresolved inputs.
+
+Source-matched normal vapour components are available in `verum.vapour.routine`. New native roof cases use explicit `roof_constraints` with the observation-window profile and record actual coupled signals and canonical truth. Unsupported roof, fitting, vibration and acoustic measurement models produce missing/inconclusive findings by default. Historical SIM damage proxies and travel-triggered cascades require explicit research opt-in; they cannot qualify training data. See `docs/roof_vapour_basis.md`.

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from verum.contracts.paths import config_dir
-from verum.params import ParamValue
+from verum.params import ParamValue, UnresolvedParameter
 from verum.tanks import load_tank_geometry
 
 TANKS = ("TK-101", "TK-102", "TK-103")
@@ -88,9 +88,13 @@ def validate_graph(faults: list[MechanicalFault]) -> None:
 
 
 def cascade_child(
-    parent: MechanicalFault, levels: list[tuple[float, float]], parameters: Parameters
+    parent: MechanicalFault, levels: list[tuple[float, float]], parameters: Parameters,
+    *, allow_legacy_simulation: bool = False,
 ) -> MechanicalFault | None:
     """First sampled travel-threshold crossing after a fully established roof hang-up."""
+    if not allow_legacy_simulation:
+        raise UnresolvedParameter("no sourced quantitative roof-to-seal failure law; "
+                                  "the legacy travel rule is restricted research only")
     if parent.fault_type != "ROOF_LANDING_ABNORMAL":
         raise ValueError("cascade requires a roof hang-up")
     if any(not math.isfinite(t) or not math.isfinite(level) or t < 0 or level < 0
@@ -148,8 +152,12 @@ def reference_window(
     temperature_k: float, diameter_m: float, days: float, seal_severity: float,
     fitting_severity: float, parameters: Parameters,
     fitting_kind: str | None = None,
+    *, allow_legacy_simulation: bool = False,
 ) -> dict[str, Any]:
     """Synthetic constant-condition window components in kg; not a complete AP-42 tank total."""
+    if not allow_legacy_simulation:
+        raise UnresolvedParameter("legacy SIM proxies require explicit research opt-in; "
+                                  "use source-matched routine components for normal equipment")
     if not all(math.isfinite(x) for x in (
         temperature_k, diameter_m, days, seal_severity, fitting_severity
     )):

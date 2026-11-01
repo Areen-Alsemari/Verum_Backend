@@ -45,7 +45,7 @@ def test_generation_preserves_splits_signals_and_source_bytes(tmp_path: Path) ->
     base, output = tmp_path / "base", tmp_path / "extension"
     source(base)
     before = {str(p.relative_to(base)): p.read_bytes() for p in base.rglob("*") if p.is_file()}
-    manifest = generate(base, output, 5)
+    manifest = generate(base, output, 5, allow_legacy_simulation=True)
     report = validate_extension(base, output)
     assert report["episodes"] == 5 and report["causal_edges_checked"] == 1
     assert report["inspection_workflows_replayed"] == 10
@@ -55,7 +55,7 @@ def test_generation_preserves_splits_signals_and_source_bytes(tmp_path: Path) ->
     assert before == {str(p.relative_to(base)): p.read_bytes()
                       for p in base.rglob("*") if p.is_file()}
     with pytest.raises(ValueError):
-        generate(base, output, 5)
+        generate(base, output, 5, allow_legacy_simulation=True)
 
 
 def test_validation_refuses_changed_files_and_source_manifest(tmp_path: Path) -> None:
@@ -65,7 +65,7 @@ def test_validation_refuses_changed_files_and_source_manifest(tmp_path: Path) ->
     """
     base, output = tmp_path / "base", tmp_path / "extension"
     source(base)
-    manifest = generate(base, output, 5)
+    manifest = generate(base, output, 5, allow_legacy_simulation=True)
     path = output / next(iter(manifest["episodes"][0]["files"]))
     before = path.read_bytes()
     path.write_bytes(before + b"corrupt")
@@ -87,7 +87,7 @@ def test_stationary_trials_retain_no_secondary_failure(tmp_path: Path) -> None:
     source(base)
     rows = grid()
     write_rows(base / "evaluator" / "episodes" / EPISODE / "inspection_truth.jsonl.gz", rows)
-    manifest = generate(base, output, 5)
+    manifest = generate(base, output, 5, allow_legacy_simulation=True)
     trial = next(e for e in manifest["episodes"] if e["kind"] == "cascade_trial")
     assert trial["cascade_outcome"] == "not_triggered"
     assert len(trial["faults"]) == 1 and trial["faults"][0]["parent_id"] is None
@@ -101,12 +101,12 @@ def test_assignment_does_not_change_when_the_future_trajectory_changes(tmp_path:
     """
     base = tmp_path / "base"
     source(base)
-    first = generate(base, tmp_path / "first", 5)
+    first = generate(base, tmp_path / "first", 5, allow_legacy_simulation=True)
     rows = grid()
     for row in rows:
         row["tanks"]["TK-103"]["level_m"] = 9.0 + row["t_sim_s"] / 1000.0
     write_rows(base / "evaluator" / "episodes" / EPISODE / "inspection_truth.jsonl.gz", rows)
-    second = generate(base, tmp_path / "second", 5)
+    second = generate(base, tmp_path / "second", 5, allow_legacy_simulation=True)
     assert [(e["episode_id"], e["tank_id"]) for e in first["episodes"]] == [
         (e["episode_id"], e["tank_id"]) for e in second["episodes"]
     ]

@@ -77,7 +77,8 @@ def validate_extension(base: Path, root: Path) -> dict[str, Any]:
             rows = read_rows(evaluator / "inspection_truth.jsonl.gz")
             tank = episode["tank_id"]
             levels = {r["t_sim_s"]: r["tanks"][tank]["level_m"] for r in rows}
-            expected_child = cascade_child(faults[0], sorted(levels.items()), p)
+            expected_child = cascade_child(faults[0], sorted(levels.items()), p,
+                                           allow_legacy_simulation=True)
             expected_faults = [faults[0]] if expected_child is None else [faults[0], expected_child]
             if faults != expected_faults:
                 raise ValueError("cascade child does not follow the travel rule")

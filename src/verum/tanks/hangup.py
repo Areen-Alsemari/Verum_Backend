@@ -56,3 +56,17 @@ class RoofHangup:
         if capacity.unit != "N" or capacity.value <= 0:
             raise ValueError("a referenced positive support capacity in N is required")
         return capacity.value - self.support_reaction_n(level_m)
+
+    def support_load_with_pressure_n(
+        self, level_m: float, above: ParamValue, below: ParamValue,
+    ) -> float:
+        """Downward support demand including prescribed absolute gas pressures above/below the deck.
+
+        This load assessment does not compute vent flow, gas pressure or structural failure.
+        """
+        if above.unit != "Pa_abs" or below.unit != "Pa_abs":
+            raise ValueError("both roof gas pressures require Pa_abs")
+        top, bottom = above.value, below.value
+        if top <= 0 or bottom <= 0 or bottom > top:
+            raise ValueError("support assessment requires positive pressures and no uplift")
+        return self.support_reaction_n(level_m) + (top - bottom) * self.base_geometry.deck_area_m2

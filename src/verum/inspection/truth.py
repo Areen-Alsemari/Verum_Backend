@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from verum.params import UnresolvedParameter
 from verum.vapour.model import MechanicalFault, Parameters, mechanical_state, validate_graph
 
 FILE = "inspection_truth.jsonl.gz"
@@ -83,6 +84,8 @@ class Truth:
 
     def state(self, t: float) -> State:
         """The true state at time ``t`` (an episode time in seconds)."""
+        if t > self.coverage_end_s and (self.directory / "roof_constraints.json").exists():
+            raise UnresolvedParameter("coupled roof state requires actual process continuation")
         left, right = self._bracket(min(t, self.horizon_s))
         t_eff = min(t, self.horizon_s)
         if right is None or t_eff <= left["t_sim_s"]:

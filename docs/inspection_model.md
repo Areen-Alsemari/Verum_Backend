@@ -57,7 +57,7 @@ Each asset has a synthetic history of prior inspections, calibrations and work o
 
 The probabilities of detection, the vibration law, the localisation error and the thresholds are selections of a simulation. They are not field performance and are not validated against inspection data. The detection limit of 15 L/min is an assumption of the source document that it states as unvalidated.
 
-The workflow checks process preconditions at the approval decision only; it does not demonstrate maintained work conditions throughout a long inspection. A realistic inspection campaign requires process continuation through the work interval and work-condition enforcement. The vibration law claims no physics beyond a monotone rise with the head loss. The history is independent of the faults by choice, so it carries no information about them.
+Default execution checks process preconditions at approval, work start, every recorded state during work and completion. A failed condition cancels the result at that recorded time, even if the process recovers before completion. Earlier approval and result views do not reveal a future cancellation. Archived research replay retains approval-only behaviour. These are simulation-cadence checks, not certified continuous monitoring or a complete personnel/atmospheric permit model.
 
 
 ## Mechanical extension
@@ -65,3 +65,5 @@ The workflow checks process preconditions at the approval decision only; it does
 An episode with a versioned mechanical sidecar supplies rim gaps and fitting seating state to the existing inspection workflow. A rim inspection reports a noisy gap and a roof-position anomaly when present; a fitting check reports the selected synthetic seating-defect code. Both retain low-confidence evidence and plain model-limit notes. Episodes without the sidecar keep the earlier placeholder behaviour for reproducibility.
 
 The mechanical extension is a restricted synthetic model (D121). It does not model roof forces or change hydraulic observations. The associated 30-day constant-condition vapour reference is evaluator-only, carries unresolved uncertainty and is not a complete tank loss or an observation.
+
+Historical mechanical, vibration and acoustic outcome laws require explicit legacy research use. Default unsupported actions produce `TEST_INCONCLUSIVE` with missing evidence. The metric `measurement_available = 0` is an availability indicator, not a zero physical reading or proof of intact equipment. New coupled-roof cases require actual process coverage even when research extrapolation is requested.

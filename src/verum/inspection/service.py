@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from verum.inspection import history, models, workflow
+from verum.inspection import history, models, preconditions, workflow
 from verum.inspection.assets import Assets, load_assets
 from verum.inspection.catalog import Catalog, load_catalog
 from verum.inspection.checks import check
@@ -32,6 +32,7 @@ class Record:
     index: int
     timeline: workflow.Timeline
     outcome: models.Outcome | None
+    cancellation: tuple[float, str] | None = None
 
 
 class InspectionService:
@@ -48,7 +49,8 @@ class InspectionService:
         self._assets = assets or load_assets()
         self._allow_extrapolated_research = allow_extrapolated_research
         self._records: dict[str, Record] = {}
-        self._prior = history.prior_history(self.truth.seed, self._catalog, self._assets)
+        self._prior = (history.prior_history(self.truth.seed, self._catalog, self._assets)
+                       if allow_extrapolated_research else [])
 
     # --- static ----------
     def catalog(self) -> list[dict[str, Any]]:
@@ -68,11 +70,21 @@ class InspectionService:
             allow_extrapolated_research=self._allow_extrapolated_research,
         )
         outcome = None
+        cancellation = None
         if timeline.approved:
+            if not self._allow_extrapolated_research:
+                cancellation = preconditions.work_cancellation(
+                    self._catalog, self._assets, self.truth, action, target,
+                    timeline.t_start_s, timeline.t_performed_s,
+                )
+        if timeline.approved and cancellation is None:
             rng = RandomStreams(self.truth.seed).stream(f"inspection/{rid}/measurement")
             state = self.truth.state(timeline.t_performed_s)
-            outcome = models.perform(self._catalog, self._assets, state, action, target, rng)
-        self._records[rid] = Record(request, len(self._records), timeline, outcome)
+            outcome = models.perform(
+                self._catalog, self._assets, state, action, target, rng,
+                allow_legacy_simulation=self._allow_extrapolated_research,
+            )
+        self._records[rid] = Record(request, len(self._records), timeline, outcome, cancellation)
         return self._request_view(self._records[rid], as_of_s)
 
     def record(self, request_id: str) -> Record:
@@ -122,6 +134,8 @@ class InspectionService:
         }  # fmt: skip
         if t >= tl.t_decision_s:
             view["workflow_status"] = "approved" if tl.approved else "cancelled"
+        if rec.cancellation is not None and t >= rec.cancellation[0]:
+            view["workflow_status"] = "cancelled"
         if rec.outcome is not None and t >= tl.t_visible_s:
             o = rec.outcome
             view |= {

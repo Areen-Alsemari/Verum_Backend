@@ -32,7 +32,7 @@ def test_pressure_function_and_rim_mass_have_independent_numeric_references() ->
     """
     assert pressure_function(75000.0, 100000.0) == pytest.approx(1 / 3)
     p = Parameters()
-    result = reference_window(298.15, 30.0, 30.0, 0.0, 0.0, p)
+    result = reference_window(298.15, 30.0, 30.0, 0.0, 0.0, p, allow_legacy_simulation=True)
     pv = 6894.757293 * math.exp(11.724 - 5237.3 / (1.8 * 298.15))
     ratio = pv / 101325.0
     pressure = ratio / (1 + math.sqrt(1 - ratio)) ** 2
@@ -48,16 +48,17 @@ def test_fitting_damage_changes_one_fitting_and_seal_damage_only_the_rim() -> No
     Independent: yes, because the ratios follow the declared one-to-two synthetic multiplier.
     """
     p = Parameters()
-    base = reference_window(298.15, 30.0, 30.0, 0.0, 0.0, p)
-    seal = reference_window(298.15, 30.0, 30.0, 1.0, 0.0, p)
-    fitting = reference_window(298.15, 30.0, 30.0, 0.0, 1.0, p, "access_hatch")
+    base = reference_window(298.15, 30.0, 30.0, 0.0, 0.0, p, allow_legacy_simulation=True)
+    seal = reference_window(298.15, 30.0, 30.0, 1.0, 0.0, p, allow_legacy_simulation=True)
+    fitting = reference_window(298.15, 30.0, 30.0, 0.0, 1.0, p, "access_hatch",
+                                allow_legacy_simulation=True)
     assert seal["rim_kg"] == pytest.approx(2 * base["rim_kg"])
     assert seal["fitting_kg"] == base["fitting_kg"]
     assert fitting["rim_kg"] == base["rim_kg"]
     assert fitting["fitting_kg"] / base["fitting_kg"] == pytest.approx(
         (1.6 + 2.8 + 2 * 6.2 + 6 * 1.0 + 1.6) / (1.6 + 2.8 + 2 * 6.2 + 6 * 1.0)
     )
-    twice = reference_window(298.15, 30.0, 60.0, 0.0, 0.0, p)
+    twice = reference_window(298.15, 30.0, 60.0, 0.0, 0.0, p, allow_legacy_simulation=True)
     assert twice["component_sum_kg"] == pytest.approx(2 * base["component_sum_kg"])
 
 
@@ -72,9 +73,9 @@ def test_invalid_windows_phases_and_missing_fittings_are_refused() -> None:
             pressure_function(vapour, atmosphere)
     for temperature, days in ((298.15, 1.0), (250.0, 30.0), (math.nan, 30.0)):
         with pytest.raises(ValueError):
-            reference_window(temperature, 30.0, days, 0.0, 0.0, p)
+            reference_window(temperature, 30.0, days, 0.0, 0.0, p, allow_legacy_simulation=True)
     with pytest.raises(ValueError):
-        reference_window(298.15, 30.0, 30.0, 0.0, 1.0, p)
+        reference_window(298.15, 30.0, 30.0, 0.0, 1.0, p, allow_legacy_simulation=True)
     with pytest.raises(ValueError):
         MechanicalFault("x", "FITTING_DAMAGE", "TK-101", 600.0, 300.0, 1.0, "roof_leg")
 
@@ -86,8 +87,10 @@ def test_cascade_requires_actual_travel_and_has_a_persistent_secondary_fault() -
     """
     p = Parameters()
     parent = MechanicalFault("parent", "ROOF_LANDING_ABNORMAL", "TK-101", 600.0, 300.0, 1.0)
-    assert cascade_child(parent, [(900.0, 9.0), (960.0, 9.01)], p) is None
-    child = cascade_child(parent, [(900.0, 9.0), (960.0, 9.01), (1020.0, 9.1)], p)
+    assert cascade_child(parent, [(900.0, 9.0), (960.0, 9.01)], p,
+                         allow_legacy_simulation=True) is None
+    child = cascade_child(parent, [(900.0, 9.0), (960.0, 9.01), (1020.0, 9.1)], p,
+                          allow_legacy_simulation=True)
     assert child is not None and child.onset_s == 1020.0 and child.parent_id == "parent"
     validate_graph([parent, child])
     before = mechanical_state([parent, child], 1000.0, p)["TK-101"]

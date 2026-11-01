@@ -122,7 +122,10 @@ def rim_survey(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Gene
                    {"true_value": 0.0})  # fmt: skip
 
 
-def valve_check(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator) -> Outcome:
+def valve_check(
+    c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator,
+    *, allow_legacy_simulation: bool = False,
+) -> Outcome:
     z1, z2, *_ = _draws(rng)
     act = c.action("ACT-INSP-02")
     drop_bar = valve_drop_bar(a, s, target)
@@ -130,21 +133,25 @@ def valve_check(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Gen
     measured = drop_bar + z1 * u_dp / 2.0
     valve = s["valves"][target]
     travel = min(100.0, max(0.0, valve["position_frac"] * 100.0 + z2 * u_travel / 2.0))
-    category = _three_way(
-        measured, c.param("thresholds", "valve_dp_normal_max_bar"),
-        c.param("thresholds", "valve_dp_critical_min_bar"),
-    )  # fmt: skip
-    expected = 100.0 if valve["commanded_open"] else 0.0
-    if category == NORMAL and abs(travel - expected) > AGREEMENT * u_travel:
-        category = MINOR  # the stem does not follow the command beyond the uncertainty
+    category = INCONCLUSIVE
+    if allow_legacy_simulation:
+        category = _three_way(
+            measured, c.param("thresholds", "valve_dp_normal_max_bar"),
+            c.param("thresholds", "valve_dp_critical_min_bar"),
+        )
+        expected = 100.0 if valve["commanded_open"] else 0.0
+        if category == NORMAL and abs(travel - expected) > AGREEMENT * u_travel:
+            category = MINOR
     notes = [
         f"Commanded state: {'open' if valve['commanded_open'] else 'closed'}.",
         f"Measured stem travel: {travel:.1f} percent (expanded uncertainty {u_travel:g} percent).",
         f"Open contact reads {'open' if valve['contact_open'] else 'closed'}.",
     ]
     true = {"true_value": drop_bar, "actual_opening_percent": valve["position_frac"] * 100.0}
+    if not allow_legacy_simulation:
+        notes.append("Equipment-specific severity limits are unqualified.")
     return Outcome("measured_differential_pressure", measured, "bar", u_dp, category, notes,
-                   "valid", true)  # fmt: skip
+                   "valid" if allow_legacy_simulation else "low_confidence", true)  # fmt: skip
 
 
 def pump_vibration(
@@ -197,12 +204,21 @@ def leak_survey(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Gen
     return Outcome("leak_detected", 0.0, "1", 0.0, INCONCLUSIVE, notes, "low_confidence", true)
 
 
-def dip_sounding(c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator) -> Outcome:
+def dip_sounding(
+    c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator,
+    *, allow_legacy_simulation: bool = False,
+) -> Outcome:
     z1, *_ = _draws(rng)
     act = c.action("ACT-INSP-05")
     u = act.u("manual_innage_level")
     true_mm = s["tanks"][target]["level_m"] * 1000.0
     measured = true_mm + z1 * u / 2.0
+    if not allow_legacy_simulation:
+        return Outcome(
+            "manual_innage_level", measured, "mm", u, INCONCLUSIVE,
+            ["Level measurement supplied; equipment acceptance tolerance is unavailable.",
+             "Water-bottom measurement unavailable."], "low_confidence", {"true_value": true_mm},
+        )
     tag = s["tags"][f"LT-{target[-3:]}"]
     reported_mm = (tag["value"] + tag["fault_offset"]) * 1000.0
     u_lt = c.param("models", "level_transmitter_uncertainty_mm")
@@ -235,7 +251,8 @@ def fitting_check(
 
 
 def loop_calibration(
-    c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator
+    c: Catalog, a: Assets, s: State, target: str, rng: np.random.Generator,
+    *, allow_legacy_simulation: bool = False,
 ) -> Outcome:
     z1, *_ = _draws(rng)
     act = c.action("ACT-INSP-07")
@@ -244,6 +261,12 @@ def loop_calibration(
     offset_pa = s["tags"][target]["fault_offset"]
     true_pct = 100.0 * (-offset_pa / BAR_PA) / span_bar  # true pressure less the reported value
     measured = true_pct + z1 * u / 2.0
+    if not allow_legacy_simulation:
+        return Outcome(
+            "calibration_error", measured, "percent of span", u, INCONCLUSIVE,
+            ["Calibration error supplied; equipment acceptance tolerance is unavailable."],
+            "low_confidence", {"true_value": true_pct},
+        )
     u_pt = c.param("models", "pressure_transmitter_uncertainty_percent_span")
     agree = abs(measured) <= AGREEMENT * math.hypot(u, u_pt)
     category, evidence = (NORMAL, "valid") if agree else (INCONCLUSIVE, "low_confidence")
@@ -262,7 +285,24 @@ MODELS = {
 
 
 def perform(
-    c: Catalog, a: Assets, s: State, action_id: str, target: str, rng: np.random.Generator
+    c: Catalog, a: Assets, s: State, action_id: str, target: str, rng: np.random.Generator,
+    *, allow_legacy_simulation: bool = False,
 ) -> Outcome:
     """The outcome of an action on a target in the true state ``s``."""
+    if action_id == "ACT-INSP-02":
+        return valve_check(c, a, s, target, rng, allow_legacy_simulation=allow_legacy_simulation)
+    if action_id == "ACT-INSP-05":
+        return dip_sounding(c, a, s, target, rng, allow_legacy_simulation=allow_legacy_simulation)
+    if action_id == "ACT-INSP-07":
+        return loop_calibration(c, a, s, target, rng,
+                                allow_legacy_simulation=allow_legacy_simulation)
+    if not allow_legacy_simulation and action_id in (
+        "ACT-INSP-01", "ACT-INSP-03", "ACT-INSP-04", "ACT-INSP-06"
+    ):
+        _draws(rng)
+        return Outcome(
+            "measurement_available", 0., "1", 0., INCONCLUSIVE,
+            ["The measurement is unavailable; no condition finding can be established."], "missing",
+            {"measurement_qualified": False},
+        )
     return MODELS[action_id](c, a, s, target, rng)

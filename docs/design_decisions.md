@@ -1505,3 +1505,36 @@ These are choices that the audited documents do not state. They are implemented,
 - **Reason.** Holding a final process state for several hours while advancing only fault severity creates unsupported physical combinations. A longer metadata horizon alone does not simulate continued operation. Historical tests retain their full timing, noise, schema and leakage assertions through the explicit replay option; separate default-service tests require covered measurements and reject extrapolation. No stored data is altered to obtain a passing result.
 - **Sensitivity required.** Process continuation through work duration, sustained preconditions and measurement-model qualification before an inspection training release.
 - **Notes.** Approval-time preconditions do not establish maintained conditions during the work interval. This decision removes unsupported default measurements but does not claim a complete industrial work-permit simulation.
+
+
+## D124 - Source-matched routine vapour components
+
+- **Version:** 1.0 (2026-11-01)  **Status:** REF  **Refines:** D121
+- **Decision.** Separate normal-equipment factors from archived SIM proxies. Require explicit equipment/closure classes, applicable unrestricted-well dimensions, seam construction/geometry, shell condition and cumulative liquid-level decreases. Retain the existing DESIGN time conventions. Require maintained, freely vented, continuously floating applicability. Keep numerical uncertainty unresolved and forbid treating components as a facility-qualified total or sensor readings.
+- **Reason.** Normal configurations cannot calibrate deteriorated material, and absent construction cannot select a coefficient. Primary sources and limits are in `docs/roof_vapour_basis.md`.
+- **Sensitivity required.** Explicit equipment, shell-condition and fluid alternatives, seam applicability and throughput-window resolution.
+- **Notes.** Published intermediate rounding in Example 4 is documented separately; model precision is not changed to match a printed result.
+
+
+## D125 - Maintained work conditions and missing inspection evidence
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN  **Refines:** D102, D123
+- **Decision.** Check conditions at work start, recorded states during work and completion. Cancel at the first failure, even if it later recovers, without exposing future cancellation at approval or producing findings/history after cancellation. Preserve approval-only behaviour solely for explicit historical replay. Unsupported roof/fitting, vibration and acoustic models return missing/inconclusive evidence. Their deterministic availability flag does not assert a zero physical reading.
+- **Reason.** Approval does not establish sustained work conditions, and missing evidence does not establish intact equipment. OSHA-WORK supplies a general maintained-condition principle, not a plant permit specification. Primary sources do not calibrate the legacy equipment-specific synthetic transfer functions.
+- **Sensitivity required.** Recorded-state resolution, omitted access/atmosphere conditions and measurement qualification.
+- **Notes.** Historical model tests explicitly select research behaviour and retain their original numerical assertions.
+
+- **Clarification.** Default valve measurements do not require or read the legacy normal/critical pressure thresholds. Their numeric readings remain available with inconclusive severity until equipment-specific limits are qualified. Explicit historical replay retains the original classification.
+
+- **Clarification.** Default level/calibration readings do not assert acceptance using the legacy agreement band, and default history contains recorded results only. Synthetic prior history and acceptance rules remain explicit research features, without altering archived records or raw measurements.
+
+
+## D126 - Native constrained-roof episodes and explicit cascade limits
+
+- **Version:** 1.0 (2026-11-01)  **Status:** DESIGN  **Refines:** D121, D122
+- **Decision.** Accept initial one-sided roof constraints in observation-window episodes, bind complete scenario/geometry into new identities, and write canonical roof truth plus censored initial-condition metadata with actual hydraulic/sensor feedback. Retain geometric corners in evaluator interpolation. Keep cases restricted and prohibit frozen future coupled states. Pressure-load assessment accepts explicit absolute pressures but does not determine vent pressure or a child failure.
+- **Reason.** Manufacturer sources describe load paths without rating Verum's unknown connections. The old liquid-travel trigger and emission proxies require explicit research opt-in, rather than remaining a default training generator. No hardware strength, universal tear threshold or damage multiplier is selected.
+- **Sensitivity required.** Existing M1 mass range, integration resolution, vent/pressure coupling, load-path geometry and independently justified material/connection properties before structural failure release.
+- **Notes.** Restraint is not proof of a torn seal and an exceeded design limit is not proof of a separate component failure. Sources and withheld inputs are in `docs/roof_vapour_basis.md`.
+
+- **Clarification.** Native roof references require an explicit pressure-equalized gas-boundary declaration, recorded and bound into their identity. This is not a prediction of installed vent performance; blocked-vent cases remain outside the generated reference domain.

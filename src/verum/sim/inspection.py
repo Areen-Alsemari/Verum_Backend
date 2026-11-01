@@ -68,6 +68,10 @@ class Reader:
         self.cfg, self.specs = cfg, faults.specs if faults is not None else ()
         self.faults = faults
         self.rows = read_rows(directory, "hydraulic_state")
+        self.roof_faults = []
+        if (directory / "roof_constraints.json").exists():
+            self.roof_faults = [row for row in read_rows(directory, "fault_truth")
+                                if row["mechanism"] == "held_roof_withdrawal_v1"]
         self.payloads = _index(self.rows)
         self.tags = {t: s for t, s in cfg.tags.items() if s.kind == "continuous"}
         self.nodes, self.lagged = {}, {}
@@ -194,6 +198,14 @@ def _fault_rows(rd: Reader, key: Key, t_fault: float) -> tuple[list[Any], list[A
                 "fault_instance_id": ident, "edge_id": spec.asset_id,
                 "fraction": spec.position, "flow_m3s": flow,
             })  # fmt: skip
+    for row in rd.roof_faults:
+        modified = row["physical_parameter_modified"]
+        faults.append({
+            "fault_instance_id": row["fault_instance_id"], "fault_type": row["fault_type"],
+            "asset_id": row["asset_id"], "severity": 1., "parameter": modified["name"],
+            "unit": modified["unit"],
+            "parameter_value": modified["fault_value_at_severity_one"]["value"],
+        })
     return leaks, faults
 
 
@@ -214,7 +226,18 @@ def build_rows(
     rd = Reader(directory, faults, load_sensor_config(config_dir))
     order = _edge_order(rd)
     rows = []
-    for key in _times(rd.rows, rd.duration, rd.specs):
+    keys = set(_times(rd.rows, rd.duration, rd.specs))
+    if rd.roof_faults:
+        # Preserve the nonlinear displacement corners in evaluator interpolation too.
+        tanks = {row["asset_id"] for row in rd.roof_faults}
+        previous: dict[str, str] = {}
+        for row in rd.rows:
+            if row["record_type"] == "tank_state" and row["element_id"] in tanks:
+                tank, regime = row["element_id"], row["payload"]["roof_state"]
+                if tank in previous and previous[tank] != regime:
+                    keys.add((row["t_sim_s"], row["side"]))
+                previous[tank] = regime
+    for key in sorted(keys, key=lambda k: (k[0], SIDE_RANK[k[1]])):
         t, side = key
         t_eval = math.nextafter(t, -math.inf) if side == PRE else t
         leaks, fault_rows = _fault_rows(rd, key, t_eval)

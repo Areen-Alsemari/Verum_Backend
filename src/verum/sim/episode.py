@@ -11,8 +11,10 @@ See D20, D24 to D26, D37 and D73.
 
 from __future__ import annotations
 
+import gzip
 import json
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,7 +32,11 @@ from verum.sensors.specs import load_sensor_config
 from verum.sim.config import SimConfig, load_sim_config
 from verum.sim.engine import Engine, EpisodeOutcome
 from verum.sim.inspection import write_inspection_truth
+from verum.sim.roof_faults import MODEL as ROOF_MODEL
+from verum.sim.roof_faults import constraint_records, scenario_record
+from verum.sim.roof_faults import truth_rows as roof_truth_rows
 from verum.sim.scenario import Scenario, load_scenario
+from verum.tanks.hangup import RoofHangup
 from verum.truth import DirectorySink, file_hashes
 
 SOLVER_VERSION = "path-dynamics-radau-1"
@@ -123,9 +129,21 @@ def run_episode(
     min_separation_s: float = 0.0,
     *,
     fault_timing_profile: str = "legacy",
+    roof_constraints: Mapping[str, RoofHangup] | None = None,
+    roof_gas_boundary: str | None = None,
 ) -> EpisodeResult:
     if fault_timing_profile not in TIMING_PROFILES:
         raise ContractError(f"unknown fault timing profile: {fault_timing_profile}")
+    roofs = dict(roof_constraints or {})
+    if roofs and roof_gas_boundary != "pressure_equalized_reference":
+        raise ContractError("roof reference requires an explicit pressure-equalized gas boundary; "
+                            "vent pressure dynamics are not qualified")
+    if not roofs and roof_gas_boundary is not None:
+        raise ContractError("a roof gas boundary requires an explicit roof constraint")
+    if roofs and fault_timing_profile != "observation_window":
+        raise ContractError("initial roof constraints require the observation_window profile")
+    if roofs and len(roofs) + (len(faults.specs) if faults else 0) > max_faults:
+        raise ContractError("roof and hydraulic faults exceed the requested fault limit")
     assert_release_allowed(TIER)
     model = model or HydraulicModel.load()
     cfg = load_sim_config(model.directory)
@@ -165,13 +183,20 @@ def run_episode(
     chash = config_hash(model.directory)
     identity = scenario.scenario_id
     if fault_timing_profile != "legacy":
-        identity = canonical_json({
+        identity_record: dict[str, Any] = {
             "scenario": scenario.scenario_id, "fault_timing_profile": fault_timing_profile,
             "fault_specs": [spec.as_record() for spec in faults.specs] if faults else [],
-        })
+        }
+        if roofs:
+            identity_record.update(roof_model=ROOF_MODEL,
+                                   roof_constraints=constraint_records(roofs),
+                                   roof_scenario=scenario_record(scenario),
+                                   roof_gas_boundary=roof_gas_boundary)
+        identity = canonical_json(identity_record)
     episode = episode_id(scenario.seed, identity, chash)
     sink = DirectorySink(out_dir / episode)
-    engine = Engine(model, table, scenario, cfg, sink, episode, faults=faults)
+    engine = Engine(model, table, scenario, cfg, sink, episode, faults=faults,
+                    roof_constraints=roofs)
     start = time.perf_counter()
     outcome = engine.run()
     wall = time.perf_counter() - start
@@ -188,28 +213,47 @@ def run_episode(
         }
         validate("simulation_rejected", record)
         sink.write_json("simulation_rejected.json", record)
-    assert_release_allowed(tier_of(outcome))  # the tier actually produced is asked as well
+    tier = RESTRICTED_TIER if roofs else tier_of(outcome)
+    assert_release_allowed(tier)  # the tier actually produced is asked as well
     specs = faults.specs if faults is not None else ()
     ids = [] if outcome.rejection else instance_ids(episode, specs)  # never label a rejected run
+    roof_rows = [] if outcome.rejection else roof_truth_rows(episode, roofs, len(ids))
     if not outcome.rejection:
-        for row in fault_truth_rows(episode, specs):
+        for row in fault_truth_rows(episode, specs) + roof_rows:
             validate("fault_truth", row)
             sink.write("fault_truth", row)
+        ids.extend(row["fault_instance_id"] for row in roof_rows)
     document = episode_document(scenario, cfg, model, episode, chash, status, outcome, ids, notes)
+    document["dataset_tier"] = tier
+    if roof_rows and notes is not None:
+        document["fault_modes"] = notes["modes"] + [None] * len(roof_rows)
+        document["fault_activity"] = notes["activity"] + ["active"] * len(roof_rows)
     validate("episode", document)
     sink.write_json("episode.json", document)
     commit, dirty = git_state()
     sink.write_json("provenance.json", {"git_commit": commit, "git_dirty": dirty})
     hashes = sink.finalize()
     if not outcome.rejection:
+        if roofs:
+            sink.write_json("roof_constraints.json", {
+                "schema_version": "1.0.0", "hidden": True, "model": ROOF_MODEL,
+                "constraints": constraint_records(roofs), "training_qualified": False,
+                "gas_boundary": roof_gas_boundary,
+                "limits": ["withdrawal_only", "rigid_deck", "no_strength_or_secondary_failure",
+                           "no_qualified_roof_inspection_model", "no_vent_pressure_dynamics"],
+            })
         if fault_timing_profile != "legacy":
+            sink.write_json("scenario.json", scenario_record(scenario))
+            if not ids:
+                (out_dir / episode / "fault_truth.jsonl.gz").write_bytes(
+                    gzip.compress(b"", mtime=0))
             window = {
                 "schema_version": "1.0.0", "hidden": True,
                 "fault_timing_profile": fault_timing_profile,
                 "left_censored_fault_instance_ids": [
-                    ident for ident, spec in zip(ids, specs, strict=True)
+                    ident for ident, spec in zip(ids[:len(specs)], specs, strict=True)
                     if spec.onset_s == 0 and spec.ramp_s is None and spec.peak_severity > 0
-                ],
+                ] + [row["fault_instance_id"] for row in roof_rows],
                 "interpretation": "Initial faults were present when observation began; "
                                   "their historical onset is not known.",
             }

@@ -17,8 +17,11 @@ def main() -> None:
     parser.add_argument("--base", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--n", type=int, required=True)
+    parser.add_argument("--legacy-sim-research", action="store_true",
+                        help="Accept historical SIM laws for research; never training-ready")
     args = parser.parse_args()
-    result = generate(args.base, args.output, args.n)
+    result = generate(args.base, args.output, args.n,
+                      allow_legacy_simulation=args.legacy_sim_research)
     print(f"Generated {len(result['episodes'])} extension episodes")
 
 

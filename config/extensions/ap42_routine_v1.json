@@ -1,0 +1,161 @@
+{
+  "schema_version": "1.0.0",
+  "source_url": "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf",
+  "scope": "Normal maintained freely vented IFRT, zero wind; no damaged-material prediction",
+  "parameters": {
+    "hatch_bolted_gasketed": {
+      "value": 1.6,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "hatch_unbolted_gasketed": {
+      "value": 31.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "hatch_unbolted_ungasketed": {
+      "value": 36.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "automatic_float_well_bolted_gasketed": {
+      "value": 2.8,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "gauge_sample_port_weighted_gasketed": {
+      "value": 0.47,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "vacuum_breaker_weighted_gasketed": {
+      "value": 6.2,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "fixed_hanger_no_opening": {
+      "value": 0.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "adjustable_ifr_leg_sleeve_under_12in": {
+      "value": 7.9,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "bolted_seam_factor": {
+      "value": 0.14,
+      "unit": "lbmol/(ft yr)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equation-2-18"
+    },
+    "uncontrolled_area_coefficient": {
+      "value": 0.27,
+      "unit": "lbmol/(in2^0.86 yr)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equation-2-17"
+    },
+    "uncontrolled_area_exponent": {
+      "value": 0.86,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equation-2-17"
+    },
+    "uncontrolled_min_well_height": {
+      "value": 0.3048,
+      "unit": "m",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equation-2-17-12in"
+    },
+    "gasoline_light_rust": {
+      "value": 0.0015,
+      "unit": "bbl/(1000 ft2)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-10"
+    },
+    "gasoline_dense_rust": {
+      "value": 0.0075,
+      "unit": "bbl/(1000 ft2)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-10"
+    },
+    "gasoline_gunite": {
+      "value": 0.15,
+      "unit": "bbl/(1000 ft2)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-10"
+    },
+    "automatic_float_well_unbolted_ungasketed": {
+      "value": 14.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "pipe_column_fabric_sleeve": {
+      "value": 10.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "ladder_well_gasketed": {
+      "value": 56.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "slotted_guidepole_gasketed": {
+      "value": 43.0,
+      "unit": "lbmol/yr",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-12"
+    },
+    "product_factor": {
+      "value": 1.0,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-section-7.1.3.2-noncrude"
+    },
+    "minimum_estimation_days": {
+      "value": 30.0,
+      "unit": "day",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D121-1.0-inherited-time-basis"
+    },
+    "reference_year_days": {
+      "value": 365.0,
+      "unit": "day",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D121-1.0-inherited-time-basis"
+    }
+  }
+}

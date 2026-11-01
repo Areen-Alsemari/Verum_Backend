@@ -78,3 +78,49 @@ def check(c: Catalog, a: Assets, t: Truth, action_id: str, target: str, time: fl
         "ACT-INSP-04": _edge, "ACT-INSP-06": _receipt,
     }  # fmt: skip
     return checks[action_id](c, a, t, target, time) if action_id in checks else None
+
+
+def _live(c: Catalog, a: Assets, state: State, action: str, target: str) -> str | None:
+    """Recheck work conditions on a recorded state without assuming that approval maintains them."""
+    tol = c.param("preconditions", "flow_tolerance_m3s")
+    if action == "ACT-INSP-01":
+        if state["tanks"][target]["level_m"] <= c.param("preconditions", "tank_level_min_m"):
+            return "LEVEL_BELOW_1_8_M"
+    elif action == "ACT-INSP-02":
+        edges = [state["edges"][e.edge_id] for e in a.valve_edges(target)]
+        if not any(abs(e["flow_m3s"]) > tol or
+                   max(e["p_from_pa_gauge"], e["p_to_pa_gauge"]) > 0 for e in edges):
+            return "VALVE_NOT_FLOWING_OR_PRESSURISED"
+    elif action == "ACT-INSP-03":
+        edge = a.pump_discharge_edge(target).edge_id
+        if (state["pumps"][target]["run_state"] != "running" or
+                state["edges"][edge]["flow_m3s"] <= tol):
+            return "PUMP_NOT_UNDER_LOAD_20_MIN"
+    elif action == "ACT-INSP-04":
+        minimum = c.param("preconditions", "edge_pressure_min_bar") * BAR_PA
+        if _edge_pressure_pa(state, target) <= minimum:
+            return "EDGE_BELOW_3_BAR"
+    elif action == "ACT-INSP-06":
+        if any(state["edges"][e.edge_id]["flow_m3s"] > tol for e in a.receipt_edges(target)):
+            return "TANK_IN_RECEIPT_MODE"
+    return None
+
+
+def work_cancellation(
+    c: Catalog, a: Assets, truth: Truth, action: str, target: str, start: float, end: float,
+) -> tuple[float, str] | None:
+    """First failing recorded work condition, including both boundaries and event-side rows.
+
+    This checks the supplied simulation cadence, not a certified continuous safety monitor.
+    """
+    reason = check(c, a, truth, action, target, start)
+    if reason is not None:
+        return start, reason
+    for state in truth.rows:
+        time = float(state["t_sim_s"])
+        if start < time <= end:
+            reason = _live(c, a, state, action, target)
+            if reason is not None:
+                return time, reason
+    reason = _live(c, a, truth.state(end), action, target)
+    return (end, reason) if reason is not None else None

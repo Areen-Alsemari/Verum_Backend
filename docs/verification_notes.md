@@ -1,5 +1,11 @@
 # Verification notes
 
+## Source-matched vapour and roof cases
+
+EPA Example 4 prints a fitting factor of 359 although its individual tabulated terms sum to 359.2. Multiplication by its rounded pressure function 0.178 and molecular weight 62 produces a 2.2072 lb/year difference solely from this intermediate rounding. The implementation retains precision. Tests check the unrounded expression and explicitly account for the documented intermediate rounding before comparing with published 3961.9 lb/year and 4330.2 lb/year results; no model output is rounded to obtain those targets. Independently derived wetted-area clingage matches the published 136.5 lb/year withdrawal result.
+
+The first native coupled-roof check exposed missing scenario serialization in raw output. The producer now records complete scenario inputs. Canonical roof truth, episode identifiers, censoring metadata and inspection-state identifiers must agree. Pressure-load checks use the independent uniform-pressure integral and Archimedes balance; they do not validate vent dynamics or material failure.
+
 Hand derivations and sampling-error arguments behind the tests, with one section per test module. A test docstring points to its section by name.
 
 ## Dead-leg pressures

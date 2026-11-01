@@ -74,7 +74,7 @@ def _faults(
     if kind != "cascade_trial":
         return [root]
     levels = {r["t_sim_s"]: r["tanks"][tank]["level_m"] for r in rows}
-    child = cascade_child(root, sorted(levels.items()), p)
+    child = cascade_child(root, sorted(levels.items()), p, allow_legacy_simulation=True)
     return [root] if child is None else [root, child]
 
 
@@ -171,7 +171,7 @@ def _episode(
     seal = max((f.peak for f in faults if f.fault_type == "RIM_SEAL_DETERIORATION"), default=0.)
     fit = max((f.peak for f in faults if f.fault_type == "FITTING_DAMAGE"), default=0.)
     window = reference_window(temperature, 30.0, 30.0, seal, fit, p,
-                              "access_hatch" if fit else None)
+                              "access_hatch" if fit else None, allow_legacy_simulation=True)
     (evaluator / "vapour_reference_window.json").write_text(json.dumps(window, sort_keys=True))
     labels = {"episode_id": episode, "parent_episode_id": parent["episode_id"],
               "split": parent["split"], "kind": kind, "peak": peak, "tank_id": tank,
@@ -188,8 +188,13 @@ def _episode(
                                for path in sorted(folder.iterdir()) if path.is_file()}}
 
 
-def generate(base: Path, output: Path, n: int) -> dict[str, Any]:
+def generate(
+    base: Path, output: Path, n: int, *, allow_legacy_simulation: bool = False,
+) -> dict[str, Any]:
     """Generate a new extension directory; refuse overwrites and retain parent split membership."""
+    if not allow_legacy_simulation:
+        raise ValueError("reduced mechanical overlays are unqualified; explicit legacy research "
+                         "opt-in is required and cannot qualify training data")
     if output.exists() or n < 5 or n % 5:
         raise ValueError("output must be new and n must be a positive multiple of five")
     manifest_path = base / "evaluator" / "manifest.json"

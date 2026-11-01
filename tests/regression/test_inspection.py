@@ -61,7 +61,7 @@ def outcome(
 ) -> models.Outcome:  # fmt: skip
     state = truth_of(tmp, rows).state(t)
     rng = RandomStreams(SEED).stream(f"inspection/REQ-INSP-{stream:05d}/measurement")
-    return models.perform(CATALOG, ASSETS, state, action, target, rng)
+    return models.perform(CATALOG, ASSETS, state, action, target, rng, allow_legacy_simulation=True)
 
 
 def within(count: float, trials: int, p: float) -> bool:
