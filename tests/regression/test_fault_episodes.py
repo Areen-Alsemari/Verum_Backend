@@ -372,8 +372,8 @@ def test_no_fault_information_reaches_the_agent_visible_data(
     healthy: EpisodeResult, faulted: dict[str, EpisodeResult], key: str
 ) -> None:
     """No fault, severity, window, scenario or tier word appears in the agent-visible rows, and the
-    dropout pattern equals that of the healthy twin. Independent: yes, because the check scans the
-    written rows.
+    dropout pattern equals that of the healthy twin; the inspection catalog equals that of the twin.
+    Independent: yes, because the check scans the written rows.
     """
     result = faulted[key]
     keys = set(load_schema("observation")["properties"])
@@ -383,7 +383,14 @@ def test_no_fault_information_reaches_the_agent_visible_data(
     assert not FORBIDDEN.search(text.replace("episode_id", "").replace("EP-", ""))
     payload = Gateway(result.directory).query(DURATION)
     check_allowlist(payload)  # LK-07: the allowlist
-    assert not FORBIDDEN.search(json.dumps(payload).replace("episode_id", "").replace("EP-", ""))
+    # The catalog names the inspection actions (a leak survey, for one) and is the same for every
+    # episode, so it is compared with the healthy twin and left out of the word scan (D100).
+    assert (
+        payload["inspection_catalog"]
+        == Gateway(healthy.directory).query(DURATION)["inspection_catalog"]
+    )
+    rest = {k: v for k, v in payload.items() if k != "inspection_catalog"}
+    assert not FORBIDDEN.search(json.dumps(rest).replace("episode_id", "").replace("EP-", ""))
     # LK-09 and LK-10: the dropout pattern and the quality counts equal those of the healthy twin.
     twin = observations(healthy)
     assert [(r["tag_id"], r["t_sim_s"], r["value"] is None) for r in rows] == [

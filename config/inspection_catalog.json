@@ -466,6 +466,20 @@
       "status": "provisional",
       "evidence_tag": "SIM",
       "provenance_id": "VERUM-DD-D103-v1.0"
+    },
+    "level_transmitter_uncertainty_mm": {
+      "value": 0.5,
+      "unit": "mm",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D103-v1.0"
+    },
+    "pressure_transmitter_uncertainty_percent_span": {
+      "value": 0.055,
+      "unit": "percent of span",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "VERUM-DD-D103-v1.0"
     }
   },
   "thresholds": {
