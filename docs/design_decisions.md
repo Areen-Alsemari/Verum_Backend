@@ -1590,3 +1590,12 @@ These are choices that the audited documents do not state. They are implemented,
 - **Qualification.** This is a coupled boundary/inspection reference, not a qualified industrial failure dataset. Existing physical and production gates remain unchanged.
 
 - **Public context.** Include source-bearing tank/roof design parameters and pipe geometry in the reference knowledge. Preserve the original evidence tags and state that these facts are not field-qualified; expose no current level, hidden fault or actual operating state.
+
+## D132 - Supported scope and reproducible training distribution
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D130, D131
+- **Scope.** Define supported hydraulic/sensor mechanisms and explicit exclusions in a machine-readable contract. Visibility class alone cannot admit an excluded mechanism. Unknown labels remain null and masked; paired initial roof constraints remain bounded experiments rather than material failures.
+- **Incorrect uses.** Exclude legacy uncoupled mechanical archives from supported release inputs. Require explicit supplemental source selection, recorded workflow ordering, finite numeric metrics, nonnegative uncertainty and source-matched metric units before marking an inspection measurement supported. Existing physical archives remain unchanged for audit.
+- **Reproducibility.** Freeze the existing campaign seed, slot count, block composition and horizon in a generation recipe. Track the generation, materialization, verification and packaging commands. Ambient sibling folders cannot change a release, and parent-related records retain original splits.
+- **Distribution.** Package the 24 role/split files and public reference/contract metadata without raw telemetry or evaluator truth. Bind every payload with SHA-256, check archive CRCs and keep generated data outside Git. Retain full local exports for auditing and sequence-model work.
+- **Qualification.** Scope selection and passing software checks do not enable production generation or establish field performance. No new physical parameter, unsupported observation or invented failure label is introduced.

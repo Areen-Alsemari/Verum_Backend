@@ -29,13 +29,13 @@ Static reference fixtures for roles 3, 4 and 6 are deduplicated by query within 
 
 ## Inspection and mechanical scope
 
-The legacy mechanical extension retains its original archive. Its 3420 performed results are outside their one-hour process coverage and its measurement models are unqualified. Only metadata quality checks are exported from those results; numerical findings and normal/critical condition categories are withheld. Cancellations remain unperformed. The two coupled roof references supply four challenge-only record checks; two contain supported raw manual-level measurements, with condition acceptance still unknown. Challenge references are not training-class balance or validation of industrial roof damage.
+The legacy mechanical extension retains its original archive. Its 3420 performed results are outside their one-hour process coverage and its measurement models are unqualified. The supported v2 release excludes this legacy archive entirely; its historical metadata exercises remain separate audit artifacts. Numerical findings and normal/critical condition categories cannot become physical training labels. Cancellations remain unperformed. The two coupled roof references supply four challenge-only record checks; two contain supported raw manual-level measurements, with condition acceptance still unknown. Challenge references are not training-class balance or validation of industrial roof damage.
 
 Roof, fitting and cascade labels from uncoupled overlays must not supervise physical diagnosis from duplicate hydraulic readings. Native coupled roof constraints remain a bounded reference demonstration; unselected support strength, failure propagation, vent capacity and damaged-emission parameters remain unresolved. Routine EPA vapour estimates are averages under the documented intact/reference assumptions, not instantaneous VOC sensor observations. None of these limitations can be resolved by assigning convenient numbers or converting an unavailable inspection into a normal result.
 
 ## Portable layout and use
 
-Build with `python tools/dataset_release.py build --source data/campaign --output data/verum_reference_v1 --workers 3`, then verify with `python tools/dataset_release.py verify data/verum_reference_v1`. Each observation file is copied byte-for-byte, with both compressed-byte and decompressed-content hashes recorded. Source scenarios, labels, fault truth and validity intervals are retained under the evaluator directory for audit, never served as inputs. Shared references and examples are hashed; an incomplete export has a build sentinel and cannot be loaded.
+Use `python tools/generate_dataset.py --root data/team_reference_v2 --workers 3` for the reproducible end-to-end pipeline, or follow the staged commands in the team generation guide. Supplemental inspection sources must be explicitly supplied; sibling folders are never discovered automatically. Each observation file is copied byte-for-byte, with both compressed-byte and decompressed-content hashes recorded. Source scenarios, labels, fault truth and validity intervals are retained under the evaluator directory for audit, never served as inputs. Shared references and examples are hashed; an incomplete export has a build sentinel and cannot be loaded.
 
 Use `iter_role_examples(root, role_key, split)` or the command's `materialize` subcommand to obtain input/target pairs. Keep validation for model selection and open test targets only for final evaluation. The raw evaluator directory is not an inference or retrieval source. Inspection metadata banks carry their own inherited splits and separate challenge membership. Each pair identifies its use as reference-model supervision or a public-reference fixture.
 
@@ -51,7 +51,9 @@ The held boundary is imposed at initialisation, with a pressure-equalized gas re
 
 ```bash
 python tools/roof_reference.py --source data/campaign --output data/roof_reference_v1 --workers 3
-python tools/dataset_release.py build --source data/campaign --output data/verum_reference_v1 --workers 3
+python tools/dataset_release.py build --source data/campaign --inspection-source data/roof_reference_v1 --output data/verum_reference_v2 --workers 3
 ```
 
 The public reference includes the existing tank/roof parameter records and pipe dimensions, routes and source locators. These are declared design specifications, not measured current state. Asset retrieval returns explicit null specifications for assets without such supplied details; it does not manufacture pump curves, maintenance history or hardware ratings.
+
+The supported scope is defined in [project scope](project_scope.md), and the reproduction/sharing workflow is in [data generation](data_generation.md). V2 adds an enforced mechanism allowlist and validated inspection workflow/metric checks. The compact training archive contains only role files and public/reference metadata; raw telemetry and evaluator truth remain in the separate local export.

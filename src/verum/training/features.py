@@ -14,6 +14,8 @@ from typing import Any
 
 import numpy as np
 
+from verum.training.scope import supported_fault
+
 
 def check_observation(row: dict[str, Any], units: dict[str, str], duration_s: float) -> None:
     """Check numeric, unit and timing invariants in an already schema-verified source file."""
@@ -154,6 +156,8 @@ def reference_supervision(
         reasons.append("model_validity_window")
     active = [f for f in record["faults"] if f["onset_s"] <= cutoff_s]
     for fault in active:
+        if not supported_fault(fault):
+            reasons.append("outside_project_scope")
         if fault["class"] != "clear":
             reasons.append("visibility_not_clear_in_source_audit")
         if record.get("latent") or fault.get("activity") not in (None, "active"):

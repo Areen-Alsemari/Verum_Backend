@@ -1,23 +1,22 @@
-"""Coursework views preserve causality, unknown labels and source split membership.
+"""Reference views preserve causality, unknown labels and source split membership.
 
 Literal records test export boundaries without assuming any physical fault is observable.
 """
 
 from __future__ import annotations
 
-import gzip
 import json
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from _dataset_fixture import fixture_source
 from verum.training.dataset import (
     build_dataset_release,
     dataset_contract,
     digest,
     iter_role_examples,
-    source_digest,
     verify_dataset_release,
 )
 from verum.training.features import (
@@ -97,7 +96,7 @@ def test_uncertain_fault_is_unknown_instead_of_healthy(visibility: str) -> None:
                 "onset_s": 10.0,
                 "class": visibility,
                 "ramp_s": 0.0,
-                "fault_type": "SENSOR_BIAS",
+                "fault_type": "SENSOR_DRIFT",
                 "subtype": "bias",
                 "asset_id": "PT-201",
             }
@@ -121,7 +120,7 @@ def test_clear_injection_still_needs_context_and_valid_model() -> None:
                 "onset_s": 100.0,
                 "class": "clear",
                 "ramp_s": 200.0,
-                "fault_type": "SENSOR_BIAS",
+                "fault_type": "SENSOR_DRIFT",
                 "subtype": "bias",
                 "asset_id": "PT-201",
             }
@@ -164,38 +163,6 @@ def test_legacy_inspection_findings_cannot_become_condition_labels() -> None:
     assert "process_horizon_does_not_cover_performance" in row["target"]["quality_flags"]
     assert "value" not in row["input"]["metric"]
     assert "NORMAL_INTACT" not in json.dumps(row)
-
-
-def fixture_source(root: Path) -> Path:
-    source = root / "source"
-    episode = source / "evaluator/episodes/EP-FIXTURE"
-    episode.mkdir(parents=True)
-    visible = source / "agent_visible/episodes/EP-FIXTURE/observations.jsonl.gz"
-    visible.parent.mkdir(parents=True)
-    from verum.sensors.specs import load_sensor_config
-
-    unit = load_sensor_config().tags["PT-201"].unit
-    with gzip.open(visible, "wt") as handle:
-        for t in (100.0, 400.0, 700.0):
-            handle.write(json.dumps(observation(t, t) | {"unit": unit}) + "\n")
-    (episode / "scenario.json").write_text(json.dumps({"duration_s": 900.0}))
-    (episode / "labels.json").write_text(json.dumps({"faults": []}))
-    for name in ("fault_truth.jsonl.gz", "validity_windows.jsonl.gz"):
-        with gzip.open(episode / name, "wt"):
-            pass
-    record: dict[str, Any] = {
-        "episode_id": "EP-FIXTURE",
-        "status": "completed",
-        "split": "test",
-        "tier": "analytic_verification",
-        "faults": [],
-        "files": {
-            p.relative_to(source).as_posix(): source_digest(p)
-            for p in [visible, *episode.iterdir()]
-        },
-    }
-    (source / "evaluator/manifest.json").write_text(json.dumps({"episodes": [record]}))
-    return source
 
 
 def test_portable_export_preserves_splits_bytes_and_all_eight_roles(tmp_path: Path) -> None:

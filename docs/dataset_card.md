@@ -119,3 +119,9 @@ The campaign manifest records held-out strata, assets and the train/validation/t
 The D121 extension is restricted_benchmark and is excluded from physical-fault training. Its mechanical states are reduced synthetic variables without hydraulic force feedback. Seal gaps, fitting outcomes and the travel-triggered cascade are uncalibrated selections. Their software checks do not establish a validated roof failure model.
 
 Vapour output is a constant-condition 30-day reference component sum, not complete facility emissions. Suspension and seam factors remain explicit SIM proxies; withdrawal is omitted and uncertainty is unresolved. No continuous VOC channel is added and no reference vapour mass is subtracted from liquid inventory. Production generation remains disabled.
+
+## Supported reference release v2
+
+The current bounded project scope is recorded in [project scope](project_scope.md). The supported release excludes the legacy mechanical extension and admits supplemental roof-reference inspection records only when explicitly selected. Scope allowlists, workflow ordering, catalog task duration, numeric completeness and metric units are enforced before a raw inspection is marked supported. These checks do not create equipment acceptance criteria or field qualification.
+
+The [team generation guide](data_generation.md) and committed recipe reproduce the source campaign, bounded references, 24 role/split views and compact training archive. The archive excludes raw telemetry and evaluator truth; the full local export preserves both for audit. Original signals, unknown labels, source splits, gaps and rejected reference attempts remain unchanged.

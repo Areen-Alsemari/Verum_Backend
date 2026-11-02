@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0.0",
+  "dataset_name": "verum_reference_v2",
+  "scope_contract": "project_scope_v1.json",
+  "campaign": {
+    "seed": 20261101,
+    "n": 3004,
+    "duration_s": 3600.0,
+    "block": {"size": 100, "healthy": 18, "single": 56, "pair": 20, "branched": 6, "latent": 3, "switch": 9, "stress": 8, "audit": 10}
+  },
+  "include_coupled_roof_reference": true,
+  "exclude_legacy_mechanical_extension": true,
+  "provenance": "Existing campaign_config.json and the supported project-scope decision; no new physical selection."
+}

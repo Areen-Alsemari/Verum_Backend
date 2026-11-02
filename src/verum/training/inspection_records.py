@@ -1,18 +1,19 @@
 """Inspection metadata exercises preserve archived evidence without endorsing its findings.
 
 Only coverage and record-completeness facts become targets, never legacy condition categories.
-Mechanical children keep their hydraulic parent's split; native roof references stay challenge-only.
+Parent-related records keep one split and incomplete timelines cannot qualify a measurement.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
-from verum.inspection.catalog import UNQUALIFIED_ACTIONS
+from verum.inspection.catalog import UNQUALIFIED_ACTIONS, load_catalog
 
 
 def inspection_example(
@@ -28,13 +29,19 @@ def inspection_example(
     performed_s = result.get("performed_at_t_sim_s")
     metric = (result.get("findings") or {}).get("primary_metric") or {}
     missing = result.get("evidence_status") == "missing"
-    coverage = bool(performed and performed_s is not None and 0 <= performed_s <= horizon_s)
+    coverage = bool(performed and _finite_number(performed_s) and 0 <= performed_s <= horizon_s)
+    timeline_valid = _timeline_valid(item, performed_s)
+    metric_valid = _metric_valid(metric, request["action_id"])
     supported_model = not legacy and request["action_id"] not in UNQUALIFIED_ACTIONS
     reasons = []
     if not performed:
         reasons.append("no_performed_result")
     if performed and not coverage:
         reasons.append("process_horizon_does_not_cover_performance")
+    if performed and not timeline_valid:
+        reasons.append("workflow_timing_unverified")
+    if metric and not metric_valid:
+        reasons.append("measurement_invalid_or_incomplete")
     if not supported_model:
         reasons.append("measurement_model_unqualified")
     if missing or not metric:
@@ -56,6 +63,8 @@ def inspection_example(
             "value_recorded": bool(metric and metric.get("value") is not None),
             "uncertainty_recorded": metric.get("uncertainty_k2") is not None,
         },
+        "workflow_timing_verified": timeline_valid,
+        "measurement_record_complete": metric_valid,
         "equipment_acceptance_tolerance_supplied": False,
     }
     return {
@@ -65,13 +74,60 @@ def inspection_example(
             "raw_measurement_supported": coverage
             and supported_model
             and not missing
-            and bool(metric),
+            and metric_valid
+            and timeline_valid,
+            "workflow_timing_valid": timeline_valid,
             "condition_acceptance_supported": False,
             "equipment_condition": None,
             "quality_flags": reasons,
             "decision": "retain_provenance_and_hold_condition_conclusion",
         },
     }
+
+
+def _finite_number(value: Any) -> TypeGuard[int | float]:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _metric_valid(metric: dict[str, Any], action_id: str) -> bool:
+    catalog = load_catalog()
+    action = catalog.actions.get(action_id)
+    matched = action is not None and any(
+        o.name == metric.get("name") and o.unit == metric.get("unit") and o.modelled
+        for o in action.outputs
+    )
+    return (
+        matched
+        and isinstance(metric.get("name"), str)
+        and bool(metric["name"].strip())
+        and isinstance(metric.get("unit"), str)
+        and bool(metric["unit"].strip())
+        and _finite_number(metric.get("value"))
+        and _finite_number(metric.get("uncertainty_k2"))
+        and metric["uncertainty_k2"] >= 0
+    )
+
+
+def _timeline_valid(item: dict[str, Any], performed: Any) -> bool:
+    timeline = item.get("timeline") or {}
+    names = ("t_requested_s", "t_decision_s", "t_start_s", "t_performed_s", "t_visible_s")
+    times = [timeline.get(name) for name in names]
+    if not all(_finite_number(t) for t in times):
+        return False
+    checked = [float(t) for t in times if t is not None]
+    requested = item["request"].get("t_requested_sim_s")
+    action = load_catalog().actions.get(item["request"]["action_id"])
+    return bool(
+        action is not None
+        and _finite_number(requested)
+        and item.get("cancellation") is None
+        and checked[3] == checked[2] + action.duration_s
+        and timeline.get("reason", "unknown") is None
+        and checked[0] == requested
+        and checked[0] >= 0
+        and checked[3] == performed
+        and all(a <= b for a, b in zip(checked, checked[1:], strict=False))
+    )
 
 
 def build_inspection_exercises(

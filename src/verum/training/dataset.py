@@ -30,6 +30,7 @@ from verum.training.features import (
     quality_target,
     reference_supervision,
 )
+from verum.training.scope import project_scope
 from verum.training.truth import load_episode_truth
 
 SPLITS = ("train", "validation", "test")
@@ -344,12 +345,22 @@ def _build_episode(job: tuple[Path, Path, dict[str, Any], dict[str, Any]]) -> di
     }
 
 
-def build_dataset_release(source: Path, output: Path, *, workers: int = 1) -> dict[str, Any]:
+def build_dataset_release(
+    source: Path, output: Path, *, workers: int = 1, inspection_sources: tuple[Path, ...] = ()
+) -> dict[str, Any]:
     """Build a new portable research handoff without editing source cases or physical gates."""
     if output.exists() or output.resolve().is_relative_to(source.resolve()):
         raise ValueError("output must be a new directory outside the source campaign")
     if workers < 1:
         raise ValueError("workers must be positive")
+    for supplement in inspection_sources:
+        if (supplement / "BUILDING.json").exists():
+            raise ValueError("inspection source is incomplete")
+        metadata = json.loads((supplement / "evaluator/manifest.json").read_text())
+        if metadata.get("dataset") != "coupled_roof_reference":
+            raise ValueError("inspection dataset is outside project scope")
+    if len({p.resolve() for p in inspection_sources}) != len(inspection_sources):
+        raise ValueError("inspection sources must be distinct")
     manifest_path = source / "evaluator" / "manifest.json"
     manifest_bytes = manifest_path.read_bytes()
     manifest = json.loads(manifest_bytes)
@@ -363,6 +374,7 @@ def build_dataset_release(source: Path, output: Path, *, workers: int = 1) -> di
     _write(output / "BUILDING.json", {"complete": False})
     _write(output / "knowledge" / "public_reference.json", public_reference())
     _write(output / "agent_data_contract.json", contract)
+    _write(output / "project_scope.json", project_scope())
     _write(output / "evaluator" / "source_manifest.json", manifest)
     jobs = [(source, output, record, contract) for record in records]
     results = []
@@ -385,27 +397,23 @@ def build_dataset_release(source: Path, output: Path, *, workers: int = 1) -> di
 
     inspections = []
     splits = {r["episode_id"]: r["split"] for r in records}
-    for directory, native in (
-        ("mechanical_extension_full_v1", False),
-        ("coupled_roof_reference_v1", True),
-        ("roof_reference_v1", True),
-    ):
-        inspection_source = source.parent / directory
-        if inspection_source.exists():
-            folder = output / directory
-            folder.mkdir()
-            inspections.append(
-                build_inspection_exercises(inspection_source, folder, splits, native=native)
-            )
+    for index, inspection_source in enumerate(inspection_sources):
+        folder = output / "inspection_records" / f"source_{index:02d}"
+        folder.mkdir(parents=True)
+        bank = build_inspection_exercises(inspection_source, folder, splits, native=True)
+        bank["file"] = (folder / "inspection_quality.jsonl").relative_to(output).as_posix()
+        inspections.append(bank)
     shared_files = [
+        "project_scope.json",
         "knowledge/public_reference.json",
         "agent_data_contract.json",
         "evaluator/source_manifest.json",
     ]
     commit, dirty = git_state()
     report = {
-        "schema_version": "1.0.0",
+        "schema_version": "2.0.0",
         "export_complete": True,
+        "scope_id": project_scope()["scope_id"],
         "scope": "reduced_simulation_and_evidence_handling",
         "physical_training_qualified": False,
         "production_enabled": False,

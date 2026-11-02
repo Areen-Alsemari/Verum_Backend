@@ -89,4 +89,10 @@ The default inspection catalog now marks unsupported outputs unmodelled with unk
 
 ## Reference datasets
 
-The eight-role data contract is documented in [agent data contract](docs/agent_data_contract.md). `tools/dataset_release.py` exports causal observation features, separate masked targets and source-matched reference records as `verum_reference_v1`. `tools/roof_reference.py` generates paired coupled roof-boundary references with process-covered manual inspections and inherited parent splits. These commands implement no agents and do not open physical training or production gates. Unknown material-failure, damaged-emission, calibration and acceptance inputs remain unresolved.
+The eight-role data contract is documented in [agent data contract](docs/agent_data_contract.md). `tools/dataset_release.py` exports causal observation features, separate masked targets and source-matched reference records as `verum_reference_v2`. `tools/roof_reference.py` generates paired coupled roof-boundary references with process-covered manual inspections and inherited parent splits. These commands implement no agents and do not open physical training or production gates. Unknown material-failure, damaged-emission, calibration and acceptance inputs remain unresolved.
+
+## Supported scope and team data generation
+
+The current project boundary is defined in [project scope](docs/project_scope.md). Unsupported structural failures, damaged-material emissions, mechanical cascades and remaining useful life are outside this version. All eight logical roles remain supported within the documented reference tasks.
+
+Use [the team generation guide](docs/data_generation.md) to reproduce the data from the committed recipe or reuse existing simulations. `tools/generate_dataset.py` creates the scoped dataset, 24 role/split files and a compact `verum_reference_v2_training.zip` archive. Generated data stays under the existing Git ignore rule; raw telemetry and evaluator truth are excluded from the training archive.

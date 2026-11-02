@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "scope_id": "verum_supported_reference_v2",
+  "supported_fault_types": ["PIPE_LEAK", "VALVE_RESTRICTION", "PUMP_HEAD_DEGRADATION", "SENSOR_DRIFT", "VALVE_MISROUTING"],
+  "supported_mechanisms": ["leak", "restriction_position_visible", "restriction_obstruction", "pump", "bias", "drift", "stuck", "misroute_a"],
+  "included": ["hydraulic_and_sensor_reference_supervision", "causal_reported_signal_forecasting", "declared_topology_and_asset_retrieval", "inspection_catalog_constraints", "process_covered_inspection_record_quality", "evidence_timing_and_provenance", "normal_operation_vapour_calculations", "explicit_coupled_roof_boundary_experiments"],
+  "excluded": ["roof_rupture_and_support_failure", "damaged_seal_or_fitting_emission_prediction", "mechanical_fault_to_fault_cascades", "remaining_useful_life", "field_equipment_acceptance", "automatic_process_or_maintenance_control", "misroute_b_physical_diagnosis_supervision", "legacy_uncoupled_mechanical_labels", "out_of_horizon_inspection_measurements"],
+  "reference_experiment_rule": "A prescribed initial roof constraint is a bounded experiment, not structural failure or a qualified diagnosis target.",
+  "physical_training_qualified": false,
+  "production_enabled": false
+}
