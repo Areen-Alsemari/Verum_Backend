@@ -96,6 +96,7 @@ def generate_dataset(
     }
     (release / "generation_recipe.json").write_text(json.dumps(lineage, indent=2) + "\n")
     shutil.copyfile(repo_root() / "docs/data_generation.md", release / "TEAM_DATA_GUIDE.md")
+    shutil.copyfile(repo_root() / "docs/project_scope.md", release / "project_scope.md")
     roles = materialize_roles(release)
     summary = {k: v for k, v in report.items() if k != "records"}
     summary["role_views"] = roles

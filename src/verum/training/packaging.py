@@ -147,6 +147,7 @@ def package_training(root: Path, target: Path) -> dict[str, Any]:
             "release_summary.json",
             "generation_recipe.json",
             "TEAM_DATA_GUIDE.md",
+            "project_scope.md",
         )
     ]
     files.extend(sorted((root / "role_views").rglob("*.jsonl.gz")))
@@ -195,6 +196,7 @@ def verify_training_archive(path: Path) -> dict[str, Any]:
             "release_summary.json",
             "generation_recipe.json",
             "TEAM_DATA_GUIDE.md",
+            "project_scope.md",
             "BUNDLE_FILES.json",
         }
         expected.update(

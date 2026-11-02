@@ -155,6 +155,7 @@ def prepared_release(root: Path) -> Path:
     (release / "generation_recipe.json").write_text(json.dumps({"recipe": load_recipe()}))
     (release / "release_summary.json").write_text(json.dumps({"episodes": report["episodes"]}))
     (release / "TEAM_DATA_GUIDE.md").write_text("Use inputs only; honour target masks.\n")
+    (release / "project_scope.md").write_text("Supported reference tasks only.\n")
     materialize_roles(release)
     return release
 
