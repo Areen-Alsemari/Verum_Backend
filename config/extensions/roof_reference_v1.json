@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "scope": "coupled_withdrawal_boundary_reference",
+  "gas_boundary": "pressure_equalized_reference",
+  "inspection_action": "ACT-INSP-05",
+  "parameters": {
+    "request_time_s": {
+      "value": 1800.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D131-existing-D121-inspection-request-time"
+    }
+  },
+  "sources": [
+    "M1 revised sections 3 and 8: selected geometry and buoyancy calibration",
+    "M4 revised section 6.3: manual level inspection and workflow",
+    "https://www.hmttank.com/products/internal-floating-roofs/full-contact/aluminator-hfc-ifr/",
+    "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf"
+  ],
+  "limitations": [
+    "initial_constraint_is_left_censored_not_a_later_failure_event",
+    "rigid_one_sided_constraint_without_structural_strength_or_rupture",
+    "pressure_equalized_reference_without_vent_pressure_dynamics",
+    "existing_design_mass_proxy_not_a_manufacturer_assembly_mass",
+    "manual_level_uncertainty_is_the_existing_synthetic_measurement_selection",
+    "no_damaged_material_vapour_prediction",
+    "no_causal_secondary_failure_label_without_a_supported_failure_law",
+    "not_field_qualified"
+  ]
+}

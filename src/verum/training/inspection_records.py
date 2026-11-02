@@ -48,6 +48,7 @@ def inspection_example(
         "process_horizon_s": horizon_s,
         "evidence_status": result.get("evidence_status"),
         "measurement_model_qualified": supported_model,
+        "measurement_model_qualification_scope": "reduced_reference_simulator",
         "metric": {
             "name": metric.get("name"),
             "unit": metric.get("unit"),
@@ -81,7 +82,7 @@ def build_inspection_exercises(
     native: bool = False,
 ) -> dict[str, Any]:
     """Derive metadata exercises from hash-checked replays without altering archived results."""
-    from verum.training.course import digest, source_digest
+    from verum.training.dataset import digest, source_digest
 
     manifest_path = source / "evaluator" / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
@@ -90,6 +91,8 @@ def build_inspection_exercises(
     path = output / "inspection_quality.jsonl"
     with path.open("w", encoding="utf-8") as handle:
         for entry in manifest["episodes"]:
+            if entry.get("status", "completed") != "completed":
+                continue
             ident = entry["episode_id"]
             directory = source / "evaluator" / "episodes" / ident
             replay_path, scenario_path = (
@@ -102,8 +105,12 @@ def build_inspection_exercises(
                     raise ValueError(f"inspection source changed: {p}")
             horizon = float(json.loads(scenario_path.read_text())["duration_s"])
             parent = entry.get("parent_episode_id", ident)
-            split = "challenge" if native else source_splits[parent]
-            if not native and split != entry["split"]:
+            split = (
+                "challenge"
+                if native and entry["split"] == "research_reference"
+                else source_splits[parent]
+            )
+            if split != "challenge" and split != entry["split"]:
                 raise ValueError("inspection child differs from parent split")
             for index, item in enumerate(json.loads(replay_path.read_text())):
                 row = inspection_example(item, horizon, legacy=not native)

@@ -1,4 +1,4 @@
-"""Causal observation summaries for coursework data handoffs.
+"""Causal observation summaries for reference-model data handoffs.
 
 Only records available at the cutoff enter an input; measurement values remain in source units.
 Absolute episode time and identifiers stay in evaluator lineage rather than model features.

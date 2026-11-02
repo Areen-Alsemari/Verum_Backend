@@ -1,4 +1,4 @@
-"""Portable coursework data views for Verum's eight fixed logical roles.
+"""Portable reference-model data views for Verum's eight fixed logical roles.
 
 Inputs contain causal observation summaries and public reference records, never simulator truth.
 Reference injection labels live in separate targets with explicit masks and model limitations.
@@ -24,7 +24,7 @@ from verum.inspection.catalog import load_catalog
 from verum.params import ParamValue
 from verum.provenance import canonical_json, config_hash, git_state
 from verum.sensors.specs import load_sensor_config
-from verum.training.course_features import (
+from verum.training.features import (
     ObservationWindows,
     check_observation,
     quality_target,
@@ -58,9 +58,9 @@ def _rows(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in handle]
 
 
-def course_contract() -> dict[str, Any]:
+def dataset_contract() -> dict[str, Any]:
     value: dict[str, Any] = json.loads(
-        (config_dir() / "extensions" / "course_data_v1.json").read_text()
+        (config_dir() / "extensions" / "agent_dataset_v1.json").read_text()
     )
     return value
 
@@ -322,7 +322,7 @@ def _build_episode(job: tuple[Path, Path, dict[str, Any], dict[str, Any]]) -> di
     }
 
 
-def build_course_release(source: Path, output: Path, *, workers: int = 1) -> dict[str, Any]:
+def build_dataset_release(source: Path, output: Path, *, workers: int = 1) -> dict[str, Any]:
     """Build a new portable research handoff without editing source cases or physical gates."""
     if output.exists() or output.resolve().is_relative_to(source.resolve()):
         raise ValueError("output must be a new directory outside the source campaign")
@@ -337,7 +337,7 @@ def build_course_release(source: Path, output: Path, *, workers: int = 1) -> dic
     if not records or any(r["split"] not in SPLITS for r in records):
         raise ValueError("nonempty source with known splits is required")
     output.mkdir(parents=True)
-    contract = course_contract()
+    contract = dataset_contract()
     _write(output / "BUILDING.json", {"complete": False})
     _write(output / "knowledge" / "public_reference.json", public_reference())
     _write(output / "agent_data_contract.json", contract)
@@ -359,13 +359,14 @@ def build_course_release(source: Path, output: Path, *, workers: int = 1) -> dic
     counters: Counter[str] = Counter()
     for result in results:
         counters.update(result["counts"])
-    from verum.training.course_inspections import build_inspection_exercises
+    from verum.training.inspection_records import build_inspection_exercises
 
     inspections = []
     splits = {r["episode_id"]: r["split"] for r in records}
     for directory, native in (
         ("mechanical_extension_full_v1", False),
         ("coupled_roof_reference_v1", True),
+        ("roof_reference_v1", True),
     ):
         inspection_source = source.parent / directory
         if inspection_source.exists():
@@ -383,7 +384,7 @@ def build_course_release(source: Path, output: Path, *, workers: int = 1) -> dic
     report = {
         "schema_version": "1.0.0",
         "export_complete": True,
-        "scope": "coursework_reduced_simulation_and_evidence_handling",
+        "scope": "reduced_simulation_and_evidence_handling",
         "physical_training_qualified": False,
         "production_enabled": False,
         "source_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
@@ -454,7 +455,7 @@ def iter_role_examples(root: Path, role: str, split: str) -> Iterator[dict[str, 
                 "target": target,
                 "use": "public_reference_fixture_not_independent_test"
                 if reference_only
-                else "coursework_input_target_pair",
+                else "reference_input_target_pair",
             }
 
     if role in ("inspection_quality_documentation", "evidence_verification_decision"):
@@ -474,7 +475,7 @@ def iter_role_examples(root: Path, role: str, split: str) -> Iterator[dict[str, 
                         }
 
 
-def verify_course_release(root: Path) -> dict[str, Any]:
+def verify_dataset_release(root: Path) -> dict[str, Any]:
     """Check portable file integrity, split membership and all target masks independently."""
     if (root / "BUILDING.json").exists():
         raise ValueError("export is incomplete")
@@ -486,7 +487,7 @@ def verify_course_release(root: Path) -> dict[str, Any]:
     membership = {
         r["episode_id"]: r["split"] for r in source["episodes"] if r["status"] == "completed"
     }
-    roles = {r["key"] for r in course_contract()["roles"]}
+    roles = {r["key"] for r in dataset_contract()["roles"]}
     seen: set[str] = set()
     counts: Counter[str] = Counter()
     episodes: set[str] = set()

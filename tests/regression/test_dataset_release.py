@@ -12,20 +12,20 @@ from typing import Any
 
 import pytest
 
-from verum.training.course import (
-    build_course_release,
-    course_contract,
+from verum.training.dataset import (
+    build_dataset_release,
+    dataset_contract,
     digest,
     iter_role_examples,
     source_digest,
-    verify_course_release,
+    verify_dataset_release,
 )
-from verum.training.course_features import (
+from verum.training.features import (
     ObservationWindows,
     check_observation,
     reference_supervision,
 )
-from verum.training.course_inspections import inspection_example
+from verum.training.inspection_records import inspection_example
 
 
 def observation(t: float, value: float | None, *, available: float | None = None) -> dict[str, Any]:
@@ -206,13 +206,13 @@ def test_portable_export_preserves_splits_bytes_and_all_eight_roles(tmp_path: Pa
     source = fixture_source(tmp_path)
     before = digest(source / "agent_visible/episodes/EP-FIXTURE/observations.jsonl.gz")
     output = tmp_path / "portable"
-    report = build_course_release(source, output)
+    report = build_dataset_release(source, output)
     assert report["episodes"] == 1 and report["counts"]["snapshots"] == 3
     assert report["records"][0]["observation_sha256"] == before
     assert not report["physical_training_qualified"]
-    assert verify_course_release(output)["integrity_passed"]
-    assert len(course_contract()["roles"]) == 8
-    for role in course_contract()["roles"]:
+    assert verify_dataset_release(output)["integrity_passed"]
+    assert len(dataset_contract()["roles"]) == 8
+    for role in dataset_contract()["roles"]:
         assert not list(iter_role_examples(output, role["key"], "train"))
         examples = list(iter_role_examples(output, role["key"], "test"))
         assert 1 <= len(examples) <= 3
@@ -220,7 +220,7 @@ def test_portable_export_preserves_splits_bytes_and_all_eight_roles(tmp_path: Pa
     file = output / report["records"][0]["example_file"]
     file.write_bytes(file.read_bytes() + b"tampered")
     with pytest.raises(ValueError, match="hash mismatch"):
-        verify_course_release(output)
+        verify_dataset_release(output)
     with pytest.raises(ValueError, match="changed"):
         list(iter_role_examples(output, "anomaly_detection", "test"))
 

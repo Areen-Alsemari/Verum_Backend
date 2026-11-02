@@ -1573,3 +1573,18 @@ These are choices that the audited documents do not state. They are implemented,
 - **Limits.** Short-window forecasting is not a health score or remaining useful life. Catalog retrieval is not optimal inspection planning. Injection labels are simulator supervision rather than field diagnosis. No unsupported hardware value, damage emission rate, history or information-gain score is supplied.
 
 - **Clock shortcuts.** Derived ages older than the lookback are right-censored with explicit lower-bound flags; unchanged startup contacts cannot reveal the absolute episode clock. Original observation timestamps remain unchanged.
+
+## D130 - Reference dataset views for eight logical roles
+
+- **Version:** 2.0 (2026-11-02)  **Status:** DESIGN  **Supersedes:** D130 version 1.0 naming only
+- **Decision.** Use `verum_reference_v1` for the dataset, `agent_dataset_v1` for its extension contract and `dataset_release` for the command. Module names describe dataset assembly, causal features and inspection records. Scope and qualification flags remain unchanged.
+- **Provenance.** Preserve prior commits and archived artifacts. Naming changes do not strengthen physical qualification, remove unknown targets or alter the representative plant. Commit authorship uses the repository's existing identity, with no trailers and no remote publication.
+
+## D131 - Prospective coupled roof references with process-covered inspections
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D126, D129, D130
+- **Decision.** Reuse existing healthy operating scenarios, geometry, property selections, sensor chains and named random streams for floating-control and rigid held-boundary pairs. Select one source parent per available split and withdrawing-tank cell without consulting generated outcomes, prefer pure delivery where available, and keep both variants in the source parent's split.
+- **Coverage.** Request a manual-level inspection at the existing 1800 s convention. Derive the horizon from the catalog's maximum approval and scheduling delays, existing action duration and result delay, giving 7320 s. Preserve approval rejections, work cancellations and inconclusive measurements. No success-conditioned redraw or invented condition category is permitted.
+- **Physics.** The same coupled volume/buoyancy relation is supplied by revised M1 sections 3 and 8. The initial rigid constraint is left-censored. Equalized gas pressure is an explicit reference boundary; unknown vent dynamics, assembly strength, seal rupture and damaged-emission factors remain unresolved. An absent implemented secondary-failure law yields an unknown secondary-failure label, not a fabricated negative or positive.
+- **Evidence.** [HMT's HFC description](https://www.hmttank.com/products/internal-floating-roofs/full-contact/aluminator-hfc-ifr/) supports the selected family and support options, not a configuration-specific strength rating. [EPA AP-42 June 2026](https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf), sections 7.1.1.1 and 7.1.3.2, excludes damaged materials from routine loss estimates; equation 2-17 requires actual uncontrolled fitting area and sufficient well height. No public factor closes the selected roof's unknown structural or fitting geometry.
+- **Qualification.** This is a coupled boundary/inspection reference, not a qualified industrial failure dataset. Existing physical and production gates remain unchanged.

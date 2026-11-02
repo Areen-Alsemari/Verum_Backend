@@ -86,3 +86,7 @@ Complete-input normal windows and separately calculated liquid-heel landing even
 Export the configuration-specific engineering request and empty supplier-response template with `python tools/hardware_handoff.py --request local/hardware_request.json --template local/hardware_response.json`. `docs/hardware_resolution.md` lists exact drawings, curves, tests and owners needed for each gap, the pressure-capsule specification caveat, and the alternative of adopting a coherent documented reference installation. Document intake never adopts physical values or opens the training gate automatically.
 
 The default inspection catalog now marks unsupported outputs unmodelled with unknown uncertainty, matching the selected service's missing/inconclusive results. An explicitly selected historical research service retains its original capability view. Advertising a research output does not qualify its physical response or acceptance criteria.
+
+## Reference datasets
+
+The eight-role data contract is documented in [agent data contract](docs/agent_data_contract.md). `tools/dataset_release.py` exports causal observation features, separate masked targets and source-matched reference records as `verum_reference_v1`. `tools/roof_reference.py` generates paired coupled roof-boundary references with process-covered manual inspections and inherited parent splits. These commands implement no agents and do not open physical training or production gates. Unknown material-failure, damaged-emission, calibration and acceptance inputs remain unresolved.
