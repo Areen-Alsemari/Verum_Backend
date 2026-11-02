@@ -20,6 +20,7 @@ from verum.params import ParamValue, UnresolvedParameter
 
 FILE = "inspection_catalog.json"
 ACTION_IDS = tuple(f"ACT-INSP-{i:02d}" for i in range(1, 8))
+UNQUALIFIED_ACTIONS = frozenset({"ACT-INSP-01", "ACT-INSP-03", "ACT-INSP-04", "ACT-INSP-06"})
 PRESSURE_TRANSMITTERS = ("PT-001", "PT-201", "PT-202A", "PT-202B", "PT-203")
 
 
@@ -73,9 +74,16 @@ class Catalog:
     def action(self, action_id: str) -> Action:
         return self.actions[action_id]
 
-    def agent_view(self) -> list[dict[str, Any]]:
+    def agent_view(self, *, allow_legacy_simulation: bool = False) -> list[dict[str, Any]]:
         """What the gateway returns: no model, threshold or workflow constant."""
-        return [_view(a) for a in self.actions.values()]
+        view = [_view(a) for a in self.actions.values()]
+        if not allow_legacy_simulation:
+            for item in view:
+                if item["action_id"] in UNQUALIFIED_ACTIONS:
+                    for output in item["outputs"]:
+                        output["modelled"] = False
+                        output["uncertainty_k2"] = None
+        return view
 
 
 def _action(action_id: str, raw: dict[str, Any]) -> Action:

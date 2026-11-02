@@ -1,5 +1,7 @@
 # Inspection model
 
+Default catalog views mark unqualified roof/fitting, vibration and acoustic outputs unmodelled with unknown uncertainty, matching their missing/inconclusive results. Catalog and query views use the attached service's capability view. Explicit historical research retains its original catalog, without asserting field qualification. Available valve, level and calibration readings remain distinct from unsupported equipment-acceptance decisions. See D129.
+
 This document describes the inspection actions that an agent can ask for, how a request is approved and performed, how an outcome is produced from the true state of the episode, and what the model does not claim. The decisions behind it are D100 to D109 in `docs/design_decisions.md`.
 
 ## What an agent can do

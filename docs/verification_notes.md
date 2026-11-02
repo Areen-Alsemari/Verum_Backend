@@ -1,5 +1,13 @@
 # Verification notes
 
+## Liquid-heel landing and complete-window estimates
+
+The saturated vapour mass follows the ideal-gas law with the source gas constant 10.731 psi ft3/(lbmol R). For an independent SI calculation the gas constant is multiplied by 6894.757293168 Pa/psi and 0.3048 cubed m3/ft3, then divided by 0.45359237 kmol/lbmol and 5/9 K/R. Multiplying partial pressure, geometric gas volume and vapour molecular mass, and dividing by this constant and absolute temperature, gives kg. The test compares this calculation with the adapter's explicit customary-unit boundary conversions.
+
+Standing idle mass is the daily saturated mass times the supplied daily expansion, duration in days and the source saturation factor, limited by available liquid-heel mass. The idle saturation is the lesser of the source expression and the filling saturation. A full heel has filling saturation 0.6, a partial heel 0.5; generated vapours use 0.15. Arrival vapours use the prior stock and saturation less 0.15, limited by the unconsumed heel, while generated vapours use the incoming stock. For unchanged service their sum recovers Equation 3-18 with the Equation 3-16 cap. Depleted-heel tests explicitly prevent counting prior liquid twice.
+
+The routine fixture uses the existing M1 counts with explicitly synthetic choices for missing fitment and shell details. Expected standing mass substitutes the source rim/fitting factors and zero-wind pressure function directly, while expected withdrawal independently multiplies wetted wall area, source film thickness and liquid density. The result is an implementation reference, not a choice of actual Verum hardware. Input/geometry/factor hashes preserve the selected conditions, and negative tests cover incomplete inventories, wrong classes, wrong periods, inadequate recording resolution and inapplicable operating regimes.
+
 ## Source-matched vapour and roof cases
 
 EPA Example 4 prints a fitting factor of 359 although its individual tabulated terms sum to 359.2. Multiplication by its rounded pressure function 0.178 and molecular weight 62 produces a 2.2072 lb/year difference solely from this intermediate rounding. The implementation retains precision. Tests check the unrounded expression and explicitly account for the documented intermediate rounding before comparing with published 3961.9 lb/year and 4330.2 lb/year results; no model output is rounded to obtain those targets. Independently derived wetted-area clingage matches the published 136.5 lb/year withdrawal result.

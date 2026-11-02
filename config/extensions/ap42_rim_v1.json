@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "source_url": "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf",
+  "scope": "Table 7.1-8 welded shell average-fitting mechanical shoe systems; zero wind IFRT only. Not a damage multiplier or proof of installed secondary attachment.",
+  "parameters": {
+    "mechanical_shoe_primary_only": {
+      "value": 5.8,
+      "unit": "lbmol/(ft yr)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-8-welded-average-fitting-mechanical_shoe_primary_only"
+    },
+    "mechanical_shoe_shoe_secondary": {
+      "value": 1.6,
+      "unit": "lbmol/(ft yr)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-8-welded-average-fitting-mechanical_shoe_shoe_secondary"
+    },
+    "mechanical_shoe_rim_secondary": {
+      "value": 0.6,
+      "unit": "lbmol/(ft yr)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-8-welded-average-fitting-mechanical_shoe_rim_secondary"
+    }
+  }
+}

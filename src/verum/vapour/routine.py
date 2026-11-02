@@ -103,6 +103,7 @@ def standing_components_kg(
     year_fraction: ParamValue, diameter: ParamValue, rim_factor: ParamValue,
     fittings: list[tuple[ParamValue, str]], deck_coefficient: ParamValue,
     factors: RoutineFactors, *, maintained: bool, freely_vented: bool, continuously_floating: bool,
+    extra_fitting_coefficient: ParamValue | None = None,
 ) -> dict[str, Any]:
     """Normal gasoline rim/fitting/seam terms, with explicit inventory classifications."""
     if not (maintained and freely_vented and continuously_floating):
@@ -114,7 +115,8 @@ def standing_components_kg(
                               _value(atmosphere_pa_abs, "Pa_abs", positive=True))
     scale = (pstar * _value(molecular_mass, "kg/kmol", positive=True) * LB_KG * fraction *
              factors.value("product_factor"))
-    ff = 0.
+    ff = (0. if extra_fitting_coefficient is None else
+          _value(extra_fitting_coefficient, "lbmol/yr"))
     for count, construction in fittings:
         n = _value(count, "1")
         if not n.is_integer():

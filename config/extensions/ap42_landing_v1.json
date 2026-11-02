@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "source_url": "https://www.epa.gov/system/files/documents/2026-08/c7s1_2026.pdf",
+  "scope": "Normal freely vented IFRT liquid-heel landing; no damaged-roof or vent-dynamics prediction",
+  "parameters": {
+    "gas_constant": {
+      "value": 10.731,
+      "unit": "psi ft3/(lbmol R)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equations-3-6-7-18"
+    },
+    "idle_saturation_coefficient": {
+      "value": 0.053,
+      "unit": "1/(psi ft)",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equation-1-23"
+    },
+    "full_heel_filling_saturation": {
+      "value": 0.6,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-17"
+    },
+    "partial_heel_filling_saturation": {
+      "value": 0.5,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-table-7.1-17"
+    },
+    "generated_saturation": {
+      "value": 0.15,
+      "unit": "1",
+      "status": "provisional",
+      "evidence_tag": "REF",
+      "provenance_id": "EPA-2026-equations-3-16-18-change-of-service"
+    }
+  }
+}

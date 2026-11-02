@@ -1538,3 +1538,27 @@ These are choices that the audited documents do not state. They are implemented,
 - **Notes.** Restraint is not proof of a torn seal and an exceeded design limit is not proof of a separate component failure. Sources and withheld inputs are in `docs/roof_vapour_basis.md`.
 
 - **Clarification.** Native roof references require an explicit pressure-equalized gas-boundary declaration, recorded and bound into their identity. This is not a prediction of installed vent performance; blocked-vent cases remain outside the generated reference domain.
+
+## D127 - Complete-input normal vapour estimates and liquid-heel landing
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D124, D126
+- **Decision.** Join routine components only for explicit, complete M1 inventories and normally floating constant-condition windows. Require source-bearing properties, classified secondary attachment/seams/penetrations, timestamp and level coverage, and an explicitly declared recording interval. Add separately sourced normal IFRT liquid-heel landing calculations with prescribed thermal expansion, stock-specific arrival/generated components and available-heel mass caps. Do not calculate a complete landing total until refilling has occurred with explicit incoming-stock properties.
+- **Reason.** Routine annual components do not by themselves establish a complete window, and a normal landing has separate emissions. EPA's normal landing convention is not a blocked-vent model or evidence of structural damage. No missing hardware, weather, uncertainty or property value is selected.
+- **Sensitivity required.** Equipment classification, fluid/thermal conditions, sampled withdrawal resolution and equipment-specific error before facility qualification. Pressure and material failure remain separate mechanisms.
+- **Notes.** Additional factor files are separately hashed. Synthetic test choices establish arithmetic/applicability checks only. Input and base configuration hashes bind the estimate; no new VOC channel or hydraulic sink is created.
+
+## D128 - Hardware evidence intake without automatic qualification
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D123, D125, D126
+- **Decision.** Preserve known representative team selections separately from unresolved configuration-specific hardware requests. Bind returned source files to a versioned request with configuration identity, applicability, hash, scope and locator. Keep engineering content unreviewed and physical qualification false regardless of successful file binding.
+- **Reason.** Manufacturer families and generic accuracy statements do not supply actual connection strengths, gas-path curves, installed fitting geometry or inspection acceptance criteria. A document hash proves identity rather than correctness or applicability. The supplier/designer or a coherent independently documented alternative design can supply engineering inputs without requiring private terminal histories.
+- **Sensitivity required.** Configuration match, measurement uncertainty, appropriate model validity and independent engineering review before parameter adoption and new generation.
+- **Notes.** The review includes the pressure capsule/span limitations in the current Yokogawa specification. No existing synthetic noise or archived labels are reclassified as calibrated hardware. No physical release gate is changed.
+
+## D129 - Inspection catalog follows selected measurement capabilities
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D125
+- **Decision.** Default catalog views mark unsupported roof, fitting, vibration and acoustic outputs unmodelled with unknown uncertainty. The gateway reads the attached service's catalog, so explicitly selected historical research retains its original catalog and outcomes. The measurement dispatch and catalog share the same unsupported-action set.
+- **Reason.** A method that returns missing evidence must not advertise a usable numerical output or measurement uncertainty to its consumer. A research implementation is not default measurement availability or hardware qualification.
+- **Sensitivity required.** Update the capability declaration only alongside a qualified implemented response model; catalog metadata cannot supply calibration.
+- **Notes.** No action, cost, closed schema, archived result or physical model value is changed. Catalog, query and measurement views must agree without exposing future outcomes or hidden fault state.

@@ -54,7 +54,7 @@ class InspectionService:
 
     # --- static ----------
     def catalog(self) -> list[dict[str, Any]]:
-        return self._catalog.agent_view()
+        return self._catalog.agent_view(allow_legacy_simulation=self._allow_extrapolated_research)
 
     def assets(self) -> list[dict[str, str]]:
         return self._assets.listing()

@@ -5,18 +5,43 @@ Hand-built process records isolate workflow semantics from hydraulic-model quali
 
 from __future__ import annotations
 
+import gzip
 import math
 from pathlib import Path
 
 import pytest
 
 from _inspection_cases import grid, request, write
+from verum.api import Gateway, check_allowlist
 from verum.inspection.assets import load_assets
 from verum.inspection.catalog import load_catalog
 from verum.inspection.models import perform
 from verum.inspection.service import InspectionService
 from verum.params import UnresolvedParameter
 from verum.rng import RandomStreams
+
+
+def test_catalog_matches_selected_measurement_capabilities(tmp_path: Path) -> None:
+    """Unsupported default outputs are not advertised as available; explicit research is separate.
+
+    Independent: yes, because the four unavailable methods and three retained methods are listed.
+    """
+    directory = write(tmp_path, grid(horizon=24000.), horizon=24000.)
+    with gzip.open(directory / "observations.jsonl.gz", "wt") as handle:
+        handle.write("")
+    default = Gateway(directory, InspectionService(directory))
+    payload = default.catalog()
+    check_allowlist(payload)
+    for item in payload["inspection_catalog"]:
+        if item["action_id"] in {"ACT-INSP-01", "ACT-INSP-03", "ACT-INSP-04", "ACT-INSP-06"}:
+            assert all(not o["modelled"] and o["uncertainty_k2"] is None for o in item["outputs"])
+        else:
+            assert any(o["modelled"] for o in item["outputs"])
+    assert default.query(0.)["inspection_catalog"] == payload["inspection_catalog"]
+    legacy = Gateway(directory, InspectionService(directory, allow_extrapolated_research=True))
+    raw = legacy.catalog()["inspection_catalog"]
+    assert raw[0]["outputs"][0]["modelled"] is True
+    assert raw[0]["outputs"][0]["uncertainty_k2"] is not None
 
 
 def test_lost_and_recovered_work_condition_cancels_without_future_leakage(tmp_path: Path) -> None:

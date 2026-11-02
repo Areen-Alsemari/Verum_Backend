@@ -21,7 +21,7 @@ import numpy as np
 from verum.hydraulics import HydraulicModel
 from verum.hydraulics.valves import loss_coefficient
 from verum.inspection.assets import Assets
-from verum.inspection.catalog import Catalog
+from verum.inspection.catalog import UNQUALIFIED_ACTIONS, Catalog
 from verum.inspection.truth import State
 from verum.sensors import load_sensor_config
 from verum.vapour.model import Parameters
@@ -296,9 +296,7 @@ def perform(
     if action_id == "ACT-INSP-07":
         return loop_calibration(c, a, s, target, rng,
                                 allow_legacy_simulation=allow_legacy_simulation)
-    if not allow_legacy_simulation and action_id in (
-        "ACT-INSP-01", "ACT-INSP-03", "ACT-INSP-04", "ACT-INSP-06"
-    ):
+    if not allow_legacy_simulation and action_id in UNQUALIFIED_ACTIONS:
         _draws(rng)
         return Outcome(
             "measurement_available", 0., "1", 0., INCONCLUSIVE,

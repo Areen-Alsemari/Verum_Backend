@@ -106,6 +106,8 @@ def _assets() -> list[dict[str, str]]:
 class InspectionBackend(Protocol):
     """What the gateway needs of an inspection service; it returns only agent-visible rows."""
 
+    def catalog(self) -> list[dict[str, Any]]: ...
+
     def submit(self, request: dict[str, Any], as_of_s: float) -> dict[str, Any]: ...
 
     def requests(self, as_of_s: float) -> list[dict[str, Any]]: ...
@@ -148,9 +150,9 @@ class Gateway:
         return payload
 
     # --- inspection ----------
-    @staticmethod
-    def _catalog() -> list[dict[str, Any]]:
-        items = load_catalog().agent_view()
+    def _catalog(self) -> list[dict[str, Any]]:
+        items = (load_catalog().agent_view() if self._inspection is None
+                 else self._inspection.catalog())
         for item in items:
             jsonschema.validate(item, CATALOG_SCHEMA)
         return items

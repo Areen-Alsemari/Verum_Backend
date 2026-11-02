@@ -1,0 +1,261 @@
+{
+  "schema_version": "1.0.0",
+  "dataset": "hardware_evidence_request",
+  "qualification": "Unresolved; document binding is not engineering approval",
+  "known_team_design": {
+    "parameters": {
+      "shell_diameter_m": {
+        "value": 30.0,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "deck_diameter_m": {
+        "value": 29.7,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "roof_support_height_m": {
+        "value": 1.5,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "roof_areal_mass_kg_m2": {
+        "value": 20.0,
+        "unit": "kg/m2",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "headroom_response_time_s": {
+        "value": 3600.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "headroom_residual_delivery_m3": {
+        "value": 20.0,
+        "unit": "m3",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "headroom_level_allowance_m": {
+        "value": 0.05,
+        "unit": "m",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      },
+      "normal_response_time_s": {
+        "value": 900.0,
+        "unit": "s",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2"
+      }
+    },
+    "geometry_sha256": "7713d81c56b39c87d0fec1a9eacf2e84aa873a481f69f82451a79480e4db199a",
+    "fitting_counts": {
+      "access_hatch": {
+        "value": 1,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2-section-3.1"
+      },
+      "gauge_well": {
+        "value": 1,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2-section-3.1"
+      },
+      "vacuum_breaker": {
+        "value": 2,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2-section-3.1"
+      },
+      "suspension_penetration_groups": {
+        "value": 6,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2-section-3.1"
+      },
+      "columns": {
+        "value": 0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2-section-3.1"
+      },
+      "support_legs": {
+        "value": 0,
+        "unit": "1",
+        "status": "provisional",
+        "evidence_tag": "DESIGN",
+        "provenance_id": "VERUM-M1-R1.2-section-3.1"
+      }
+    },
+    "source_sha256": {
+      "vendor/verum_audited/revised/01_facility_tanks_topology.md": "5632821240925e620bfb6e36197e45b6bb05158a90a8ac4d3d5ea95b2708c65e",
+      "vendor/verum_audited/revised/02_hydraulic_model.md": "f9cac8dbef333c1ff16b6e5a640aa9ac183f43d771707a9028a2e377dad59102",
+      "vendor/verum_audited/revised/03_vapor_fault_models.md": "2099b7ccf6c209f69e6ae1aed6a03e8b402236d89751f3de39c6220defa71599",
+      "vendor/verum_audited/revised/04_instrumentation_inspection.md": "d091320b30017c2c12e2fb19f082dcd6154dd1713ca3bd24791b4c9ea4f38798",
+      "vendor/verum_audited/revised/05_simulation_validation_dataset.md": "384fa18e5fb87b895874ea2c75b04970a57c508d7e8ae12176eae5ebbde8e283"
+    },
+    "scope": "Representative team design; dimensions/counts do not qualify mass, capacity, fitment or failure physics"
+  },
+  "requested_packages": [
+    {
+      "id": "roof_assembly",
+      "assets": [
+        "IFR-101..103"
+      ],
+      "delivery_owner": "Roof supplier engineering",
+      "required_contents": [
+        "Configuration-specific panel, joint, attachment and clearance drawings",
+        "Installed dry mass including attachments, mass distribution and buoyancy basis",
+        "Shell roundness, guide alignment and dimensional tolerances"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "support_and_failure",
+      "assets": [
+        "IFR-101..103"
+      ],
+      "delivery_owner": "Roof/suspension engineer and representative test laboratory",
+      "required_contents": [
+        "Suspension count, positions, sizes, lengths, pretension and complete connections",
+        "Materials, joints and stiffness under relevant environmental conditions",
+        "Separate allowable loads and actual failure model, asymmetry, load redistribution and test or validated analysis"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "seal_failure",
+      "assets": [
+        "SEAL-P-101..103",
+        "SEAL-S-101..103"
+      ],
+      "delivery_owner": "Seal supplier engineering and representative test laboratory",
+      "required_contents": [
+        "Exact models, mountings, spring geometry, contact, friction and snagging geometry",
+        "Load-displacement and rupture evidence for actual materials and connections",
+        "Evidence for the child failure and resulting geometry; no liquid-travel-only threshold"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "venting",
+      "assets": [
+        "VENT-101..103",
+        "FIT-101..103"
+      ],
+      "delivery_owner": "Roof and vent manufacturer applications engineer",
+      "required_contents": [
+        "Separate fixed-roof openings from the two deck vacuum breakers; gas-path topology",
+        "Actual models, sizes, bidirectional pressure-flow curves, reference gas/temperature, cracking/closing pressure and dynamics",
+        "Screens, arresters, ducts and leakage paths; subdeck gas volume and thermal/pressure boundary conditions"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "vapour_inventory",
+      "assets": [
+        "FIT-101..103",
+        "SEAL-P-101..103",
+        "SEAL-S-101..103"
+      ],
+      "delivery_owner": "Roof drawing/BOM owner and emissions engineer",
+      "required_contents": [
+        "Hatch fastening/gasket, actual radar/manual well, both vacuum breakers and six specified suspension penetrations",
+        "Secondary-seal attachment to roof rim or primary shoe; gap evidence before tight-fitting claims",
+        "Panel joint construction, total seam length, exposed well area net of obstructions, well height and shell condition"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "product_properties",
+      "assets": [
+        "TK-101..103"
+      ],
+      "delivery_owner": "Fuel supplier quality or accredited petroleum laboratory",
+      "required_contents": [
+        "Batch/season identity and true vapour pressure versus temperature, absolute pressure basis and method",
+        "Density and vapour molecular mass versus conditions or composition with an independently checked property model",
+        "Uncertainty and valid phase/temperature range; keep a reference blend distinct from Saudi PG95"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "inspection_measurements",
+      "assets": [
+        "ACT-INSP-01..07"
+      ],
+      "delivery_owner": "Instrument supplier, calibration laboratory and inspection/reliability engineer",
+      "required_contents": [
+        "Exact instruments, order codes, measurement locations and method for each output",
+        "Calibration/response data and uncertainty budget with reference tool, installation, repeatability and coverage factor",
+        "Equipment-specific acceptance tolerances; acoustic/visual detection and localisation evidence; vibration spectra for actual faults"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "inspection_access",
+      "assets": [
+        "ACT-INSP-01",
+        "ACT-INSP-03",
+        "ACT-INSP-05",
+        "ACT-INSP-06"
+      ],
+      "delivery_owner": "Tank inspection and process-safety reviewer",
+      "required_contents": [
+        "Chosen remote/offline/entry method and conditions maintained throughout work",
+        "Applicable access, atmosphere and permit prerequisites with available evidence; missing gas readings are not safe readings",
+        "Recording resolution and abort conditions; no live-entry authorization inferred from a simulated catalog"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "pump_valve_motor",
+      "assets": [
+        "P-101A/B",
+        "XV-*",
+        "YS-201A/B",
+        "VT-201A/B",
+        "IT-201A/B"
+      ],
+      "delivery_owner": "Equipment suppliers and hydraulics/reliability reviewer",
+      "required_contents": [
+        "Pump model, impeller and speed: head/flow, efficiency, operating envelope and NPSH test data",
+        "Valve characteristic, stroke dynamics, seat leakage and passive check behaviour",
+        "Motor/VFD ratings and calibrated current/speed/vibration response before adding withheld channels"
+      ],
+      "status": "unresolved"
+    },
+    {
+      "id": "thermal_environment",
+      "assets": [
+        "TK-101..103"
+      ],
+      "delivery_owner": "Team design owner and emissions engineer",
+      "required_contents": [
+        "Representative coordinates/elevation and defined weather/scenario period",
+        "Ambient, stock and surface temperature, solar, absolute pressure, coating and insulation basis",
+        "Measured data or a documented thermal model and temporal resolution"
+      ],
+      "status": "unresolved"
+    }
+  ]
+}
