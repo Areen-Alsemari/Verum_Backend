@@ -240,3 +240,21 @@ def test_pipeline_produces_all_roles_without_running_a_model(
     assert report["agents_built"] is False
     assert report["archive"]["verification"]["role_files"] == 24
     assert verify_training_archive(tmp_path / "generated/verum_reference_v2_training.zip")
+
+
+def test_partial_campaign_cannot_be_claimed_as_the_complete_recipe(tmp_path: Path) -> None:
+    """A full-size configuration with missing slot records is rejected before export.
+
+    Independent: yes, because the fixture deliberately provides no records for the configured slots.
+    """
+    from dataclasses import asdict
+
+    from verum.training.pipeline import _campaign
+
+    config = campaign_config(load_recipe())
+    source = tmp_path / "partial"
+    (source / "evaluator").mkdir(parents=True)
+    (source / "campaign_config.json").write_text(json.dumps(asdict(config)))
+    (source / "evaluator/manifest.json").write_text(json.dumps({"episodes": []}))
+    with pytest.raises(ValueError, match="incomplete"):
+        _campaign(tmp_path / "output", config, source, 1)

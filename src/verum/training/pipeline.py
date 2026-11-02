@@ -37,12 +37,25 @@ def _campaign(root: Path, config: CampaignConfig, supplied: Path | None, workers
     if supplied is not None:
         if runner.load_config(supplied) != config:
             raise ValueError("supplied campaign differs from the committed generation recipe")
+        _complete_campaign(supplied, config)
         return supplied
     target = root / "campaign"
     if (target / runner.CONFIG_FILE).exists() and runner.load_config(target) != config:
         raise ValueError("stored campaign differs from the committed generation recipe")
     runner.run_campaign(config, target, workers)
+    _complete_campaign(target, config)
     return target
+
+
+def _complete_campaign(source: Path, config: CampaignConfig) -> None:
+    manifest = json.loads((source / "evaluator/manifest.json").read_text())
+    records = manifest["episodes"]
+    if (
+        len(records) != config.n
+        or {r["index"] for r in records} != set(range(config.n))
+        or any(r["status"] not in ("completed", "gap") for r in records)
+    ):
+        raise ValueError("campaign is incomplete; resume all recipe slots before exporting")
 
 
 def _roof(root: Path, source: Path, supplied: Path | None, workers: int) -> Path:
