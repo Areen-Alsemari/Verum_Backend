@@ -233,3 +233,18 @@ def test_incomplete_exports_cannot_be_loaded(tmp_path: Path) -> None:
     (tmp_path / "BUILDING.json").write_text("{}")
     with pytest.raises(ValueError, match="incomplete"):
         list(iter_role_examples(tmp_path, "anomaly_detection", "train"))
+
+
+def test_old_contact_age_cannot_encode_episode_clock() -> None:
+    """An unchanged old contact has the same censored age at successive observation cutoffs.
+
+    Independent: yes, because a literal event at zero is outside both supplied windows.
+    """
+    row = observation(0.0, 1.0) | {"unit": "bool"}
+    windows = ObservationWindows([row], {"PT-201": "bool"})
+    first = windows.summary(600.0, 300.0)
+    assert first == windows.summary(900.0, 300.0)
+    signal = first["signals"][0]
+    assert signal["latest_received_age_s"] == 300.0
+    assert signal["latest_received_age_is_lower_bound"] is True
+    assert signal["latest_value"] == 1.0

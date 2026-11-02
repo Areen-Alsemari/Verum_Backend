@@ -71,12 +71,18 @@ class ObservationWindows:
                     else latest["availability_status"],
                     "latest_received_age_s": None
                     if latest is None
-                    else cutoff_s - latest["t_available_s"],
+                    else min(lookback_s, cutoff_s - latest["t_available_s"]),
+                    "latest_received_age_is_lower_bound": None
+                    if latest is None
+                    else cutoff_s - latest["t_available_s"] >= lookback_s,
                     "previous_measured_value": None if good is None else good["value"],
                     "previous_measured_quality": None if good is None else good["quality_flag"],
                     "previous_measured_age_s": None
                     if good is None
-                    else cutoff_s - good["t_available_s"],
+                    else min(lookback_s, cutoff_s - good["t_available_s"]),
+                    "previous_measured_age_is_lower_bound": None
+                    if good is None
+                    else cutoff_s - good["t_available_s"] >= lookback_s,
                     **numeric,
                 }
             )

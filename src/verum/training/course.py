@@ -513,6 +513,10 @@ def verify_course_release(root: Path) -> dict[str, Any]:
             features = row["input"]
             if features["current_time_s"] != 0 or "episode_id" in features:
                 raise ValueError("episode identity/absolute clock leaked into features")
+            for signal in features["signals"]:
+                for key in ("latest_received_age_s", "previous_measured_age_s"):
+                    if signal[key] is not None and not 0 <= signal[key] <= features["lookback_s"]:
+                        raise ValueError("uncensored age can expose the episode clock")
             for target in (
                 row["targets"]["diagnostic_reasoning"],
                 row["targets"]["anomaly_detection"]["reference_supervision"],
