@@ -53,3 +53,5 @@ The held boundary is imposed at initialisation, with a pressure-equalized gas re
 python tools/roof_reference.py --source data/campaign --output data/roof_reference_v1 --workers 3
 python tools/dataset_release.py build --source data/campaign --output data/verum_reference_v1 --workers 3
 ```
+
+The public reference includes the existing tank/roof parameter records and pipe dimensions, routes and source locators. These are declared design specifications, not measured current state. Asset retrieval returns explicit null specifications for assets without such supplied details; it does not manufacture pump curves, maintenance history or hardware ratings.

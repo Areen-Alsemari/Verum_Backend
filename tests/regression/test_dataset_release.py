@@ -248,3 +248,20 @@ def test_old_contact_age_cannot_encode_episode_clock() -> None:
     assert signal["latest_received_age_s"] == 300.0
     assert signal["latest_received_age_is_lower_bound"] is True
     assert signal["latest_value"] == 1.0
+
+
+def test_public_asset_facts_preserve_source_status_without_hidden_state() -> None:
+    """Selected roof dimensions and mass remain design facts rather than observed equipment state.
+
+    Independent: yes, because the literals follow the existing M1 design and provenance contract.
+    """
+    from verum.training.dataset import public_reference
+
+    reference = public_reference()
+    tank = reference["asset_facts"]["TK-101"]
+    mass = tank["roof_geometry_parameters"]["roof_areal_mass_kg_m2"]
+    assert mass["value"] == 20.0 and mass["unit"] == "kg/m2"
+    assert mass["evidence_tag"] == "DESIGN" and mass["provenance_id"]
+    assert tank["field_qualified"] is False
+    assert "level_m" not in tank and "faults" not in tank
+    assert all("source" in item for item in reference["asset_facts"].values())

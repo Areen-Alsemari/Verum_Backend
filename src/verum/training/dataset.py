@@ -75,8 +75,29 @@ def public_reference() -> dict[str, Any]:
     """Export declared graph and instrument facts without actual hidden operating state."""
     topology = load_topology()
     sensors = load_sensor_config()
+    geometry = json.loads((config_dir() / "tank_geometry.json").read_text())
+    facts: dict[str, Any] = {
+        tank.tank_id: {
+            "declared_dimensions_m": tank.dimensions_m,
+            "roof_geometry_parameters": geometry["parameters"],
+            "source": geometry["source"],
+            "field_qualified": False,
+        }
+        for tank in topology.tanks
+    }
+    for edge in topology.edges:
+        facts[edge.edge_id] = {
+            "length_m": edge.length_m,
+            "inner_diameter_m": edge.inner_diameter_m,
+            "elevation_from_m": edge.z_from_m,
+            "elevation_to_m": edge.z_to_m,
+            "route_id": edge.route_id,
+            "source": edge.provenance,
+            "field_qualified": False,
+        }
     return {
         "assets": load_assets().listing(),
+        "asset_facts": facts,
         "connections": [
             {"edge_id": e.edge_id, "from_node": e.from_node, "to_node": e.to_node}
             for e in topology.edges
@@ -124,6 +145,7 @@ def _reference_targets(index: int, reference: dict[str, Any]) -> dict[str, Any]:
             "query": {"asset_id": ident},
             "answer": {
                 "asset_record": asset,
+                "declared_specifications": reference["asset_facts"].get(ident),
                 "maintenance_history": None,
                 "history_status": reference["history_status"],
                 "evidence_ref": "knowledge/public_reference.json",
