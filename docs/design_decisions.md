@@ -1562,3 +1562,12 @@ These are choices that the audited documents do not state. They are implemented,
 - **Reason.** A method that returns missing evidence must not advertise a usable numerical output or measurement uncertainty to its consumer. A research implementation is not default measurement availability or hardware qualification.
 - **Sensitivity required.** Update the capability declaration only alongside a qualified implemented response model; catalog metadata cannot supply calibration.
 - **Notes.** No action, cost, closed schema, archived result or physical model value is changed. Catalog, query and measurement views must agree without exposing future outcomes or hidden fault state.
+
+## D130 - Bounded coursework views for eight logical roles
+
+- **Version:** 1.0 (2026-11-02)  **Status:** DESIGN  **Refines:** D80, D121, D129
+- **Decision.** The master context version 1.3 defines eight logical roles independently of team size. Provide shared causal snapshots, source graph/catalog fixtures, masked reduced-model injection targets and inspection metadata checks for those roles without implementing agents or changing physical training gates.
+- **Windows.** Use the existing D80 window selections: 300 s lookback, grid and forecasting horizon, and 900 s post-ramp diagnosis context. These are coursework preprocessing choices, not new physical constants or guaranteed detectability limits.
+- **Unknown targets.** Restricted, invalid, latent, marginal, invisible, unaudited and insufficient-context diagnoses have null targets and an explicit false loss mask. Unqualified mechanical findings cannot become condition labels. Existing source observations and injected outcomes remain unchanged.
+- **Evaluation.** Keep original episode splits, inherit inspection parent splits and isolate coupled roof references as challenge-only metadata examples. Deduplicated static public-reference fixtures do not constitute independent predictive evaluation.
+- **Limits.** Short-window forecasting is not a health score or remaining useful life. Catalog retrieval is not optimal inspection planning. Injection labels are simulator supervision rather than field diagnosis. No unsupported hardware value, damage emission rate, history or information-gain score is supplied.

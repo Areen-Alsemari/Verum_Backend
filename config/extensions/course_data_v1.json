@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0.0",
+  "scope": "coursework_reduced_simulation_and_evidence_handling",
+  "architecture_source": {
+    "name": "VERUM \u2014 Master Project Context and Engineering Desicion.md",
+    "version": "1.3",
+    "sha256": "21fd59d1c0bafab09daf5dfab1df7dc68aa6a58d5cd4e8a07d88f740b8b8176d"
+  },
+  "roles": [
+    {
+      "number": "1",
+      "name": "Predictive Health",
+      "responsibilities": "Estimate health trends, degradation trajectory, risk of future abnormal behavior",
+      "inputs": "Time series, operating modes, physics residuals, asset history",
+      "outputs": "Health scores with uncertainty, forecasts, degradation flags",
+      "restrictions": "Do not assert remaining useful life without validation",
+      "key": "predictive_health",
+      "data_scope": "future measured signal summaries; no invented health score or RUL"
+    },
+    {
+      "number": "2",
+      "name": "Anomaly Detection",
+      "responsibilities": "Identify departures from operating-condition-aware baselines; separate regime changes from anomalies",
+      "inputs": "Sensors, timestamps, operating state, healthy-twin expectations",
+      "outputs": "Anomaly events, residuals, confidence, affected channels",
+      "restrictions": "Avoid using hidden fault labels at inference",
+      "key": "anomaly_detection",
+      "data_scope": "observed quality plus masked reference-injection detection"
+    },
+    {
+      "number": "3",
+      "name": "Topology & Dependency",
+      "responsibilities": "Represent tank/manifold/valve/pump/pipe connectivity, flow direction, active routing and propagation paths",
+      "inputs": "Asset graph, valve/pump state observations, operating schedules",
+      "outputs": "Candidate upstream/downstream assets, causal reachability, routing ambiguity",
+      "restrictions": "Commanded valve state \u2260 confirmed actual state",
+      "key": "topology_dependency",
+      "data_scope": "declared graph/reference retrieval; contacts are not true valve position"
+    },
+    {
+      "number": "4",
+      "name": "Historical & Asset Intelligence",
+      "responsibilities": "Retrieve maintenance, calibration, past failures, inspection records, equipment specifications and provenance",
+      "inputs": "CMMS-like records, asset registry, prior episodes",
+      "outputs": "Relevant evidence, known limitations, comparable historical patterns",
+      "restrictions": "Synthetic history must be labeled synthetic",
+      "key": "historical_asset_intelligence",
+      "data_scope": "source asset records and explicit missing history"
+    },
+    {
+      "number": "5",
+      "name": "Diagnostic Reasoning",
+      "responsibilities": "Generate, compare and update single/multiple fault hypotheses; test physical consistency",
+      "inputs": "Outputs of agents 1\u20134, physics predictions, inspection evidence",
+      "outputs": "Ranked hypotheses with support/conflicts, uncertainty, alternative explanations",
+      "restrictions": "Never force single-root-cause conclusion",
+      "key": "diagnostic_reasoning",
+      "data_scope": "masked reduced-model injection labels, not field-confirmed diagnoses"
+    },
+    {
+      "number": "6",
+      "name": "Inspection Planning",
+      "responsibilities": "Choose feasible next inspection/test based on diagnostic value, cost, time, accessibility and safety",
+      "inputs": "Hypotheses, available tests, expected observation models, constraints",
+      "outputs": "Recommended inspection, rationale, expected discrimination, alternatives",
+      "restrictions": "Do not recommend unsafe access or automatic intervention",
+      "key": "inspection_planning",
+      "data_scope": "catalog/constraint retrieval; no invented best-action or information gain"
+    },
+    {
+      "number": "7",
+      "name": "Inspection Quality & Documentation",
+      "responsibilities": "Guide evidence capture, units, calibration, timestamps, completeness, chain of custody and reporting",
+      "inputs": "Inspection procedure, technician observations, instrument metadata",
+      "outputs": "Structured inspection record, quality/completeness flags",
+      "restrictions": "Does not manufacture observations",
+      "key": "inspection_quality_documentation",
+      "data_scope": "observed record quality plus separately audited inspection records"
+    },
+    {
+      "number": "8",
+      "name": "Evidence Verification & Decision",
+      "responsibilities": "Check evidence provenance, consistency, contradictory results and decision readiness",
+      "inputs": "Hypotheses, physics, records, quality-checked inspections",
+      "outputs": "Updated assessment, recommendation, escalation/hold, auditable explanation",
+      "restrictions": "Human makes maintenance/control decision",
+      "key": "evidence_verification_decision",
+      "data_scope": "evidence admissibility without future numerical values or hidden truth"
+    }
+  ],
+  "parameters": {
+    "lookback_s": {
+      "value": 300.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D130-existing-D80-window-conventions"
+    },
+    "snapshot_step_s": {
+      "value": 300.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D130-existing-D80-window-conventions"
+    },
+    "forecast_horizon_s": {
+      "value": 300.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D130-existing-D80-window-conventions"
+    },
+    "diagnosis_context_delay_s": {
+      "value": 900.0,
+      "unit": "s",
+      "status": "provisional",
+      "evidence_tag": "DESIGN",
+      "provenance_id": "D130-existing-D80-window-conventions"
+    }
+  },
+  "limitations": [
+    "not_field_validated_or_production_qualified",
+    "does_not_change_physical_release_gates",
+    "source_injection_labels_are_not_observability_proofs",
+    "invisible_marginal_unaudited_or_latent_injections_are_not_supervised_diagnoses",
+    "source_restricted_or_invalid_windows_are_masked_for_physical_reference_heads",
+    "no_unqualified_mechanical_inspection_findings_as_measurements",
+    "no_damaged_roof_emissions_or_RUL_labels",
+    "reference_tasks_are_not_optimal_inspection_policy_labels",
+    "same_parent_and_episode_splits_for_all_eight_roles",
+    "never_feed_targets_or_lineage_into_model_inputs"
+  ]
+}
