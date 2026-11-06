@@ -26,7 +26,7 @@ ROLE = "predictive_health"
 
 
 def _text(value: Any) -> str:
-    return json.dumps(value, separators=(",", ":")) + "\n"
+    return json.dumps(value, indent=2, sort_keys=True) + "\n"
 
 
 def _snapshot(release: Path) -> Snapshot:

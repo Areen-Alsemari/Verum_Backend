@@ -1,1 +1,3033 @@
-{"interface_version":"1.0.0","message_type":"request","agent":"historical_asset_intelligence","request_id":"AN-chained-example-r0-historical_asset_intelligence","context":{"case_id":"chained-example","analysis_id":"AN-chained-example-r0","revision":0,"as_of_s":300.0,"as_of_utc":null,"data_release":"verum_reference_v2","reference_snapshot_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","scope_id":"verum_supported_reference_v2","execution_mode":"runtime"},"evidence":[{"evidence_id":"source-observations","kind":"observation_window","source_ref":"observations:cutoff-300.0","available_at_s":300.0,"content_sha256":"57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd","root_evidence_ids":["source-observations"],"provenance":"simulated_observation"},{"evidence_id":"source-reference","kind":"declared_reference","source_ref":"reference:public_reference","available_at_s":0.0,"content_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","root_evidence_ids":["source-reference"],"provenance":"declared_design"},{"evidence_id":"features-summary","kind":"observation_representation","source_ref":"features:summary-300.0","available_at_s":300.0,"content_sha256":"57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd","root_evidence_ids":["source-observations"],"provenance":"derived_observation"},{"evidence_id":"predictive_health-AN-chained-example-r0-ddf7ffff","kind":"agent_report","source_ref":"report:predictive_health-AN-chained-example-r0-ddf7ffff","available_at_s":300.0,"content_sha256":"bf2f6dd1ae9563b1232495c8b276a8c6d7d0bdd092dae9230c00c45bb8f66b2e","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"topology_dependency-AN-chained-example-r0-a231e080","kind":"agent_report","source_ref":"report:topology_dependency-AN-chained-example-r0-a231e080","available_at_s":300.0,"content_sha256":"43f15a70946378882566889cdef83028d98ecd6502ae2d557b80e230b8572564","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"}],"input":{"query_asset_ids":["TK-101","TK-102","TK-103","P-101A","P-101B","XV-PAI","XV-PAO","XV-PBI","XV-PBO","XV-R000","XV-R101","XV-R102","XV-R103","XV-S101","XV-S102","XV-S103","E001","E002","E003","E-R101a","E-R101b","E-S101a","E-S101b","E-R102a","E-R102b","E-S102a","E-S102b","E-R103a","E-R103b","E-S103a","E-S103b","E-SH","E-PA0","E-PA1","E-PA2","E-PA3","E-PA4","E-PB0","E-PB1","E-PB2","E-PB3","E-PB4","E-D1","E-D2","PT-001","PT-201","PT-202A","PT-202B","PT-203"],"assets":[{"asset_id":"TK-101","kind":"tank"},{"asset_id":"TK-102","kind":"tank"},{"asset_id":"TK-103","kind":"tank"},{"asset_id":"P-101A","kind":"pump"},{"asset_id":"P-101B","kind":"pump"},{"asset_id":"XV-PAI","kind":"isolation_valve"},{"asset_id":"XV-PAO","kind":"isolation_valve"},{"asset_id":"XV-PBI","kind":"isolation_valve"},{"asset_id":"XV-PBO","kind":"isolation_valve"},{"asset_id":"XV-R000","kind":"isolation_valve"},{"asset_id":"XV-R101","kind":"isolation_valve"},{"asset_id":"XV-R102","kind":"isolation_valve"},{"asset_id":"XV-R103","kind":"isolation_valve"},{"asset_id":"XV-S101","kind":"isolation_valve"},{"asset_id":"XV-S102","kind":"isolation_valve"},{"asset_id":"XV-S103","kind":"isolation_valve"},{"asset_id":"E001","kind":"pipe"},{"asset_id":"E002","kind":"pipe"},{"asset_id":"E003","kind":"pipe"},{"asset_id":"E-R101a","kind":"pipe"},{"asset_id":"E-R101b","kind":"pipe"},{"asset_id":"E-S101a","kind":"pipe"},{"asset_id":"E-S101b","kind":"pipe"},{"asset_id":"E-R102a","kind":"pipe"},{"asset_id":"E-R102b","kind":"pipe"},{"asset_id":"E-S102a","kind":"pipe"},{"asset_id":"E-S102b","kind":"pipe"},{"asset_id":"E-R103a","kind":"pipe"},{"asset_id":"E-R103b","kind":"pipe"},{"asset_id":"E-S103a","kind":"pipe"},{"asset_id":"E-S103b","kind":"pipe"},{"asset_id":"E-SH","kind":"pipe"},{"asset_id":"E-PA0","kind":"pipe"},{"asset_id":"E-PA1","kind":"pipe"},{"asset_id":"E-PA2","kind":"pipe"},{"asset_id":"E-PA3","kind":"pipe"},{"asset_id":"E-PA4","kind":"pipe"},{"asset_id":"E-PB0","kind":"pipe"},{"asset_id":"E-PB1","kind":"pipe"},{"asset_id":"E-PB2","kind":"pipe"},{"asset_id":"E-PB3","kind":"pipe"},{"asset_id":"E-PB4","kind":"pipe"},{"asset_id":"E-D1","kind":"pipe"},{"asset_id":"E-D2","kind":"pipe"},{"asset_id":"PT-001","kind":"pressure_transmitter"},{"asset_id":"PT-201","kind":"pressure_transmitter"},{"asset_id":"PT-202A","kind":"pressure_transmitter"},{"asset_id":"PT-202B","kind":"pressure_transmitter"},{"asset_id":"PT-203","kind":"pressure_transmitter"}],"declared_facts":[{"fact_id":"TK-101:declared_dimensions_m.diameter_m","asset_id":"TK-101","field_path":"declared_dimensions_m.diameter_m","value":30,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.shell_height_m","asset_id":"TK-101","field_path":"declared_dimensions_m.shell_height_m","value":15,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.initial_level_m","asset_id":"TK-101","field_path":"declared_dimensions_m.initial_level_m","value":9.0,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.inlet_z_m","asset_id":"TK-101","field_path":"declared_dimensions_m.inlet_z_m","value":0.6,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.outlet_z_m","asset_id":"TK-101","field_path":"declared_dimensions_m.outlet_z_m","value":0.4,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.normal_min_level_m","asset_id":"TK-101","field_path":"declared_dimensions_m.normal_min_level_m","value":1.8,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.normal_max_level_m","asset_id":"TK-101","field_path":"declared_dimensions_m.normal_max_level_m","value":12,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.high_alarm_m","asset_id":"TK-101","field_path":"declared_dimensions_m.high_alarm_m","value":12.5,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.independent_high_high_m","asset_id":"TK-101","field_path":"declared_dimensions_m.independent_high_high_m","value":13,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:declared_dimensions_m.critical_model_limit_m","asset_id":"TK-101","field_path":"declared_dimensions_m.critical_model_limit_m","value":14,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.shell_diameter_m","asset_id":"TK-101","field_path":"roof_geometry_parameters.shell_diameter_m","value":30.0,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.deck_diameter_m","asset_id":"TK-101","field_path":"roof_geometry_parameters.deck_diameter_m","value":29.7,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.roof_support_height_m","asset_id":"TK-101","field_path":"roof_geometry_parameters.roof_support_height_m","value":1.5,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.roof_areal_mass_kg_m2","asset_id":"TK-101","field_path":"roof_geometry_parameters.roof_areal_mass_kg_m2","value":20.0,"unit":"kg/m2","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.headroom_response_time_s","asset_id":"TK-101","field_path":"roof_geometry_parameters.headroom_response_time_s","value":3600.0,"unit":"s","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.headroom_residual_delivery_m3","asset_id":"TK-101","field_path":"roof_geometry_parameters.headroom_residual_delivery_m3","value":20.0,"unit":"m3","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.headroom_level_allowance_m","asset_id":"TK-101","field_path":"roof_geometry_parameters.headroom_level_allowance_m","value":0.05,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:roof_geometry_parameters.normal_response_time_s","asset_id":"TK-101","field_path":"roof_geometry_parameters.normal_response_time_s","value":900.0,"unit":"s","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-101:field_qualified","asset_id":"TK-101","field_path":"field_qualified","value":false,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.diameter_m","asset_id":"TK-102","field_path":"declared_dimensions_m.diameter_m","value":30,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.shell_height_m","asset_id":"TK-102","field_path":"declared_dimensions_m.shell_height_m","value":15,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.initial_level_m","asset_id":"TK-102","field_path":"declared_dimensions_m.initial_level_m","value":7.0,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.inlet_z_m","asset_id":"TK-102","field_path":"declared_dimensions_m.inlet_z_m","value":0.6,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.outlet_z_m","asset_id":"TK-102","field_path":"declared_dimensions_m.outlet_z_m","value":0.4,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.normal_min_level_m","asset_id":"TK-102","field_path":"declared_dimensions_m.normal_min_level_m","value":1.8,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.normal_max_level_m","asset_id":"TK-102","field_path":"declared_dimensions_m.normal_max_level_m","value":12,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.high_alarm_m","asset_id":"TK-102","field_path":"declared_dimensions_m.high_alarm_m","value":12.5,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.independent_high_high_m","asset_id":"TK-102","field_path":"declared_dimensions_m.independent_high_high_m","value":13,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:declared_dimensions_m.critical_model_limit_m","asset_id":"TK-102","field_path":"declared_dimensions_m.critical_model_limit_m","value":14,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.shell_diameter_m","asset_id":"TK-102","field_path":"roof_geometry_parameters.shell_diameter_m","value":30.0,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.deck_diameter_m","asset_id":"TK-102","field_path":"roof_geometry_parameters.deck_diameter_m","value":29.7,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.roof_support_height_m","asset_id":"TK-102","field_path":"roof_geometry_parameters.roof_support_height_m","value":1.5,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.roof_areal_mass_kg_m2","asset_id":"TK-102","field_path":"roof_geometry_parameters.roof_areal_mass_kg_m2","value":20.0,"unit":"kg/m2","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.headroom_response_time_s","asset_id":"TK-102","field_path":"roof_geometry_parameters.headroom_response_time_s","value":3600.0,"unit":"s","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.headroom_residual_delivery_m3","asset_id":"TK-102","field_path":"roof_geometry_parameters.headroom_residual_delivery_m3","value":20.0,"unit":"m3","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.headroom_level_allowance_m","asset_id":"TK-102","field_path":"roof_geometry_parameters.headroom_level_allowance_m","value":0.05,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:roof_geometry_parameters.normal_response_time_s","asset_id":"TK-102","field_path":"roof_geometry_parameters.normal_response_time_s","value":900.0,"unit":"s","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-102:field_qualified","asset_id":"TK-102","field_path":"field_qualified","value":false,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.diameter_m","asset_id":"TK-103","field_path":"declared_dimensions_m.diameter_m","value":30,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.shell_height_m","asset_id":"TK-103","field_path":"declared_dimensions_m.shell_height_m","value":15,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.initial_level_m","asset_id":"TK-103","field_path":"declared_dimensions_m.initial_level_m","value":5.0,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.inlet_z_m","asset_id":"TK-103","field_path":"declared_dimensions_m.inlet_z_m","value":0.6,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.outlet_z_m","asset_id":"TK-103","field_path":"declared_dimensions_m.outlet_z_m","value":0.4,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.normal_min_level_m","asset_id":"TK-103","field_path":"declared_dimensions_m.normal_min_level_m","value":1.8,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.normal_max_level_m","asset_id":"TK-103","field_path":"declared_dimensions_m.normal_max_level_m","value":12,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.high_alarm_m","asset_id":"TK-103","field_path":"declared_dimensions_m.high_alarm_m","value":12.5,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.independent_high_high_m","asset_id":"TK-103","field_path":"declared_dimensions_m.independent_high_high_m","value":13,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:declared_dimensions_m.critical_model_limit_m","asset_id":"TK-103","field_path":"declared_dimensions_m.critical_model_limit_m","value":14,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.shell_diameter_m","asset_id":"TK-103","field_path":"roof_geometry_parameters.shell_diameter_m","value":30.0,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.deck_diameter_m","asset_id":"TK-103","field_path":"roof_geometry_parameters.deck_diameter_m","value":29.7,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.roof_support_height_m","asset_id":"TK-103","field_path":"roof_geometry_parameters.roof_support_height_m","value":1.5,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.roof_areal_mass_kg_m2","asset_id":"TK-103","field_path":"roof_geometry_parameters.roof_areal_mass_kg_m2","value":20.0,"unit":"kg/m2","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.headroom_response_time_s","asset_id":"TK-103","field_path":"roof_geometry_parameters.headroom_response_time_s","value":3600.0,"unit":"s","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.headroom_residual_delivery_m3","asset_id":"TK-103","field_path":"roof_geometry_parameters.headroom_residual_delivery_m3","value":20.0,"unit":"m3","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.headroom_level_allowance_m","asset_id":"TK-103","field_path":"roof_geometry_parameters.headroom_level_allowance_m","value":0.05,"unit":"m","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:roof_geometry_parameters.normal_response_time_s","asset_id":"TK-103","field_path":"roof_geometry_parameters.normal_response_time_s","value":900.0,"unit":"s","source_locator":"VERUM-M1-R1.2","parameter_status":"provisional","evidence_ids":["source-reference"]},{"fact_id":"TK-103:field_qualified","asset_id":"TK-103","field_path":"field_qualified","value":false,"unit":null,"source_locator":"revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E001:length_m","asset_id":"E001","field_path":"length_m","value":30.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E001:inner_diameter_m","asset_id":"E001","field_path":"inner_diameter_m","value":0.30318,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E001:elevation_from_m","asset_id":"E001","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E001:elevation_to_m","asset_id":"E001","field_path":"elevation_to_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E001:route_id","asset_id":"E001","field_path":"route_id","value":"R-MAIN","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E001:field_qualified","asset_id":"E001","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E002:length_m","asset_id":"E002","field_path":"length_m","value":15.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E002:inner_diameter_m","asset_id":"E002","field_path":"inner_diameter_m","value":0.30318,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E002:elevation_from_m","asset_id":"E002","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E002:elevation_to_m","asset_id":"E002","field_path":"elevation_to_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E002:route_id","asset_id":"E002","field_path":"route_id","value":"R-MAIN","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E002:field_qualified","asset_id":"E002","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E003:length_m","asset_id":"E003","field_path":"length_m","value":105.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E003:inner_diameter_m","asset_id":"E003","field_path":"inner_diameter_m","value":0.30318,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E003:elevation_from_m","asset_id":"E003","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E003:elevation_to_m","asset_id":"E003","field_path":"elevation_to_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E003:route_id","asset_id":"E003","field_path":"route_id","value":"R-MAIN","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E003:field_qualified","asset_id":"E003","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101a:length_m","asset_id":"E-R101a","field_path":"length_m","value":36.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101a:inner_diameter_m","asset_id":"E-R101a","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101a:elevation_from_m","asset_id":"E-R101a","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101a:elevation_to_m","asset_id":"E-R101a","field_path":"elevation_to_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101a:route_id","asset_id":"E-R101a","field_path":"route_id","value":"R-101","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101a:field_qualified","asset_id":"E-R101a","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101b:length_m","asset_id":"E-R101b","field_path":"length_m","value":9.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101b:inner_diameter_m","asset_id":"E-R101b","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101b:elevation_from_m","asset_id":"E-R101b","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101b:elevation_to_m","asset_id":"E-R101b","field_path":"elevation_to_m","value":0.6,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101b:route_id","asset_id":"E-R101b","field_path":"route_id","value":"R-101","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R101b:field_qualified","asset_id":"E-R101b","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101a:length_m","asset_id":"E-S101a","field_path":"length_m","value":12.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101a:inner_diameter_m","asset_id":"E-S101a","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101a:elevation_from_m","asset_id":"E-S101a","field_path":"elevation_from_m","value":0.4,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101a:elevation_to_m","asset_id":"E-S101a","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101a:route_id","asset_id":"E-S101a","field_path":"route_id","value":"S-101","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101a:field_qualified","asset_id":"E-S101a","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101b:length_m","asset_id":"E-S101b","field_path":"length_m","value":48.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101b:inner_diameter_m","asset_id":"E-S101b","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101b:elevation_from_m","asset_id":"E-S101b","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101b:elevation_to_m","asset_id":"E-S101b","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101b:route_id","asset_id":"E-S101b","field_path":"route_id","value":"S-101","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S101b:field_qualified","asset_id":"E-S101b","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102a:length_m","asset_id":"E-R102a","field_path":"length_m","value":64.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102a:inner_diameter_m","asset_id":"E-R102a","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102a:elevation_from_m","asset_id":"E-R102a","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102a:elevation_to_m","asset_id":"E-R102a","field_path":"elevation_to_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102a:route_id","asset_id":"E-R102a","field_path":"route_id","value":"R-102","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102a:field_qualified","asset_id":"E-R102a","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102b:length_m","asset_id":"E-R102b","field_path":"length_m","value":16.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102b:inner_diameter_m","asset_id":"E-R102b","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102b:elevation_from_m","asset_id":"E-R102b","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102b:elevation_to_m","asset_id":"E-R102b","field_path":"elevation_to_m","value":0.6,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102b:route_id","asset_id":"E-R102b","field_path":"route_id","value":"R-102","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R102b:field_qualified","asset_id":"E-R102b","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102a:length_m","asset_id":"E-S102a","field_path":"length_m","value":18.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102a:inner_diameter_m","asset_id":"E-S102a","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102a:elevation_from_m","asset_id":"E-S102a","field_path":"elevation_from_m","value":0.4,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102a:elevation_to_m","asset_id":"E-S102a","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102a:route_id","asset_id":"E-S102a","field_path":"route_id","value":"S-102","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102a:field_qualified","asset_id":"E-S102a","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102b:length_m","asset_id":"E-S102b","field_path":"length_m","value":72.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102b:inner_diameter_m","asset_id":"E-S102b","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102b:elevation_from_m","asset_id":"E-S102b","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102b:elevation_to_m","asset_id":"E-S102b","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102b:route_id","asset_id":"E-S102b","field_path":"route_id","value":"S-102","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S102b:field_qualified","asset_id":"E-S102b","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103a:length_m","asset_id":"E-R103a","field_path":"length_m","value":92.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103a:inner_diameter_m","asset_id":"E-R103a","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103a:elevation_from_m","asset_id":"E-R103a","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103a:elevation_to_m","asset_id":"E-R103a","field_path":"elevation_to_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103a:route_id","asset_id":"E-R103a","field_path":"route_id","value":"R-103","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103a:field_qualified","asset_id":"E-R103a","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103b:length_m","asset_id":"E-R103b","field_path":"length_m","value":23.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103b:inner_diameter_m","asset_id":"E-R103b","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103b:elevation_from_m","asset_id":"E-R103b","field_path":"elevation_from_m","value":1.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103b:elevation_to_m","asset_id":"E-R103b","field_path":"elevation_to_m","value":0.6,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103b:route_id","asset_id":"E-R103b","field_path":"route_id","value":"R-103","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-R103b:field_qualified","asset_id":"E-R103b","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103a:length_m","asset_id":"E-S103a","field_path":"length_m","value":24.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103a:inner_diameter_m","asset_id":"E-S103a","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103a:elevation_from_m","asset_id":"E-S103a","field_path":"elevation_from_m","value":0.4,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103a:elevation_to_m","asset_id":"E-S103a","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103a:route_id","asset_id":"E-S103a","field_path":"route_id","value":"S-103","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103a:field_qualified","asset_id":"E-S103a","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103b:length_m","asset_id":"E-S103b","field_path":"length_m","value":96.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103b:inner_diameter_m","asset_id":"E-S103b","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103b:elevation_from_m","asset_id":"E-S103b","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103b:elevation_to_m","asset_id":"E-S103b","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103b:route_id","asset_id":"E-S103b","field_path":"route_id","value":"S-103","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-S103b:field_qualified","asset_id":"E-S103b","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-SH:length_m","asset_id":"E-SH","field_path":"length_m","value":35.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-SH:inner_diameter_m","asset_id":"E-SH","field_path":"inner_diameter_m","value":0.25446,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-SH:elevation_from_m","asset_id":"E-SH","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-SH:elevation_to_m","asset_id":"E-SH","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-SH:route_id","asset_id":"E-SH","field_path":"route_id","value":"S-HEADER","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-SH:field_qualified","asset_id":"E-SH","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA0:length_m","asset_id":"E-PA0","field_path":"length_m","value":7.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA0:inner_diameter_m","asset_id":"E-PA0","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA0:elevation_from_m","asset_id":"E-PA0","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA0:elevation_to_m","asset_id":"E-PA0","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA0:route_id","asset_id":"E-PA0","field_path":"route_id","value":"P-A","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA0:field_qualified","asset_id":"E-PA0","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA1:length_m","asset_id":"E-PA1","field_path":"length_m","value":3.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA1:inner_diameter_m","asset_id":"E-PA1","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA1:elevation_from_m","asset_id":"E-PA1","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA1:elevation_to_m","asset_id":"E-PA1","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA1:route_id","asset_id":"E-PA1","field_path":"route_id","value":"P-A","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA1:field_qualified","asset_id":"E-PA1","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA2:length_m","asset_id":"E-PA2","field_path":"length_m","value":2.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA2:inner_diameter_m","asset_id":"E-PA2","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA2:elevation_from_m","asset_id":"E-PA2","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA2:elevation_to_m","asset_id":"E-PA2","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA2:route_id","asset_id":"E-PA2","field_path":"route_id","value":"P-A","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA2:field_qualified","asset_id":"E-PA2","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA3:length_m","asset_id":"E-PA3","field_path":"length_m","value":2.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA3:inner_diameter_m","asset_id":"E-PA3","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA3:elevation_from_m","asset_id":"E-PA3","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA3:elevation_to_m","asset_id":"E-PA3","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA3:route_id","asset_id":"E-PA3","field_path":"route_id","value":"P-A","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA3:field_qualified","asset_id":"E-PA3","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA4:length_m","asset_id":"E-PA4","field_path":"length_m","value":6.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA4:inner_diameter_m","asset_id":"E-PA4","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA4:elevation_from_m","asset_id":"E-PA4","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA4:elevation_to_m","asset_id":"E-PA4","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA4:route_id","asset_id":"E-PA4","field_path":"route_id","value":"P-A","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PA4:field_qualified","asset_id":"E-PA4","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB0:length_m","asset_id":"E-PB0","field_path":"length_m","value":7.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB0:inner_diameter_m","asset_id":"E-PB0","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB0:elevation_from_m","asset_id":"E-PB0","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB0:elevation_to_m","asset_id":"E-PB0","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB0:route_id","asset_id":"E-PB0","field_path":"route_id","value":"P-B","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB0:field_qualified","asset_id":"E-PB0","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB1:length_m","asset_id":"E-PB1","field_path":"length_m","value":3.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB1:inner_diameter_m","asset_id":"E-PB1","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB1:elevation_from_m","asset_id":"E-PB1","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB1:elevation_to_m","asset_id":"E-PB1","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB1:route_id","asset_id":"E-PB1","field_path":"route_id","value":"P-B","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB1:field_qualified","asset_id":"E-PB1","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB2:length_m","asset_id":"E-PB2","field_path":"length_m","value":2.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB2:inner_diameter_m","asset_id":"E-PB2","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB2:elevation_from_m","asset_id":"E-PB2","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB2:elevation_to_m","asset_id":"E-PB2","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB2:route_id","asset_id":"E-PB2","field_path":"route_id","value":"P-B","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB2:field_qualified","asset_id":"E-PB2","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB3:length_m","asset_id":"E-PB3","field_path":"length_m","value":2.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB3:inner_diameter_m","asset_id":"E-PB3","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB3:elevation_from_m","asset_id":"E-PB3","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB3:elevation_to_m","asset_id":"E-PB3","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB3:route_id","asset_id":"E-PB3","field_path":"route_id","value":"P-B","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB3:field_qualified","asset_id":"E-PB3","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB4:length_m","asset_id":"E-PB4","field_path":"length_m","value":6.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB4:inner_diameter_m","asset_id":"E-PB4","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB4:elevation_from_m","asset_id":"E-PB4","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB4:elevation_to_m","asset_id":"E-PB4","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB4:route_id","asset_id":"E-PB4","field_path":"route_id","value":"P-B","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-PB4:field_qualified","asset_id":"E-PB4","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D1:length_m","asset_id":"E-D1","field_path":"length_m","value":150.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D1:inner_diameter_m","asset_id":"E-D1","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D1:elevation_from_m","asset_id":"E-D1","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D1:elevation_to_m","asset_id":"E-D1","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D1:route_id","asset_id":"E-D1","field_path":"route_id","value":"D-MAIN","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D1:field_qualified","asset_id":"E-D1","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D2:length_m","asset_id":"E-D2","field_path":"length_m","value":100.0,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D2:inner_diameter_m","asset_id":"E-D2","field_path":"inner_diameter_m","value":0.20274,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D2:elevation_from_m","asset_id":"E-D2","field_path":"elevation_from_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D2:elevation_to_m","asset_id":"E-D2","field_path":"elevation_to_m","value":0.5,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D2:route_id","asset_id":"E-D2","field_path":"route_id","value":"D-MAIN","unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]},{"fact_id":"E-D2:field_qualified","asset_id":"E-D2","field_path":"field_qualified","value":false,"unit":null,"source_locator":"M1-v1.2:DESIGN","parameter_status":null,"evidence_ids":["source-reference"]}],"history":[],"reference_evidence_ids":["source-reference"]}}
+{
+  "agent": "historical_asset_intelligence",
+  "context": {
+    "analysis_id": "AN-chained-example-r0",
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "case_id": "chained-example",
+    "data_release": "verum_reference_v2",
+    "execution_mode": "runtime",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "revision": 0,
+    "scope_id": "verum_supported_reference_v2"
+  },
+  "evidence": [
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "evidence_id": "source-observations",
+      "kind": "observation_window",
+      "provenance": "simulated_observation",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "source_ref": "observations:cutoff-300.0"
+    },
+    {
+      "available_at_s": 0.0,
+      "content_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+      "evidence_id": "source-reference",
+      "kind": "declared_reference",
+      "provenance": "declared_design",
+      "root_evidence_ids": [
+        "source-reference"
+      ],
+      "source_ref": "reference:public_reference"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "evidence_id": "features-summary",
+      "kind": "observation_representation",
+      "provenance": "derived_observation",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "source_ref": "features:summary-300.0"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "bf2f6dd1ae9563b1232495c8b276a8c6d7d0bdd092dae9230c00c45bb8f66b2e",
+      "evidence_id": "predictive_health-AN-chained-example-r0-ddf7ffff",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:predictive_health-AN-chained-example-r0-ddf7ffff"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "43f15a70946378882566889cdef83028d98ecd6502ae2d557b80e230b8572564",
+      "evidence_id": "topology_dependency-AN-chained-example-r0-a231e080",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:topology_dependency-AN-chained-example-r0-a231e080"
+    }
+  ],
+  "input": {
+    "assets": [
+      {
+        "asset_id": "TK-101",
+        "kind": "tank"
+      },
+      {
+        "asset_id": "TK-102",
+        "kind": "tank"
+      },
+      {
+        "asset_id": "TK-103",
+        "kind": "tank"
+      },
+      {
+        "asset_id": "P-101A",
+        "kind": "pump"
+      },
+      {
+        "asset_id": "P-101B",
+        "kind": "pump"
+      },
+      {
+        "asset_id": "XV-PAI",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-PAO",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-PBI",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-PBO",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R000",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R101",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R102",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R103",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-S101",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-S102",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-S103",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "E001",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E002",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E003",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R101a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R101b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S101a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S101b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R102a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R102b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S102a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S102b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R103a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R103b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S103a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S103b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-SH",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA0",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA1",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA2",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA3",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA4",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB0",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB1",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB2",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB3",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB4",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-D1",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-D2",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "PT-001",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-201",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-202A",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-202B",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-203",
+        "kind": "pressure_transmitter"
+      }
+    ],
+    "declared_facts": [
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.diameter_m",
+        "field_path": "declared_dimensions_m.diameter_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 30
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.shell_height_m",
+        "field_path": "declared_dimensions_m.shell_height_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 15
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.initial_level_m",
+        "field_path": "declared_dimensions_m.initial_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 9.0
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.inlet_z_m",
+        "field_path": "declared_dimensions_m.inlet_z_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 0.6
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.outlet_z_m",
+        "field_path": "declared_dimensions_m.outlet_z_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 0.4
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.normal_min_level_m",
+        "field_path": "declared_dimensions_m.normal_min_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 1.8
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.normal_max_level_m",
+        "field_path": "declared_dimensions_m.normal_max_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 12
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.high_alarm_m",
+        "field_path": "declared_dimensions_m.high_alarm_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 12.5
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.independent_high_high_m",
+        "field_path": "declared_dimensions_m.independent_high_high_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 13
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:declared_dimensions_m.critical_model_limit_m",
+        "field_path": "declared_dimensions_m.critical_model_limit_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 14
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.shell_diameter_m",
+        "field_path": "roof_geometry_parameters.shell_diameter_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 30.0
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.deck_diameter_m",
+        "field_path": "roof_geometry_parameters.deck_diameter_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 29.7
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.roof_support_height_m",
+        "field_path": "roof_geometry_parameters.roof_support_height_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 1.5
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.roof_areal_mass_kg_m2",
+        "field_path": "roof_geometry_parameters.roof_areal_mass_kg_m2",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "kg/m2",
+        "value": 20.0
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.headroom_response_time_s",
+        "field_path": "roof_geometry_parameters.headroom_response_time_s",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "s",
+        "value": 3600.0
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.headroom_residual_delivery_m3",
+        "field_path": "roof_geometry_parameters.headroom_residual_delivery_m3",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m3",
+        "value": 20.0
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.headroom_level_allowance_m",
+        "field_path": "roof_geometry_parameters.headroom_level_allowance_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 0.05
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:roof_geometry_parameters.normal_response_time_s",
+        "field_path": "roof_geometry_parameters.normal_response_time_s",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "s",
+        "value": 900.0
+      },
+      {
+        "asset_id": "TK-101",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-101:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.diameter_m",
+        "field_path": "declared_dimensions_m.diameter_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 30
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.shell_height_m",
+        "field_path": "declared_dimensions_m.shell_height_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 15
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.initial_level_m",
+        "field_path": "declared_dimensions_m.initial_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 7.0
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.inlet_z_m",
+        "field_path": "declared_dimensions_m.inlet_z_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 0.6
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.outlet_z_m",
+        "field_path": "declared_dimensions_m.outlet_z_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 0.4
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.normal_min_level_m",
+        "field_path": "declared_dimensions_m.normal_min_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 1.8
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.normal_max_level_m",
+        "field_path": "declared_dimensions_m.normal_max_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 12
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.high_alarm_m",
+        "field_path": "declared_dimensions_m.high_alarm_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 12.5
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.independent_high_high_m",
+        "field_path": "declared_dimensions_m.independent_high_high_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 13
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:declared_dimensions_m.critical_model_limit_m",
+        "field_path": "declared_dimensions_m.critical_model_limit_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 14
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.shell_diameter_m",
+        "field_path": "roof_geometry_parameters.shell_diameter_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 30.0
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.deck_diameter_m",
+        "field_path": "roof_geometry_parameters.deck_diameter_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 29.7
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.roof_support_height_m",
+        "field_path": "roof_geometry_parameters.roof_support_height_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 1.5
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.roof_areal_mass_kg_m2",
+        "field_path": "roof_geometry_parameters.roof_areal_mass_kg_m2",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "kg/m2",
+        "value": 20.0
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.headroom_response_time_s",
+        "field_path": "roof_geometry_parameters.headroom_response_time_s",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "s",
+        "value": 3600.0
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.headroom_residual_delivery_m3",
+        "field_path": "roof_geometry_parameters.headroom_residual_delivery_m3",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m3",
+        "value": 20.0
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.headroom_level_allowance_m",
+        "field_path": "roof_geometry_parameters.headroom_level_allowance_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 0.05
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:roof_geometry_parameters.normal_response_time_s",
+        "field_path": "roof_geometry_parameters.normal_response_time_s",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "s",
+        "value": 900.0
+      },
+      {
+        "asset_id": "TK-102",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-102:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.diameter_m",
+        "field_path": "declared_dimensions_m.diameter_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 30
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.shell_height_m",
+        "field_path": "declared_dimensions_m.shell_height_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 15
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.initial_level_m",
+        "field_path": "declared_dimensions_m.initial_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 5.0
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.inlet_z_m",
+        "field_path": "declared_dimensions_m.inlet_z_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 0.6
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.outlet_z_m",
+        "field_path": "declared_dimensions_m.outlet_z_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 0.4
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.normal_min_level_m",
+        "field_path": "declared_dimensions_m.normal_min_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 1.8
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.normal_max_level_m",
+        "field_path": "declared_dimensions_m.normal_max_level_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 12
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.high_alarm_m",
+        "field_path": "declared_dimensions_m.high_alarm_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 12.5
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.independent_high_high_m",
+        "field_path": "declared_dimensions_m.independent_high_high_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 13
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:declared_dimensions_m.critical_model_limit_m",
+        "field_path": "declared_dimensions_m.critical_model_limit_m",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": 14
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.shell_diameter_m",
+        "field_path": "roof_geometry_parameters.shell_diameter_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 30.0
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.deck_diameter_m",
+        "field_path": "roof_geometry_parameters.deck_diameter_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 29.7
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.roof_support_height_m",
+        "field_path": "roof_geometry_parameters.roof_support_height_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 1.5
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.roof_areal_mass_kg_m2",
+        "field_path": "roof_geometry_parameters.roof_areal_mass_kg_m2",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "kg/m2",
+        "value": 20.0
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.headroom_response_time_s",
+        "field_path": "roof_geometry_parameters.headroom_response_time_s",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "s",
+        "value": 3600.0
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.headroom_residual_delivery_m3",
+        "field_path": "roof_geometry_parameters.headroom_residual_delivery_m3",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m3",
+        "value": 20.0
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.headroom_level_allowance_m",
+        "field_path": "roof_geometry_parameters.headroom_level_allowance_m",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "m",
+        "value": 0.05
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:roof_geometry_parameters.normal_response_time_s",
+        "field_path": "roof_geometry_parameters.normal_response_time_s",
+        "parameter_status": "provisional",
+        "source_locator": "VERUM-M1-R1.2",
+        "unit": "s",
+        "value": 900.0
+      },
+      {
+        "asset_id": "TK-103",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "TK-103:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "revised/01_facility_tanks_topology.md sections 3.1, 5 (E1-E4, E7) and 6.1",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E001",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E001:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 30.0
+      },
+      {
+        "asset_id": "E001",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E001:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.30318
+      },
+      {
+        "asset_id": "E001",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E001:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E001",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E001:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E001",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E001:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-MAIN"
+      },
+      {
+        "asset_id": "E001",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E001:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E002",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E002:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 15.0
+      },
+      {
+        "asset_id": "E002",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E002:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.30318
+      },
+      {
+        "asset_id": "E002",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E002:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E002",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E002:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E002",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E002:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-MAIN"
+      },
+      {
+        "asset_id": "E002",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E002:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E003",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E003:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 105.0
+      },
+      {
+        "asset_id": "E003",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E003:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.30318
+      },
+      {
+        "asset_id": "E003",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E003:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E003",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E003:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E003",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E003:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-MAIN"
+      },
+      {
+        "asset_id": "E003",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E003:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-R101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101a:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 36.0
+      },
+      {
+        "asset_id": "E-R101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101a:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-R101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101a:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101a:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101a:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-101"
+      },
+      {
+        "asset_id": "E-R101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101a:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-R101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101b:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 9.0
+      },
+      {
+        "asset_id": "E-R101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101b:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-R101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101b:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101b:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.6
+      },
+      {
+        "asset_id": "E-R101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101b:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-101"
+      },
+      {
+        "asset_id": "E-R101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R101b:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-S101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101a:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 12.0
+      },
+      {
+        "asset_id": "E-S101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101a:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-S101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101a:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.4
+      },
+      {
+        "asset_id": "E-S101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101a:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101a:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-101"
+      },
+      {
+        "asset_id": "E-S101a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101a:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-S101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101b:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 48.0
+      },
+      {
+        "asset_id": "E-S101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101b:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-S101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101b:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101b:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101b:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-101"
+      },
+      {
+        "asset_id": "E-S101b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S101b:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-R102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102a:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 64.0
+      },
+      {
+        "asset_id": "E-R102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102a:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-R102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102a:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102a:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102a:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-102"
+      },
+      {
+        "asset_id": "E-R102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102a:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-R102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102b:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 16.0
+      },
+      {
+        "asset_id": "E-R102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102b:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-R102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102b:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102b:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.6
+      },
+      {
+        "asset_id": "E-R102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102b:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-102"
+      },
+      {
+        "asset_id": "E-R102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R102b:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-S102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102a:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 18.0
+      },
+      {
+        "asset_id": "E-S102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102a:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-S102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102a:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.4
+      },
+      {
+        "asset_id": "E-S102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102a:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102a:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-102"
+      },
+      {
+        "asset_id": "E-S102a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102a:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-S102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102b:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 72.0
+      },
+      {
+        "asset_id": "E-S102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102b:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-S102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102b:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102b:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102b:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-102"
+      },
+      {
+        "asset_id": "E-S102b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S102b:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-R103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103a:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 92.0
+      },
+      {
+        "asset_id": "E-R103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103a:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-R103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103a:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103a:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103a:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-103"
+      },
+      {
+        "asset_id": "E-R103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103a:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-R103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103b:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 23.0
+      },
+      {
+        "asset_id": "E-R103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103b:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-R103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103b:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 1.0
+      },
+      {
+        "asset_id": "E-R103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103b:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.6
+      },
+      {
+        "asset_id": "E-R103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103b:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "R-103"
+      },
+      {
+        "asset_id": "E-R103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-R103b:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-S103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103a:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 24.0
+      },
+      {
+        "asset_id": "E-S103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103a:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-S103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103a:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.4
+      },
+      {
+        "asset_id": "E-S103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103a:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103a:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-103"
+      },
+      {
+        "asset_id": "E-S103a",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103a:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-S103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103b:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 96.0
+      },
+      {
+        "asset_id": "E-S103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103b:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-S103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103b:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103b:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-S103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103b:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-103"
+      },
+      {
+        "asset_id": "E-S103b",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-S103b:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-SH",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-SH:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 35.0
+      },
+      {
+        "asset_id": "E-SH",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-SH:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.25446
+      },
+      {
+        "asset_id": "E-SH",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-SH:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-SH",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-SH:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-SH",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-SH:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "S-HEADER"
+      },
+      {
+        "asset_id": "E-SH",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-SH:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PA0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA0:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 7.0
+      },
+      {
+        "asset_id": "E-PA0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA0:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PA0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA0:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA0:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA0:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-A"
+      },
+      {
+        "asset_id": "E-PA0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA0:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PA1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA1:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 3.0
+      },
+      {
+        "asset_id": "E-PA1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA1:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PA1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA1:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA1:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA1:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-A"
+      },
+      {
+        "asset_id": "E-PA1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA1:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PA2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA2:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 2.0
+      },
+      {
+        "asset_id": "E-PA2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA2:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PA2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA2:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA2:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA2:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-A"
+      },
+      {
+        "asset_id": "E-PA2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA2:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PA3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA3:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 2.0
+      },
+      {
+        "asset_id": "E-PA3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA3:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PA3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA3:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA3:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA3:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-A"
+      },
+      {
+        "asset_id": "E-PA3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA3:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PA4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA4:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 6.0
+      },
+      {
+        "asset_id": "E-PA4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA4:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PA4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA4:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA4:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PA4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA4:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-A"
+      },
+      {
+        "asset_id": "E-PA4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PA4:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PB0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB0:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 7.0
+      },
+      {
+        "asset_id": "E-PB0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB0:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PB0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB0:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB0:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB0:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-B"
+      },
+      {
+        "asset_id": "E-PB0",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB0:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PB1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB1:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 3.0
+      },
+      {
+        "asset_id": "E-PB1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB1:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PB1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB1:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB1:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB1:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-B"
+      },
+      {
+        "asset_id": "E-PB1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB1:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PB2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB2:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 2.0
+      },
+      {
+        "asset_id": "E-PB2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB2:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PB2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB2:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB2:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB2:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-B"
+      },
+      {
+        "asset_id": "E-PB2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB2:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PB3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB3:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 2.0
+      },
+      {
+        "asset_id": "E-PB3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB3:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PB3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB3:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB3:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB3:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-B"
+      },
+      {
+        "asset_id": "E-PB3",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB3:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-PB4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB4:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 6.0
+      },
+      {
+        "asset_id": "E-PB4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB4:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-PB4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB4:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB4:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-PB4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB4:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "P-B"
+      },
+      {
+        "asset_id": "E-PB4",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-PB4:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-D1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D1:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 150.0
+      },
+      {
+        "asset_id": "E-D1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D1:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-D1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D1:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-D1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D1:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-D1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D1:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "D-MAIN"
+      },
+      {
+        "asset_id": "E-D1",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D1:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      },
+      {
+        "asset_id": "E-D2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D2:length_m",
+        "field_path": "length_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 100.0
+      },
+      {
+        "asset_id": "E-D2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D2:inner_diameter_m",
+        "field_path": "inner_diameter_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.20274
+      },
+      {
+        "asset_id": "E-D2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D2:elevation_from_m",
+        "field_path": "elevation_from_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-D2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D2:elevation_to_m",
+        "field_path": "elevation_to_m",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": 0.5
+      },
+      {
+        "asset_id": "E-D2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D2:route_id",
+        "field_path": "route_id",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": "D-MAIN"
+      },
+      {
+        "asset_id": "E-D2",
+        "evidence_ids": [
+          "source-reference"
+        ],
+        "fact_id": "E-D2:field_qualified",
+        "field_path": "field_qualified",
+        "parameter_status": null,
+        "source_locator": "M1-v1.2:DESIGN",
+        "unit": null,
+        "value": false
+      }
+    ],
+    "history": [],
+    "query_asset_ids": [
+      "TK-101",
+      "TK-102",
+      "TK-103",
+      "P-101A",
+      "P-101B",
+      "XV-PAI",
+      "XV-PAO",
+      "XV-PBI",
+      "XV-PBO",
+      "XV-R000",
+      "XV-R101",
+      "XV-R102",
+      "XV-R103",
+      "XV-S101",
+      "XV-S102",
+      "XV-S103",
+      "E001",
+      "E002",
+      "E003",
+      "E-R101a",
+      "E-R101b",
+      "E-S101a",
+      "E-S101b",
+      "E-R102a",
+      "E-R102b",
+      "E-S102a",
+      "E-S102b",
+      "E-R103a",
+      "E-R103b",
+      "E-S103a",
+      "E-S103b",
+      "E-SH",
+      "E-PA0",
+      "E-PA1",
+      "E-PA2",
+      "E-PA3",
+      "E-PA4",
+      "E-PB0",
+      "E-PB1",
+      "E-PB2",
+      "E-PB3",
+      "E-PB4",
+      "E-D1",
+      "E-D2",
+      "PT-001",
+      "PT-201",
+      "PT-202A",
+      "PT-202B",
+      "PT-203"
+    ],
+    "reference_evidence_ids": [
+      "source-reference"
+    ]
+  },
+  "interface_version": "1.0.0",
+  "message_type": "request",
+  "request_id": "AN-chained-example-r0-historical_asset_intelligence"
+}

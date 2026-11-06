@@ -1,1 +1,317 @@
-{"interface_version":"1.0.0","message_type":"request","agent":"evidence_verification_decision","request_id":"AN-chained-example-r0-evidence_verification_decision","context":{"case_id":"chained-example","analysis_id":"AN-chained-example-r0","revision":0,"as_of_s":300.0,"as_of_utc":null,"data_release":"verum_reference_v2","reference_snapshot_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","scope_id":"verum_supported_reference_v2","execution_mode":"runtime"},"evidence":[{"evidence_id":"source-observations","kind":"observation_window","source_ref":"observations:cutoff-300.0","available_at_s":300.0,"content_sha256":"57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd","root_evidence_ids":["source-observations"],"provenance":"simulated_observation"},{"evidence_id":"source-reference","kind":"declared_reference","source_ref":"reference:public_reference","available_at_s":0.0,"content_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","root_evidence_ids":["source-reference"],"provenance":"declared_design"},{"evidence_id":"features-summary","kind":"observation_representation","source_ref":"features:summary-300.0","available_at_s":300.0,"content_sha256":"57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd","root_evidence_ids":["source-observations"],"provenance":"derived_observation"},{"evidence_id":"predictive_health-AN-chained-example-r0-ddf7ffff","kind":"agent_report","source_ref":"report:predictive_health-AN-chained-example-r0-ddf7ffff","available_at_s":300.0,"content_sha256":"bf2f6dd1ae9563b1232495c8b276a8c6d7d0bdd092dae9230c00c45bb8f66b2e","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"topology_dependency-AN-chained-example-r0-a231e080","kind":"agent_report","source_ref":"report:topology_dependency-AN-chained-example-r0-a231e080","available_at_s":300.0,"content_sha256":"43f15a70946378882566889cdef83028d98ecd6502ae2d557b80e230b8572564","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"historical_asset_intelligence-AN-chained-example-r0-5582e3ef","kind":"agent_report","source_ref":"report:historical_asset_intelligence-AN-chained-example-r0-5582e3ef","available_at_s":300.0,"content_sha256":"b02b899796373abaa0cbb1d2d9b317ab99cdc7247a3f7b44dca3b6043fae8023","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"inspection_quality_documentation-AN-chained-example-r0-ab045a71","kind":"agent_report","source_ref":"report:inspection_quality_documentation-AN-chained-example-r0-ab045a71","available_at_s":300.0,"content_sha256":"c0c4a35b93a617e6726bf5e6976354fc7963ebda9354e0ee3cb52ef96b7ceda2","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"anomaly_detection-AN-chained-example-r0-8093a92d","kind":"agent_report","source_ref":"report:anomaly_detection-AN-chained-example-r0-8093a92d","available_at_s":300.0,"content_sha256":"e49a697bf2f6f123cdcab2952ec1295d6374226c9f0a6150b7315d7b0664f0e0","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"diagnostic_reasoning-AN-chained-example-r0-ae493950","kind":"agent_report","source_ref":"report:diagnostic_reasoning-AN-chained-example-r0-ae493950","available_at_s":300.0,"content_sha256":"3a4c2d7491214b900976d2b5f0205afa839fc939ad6096d7cc806b4c255ee40f","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"},{"evidence_id":"inspection_planning-AN-chained-example-r0-28230172","kind":"agent_report","source_ref":"report:inspection_planning-AN-chained-example-r0-28230172","available_at_s":300.0,"content_sha256":"0004c6955e95ef9b959bab102c706ba924a804202959bfc7faa64e5b20a681aa","root_evidence_ids":["source-observations","source-reference"],"provenance":"derived_agent_output"}],"input":{"diagnosis_report":{"interface_version":"1.0.0","message_type":"response","agent":"diagnostic_reasoning","request_id":"AN-chained-example-r0-diagnostic_reasoning","report_id":"diagnostic_reasoning-AN-chained-example-r0-ae493950","context":{"case_id":"chained-example","analysis_id":"AN-chained-example-r0","revision":0,"as_of_s":300.0,"as_of_utc":null,"data_release":"verum_reference_v2","reference_snapshot_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","scope_id":"verum_supported_reference_v2","execution_mode":"runtime"},"implementation":{"name":"diagnostic_reasoning-stub","version":"0.0.0","artifact_sha256":null,"feature_profile_id":null},"status":"degraded","consumed_evidence_ids":["source-observations","source-reference","features-summary","predictive_health-AN-chained-example-r0-ddf7ffff","anomaly_detection-AN-chained-example-r0-8093a92d","topology_dependency-AN-chained-example-r0-a231e080","historical_asset_intelligence-AN-chained-example-r0-5582e3ef","inspection_quality_documentation-AN-chained-example-r0-ab045a71"],"issues":[{"code":"STUB_NOT_IMPLEMENTED","message":"stub, not implemented","evidence_ids":[]}],"limitations":["Stub implementation: no role logic is present; the result is unchanged."],"advisory_only":true,"result":{"hypotheses":[],"assessment":"inconclusive","upstream_checks":[{"check_id":"forecast_report","description":"Compare available forecast_report","outcome":"unknown","evidence_ids":[]},{"check_id":"anomaly_report","description":"Compare available anomaly_report","outcome":"unknown","evidence_ids":[]},{"check_id":"topology_report","description":"Compare available topology_report","outcome":"unknown","evidence_ids":[]},{"check_id":"asset_report","description":"Compare available asset_report","outcome":"unknown","evidence_ids":[]},{"check_id":"inspection_quality_report","description":"Compare available inspection_quality_report","outcome":"unknown","evidence_ids":[]}],"field_diagnosis_qualified":false,"ranking_basis":null}},"inspection_plan_report":{"interface_version":"1.0.0","message_type":"response","agent":"inspection_planning","request_id":"AN-chained-example-r0-inspection_planning","report_id":"inspection_planning-AN-chained-example-r0-28230172","context":{"case_id":"chained-example","analysis_id":"AN-chained-example-r0","revision":0,"as_of_s":300.0,"as_of_utc":null,"data_release":"verum_reference_v2","reference_snapshot_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","scope_id":"verum_supported_reference_v2","execution_mode":"runtime"},"implementation":{"name":"inspection_planning-stub","version":"0.0.0","artifact_sha256":null,"feature_profile_id":null},"status":"degraded","consumed_evidence_ids":["source-observations","source-reference","features-summary","diagnostic_reasoning-AN-chained-example-r0-ae493950"],"issues":[{"code":"STUB_NOT_IMPLEMENTED","message":"stub, not implemented","evidence_ids":[]}],"limitations":["Stub implementation: no role logic is present; the result is unchanged."],"advisory_only":true,"result":{"options":[],"selection_policy_id":null,"recommended_option_id":null,"dispatch_authorized":false}},"inspection_quality_report":{"interface_version":"1.0.0","message_type":"response","agent":"inspection_quality_documentation","request_id":"AN-chained-example-r0-inspection_quality_documentation","report_id":"inspection_quality_documentation-AN-chained-example-r0-ab045a71","context":{"case_id":"chained-example","analysis_id":"AN-chained-example-r0","revision":0,"as_of_s":300.0,"as_of_utc":null,"data_release":"verum_reference_v2","reference_snapshot_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","scope_id":"verum_supported_reference_v2","execution_mode":"runtime"},"implementation":{"name":"inspection_quality_documentation-stub","version":"0.0.0","artifact_sha256":null,"feature_profile_id":null},"status":"degraded","consumed_evidence_ids":["source-observations","source-reference","features-summary"],"issues":[{"code":"STUB_NOT_IMPLEMENTED","message":"stub, not implemented","evidence_ids":[]}],"limitations":["Stub implementation: no role logic is present; the result is unchanged."],"advisory_only":true,"result":{"record_checks":[],"observed_quality":[],"retest_result_ids":[]}},"evidence_proposals":[]}}
+{
+  "agent": "evidence_verification_decision",
+  "context": {
+    "analysis_id": "AN-chained-example-r0",
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "case_id": "chained-example",
+    "data_release": "verum_reference_v2",
+    "execution_mode": "runtime",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "revision": 0,
+    "scope_id": "verum_supported_reference_v2"
+  },
+  "evidence": [
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "evidence_id": "source-observations",
+      "kind": "observation_window",
+      "provenance": "simulated_observation",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "source_ref": "observations:cutoff-300.0"
+    },
+    {
+      "available_at_s": 0.0,
+      "content_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+      "evidence_id": "source-reference",
+      "kind": "declared_reference",
+      "provenance": "declared_design",
+      "root_evidence_ids": [
+        "source-reference"
+      ],
+      "source_ref": "reference:public_reference"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "evidence_id": "features-summary",
+      "kind": "observation_representation",
+      "provenance": "derived_observation",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "source_ref": "features:summary-300.0"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "bf2f6dd1ae9563b1232495c8b276a8c6d7d0bdd092dae9230c00c45bb8f66b2e",
+      "evidence_id": "predictive_health-AN-chained-example-r0-ddf7ffff",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:predictive_health-AN-chained-example-r0-ddf7ffff"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "43f15a70946378882566889cdef83028d98ecd6502ae2d557b80e230b8572564",
+      "evidence_id": "topology_dependency-AN-chained-example-r0-a231e080",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:topology_dependency-AN-chained-example-r0-a231e080"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "b02b899796373abaa0cbb1d2d9b317ab99cdc7247a3f7b44dca3b6043fae8023",
+      "evidence_id": "historical_asset_intelligence-AN-chained-example-r0-5582e3ef",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:historical_asset_intelligence-AN-chained-example-r0-5582e3ef"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "c0c4a35b93a617e6726bf5e6976354fc7963ebda9354e0ee3cb52ef96b7ceda2",
+      "evidence_id": "inspection_quality_documentation-AN-chained-example-r0-ab045a71",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:inspection_quality_documentation-AN-chained-example-r0-ab045a71"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "e49a697bf2f6f123cdcab2952ec1295d6374226c9f0a6150b7315d7b0664f0e0",
+      "evidence_id": "anomaly_detection-AN-chained-example-r0-8093a92d",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:anomaly_detection-AN-chained-example-r0-8093a92d"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "3a4c2d7491214b900976d2b5f0205afa839fc939ad6096d7cc806b4c255ee40f",
+      "evidence_id": "diagnostic_reasoning-AN-chained-example-r0-ae493950",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:diagnostic_reasoning-AN-chained-example-r0-ae493950"
+    },
+    {
+      "available_at_s": 300.0,
+      "content_sha256": "0004c6955e95ef9b959bab102c706ba924a804202959bfc7faa64e5b20a681aa",
+      "evidence_id": "inspection_planning-AN-chained-example-r0-28230172",
+      "kind": "agent_report",
+      "provenance": "derived_agent_output",
+      "root_evidence_ids": [
+        "source-observations",
+        "source-reference"
+      ],
+      "source_ref": "report:inspection_planning-AN-chained-example-r0-28230172"
+    }
+  ],
+  "input": {
+    "diagnosis_report": {
+      "advisory_only": true,
+      "agent": "diagnostic_reasoning",
+      "consumed_evidence_ids": [
+        "source-observations",
+        "source-reference",
+        "features-summary",
+        "predictive_health-AN-chained-example-r0-ddf7ffff",
+        "anomaly_detection-AN-chained-example-r0-8093a92d",
+        "topology_dependency-AN-chained-example-r0-a231e080",
+        "historical_asset_intelligence-AN-chained-example-r0-5582e3ef",
+        "inspection_quality_documentation-AN-chained-example-r0-ab045a71"
+      ],
+      "context": {
+        "analysis_id": "AN-chained-example-r0",
+        "as_of_s": 300.0,
+        "as_of_utc": null,
+        "case_id": "chained-example",
+        "data_release": "verum_reference_v2",
+        "execution_mode": "runtime",
+        "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+        "revision": 0,
+        "scope_id": "verum_supported_reference_v2"
+      },
+      "implementation": {
+        "artifact_sha256": null,
+        "feature_profile_id": null,
+        "name": "diagnostic_reasoning-stub",
+        "version": "0.0.0"
+      },
+      "interface_version": "1.0.0",
+      "issues": [
+        {
+          "code": "STUB_NOT_IMPLEMENTED",
+          "evidence_ids": [],
+          "message": "stub, not implemented"
+        }
+      ],
+      "limitations": [
+        "Stub implementation: no role logic is present; the result is unchanged."
+      ],
+      "message_type": "response",
+      "report_id": "diagnostic_reasoning-AN-chained-example-r0-ae493950",
+      "request_id": "AN-chained-example-r0-diagnostic_reasoning",
+      "result": {
+        "assessment": "inconclusive",
+        "field_diagnosis_qualified": false,
+        "hypotheses": [],
+        "ranking_basis": null,
+        "upstream_checks": [
+          {
+            "check_id": "forecast_report",
+            "description": "Compare available forecast_report",
+            "evidence_ids": [],
+            "outcome": "unknown"
+          },
+          {
+            "check_id": "anomaly_report",
+            "description": "Compare available anomaly_report",
+            "evidence_ids": [],
+            "outcome": "unknown"
+          },
+          {
+            "check_id": "topology_report",
+            "description": "Compare available topology_report",
+            "evidence_ids": [],
+            "outcome": "unknown"
+          },
+          {
+            "check_id": "asset_report",
+            "description": "Compare available asset_report",
+            "evidence_ids": [],
+            "outcome": "unknown"
+          },
+          {
+            "check_id": "inspection_quality_report",
+            "description": "Compare available inspection_quality_report",
+            "evidence_ids": [],
+            "outcome": "unknown"
+          }
+        ]
+      },
+      "status": "degraded"
+    },
+    "evidence_proposals": [],
+    "inspection_plan_report": {
+      "advisory_only": true,
+      "agent": "inspection_planning",
+      "consumed_evidence_ids": [
+        "source-observations",
+        "source-reference",
+        "features-summary",
+        "diagnostic_reasoning-AN-chained-example-r0-ae493950"
+      ],
+      "context": {
+        "analysis_id": "AN-chained-example-r0",
+        "as_of_s": 300.0,
+        "as_of_utc": null,
+        "case_id": "chained-example",
+        "data_release": "verum_reference_v2",
+        "execution_mode": "runtime",
+        "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+        "revision": 0,
+        "scope_id": "verum_supported_reference_v2"
+      },
+      "implementation": {
+        "artifact_sha256": null,
+        "feature_profile_id": null,
+        "name": "inspection_planning-stub",
+        "version": "0.0.0"
+      },
+      "interface_version": "1.0.0",
+      "issues": [
+        {
+          "code": "STUB_NOT_IMPLEMENTED",
+          "evidence_ids": [],
+          "message": "stub, not implemented"
+        }
+      ],
+      "limitations": [
+        "Stub implementation: no role logic is present; the result is unchanged."
+      ],
+      "message_type": "response",
+      "report_id": "inspection_planning-AN-chained-example-r0-28230172",
+      "request_id": "AN-chained-example-r0-inspection_planning",
+      "result": {
+        "dispatch_authorized": false,
+        "options": [],
+        "recommended_option_id": null,
+        "selection_policy_id": null
+      },
+      "status": "degraded"
+    },
+    "inspection_quality_report": {
+      "advisory_only": true,
+      "agent": "inspection_quality_documentation",
+      "consumed_evidence_ids": [
+        "source-observations",
+        "source-reference",
+        "features-summary"
+      ],
+      "context": {
+        "analysis_id": "AN-chained-example-r0",
+        "as_of_s": 300.0,
+        "as_of_utc": null,
+        "case_id": "chained-example",
+        "data_release": "verum_reference_v2",
+        "execution_mode": "runtime",
+        "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+        "revision": 0,
+        "scope_id": "verum_supported_reference_v2"
+      },
+      "implementation": {
+        "artifact_sha256": null,
+        "feature_profile_id": null,
+        "name": "inspection_quality_documentation-stub",
+        "version": "0.0.0"
+      },
+      "interface_version": "1.0.0",
+      "issues": [
+        {
+          "code": "STUB_NOT_IMPLEMENTED",
+          "evidence_ids": [],
+          "message": "stub, not implemented"
+        }
+      ],
+      "limitations": [
+        "Stub implementation: no role logic is present; the result is unchanged."
+      ],
+      "message_type": "response",
+      "report_id": "inspection_quality_documentation-AN-chained-example-r0-ab045a71",
+      "request_id": "AN-chained-example-r0-inspection_quality_documentation",
+      "result": {
+        "observed_quality": [],
+        "record_checks": [],
+        "retest_result_ids": []
+      },
+      "status": "degraded"
+    }
+  },
+  "interface_version": "1.0.0",
+  "message_type": "request",
+  "request_id": "AN-chained-example-r0-evidence_verification_decision"
+}

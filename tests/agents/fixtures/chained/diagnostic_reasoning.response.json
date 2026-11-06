@@ -1,1 +1,84 @@
-{"interface_version":"1.0.0","message_type":"response","agent":"diagnostic_reasoning","request_id":"AN-chained-example-r0-diagnostic_reasoning","report_id":"diagnostic_reasoning-AN-chained-example-r0-ae493950","context":{"case_id":"chained-example","analysis_id":"AN-chained-example-r0","revision":0,"as_of_s":300.0,"as_of_utc":null,"data_release":"verum_reference_v2","reference_snapshot_sha256":"06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403","scope_id":"verum_supported_reference_v2","execution_mode":"runtime"},"implementation":{"name":"diagnostic_reasoning-stub","version":"0.0.0","artifact_sha256":null,"feature_profile_id":null},"status":"degraded","consumed_evidence_ids":["source-observations","source-reference","features-summary","predictive_health-AN-chained-example-r0-ddf7ffff","anomaly_detection-AN-chained-example-r0-8093a92d","topology_dependency-AN-chained-example-r0-a231e080","historical_asset_intelligence-AN-chained-example-r0-5582e3ef","inspection_quality_documentation-AN-chained-example-r0-ab045a71"],"issues":[{"code":"STUB_NOT_IMPLEMENTED","message":"stub, not implemented","evidence_ids":[]}],"limitations":["Stub implementation: no role logic is present; the result is unchanged."],"advisory_only":true,"result":{"hypotheses":[],"assessment":"inconclusive","upstream_checks":[{"check_id":"forecast_report","description":"Compare available forecast_report","outcome":"unknown","evidence_ids":[]},{"check_id":"anomaly_report","description":"Compare available anomaly_report","outcome":"unknown","evidence_ids":[]},{"check_id":"topology_report","description":"Compare available topology_report","outcome":"unknown","evidence_ids":[]},{"check_id":"asset_report","description":"Compare available asset_report","outcome":"unknown","evidence_ids":[]},{"check_id":"inspection_quality_report","description":"Compare available inspection_quality_report","outcome":"unknown","evidence_ids":[]}],"field_diagnosis_qualified":false,"ranking_basis":null}}
+{
+  "advisory_only": true,
+  "agent": "diagnostic_reasoning",
+  "consumed_evidence_ids": [
+    "source-observations",
+    "source-reference",
+    "features-summary",
+    "predictive_health-AN-chained-example-r0-ddf7ffff",
+    "anomaly_detection-AN-chained-example-r0-8093a92d",
+    "topology_dependency-AN-chained-example-r0-a231e080",
+    "historical_asset_intelligence-AN-chained-example-r0-5582e3ef",
+    "inspection_quality_documentation-AN-chained-example-r0-ab045a71"
+  ],
+  "context": {
+    "analysis_id": "AN-chained-example-r0",
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "case_id": "chained-example",
+    "data_release": "verum_reference_v2",
+    "execution_mode": "runtime",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "revision": 0,
+    "scope_id": "verum_supported_reference_v2"
+  },
+  "implementation": {
+    "artifact_sha256": null,
+    "feature_profile_id": null,
+    "name": "diagnostic_reasoning-stub",
+    "version": "0.0.0"
+  },
+  "interface_version": "1.0.0",
+  "issues": [
+    {
+      "code": "STUB_NOT_IMPLEMENTED",
+      "evidence_ids": [],
+      "message": "stub, not implemented"
+    }
+  ],
+  "limitations": [
+    "Stub implementation: no role logic is present; the result is unchanged."
+  ],
+  "message_type": "response",
+  "report_id": "diagnostic_reasoning-AN-chained-example-r0-ae493950",
+  "request_id": "AN-chained-example-r0-diagnostic_reasoning",
+  "result": {
+    "assessment": "inconclusive",
+    "field_diagnosis_qualified": false,
+    "hypotheses": [],
+    "ranking_basis": null,
+    "upstream_checks": [
+      {
+        "check_id": "forecast_report",
+        "description": "Compare available forecast_report",
+        "evidence_ids": [],
+        "outcome": "unknown"
+      },
+      {
+        "check_id": "anomaly_report",
+        "description": "Compare available anomaly_report",
+        "evidence_ids": [],
+        "outcome": "unknown"
+      },
+      {
+        "check_id": "topology_report",
+        "description": "Compare available topology_report",
+        "evidence_ids": [],
+        "outcome": "unknown"
+      },
+      {
+        "check_id": "asset_report",
+        "description": "Compare available asset_report",
+        "evidence_ids": [],
+        "outcome": "unknown"
+      },
+      {
+        "check_id": "inspection_quality_report",
+        "description": "Compare available inspection_quality_report",
+        "evidence_ids": [],
+        "outcome": "unknown"
+      }
+    ]
+  },
+  "status": "degraded"
+}
