@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Final
 
-from verum.agents.common.numbers import normalise
+from verum.agents.common.numbers import to_plain
 from verum.agents.common.registry import EvidenceRegistry
 
 TAG_ORDER: Final[tuple[str, ...]] = (
@@ -22,8 +22,8 @@ SUMMARY_KEYS: Final = frozenset({"clock_basis", "current_time_s", "lookback_s", 
 
 
 def ordered_summary(summary: dict[str, Any]) -> dict[str, Any]:
-    """Return a normalised copy of a summary whose signals follow the fixed tag order."""
-    clean: dict[str, Any] = normalise(summary)
+    """Return a plain copy of a summary whose signals follow the fixed tag order."""
+    clean: dict[str, Any] = to_plain(summary)
     if set(clean) != SUMMARY_KEYS:
         raise ValueError("a summary has exactly its clock, lookback and signal fields")
     by_tag = {signal["tag_id"]: signal for signal in clean["signals"]}

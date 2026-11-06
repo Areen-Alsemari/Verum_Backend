@@ -13,7 +13,7 @@ from verum.agents.common.envelope import (
 )
 from verum.agents.common.ids import analysis_id, report_id
 from verum.agents.common.loader import EpisodeRef, RoleRecord, episode_lookup, iter_role_records
-from verum.agents.common.numbers import normalise, stable_hash
+from verum.agents.common.numbers import stable_hash, to_plain
 from verum.agents.common.observations import TAG_ORDER, attach_summary, summary_representation
 from verum.agents.common.registry import EvidenceRegistry
 from verum.agents.common.roles import ROLES
@@ -40,8 +40,8 @@ __all__ = [
     "make_context",
     "make_context_from_reference",
     "make_issue",
-    "normalise",
     "report_id",
     "stable_hash",
     "summary_representation",
+    "to_plain",
 ]

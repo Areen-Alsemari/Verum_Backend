@@ -8,29 +8,23 @@ from typing import Any
 import numpy as np
 import pytest
 
-from verum.agents.common import ROLES, analysis_id, normalise, report_id, stable_hash
+from verum.agents.common import ROLES, analysis_id, report_id, stable_hash, to_plain
 from verum.agents.common.ids import require_source_id
 from verum.contracts.agent_interfaces import content_hash
 
 
-def test_integral_floats_and_integers_hash_alike() -> None:
-    """The spellings 300 and 300.0 give one hash, also inside nested messages.
+def test_numbers_keep_their_type_and_hash_as_the_contract_hashes() -> None:
+    """The helper hash equals the contract hash, so 300 and 300.0 differ on purpose.
 
-    Independent: no, because the hash is computed by the same canonical routine as the rule uses.
+    Independent: yes, because the contract hash is a separate routine and the values are literals.
     """
-    assert stable_hash({"a": [300, {"b": 0}]}) == stable_hash({"a": [300.0, {"b": -0.0}]})
-    assert content_hash({"a": 300}) != content_hash({"a": 300.0})
-
-
-def test_non_integral_and_huge_floats_are_kept() -> None:
-    """A fractional value, and a float too large to be exact as an integer, are not rewritten.
-
-    Independent: yes, because the expected values are literals.
-    """
-    assert normalise(0.5) == 0.5
-    assert isinstance(normalise(2.0**60), float)
-    assert isinstance(normalise(3.0), int)
-    assert normalise(True) is True
+    message = {"a": [300, {"b": 0}], "c": 300.0, "d": -0.0}
+    assert stable_hash(message) == content_hash(message)
+    assert stable_hash({"a": 300}) != stable_hash({"a": 300.0})
+    plain = to_plain(message)
+    assert plain == message and isinstance(plain["c"], float) and isinstance(plain["a"][0], int)
+    assert to_plain(True) is True and to_plain(2.0**60) == 2.0**60
+    assert to_plain((1, 2.0)) == [1, 2.0]
 
 
 @pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
@@ -40,30 +34,34 @@ def test_non_finite_numbers_are_rejected(value: float) -> None:
     Independent: yes, because the rejected values are literals.
     """
     with pytest.raises(ValueError, match="non-finite"):
-        normalise({"x": [value]})
+        to_plain({"x": [value]})
+    with pytest.raises(ValueError, match="non-finite"):
+        to_plain({"x": np.float64(value)})
 
 
-@pytest.mark.parametrize(
-    "value", [np.float64(1.5), np.int64(3), np.bool_(True), np.array([1.0])]
-)
-def test_numpy_values_are_rejected(value: Any) -> None:
-    """A numpy scalar or array is refused rather than silently converted.
+def test_numpy_scalars_become_python_numbers() -> None:
+    """Numpy scalars are converted to the matching Python type, keeping their value.
+
+    Independent: yes, because the expected values and types are literals.
+    """
+    numpy_message = {"f": np.float64(1.5), "g": np.float32(2.0), "i": np.int64(3), "b": np.bool_(1)}
+    plain = to_plain(numpy_message)
+    assert plain == {"f": 1.5, "g": 2.0, "i": 3, "b": True}
+    assert [type(plain[k]) for k in "fgib"] == [float, float, int, bool]
+    assert stable_hash({"f": np.float64(1.5)}) == content_hash({"f": 1.5})
+
+
+def test_numpy_arrays_and_unsupported_values_are_rejected() -> None:
+    """An array, a set or a non-text key is refused instead of being converted.
 
     Independent: yes, because the rejected values are literals.
     """
-    with pytest.raises(TypeError, match="numpy"):
-        normalise({"x": value})
-
-
-def test_unsupported_values_and_keys_are_rejected() -> None:
-    """Only JSON-compatible values with text keys are accepted.
-
-    Independent: yes, because the rejected values are literals.
-    """
+    with pytest.raises(TypeError, match="arrays"):
+        to_plain({"x": np.array([1.0])})
     with pytest.raises(TypeError):
-        normalise({1: "a"})
+        to_plain({1: "a"})
     with pytest.raises(TypeError):
-        normalise({"x": {1, 2}})
+        to_plain({"x": {1, 2}})
 
 
 def test_analysis_identifier_format() -> None:

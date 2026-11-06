@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Final
 
 from verum.agents.common.ids import analysis_id
-from verum.agents.common.numbers import normalise
 
 DATA_RELEASE: Final = "verum_reference_v2"
 SCOPE_ID: Final = "verum_supported_reference_v2"
@@ -45,7 +44,7 @@ def make_context(
         raise ValueError(f"execution mode must be one of {EXECUTION_MODES}")
     if not _SHA256.fullmatch(reference_snapshot_sha256):
         raise ValueError("the reference snapshot is a lowercase SHA-256 digest")
-    cutoff = normalise(float(as_of_s))
+    cutoff = float(as_of_s)
     if not math.isfinite(as_of_s) or as_of_s < 0:
         raise ValueError("the cutoff is a finite nonnegative time")
     return {

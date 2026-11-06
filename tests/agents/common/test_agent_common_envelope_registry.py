@@ -65,7 +65,7 @@ def test_context_has_the_contract_fields_and_derived_analysis_id() -> None:
     """
     context = _context(as_of_s=300.0)
     assert context["analysis_id"] == "AN-C7-r0"
-    assert context["as_of_s"] == 300 and context["as_of_utc"] is None
+    assert context["as_of_s"] == 300.0 and context["as_of_utc"] is None
     assert context["data_release"] == "verum_reference_v2"
     assert context["scope_id"] == "verum_supported_reference_v2"
 

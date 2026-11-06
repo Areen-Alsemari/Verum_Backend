@@ -3,7 +3,7 @@
 The registry holds source rows, derived observation representation rows and derived agent report
 rows. Source rows name themselves as their root; a representation names its observation sources;
 a report names the union of the roots of everything it consumed. Hashes are taken over the
-normalised content, so the object that is embedded in a message is the object that was hashed.
+the plain form of the content, which is the contract hash of the message as written.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from verum.agents.common.ids import require_source_id
-from verum.agents.common.numbers import normalise, stable_hash
+from verum.agents.common.numbers import stable_hash, to_plain
 from verum.contracts.agent_interfaces import PREFIXES
 
 SOURCE_KINDS = (
@@ -70,7 +70,7 @@ class EvidenceRegistry:
         prefix, provenance = PREFIXES[kind]
         self._add_new({
             "evidence_id": evidence_id, "kind": kind, "source_ref": prefix + locator,
-            "available_at_s": normalise(float(available_at_s)), "content_sha256": content_sha256,
+            "available_at_s": float(available_at_s), "content_sha256": content_sha256,
             "root_evidence_ids": [evidence_id], "provenance": provenance,
         })
 
@@ -96,14 +96,14 @@ class EvidenceRegistry:
         prefix, provenance = PREFIXES["observation_representation"]
         self._add_new({
             "evidence_id": evidence_id, "kind": "observation_representation",
-            "source_ref": prefix + locator, "available_at_s": normalise(float(available_at_s)),
+            "source_ref": prefix + locator, "available_at_s": float(available_at_s),
             "content_sha256": stable_hash(payload), "root_evidence_ids": sorted(set(root_ids)),
             "provenance": provenance,
         })
 
     def add_report(self, report: dict[str, Any]) -> dict[str, Any]:
-        """Register an upstream report and return the normalised copy that must be embedded."""
-        embedded: dict[str, Any] = normalise(report)
+        """Register an upstream report and return the plain copy to embed."""
+        embedded: dict[str, Any] = to_plain(report)
         if embedded["context"] != self.context:
             raise ValueError("report belongs to a different analysis snapshot")
         identifier = embedded["report_id"]
@@ -115,7 +115,7 @@ class EvidenceRegistry:
         prefix, provenance = PREFIXES["agent_report"]
         self._add_new({
             "evidence_id": identifier, "kind": "agent_report", "source_ref": prefix + identifier,
-            "available_at_s": normalise(float(self.context["as_of_s"])),
+            "available_at_s": float(self.context["as_of_s"]),
             "content_sha256": stable_hash(embedded), "root_evidence_ids": sorted(roots),
             "provenance": provenance,
         })

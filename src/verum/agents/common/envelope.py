@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from typing import Any, Final
 
 from verum.agents.common.ids import report_id
-from verum.agents.common.numbers import normalise
+from verum.agents.common.numbers import to_plain
 from verum.agents.common.registry import EvidenceRegistry
 from verum.agents.common.roles import require_role
 
@@ -40,12 +40,12 @@ def make_issue(code: str, message: str, evidence_ids: Iterable[str] = ()) -> dic
 def build_request(
     role: str, request_id: str, registry: EvidenceRegistry, inputs: dict[str, Any]
 ) -> dict[str, Any]:
-    """Assemble a request whose evidence is the registry and whose input is normalised."""
+    """Assemble a request whose evidence is the registry and whose input is plain JSON."""
     return {
         "interface_version": INTERFACE_VERSION, "message_type": "request",
         "agent": require_role(role), "request_id": request_id,
         "context": copy.deepcopy(registry.context), "evidence": registry.rows(),
-        "input": normalise(inputs),
+        "input": to_plain(inputs),
     }
 
 
@@ -68,7 +68,7 @@ def build_response(
         "interface_version": INTERFACE_VERSION, "message_type": "response",
         "agent": request["agent"], "request_id": request["request_id"],
         "report_id": identifier, "context": copy.deepcopy(request["context"]),
-        **normalise({
+        **to_plain({
             "implementation": implementation, "status": status,
             "consumed_evidence_ids": consumed, "issues": kept_issues,
             "limitations": list(limitations), "advisory_only": True, "result": result,
