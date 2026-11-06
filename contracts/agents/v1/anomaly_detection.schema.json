@@ -80,27 +80,7 @@
           }
         },
         "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "observations": {
-              "$ref": "urn:verum:agents:v1:common#/$defs/observations"
-            },
-            "forecast_report": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:predictive_health#/$defs/response"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": [
-            "observations",
-            "forecast_report"
-          ]
+          "$ref": "#/$defs/input"
         }
       },
       "required": [
@@ -214,31 +194,7 @@
         "result": {
           "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "events": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/anomaly_event"
-                  }
-                },
-                "coverage": {
-                  "enum": [
-                    "assessed",
-                    "partial",
-                    "unknown"
-                  ]
-                },
-                "no_event_means_healthy": {
-                  "const": false
-                }
-              },
-              "required": [
-                "events",
-                "coverage",
-                "no_event_means_healthy"
-              ]
+              "$ref": "#/$defs/result"
             },
             {
               "type": "null"
@@ -276,31 +232,7 @@
           "then": {
             "properties": {
               "result": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "events": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/anomaly_event"
-                    }
-                  },
-                  "coverage": {
-                    "enum": [
-                      "assessed",
-                      "partial",
-                      "unknown"
-                    ]
-                  },
-                  "no_event_means_healthy": {
-                    "const": false
-                  }
-                },
-                "required": [
-                  "events",
-                  "coverage",
-                  "no_event_means_healthy"
-                ]
+                "$ref": "#/$defs/result"
               }
             }
           }

@@ -142,71 +142,7 @@
           }
         },
         "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "observations": {
-              "$ref": "urn:verum:agents:v1:common#/$defs/observations"
-            },
-            "forecast_report": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:predictive_health#/$defs/response"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "anomaly_report": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:anomaly_detection#/$defs/response"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "topology_report": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:topology_dependency#/$defs/response"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "asset_report": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:historical_asset_intelligence#/$defs/response"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "inspection_quality_report": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:inspection_quality_documentation#/$defs/response"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": [
-            "observations",
-            "forecast_report",
-            "anomaly_report",
-            "topology_report",
-            "asset_report",
-            "inspection_quality_report"
-          ]
+          "$ref": "#/$defs/input"
         }
       },
       "required": [
@@ -320,49 +256,7 @@
         "result": {
           "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "hypotheses": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/hypothesis"
-                  }
-                },
-                "assessment": {
-                  "enum": [
-                    "candidates_available",
-                    "inconclusive"
-                  ]
-                },
-                "upstream_checks": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/check"
-                  }
-                },
-                "field_diagnosis_qualified": {
-                  "const": false
-                },
-                "ranking_basis": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                }
-              },
-              "required": [
-                "hypotheses",
-                "assessment",
-                "upstream_checks",
-                "field_diagnosis_qualified",
-                "ranking_basis"
-              ]
+              "$ref": "#/$defs/result"
             },
             {
               "type": "null"
@@ -400,49 +294,7 @@
           "then": {
             "properties": {
               "result": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "hypotheses": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/hypothesis"
-                    }
-                  },
-                  "assessment": {
-                    "enum": [
-                      "candidates_available",
-                      "inconclusive"
-                    ]
-                  },
-                  "upstream_checks": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/check"
-                    }
-                  },
-                  "field_diagnosis_qualified": {
-                    "const": false
-                  },
-                  "ranking_basis": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "hypotheses",
-                  "assessment",
-                  "upstream_checks",
-                  "field_diagnosis_qualified",
-                  "ranking_basis"
-                ]
+                "$ref": "#/$defs/result"
               }
             }
           }

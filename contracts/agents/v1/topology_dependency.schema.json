@@ -127,56 +127,7 @@
           }
         },
         "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "query_asset_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "uniqueItems": true
-            },
-            "direction": {
-              "enum": [
-                "upstream",
-                "downstream",
-                "both"
-              ]
-            },
-            "declared_connections": {
-              "type": "array",
-              "items": {
-                "$ref": "urn:verum:agents:v1:common#/$defs/connection"
-              }
-            },
-            "reference_evidence_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "uniqueItems": true
-            },
-            "observations": {
-              "anyOf": [
-                {
-                  "$ref": "urn:verum:agents:v1:common#/$defs/observations"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": [
-            "query_asset_ids",
-            "direction",
-            "declared_connections",
-            "reference_evidence_ids",
-            "observations"
-          ]
+          "$ref": "#/$defs/input"
         }
       },
       "required": [
@@ -290,49 +241,7 @@
         "result": {
           "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "direct_connections": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/connection"
-                  }
-                },
-                "reachable_nodes": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "uniqueItems": true
-                },
-                "routing_assessment": {
-                  "enum": [
-                    "declared_only",
-                    "ambiguous",
-                    "unknown"
-                  ]
-                },
-                "actual_routing_confirmed": {
-                  "const": false
-                },
-                "evidence_ids": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "uniqueItems": true
-                }
-              },
-              "required": [
-                "direct_connections",
-                "reachable_nodes",
-                "routing_assessment",
-                "actual_routing_confirmed",
-                "evidence_ids"
-              ]
+              "$ref": "#/$defs/result"
             },
             {
               "type": "null"
@@ -370,49 +279,7 @@
           "then": {
             "properties": {
               "result": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "direct_connections": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/connection"
-                    }
-                  },
-                  "reachable_nodes": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "uniqueItems": true
-                  },
-                  "routing_assessment": {
-                    "enum": [
-                      "declared_only",
-                      "ambiguous",
-                      "unknown"
-                    ]
-                  },
-                  "actual_routing_confirmed": {
-                    "const": false
-                  },
-                  "evidence_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "uniqueItems": true
-                  }
-                },
-                "required": [
-                  "direct_connections",
-                  "reachable_nodes",
-                  "routing_assessment",
-                  "actual_routing_confirmed",
-                  "evidence_ids"
-                ]
+                "$ref": "#/$defs/result"
               }
             }
           }

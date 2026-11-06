@@ -82,29 +82,7 @@
           }
         },
         "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "observations": {
-              "$ref": "urn:verum:agents:v1:common#/$defs/observations"
-            },
-            "target_tag_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "uniqueItems": true
-            },
-            "forecast_horizon_s": {
-              "const": 300.0
-            }
-          },
-          "required": [
-            "observations",
-            "target_tag_ids",
-            "forecast_horizon_s"
-          ]
+          "$ref": "#/$defs/input"
         }
       },
       "required": [
@@ -218,31 +196,7 @@
         "result": {
           "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "forecasts": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/forecast"
-                  }
-                },
-                "health_score": {
-                  "type": "null"
-                },
-                "remaining_useful_life": {
-                  "type": "null"
-                },
-                "field_qualified": {
-                  "const": false
-                }
-              },
-              "required": [
-                "forecasts",
-                "health_score",
-                "remaining_useful_life",
-                "field_qualified"
-              ]
+              "$ref": "#/$defs/result"
             },
             {
               "type": "null"
@@ -280,31 +234,7 @@
           "then": {
             "properties": {
               "result": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "forecasts": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/forecast"
-                    }
-                  },
-                  "health_score": {
-                    "type": "null"
-                  },
-                  "remaining_useful_life": {
-                    "type": "null"
-                  },
-                  "field_qualified": {
-                    "const": false
-                  }
-                },
-                "required": [
-                  "forecasts",
-                  "health_score",
-                  "remaining_useful_life",
-                  "field_qualified"
-                ]
+                "$ref": "#/$defs/result"
               }
             }
           }

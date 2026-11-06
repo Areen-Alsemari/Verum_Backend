@@ -132,51 +132,7 @@
           }
         },
         "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "query_asset_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "uniqueItems": true
-            },
-            "assets": {
-              "type": "array",
-              "items": {
-                "$ref": "urn:verum:agents:v1:common#/$defs/asset"
-              }
-            },
-            "declared_facts": {
-              "type": "array",
-              "items": {
-                "$ref": "urn:verum:agents:v1:common#/$defs/fact"
-              }
-            },
-            "history": {
-              "type": "array",
-              "items": {
-                "$ref": "urn:verum:inspection_history:0.7.0"
-              }
-            },
-            "reference_evidence_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "uniqueItems": true
-            }
-          },
-          "required": [
-            "query_asset_ids",
-            "assets",
-            "declared_facts",
-            "history",
-            "reference_evidence_ids"
-          ]
+          "$ref": "#/$defs/input"
         }
       },
       "required": [
@@ -290,59 +246,7 @@
         "result": {
           "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "asset_records": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/asset"
-                  }
-                },
-                "facts": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:agents:v1:common#/$defs/fact"
-                  }
-                },
-                "history": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "urn:verum:inspection_history:0.7.0"
-                  }
-                },
-                "history_status": {
-                  "enum": [
-                    "no_verified_past_maintenance_supplied",
-                    "simulated_records_available",
-                    "unknown"
-                  ]
-                },
-                "missing_asset_ids": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "uniqueItems": true
-                },
-                "evidence_ids": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "uniqueItems": true
-                }
-              },
-              "required": [
-                "asset_records",
-                "facts",
-                "history",
-                "history_status",
-                "missing_asset_ids",
-                "evidence_ids"
-              ]
+              "$ref": "#/$defs/result"
             },
             {
               "type": "null"
@@ -380,59 +284,7 @@
           "then": {
             "properties": {
               "result": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "asset_records": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/asset"
-                    }
-                  },
-                  "facts": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:agents:v1:common#/$defs/fact"
-                    }
-                  },
-                  "history": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "urn:verum:inspection_history:0.7.0"
-                    }
-                  },
-                  "history_status": {
-                    "enum": [
-                      "no_verified_past_maintenance_supplied",
-                      "simulated_records_available",
-                      "unknown"
-                    ]
-                  },
-                  "missing_asset_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "uniqueItems": true
-                  },
-                  "evidence_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "uniqueItems": true
-                  }
-                },
-                "required": [
-                  "asset_records",
-                  "facts",
-                  "history",
-                  "history_status",
-                  "missing_asset_ids",
-                  "evidence_ids"
-                ]
+                "$ref": "#/$defs/result"
               }
             }
           }
