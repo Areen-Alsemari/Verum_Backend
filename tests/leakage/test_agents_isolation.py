@@ -66,13 +66,25 @@ def test_role_packages_import_only_contracts_and_shared_helpers(root: Path) -> N
     Independent: yes, because the check scans the imports of the source tree.
     """
     base = root / "src" / "verum" / "agents"
-    skipped = {"common", "__pycache__"}
+    skipped = {"common", "runner", "__pycache__"}
     roles = [p for p in sorted(base.iterdir()) if p.is_dir() and p.name not in skipped]
     assert len(roles) == 8
     for package in roles:
         own = f"verum.agents.{package.name}"
         for path in package.rglob("*.py"):
             assert _other_verum(_imports(path), own) == [], path.as_posix()
+
+
+def test_the_runner_imports_only_contracts_and_shared_helpers(root: Path) -> None:
+    """The runner finds role modules by name at run time and imports no role package itself.
+
+    Independent: yes, because the check scans the imports of the source tree.
+    """
+    base = root / "src" / "verum" / "agents" / "runner"
+    files = sorted(base.glob("*.py"))
+    assert len(files) >= 5
+    for path in files:
+        assert _other_verum(_imports(path), "verum.agents.runner") == [], path.as_posix()
 
 
 def _loaded_after_importing(statement: str) -> list[str]:
