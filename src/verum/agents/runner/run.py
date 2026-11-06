@@ -15,7 +15,7 @@ import jsonschema
 
 from verum.agents.common import build_request, check_request, check_response
 from verum.agents.runner.builders import BUILDERS, Reports
-from verum.agents.runner.bundle import Bundle
+from verum.agents.runner.bundle import Bundle, check_exchange, check_same_snapshot
 from verum.agents.runner.discovery import load_agent
 from verum.agents.runner.prepare import Prepared, prepare
 from verum.agents.runner.snapshot import Snapshot
@@ -53,6 +53,8 @@ def _answer(
         return None, _issue(role, "AGENT_INVALID_RESPONSE", "the response is not an object")
     try:
         check_response(request, response)
+        check_same_snapshot(request["context"], response["context"], f"{role} response")
+        check_exchange(request, response)
     except (ValueError, jsonschema.ValidationError) as error:
         return None, _issue(role, "AGENT_INVALID_RESPONSE", str(error))
     return response, None

@@ -13,7 +13,12 @@ from typing import Any, Final
 
 import jsonschema
 
-from verum.agents.common.envelope import build_response, implementation_block, make_issue
+from verum.agents.common.envelope import (
+    attached_report_ids,
+    build_response,
+    implementation_block,
+    make_issue,
+)
 from verum.agents.common.roles import require_role
 from verum.agents.common.validation import check_request, check_response
 from verum.contracts.agent_interfaces import contract_directory
@@ -29,6 +34,15 @@ def _example_response(role: str) -> dict[str, Any]:
     path = contract_directory() / "examples" / f"{role}.response.json"
     loaded: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return loaded
+
+
+def _consumed(example: list[str], request: dict[str, Any], known: set[str]) -> list[str]:
+    """The example's evidence that exists in the request, then the attached reports.
+
+    The placeholder reads none of them; it lists the reports so that the bundle rule holds.
+    """
+    wanted = [i for i in example if i in known]
+    return wanted + [i for i in attached_report_ids(request) if i not in wanted]
 
 
 class StubAgent:
@@ -61,7 +75,7 @@ class StubAgent:
             request,
             status=example["status"],
             result=example["result"],
-            consumed_evidence_ids=[i for i in example["consumed_evidence_ids"] if i in known],
+            consumed_evidence_ids=_consumed(example["consumed_evidence_ids"], request, known),
             implementation=self._implementation(),
             issues=[make_issue(STUB_CODE, STUB_MESSAGE)],
             limitations=[STUB_LIMITATION],
@@ -72,7 +86,7 @@ class StubAgent:
             request,
             status="insufficient_evidence",
             result=None,
-            consumed_evidence_ids=[],
+            consumed_evidence_ids=attached_report_ids(request),
             implementation=self._implementation(),
             issues=[make_issue(STUB_CODE, STUB_MESSAGE)],
             limitations=[STUB_LIMITATION],

@@ -6,6 +6,7 @@ The helpers carry no role logic and no physical value.
 
 from verum.agents.common.context import file_sha256, make_context, make_context_from_reference
 from verum.agents.common.envelope import (
+    attached_report_ids,
     build_request,
     build_response,
     implementation_block,
@@ -28,6 +29,7 @@ __all__ = [
     "RoleRecord",
     "StubAgent",
     "analysis_id",
+    "attached_report_ids",
     "attach_summary",
     "build_request",
     "build_response",

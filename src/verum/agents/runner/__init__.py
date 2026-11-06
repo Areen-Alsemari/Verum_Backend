@@ -5,9 +5,17 @@ validates both messages, registers the report as evidence and carries on when an
 holds no role logic, and agents are replaced without any change here.
 """
 
-from verum.agents.runner.bundle import Bundle
+from verum.agents.runner.bundle import Bundle, BundleError, VerifiedBundle, verify_bundle
 from verum.agents.runner.discovery import load_agent
 from verum.agents.runner.run import run_analysis
 from verum.agents.runner.snapshot import Snapshot
 
-__all__ = ["Bundle", "Snapshot", "load_agent", "run_analysis"]
+__all__ = [
+    "Bundle",
+    "BundleError",
+    "Snapshot",
+    "VerifiedBundle",
+    "load_agent",
+    "run_analysis",
+    "verify_bundle",
+]

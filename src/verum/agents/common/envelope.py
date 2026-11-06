@@ -37,6 +37,14 @@ def make_issue(code: str, message: str, evidence_ids: Iterable[str] = ()) -> dic
     return {"code": code, "message": message, "evidence_ids": list(evidence_ids)}
 
 
+def attached_report_ids(request: dict[str, Any]) -> list[str]:
+    """Return the identifiers of the upstream reports attached to a request, in field order."""
+    return [
+        value["report_id"] for key, value in request["input"].items()
+        if key.endswith("_report") and value is not None
+    ]
+
+
 def build_request(
     role: str, request_id: str, registry: EvidenceRegistry, inputs: dict[str, Any]
 ) -> dict[str, Any]:
