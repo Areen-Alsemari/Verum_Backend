@@ -47,7 +47,7 @@ request = build_request("predictive_health", "REQ-1", registry, {
 })
 ```
 
-An upstream report is registered with `registry.add_report(report)`. It returns the normalised copy that must be placed in the input, because the registered hash covers exactly that copy. The registry computes the report's roots, availability and source reference. Rebuild the request evidence from `registry.rows()` afterwards.
+An upstream report is registered with `registry.add_report(report)`. It returns a plain copy of the report, equal to the original, and the registered hash is the contract hash of that copy. Place the report (or the returned copy) in the input unchanged: the validator hashes exactly what is embedded. The registry computes the report's roots, availability and source reference. Rebuild the request evidence from `registry.rows()` afterwards.
 
 A response is built with `build_response(request, status=..., result=..., consumed_evidence_ids=..., implementation=implementation_block(name, version), issues=..., limitations=...)`. It copies the context exactly, derives the report identifier, and refuses a result next to an `error` or `insufficient_evidence` status, and either of those statuses without an issue. Call `check_request(request)` before inference and `check_response(request, response)` before returning. Both reuse the loaded schemas.
 
@@ -59,7 +59,7 @@ A response is built with `build_response(request, status=..., result=..., consum
 
 ## The number rule
 
-Integral numbers are written as integers: 300.0 becomes 300 before a message is hashed or embedded, so both spellings give one hash. `normalise` and `stable_hash` apply the rule, and the registry and builders call them for you. NaN, infinities and numpy scalars or arrays are rejected with an error rather than converted, so convert model outputs with `float(...)` before they enter a message. Hashes in the shipped example messages predate this rule and keep their original spelling; they are validated as they are.
+Numbers keep the type they have, and the helpers never rewrite them. The contract hashes a message exactly as written, so 300 and 300.0 give different hashes on purpose, and the helpers always hash what the validator hashes: `stable_hash(x)` equals the contract `content_hash(x)` for any plain message. Keep one spelling per value in your own code, since a client that rewrites 300.0 as 300 changes the hash of a report. NaN and infinities are rejected. Numpy scalars are converted to Python numbers at the boundary by `to_plain`, and numpy arrays are rejected, so convert arrays with `.tolist()` before they enter a message. The example messages shipped with the contract are used as they are.
 
 ## Observations and tag order
 
