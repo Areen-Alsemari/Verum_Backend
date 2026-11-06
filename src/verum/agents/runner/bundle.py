@@ -23,6 +23,7 @@ from verum.agents.common import (
     stable_hash,
 )
 from verum.agents.common.stub import STUB_CODE
+from verum.agents.runner.wiring import UPSTREAM
 
 PLACEHOLDER_CODE = "PLACEHOLDER_AGENT"
 SNAPSHOT_FIELDS = (
@@ -87,6 +88,23 @@ def _check_request(role: str, request: dict[str, Any], context: dict[str, Any]) 
         raise BundleError(f"{role} request breaks its schema") from error
     except ValueError as error:
         raise BundleError(f"{role} request: {error}") from error
+
+
+def _check_attached(
+    role: str, request: dict[str, Any], reports: dict[str, dict[str, Any] | None]
+) -> None:
+    """Each attached report must be the report the bundle holds for its producer."""
+    for key, value in request["input"].items():
+        if not key.endswith("_report") or value is None:
+            continue
+        producer = UPSTREAM.get(role, {}).get(key)
+        registered = reports.get(producer) if producer else None
+        if registered is None:
+            raise BundleError(f"{role} {key} has no registered report of {producer}")
+        if value["report_id"] != registered["report_id"]:
+            raise BundleError(f"{role} {key} is not the registered report of {producer}")
+        if stable_hash(value) != stable_hash(registered):
+            raise BundleError(f"{role} {key} differs from the registered report of {producer}")
 
 
 def _check_report(
@@ -163,6 +181,7 @@ def verify_bundle(
     _check_ids(bundle)
     for role, request in bundle.requests.items():
         _check_request(role, request, bundle.context)
+        _check_attached(role, request, bundle.reports)
     for role, report in bundle.reports.items():
         if report is None:
             continue

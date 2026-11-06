@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from _runner_cases import run
-from verum.agents.common import attached_report_ids, stable_hash
+from _runner_cases import placeholders, run
+from verum.agents.common import StubAgent, attached_report_ids, check_request, stable_hash
 from verum.agents.runner import Bundle, BundleError, verify_bundle
 from verum.agents.runner.bundle import check_exchange
 
@@ -16,6 +16,15 @@ CHANGES: dict[str, Any] = {
     "case_id": "other-case", "analysis_id": "AN-C7-r9", "revision": 4, "as_of_s": 299.0,
     "reference_snapshot_sha256": "cd" * 32,
 }
+
+
+class Altered(StubAgent):
+    """A placeholder whose report differs in content but not in identifier."""
+
+    def run(self, request: dict[str, Any]) -> dict[str, Any]:
+        response = super().run(request)
+        response["limitations"] = [*response["limitations"], "altered"]
+        return response
 
 
 def _bundle() -> Bundle:
@@ -128,3 +137,75 @@ def test_the_verified_bundle_carries_context_responses_and_evidence() -> None:
     }
     verified.responses["predictive_health"]["limitations"].append("x")
     assert "x" not in (bundle.reports["predictive_health"] or {})["limitations"]
+
+
+def _tamper_attached(bundle: Bundle, role: str, field: str) -> dict[str, Any]:
+    """Edit an embedded upstream report and recompute the request's own evidence hash."""
+    request = bundle.requests[role]
+    report: dict[str, Any] = request["input"][field]
+    report["limitations"] = [*report["limitations"], "tampered"]
+    for row in request["evidence"]:
+        if row["evidence_id"] == report["report_id"]:
+            row["content_sha256"] = stable_hash(report)
+    return report
+
+
+def test_a_tampered_attached_report_is_rejected_even_with_consistent_evidence() -> None:
+    """Changing Agent 1's report in Agent 2's request fails although the request still validates.
+
+    Independent: yes, because the contract validator accepts the tampered request on its own.
+    """
+    bundle = _bundle()
+    verify_bundle(bundle)
+    _tamper_attached(bundle, "anomaly_detection", "forecast_report")
+    check_request(bundle.requests["anomaly_detection"])
+    message = "differs from the registered report of predictive_health"
+    with pytest.raises(BundleError, match=message):
+        verify_bundle(bundle)
+
+
+@pytest.mark.parametrize(
+    "role, field",
+    [("diagnostic_reasoning", "asset_report"), ("inspection_planning", "diagnosis_report"),
+     ("evidence_verification_decision", "inspection_quality_report")],
+)
+def test_every_attached_report_is_compared_with_its_producer(role: str, field: str) -> None:
+    """The comparison covers every upstream field, not only the forecast.
+
+    Independent: yes, because each rejection comes from one literal edit.
+    """
+    bundle = _bundle()
+    _tamper_attached(bundle, role, field)
+    with pytest.raises(BundleError, match=f"{role} {field} differs"):
+        verify_bundle(bundle)
+
+
+def test_an_attached_report_whose_producer_has_no_report_is_rejected() -> None:
+    """An attached report is refused when the bundle holds no report for its producer.
+
+    Independent: yes, because the producer's report is removed by the test.
+    """
+    bundle = _bundle()
+    bundle.reports["predictive_health"] = None
+    with pytest.raises(BundleError, match="no registered report of predictive_health"):
+        verify_bundle(bundle)
+
+
+def test_a_report_from_another_run_with_the_same_identifier_is_rejected() -> None:
+    """A report with the same identifier but different content does not replace the registered one.
+
+    Independent: yes, because the other run uses a different agent class.
+    """
+    bundle = _bundle()
+    other = run(agents={**placeholders(), "predictive_health": Altered("predictive_health")})
+    report = copy.deepcopy(other.reports["predictive_health"])
+    registered = bundle.reports["predictive_health"]
+    assert report is not None and registered is not None
+    assert report["report_id"] == registered["report_id"]
+    request = bundle.requests["anomaly_detection"]
+    request["input"]["forecast_report"] = report
+    for row in request["evidence"]:
+        if row["evidence_id"] == report["report_id"]:
+            row["content_sha256"] = stable_hash(report)
+    with pytest.raises(BundleError, match="differs from the registered report"):
+        verify_bundle(bundle)
