@@ -14,12 +14,15 @@ from typing import Any
 import jsonschema
 
 from verum.agents.common import build_request, check_request, check_response
+from verum.agents.common.stub import STUB_CODE, StubAgent
 from verum.agents.runner.builders import BUILDERS, Reports
 from verum.agents.runner.bundle import (
+    PLACEHOLDER_CODE,
     Bundle,
     BundleError,
     VerifiedBundle,
     check_exchange,
+    check_placeholders,
     check_same_snapshot,
     verify_bundle,
 )
@@ -48,23 +51,28 @@ def _call(agent: Agent, request: dict[str, Any], timeout_s: float | None) -> Any
 
 def _answer(
     role: str, request: dict[str, Any], agents: Mapping[str, Agent], timeout_s: float | None
-) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+) -> tuple[dict[str, Any] | None, dict[str, str] | None, bool]:
+    """Return the validated response or an issue, and whether a placeholder served the role."""
+    placeholder = False
     try:
         agent = agents[role] if role in agents else load_agent(role)
+        placeholder = isinstance(agent, StubAgent)
         response = _call(agent, request, timeout_s)
     except FutureTimeout:
-        return None, _issue(role, "AGENT_TIMEOUT", f"no answer within {timeout_s} s")
+        return None, _issue(role, "AGENT_TIMEOUT", f"no answer within {timeout_s} s"), placeholder
     except Exception as error:  # an agent may fail in any way; the run must go on
-        return None, _issue(role, "AGENT_ERROR", f"{type(error).__name__}: {error}")
+        return None, _issue(role, "AGENT_ERROR", f"{type(error).__name__}: {error}"), placeholder
     if not isinstance(response, dict):
-        return None, _issue(role, "AGENT_INVALID_RESPONSE", "the response is not an object")
+        issue = _issue(role, "AGENT_INVALID_RESPONSE", "the response is not an object")
+        return None, issue, placeholder
     try:
         check_response(request, response)
         check_same_snapshot(request["context"], response["context"], f"{role} response")
         check_exchange(request, response)
     except (ValueError, jsonschema.ValidationError) as error:
-        return None, _issue(role, "AGENT_INVALID_RESPONSE", str(error))
-    return response, None
+        return None, _issue(role, "AGENT_INVALID_RESPONSE", str(error)), placeholder
+    marked = any(issue["code"] == STUB_CODE for issue in response["issues"])
+    return response, None, placeholder or marked
 
 
 def _run_role(
@@ -82,7 +90,12 @@ def _run_role(
         bundle.issues.append(_issue(role, "REQUEST_INVALID", str(error)))
         return
     bundle.requests[role] = request
-    response, problem = _answer(role, request, agents, timeout_s)
+    response, problem, placeholder = _answer(role, request, agents, timeout_s)
+    if placeholder:
+        bundle.notes.append({
+            "role": role, "code": PLACEHOLDER_CODE,
+            "message": "A placeholder agent served this role, so its report carries no role logic.",
+        })
     if problem is not None or response is None:
         bundle.issues.append(problem or _issue(role, "AGENT_ERROR", "no response"))
         return
@@ -95,18 +108,22 @@ def run_analysis(
     *,
     agents: Mapping[str, Agent] | None = None,
     timeout_s: float | None = None,
+    allow_placeholders: bool = True,
     previous: VerifiedBundle | None = None,
 ) -> Bundle:
     """Run all roles on a snapshot and return the bundle of requests, reports and issues.
 
     Agents are found by convention unless supplied. A previous verified bundle makes the run check
-    that this one is a genuine new revision; earlier reports are never carried into this run.
+    that this one is a genuine new revision; earlier reports are never carried into this run. Each
+    role served by a placeholder gets a note; with allow_placeholders false the run is rejected.
     """
     prep = prepare(snapshot, mode)
     bundle = Bundle(context=prep.context, registry=prep.registry, notes=prep.notes)
     for stage in workflow_stages():
         for role in stage:
             _run_role(role, prep, bundle, agents or {}, timeout_s)
+    if not allow_placeholders:
+        check_placeholders(bundle)
     if previous is not None:
         try:
             verify_bundle(bundle, previous)

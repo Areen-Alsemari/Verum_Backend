@@ -22,7 +22,9 @@ from verum.agents.common import (
     check_response,
     stable_hash,
 )
+from verum.agents.common.stub import STUB_CODE
 
+PLACEHOLDER_CODE = "PLACEHOLDER_AGENT"
 SNAPSHOT_FIELDS = (
     "case_id", "analysis_id", "revision", "as_of_s", "reference_snapshot_sha256",
     "execution_mode",
@@ -134,8 +136,30 @@ def check_revision(bundle: Bundle, previous: VerifiedBundle) -> None:
         raise BundleError("a report of an earlier revision is reused as current")
 
 
-def verify_bundle(bundle: Bundle, previous: VerifiedBundle | None = None) -> VerifiedBundle:
-    """Check every message and every cross-cutting rule, and return the verified bundle."""
+def placeholder_roles(bundle: Bundle) -> list[str]:
+    """Roles served by a placeholder, from the run notes and from the reports themselves."""
+    noted = {n["role"] for n in bundle.notes if n["code"] == PLACEHOLDER_CODE}
+    marked = {
+        role for role, report in bundle.reports.items()
+        if report is not None and any(i["code"] == STUB_CODE for i in report["issues"])
+    }
+    return sorted(noted | marked)
+
+
+def check_placeholders(bundle: Bundle) -> None:
+    """Raise if any role was served by a placeholder agent."""
+    roles = placeholder_roles(bundle)
+    if roles:
+        raise BundleError(f"placeholder agents serve: {', '.join(roles)}")
+
+
+def verify_bundle(
+    bundle: Bundle, previous: VerifiedBundle | None = None, *, allow_placeholders: bool = True
+) -> VerifiedBundle:
+    """Check every message and every cross-cutting rule, and return the verified bundle.
+
+    Placeholder agents are accepted unless allow_placeholders is false.
+    """
     _check_ids(bundle)
     for role, request in bundle.requests.items():
         _check_request(role, request, bundle.context)
@@ -148,6 +172,8 @@ def verify_bundle(bundle: Bundle, previous: VerifiedBundle | None = None) -> Ver
         _check_report(role, bundle.requests[role], report, bundle.registry)
     if previous is not None:
         check_revision(bundle, previous)
+    if not allow_placeholders:
+        check_placeholders(bundle)
     return VerifiedBundle(
         context=copy.deepcopy(bundle.context),
         responses={r: copy.deepcopy(v) for r, v in bundle.reports.items() if v is not None},
