@@ -117,7 +117,7 @@ def _check_ids(bundle: Bundle) -> None:
         raise BundleError("report identifier collides with an evidence identifier")
 
 
-def _check_revision(bundle: Bundle, previous: VerifiedBundle) -> None:
+def check_revision(bundle: Bundle, previous: VerifiedBundle) -> None:
     old, new = previous.context, bundle.context
     if new["case_id"] != old["case_id"]:
         raise BundleError("a revision belongs to the same case")
@@ -147,7 +147,7 @@ def verify_bundle(bundle: Bundle, previous: VerifiedBundle | None = None) -> Ver
         check_same_snapshot(bundle.context, report["context"], f"{role} response")
         _check_report(role, bundle.requests[role], report, bundle.registry)
     if previous is not None:
-        _check_revision(bundle, previous)
+        check_revision(bundle, previous)
     return VerifiedBundle(
         context=copy.deepcopy(bundle.context),
         responses={r: copy.deepcopy(v) for r, v in bundle.reports.items() if v is not None},

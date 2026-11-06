@@ -85,3 +85,28 @@ Edit the shared helpers, the contract validator, the schemas, `pyproject.toml` a
 The folder `tests/agents/fixtures/chained/` holds one runtime snapshot answered by all eight placeholders: a request and a response for every role, and `index.json` with the context, the run order and the report identifiers. Every request after the first carries the real, hashed reports of the roles it depends on, so you can test your agent against genuine upstream input instead of the empty contract examples. Load a request with `json.load`, call `check_request`, run your agent, and call `check_response`.
 
 Regenerate the files with `uv run python tools/agents/build_chained_fixtures.py` from a checkout that has the extracted release folder. The `--release` option points at another release folder and `--output` at another target. The script always answers with the placeholders so that the files stay the same while owners replace their agents; add `--installed-agents` to see a run with whatever is installed. The `--check` option compares the files on disk with a fresh run and exits with status 1 if they differ. Regenerate and commit the files only when the request builders or the contract change.
+
+## The runner
+
+`verum.agents.runner` runs all eight roles on one snapshot. It is a plain function, with no framework and no role logic.
+
+```python
+from verum.agents.runner import Snapshot, next_revision, run_analysis, verify_bundle
+
+snapshot = Snapshot(
+    case_id="C7", revision=0, as_of_s=300.0, summary=summary, reference=reference,
+    reference_snapshot_sha256=reference_file_sha256,
+)
+bundle = run_analysis(snapshot, "runtime")
+verified = verify_bundle(bundle)
+```
+
+The summary is a prepared observation summary, for example the `observations` input of a role record, and the reference is the public reference. Optional snapshot fields carry what a caller can supply: the queried assets and direction, history, inspection results and requests, process coverage, constraint checks, a budget and evidence proposals. Whatever is not supplied is left at the contract's empty or null value, and `bundle.notes` records each such gap by role and code. Nothing is invented. Declared facts carry a unit or a parameter status only where the reference states one.
+
+The roles run in the stage order of the interface manifest. Each request is built from the snapshot and the reports so far, validated, sent to the agent, and the response is validated again. A valid report is registered in the evidence registry with its roots and embedded unchanged in the requests that need it. If an agent raises, returns something invalid, returns a report of another snapshot or mode, ignores an attached report, or exceeds `timeout_s`, its report is null, `bundle.issues` gets a structured entry with the role and a code, nothing is added to the registry, and the run continues. The codes are `AGENT_ERROR`, `AGENT_TIMEOUT`, `AGENT_INVALID_RESPONSE` and `REQUEST_INVALID`.
+
+The runner finds the agent of a role by convention. Define exactly one class whose name ends in `Agent` and which has a `run` method in `verum/agents/<role>/agent.py`, or a function called `create_agent` there that returns an agent. Replace the placeholder in that file and the runner uses it with no other change. Tests can pass `agents={role: instance}` to `run_analysis` instead.
+
+`verify_bundle` checks every message again and the rules that span the whole analysis: every report has the case, analysis, revision, cutoff, reference snapshot and execution mode of the bundle; no fixture-mode report appears in a runtime request; each response lists every report attached to its request among its consumed evidence; report identifiers are unique and never equal an evidence identifier; and each report is registered under its own content hash. It returns the context, the validated responses and the evidence rows, which is what Agent 7's report assembly receives.
+
+A new inspection result starts a new analysis. Call `next_revision(snapshot, as_of_s=..., summary=..., inspection_results=...)` with observations prepared for the later cutoff, and run it again with `previous=verified` to check that the revision increased and the analysis identifier changed. The earlier results, requests and coverage carry over, and no earlier report is reused: all eight roles run again against a fresh registry.
