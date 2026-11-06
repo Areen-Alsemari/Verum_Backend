@@ -247,3 +247,7 @@ uv run pytest -q tests/regression/test_agent_interfaces.py
 The standalone check reports eight interfaces, sixteen example messages and `passed: true`. The tests additionally exercise stale contexts, future evidence, changed hashes, unit mismatches, invented retrieved facts, unsupported inspection recommendations and control/qualification flags. These checks establish connection rules, not model accuracy or physical validation.
 
 During implementation, call `validate_request(request)` before `run` and `validate_response(request, response)` before publishing. The functions live in `verum.contracts.agent_interfaces`. An owner is complete when its component obeys the shared messages, supplies reproducible task-specific evaluation, handles unknowns and failures, records its artifact/preprocessing identity where applicable, and passes contract tests with both example and real reports.
+
+## Structured report assembly
+
+Agent 7 also owns a separate documentation operation after Agent 8 returns its current assessment. This operation consumes a verified bundle of same-analysis reports and evidence and returns the closed JSON maintenance assessment defined in `contracts/reports/maintenance_report.schema.json`. It does not add fields to the eight existing run messages or create a ninth agent. The frontend renders that JSON and exports PDF. See `docs/agent_interfaces.md` for build instructions, model comparisons, reporting ownership and optional Cohere wording boundaries.
