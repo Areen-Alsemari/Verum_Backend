@@ -1,0 +1,58 @@
+{
+  "interface_version": "1.0.0",
+  "message_type": "request",
+  "agent": "evidence_verification_decision",
+  "request_id": "contract-request-evidence_verification_decision",
+  "context": {
+    "case_id": "contract-example",
+    "analysis_id": "contract-example-snapshot",
+    "revision": 0,
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "data_release": "verum_reference_v2",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "scope_id": "verum_supported_reference_v2",
+    "execution_mode": "contract_fixture"
+  },
+  "evidence": [
+    {
+      "evidence_id": "source-observations",
+      "kind": "observation_window",
+      "source_ref": "observations:training-prefix-at-300",
+      "available_at_s": 300.0,
+      "content_sha256": "baa8b00d4c8fc5d36b4bede20eae29b7d775084cd53ca650eb7e8a2f8bd6fec7",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "provenance": "simulated_observation"
+    },
+    {
+      "evidence_id": "source-reference",
+      "kind": "declared_reference",
+      "source_ref": "reference:public_reference",
+      "available_at_s": 0.0,
+      "content_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+      "root_evidence_ids": [
+        "source-reference"
+      ],
+      "provenance": "declared_design"
+    },
+    {
+      "evidence_id": "features-summary",
+      "kind": "observation_representation",
+      "source_ref": "features:training-summary-at-300",
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "provenance": "derived_observation"
+    }
+  ],
+  "input": {
+    "diagnosis_report": null,
+    "inspection_plan_report": null,
+    "inspection_quality_report": null,
+    "evidence_proposals": []
+  }
+}

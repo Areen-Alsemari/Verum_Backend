@@ -1,0 +1,453 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:agents:v1:topology_dependency",
+  "title": "Topology & Dependency interface v1",
+  "$defs": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query_asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "direction": {
+          "enum": [
+            "upstream",
+            "downstream",
+            "both"
+          ]
+        },
+        "declared_connections": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/connection"
+          }
+        },
+        "reference_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "observations": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/observations"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "query_asset_ids",
+        "direction",
+        "declared_connections",
+        "reference_evidence_ids",
+        "observations"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direct_connections": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/connection"
+          }
+        },
+        "reachable_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "routing_assessment": {
+          "enum": [
+            "declared_only",
+            "ambiguous",
+            "unknown"
+          ]
+        },
+        "actual_routing_confirmed": {
+          "const": false
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "direct_connections",
+        "reachable_nodes",
+        "routing_assessment",
+        "actual_routing_confirmed",
+        "evidence_ids"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "request"
+        },
+        "agent": {
+          "const": "topology_dependency"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/evidence"
+          }
+        },
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query_asset_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "direction": {
+              "enum": [
+                "upstream",
+                "downstream",
+                "both"
+              ]
+            },
+            "declared_connections": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:verum:agents:v1:common#/$defs/connection"
+              }
+            },
+            "reference_evidence_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "observations": {
+              "anyOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/observations"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "query_asset_ids",
+            "direction",
+            "declared_connections",
+            "reference_evidence_ids",
+            "observations"
+          ]
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "context",
+        "evidence",
+        "input"
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "response"
+        },
+        "agent": {
+          "const": "topology_dependency"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "report_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "artifact_sha256": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "feature_profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "artifact_sha256",
+            "feature_profile_id"
+          ]
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "degraded",
+            "insufficient_evidence",
+            "error"
+          ]
+        },
+        "consumed_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/issue"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "advisory_only": {
+          "const": true
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "direct_connections": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "urn:verum:agents:v1:common#/$defs/connection"
+                  }
+                },
+                "reachable_nodes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "routing_assessment": {
+                  "enum": [
+                    "declared_only",
+                    "ambiguous",
+                    "unknown"
+                  ]
+                },
+                "actual_routing_confirmed": {
+                  "const": false
+                },
+                "evidence_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "direct_connections",
+                "reachable_nodes",
+                "routing_assessment",
+                "actual_routing_confirmed",
+                "evidence_ids"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "report_id",
+        "context",
+        "implementation",
+        "status",
+        "consumed_evidence_ids",
+        "issues",
+        "limitations",
+        "advisory_only",
+        "result"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "degraded"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "direct_connections": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "urn:verum:agents:v1:common#/$defs/connection"
+                    }
+                  },
+                  "reachable_nodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "routing_assessment": {
+                    "enum": [
+                      "declared_only",
+                      "ambiguous",
+                      "unknown"
+                    ]
+                  },
+                  "actual_routing_confirmed": {
+                    "const": false
+                  },
+                  "evidence_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "direct_connections",
+                  "reachable_nodes",
+                  "routing_assessment",
+                  "actual_routing_confirmed",
+                  "evidence_ids"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "insufficient_evidence",
+                  "error"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "null"
+              },
+              "issues": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ]
+}

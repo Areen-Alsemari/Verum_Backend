@@ -1,0 +1,832 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:agents:v1:evidence_verification_decision",
+  "title": "Evidence Verification & Decision interface v1",
+  "$defs": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "diagnosis_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:diagnostic_reasoning#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inspection_plan_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:inspection_planning#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inspection_quality_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:inspection_quality_documentation#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_proposals": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/proposal"
+          }
+        }
+      },
+      "required": [
+        "diagnosis_report",
+        "inspection_plan_report",
+        "inspection_quality_report",
+        "evidence_proposals"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "decision_state": {
+          "enum": [
+            "assessment_available",
+            "more_evidence_required",
+            "review_required",
+            "inconclusive"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hypothesis_report_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "evidence_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "proposal_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "time_admissible": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "provenance_verified": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quality_acceptable": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "scope_supported": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usable": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "proposal_id",
+              "time_admissible",
+              "provenance_verified",
+              "quality_acceptable",
+              "scope_supported",
+              "usable",
+              "reasons",
+              "evidence_ids"
+            ]
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/check"
+          }
+        },
+        "next_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "human_review",
+                  "collect_evidence",
+                  "review_records",
+                  "continue_observation"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "kind",
+              "description",
+              "evidence_ids"
+            ]
+          }
+        },
+        "human_decision_required": {
+          "const": true
+        },
+        "automatic_action_authorized": {
+          "const": false
+        },
+        "equipment_condition_confirmed": {
+          "const": false
+        }
+      },
+      "required": [
+        "decision_state",
+        "summary",
+        "hypothesis_report_ids",
+        "evidence_checks",
+        "conflicts",
+        "next_steps",
+        "human_decision_required",
+        "automatic_action_authorized",
+        "equipment_condition_confirmed"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "request"
+        },
+        "agent": {
+          "const": "evidence_verification_decision"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/evidence"
+          }
+        },
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "diagnosis_report": {
+              "anyOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:diagnostic_reasoning#/$defs/response"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "inspection_plan_report": {
+              "anyOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:inspection_planning#/$defs/response"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "inspection_quality_report": {
+              "anyOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:inspection_quality_documentation#/$defs/response"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "evidence_proposals": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:verum:agents:v1:common#/$defs/proposal"
+              }
+            }
+          },
+          "required": [
+            "diagnosis_report",
+            "inspection_plan_report",
+            "inspection_quality_report",
+            "evidence_proposals"
+          ]
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "context",
+        "evidence",
+        "input"
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "response"
+        },
+        "agent": {
+          "const": "evidence_verification_decision"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "report_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "artifact_sha256": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "feature_profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "artifact_sha256",
+            "feature_profile_id"
+          ]
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "degraded",
+            "insufficient_evidence",
+            "error"
+          ]
+        },
+        "consumed_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/issue"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "advisory_only": {
+          "const": true
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "decision_state": {
+                  "enum": [
+                    "assessment_available",
+                    "more_evidence_required",
+                    "review_required",
+                    "inconclusive"
+                  ]
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "hypothesis_report_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "evidence_checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "proposal_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "time_admissible": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "provenance_verified": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "quality_acceptable": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "scope_supported": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "usable": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "reasons": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "evidence_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "proposal_id",
+                      "time_admissible",
+                      "provenance_verified",
+                      "quality_acceptable",
+                      "scope_supported",
+                      "usable",
+                      "reasons",
+                      "evidence_ids"
+                    ]
+                  }
+                },
+                "conflicts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "urn:verum:agents:v1:common#/$defs/check"
+                  }
+                },
+                "next_steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "human_review",
+                          "collect_evidence",
+                          "review_records",
+                          "continue_observation"
+                        ]
+                      },
+                      "description": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "evidence_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "description",
+                      "evidence_ids"
+                    ]
+                  }
+                },
+                "human_decision_required": {
+                  "const": true
+                },
+                "automatic_action_authorized": {
+                  "const": false
+                },
+                "equipment_condition_confirmed": {
+                  "const": false
+                }
+              },
+              "required": [
+                "decision_state",
+                "summary",
+                "hypothesis_report_ids",
+                "evidence_checks",
+                "conflicts",
+                "next_steps",
+                "human_decision_required",
+                "automatic_action_authorized",
+                "equipment_condition_confirmed"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "report_id",
+        "context",
+        "implementation",
+        "status",
+        "consumed_evidence_ids",
+        "issues",
+        "limitations",
+        "advisory_only",
+        "result"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "degraded"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "decision_state": {
+                    "enum": [
+                      "assessment_available",
+                      "more_evidence_required",
+                      "review_required",
+                      "inconclusive"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "hypothesis_report_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "evidence_checks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "proposal_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "time_admissible": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "provenance_verified": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "quality_acceptable": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "scope_supported": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "usable": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "evidence_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "proposal_id",
+                        "time_admissible",
+                        "provenance_verified",
+                        "quality_acceptable",
+                        "scope_supported",
+                        "usable",
+                        "reasons",
+                        "evidence_ids"
+                      ]
+                    }
+                  },
+                  "conflicts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "urn:verum:agents:v1:common#/$defs/check"
+                    }
+                  },
+                  "next_steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "human_review",
+                            "collect_evidence",
+                            "review_records",
+                            "continue_observation"
+                          ]
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "evidence_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "description",
+                        "evidence_ids"
+                      ]
+                    }
+                  },
+                  "human_decision_required": {
+                    "const": true
+                  },
+                  "automatic_action_authorized": {
+                    "const": false
+                  },
+                  "equipment_condition_confirmed": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "decision_state",
+                  "summary",
+                  "hypothesis_report_ids",
+                  "evidence_checks",
+                  "conflicts",
+                  "next_steps",
+                  "human_decision_required",
+                  "automatic_action_authorized",
+                  "equipment_condition_confirmed"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "insufficient_evidence",
+                  "error"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "null"
+              },
+              "issues": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ]
+}
