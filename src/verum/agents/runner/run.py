@@ -15,7 +15,14 @@ import jsonschema
 
 from verum.agents.common import build_request, check_request, check_response
 from verum.agents.runner.builders import BUILDERS, Reports
-from verum.agents.runner.bundle import Bundle, check_exchange, check_same_snapshot
+from verum.agents.runner.bundle import (
+    Bundle,
+    BundleError,
+    VerifiedBundle,
+    check_exchange,
+    check_same_snapshot,
+    verify_bundle,
+)
 from verum.agents.runner.discovery import load_agent
 from verum.agents.runner.prepare import Prepared, prepare
 from verum.agents.runner.snapshot import Snapshot
@@ -88,15 +95,21 @@ def run_analysis(
     *,
     agents: Mapping[str, Agent] | None = None,
     timeout_s: float | None = None,
+    previous: VerifiedBundle | None = None,
 ) -> Bundle:
     """Run all roles on a snapshot and return the bundle of requests, reports and issues.
 
-    Agents are found by convention unless supplied. Every run starts from an empty registry, so no
-    report of an earlier run is carried into this one.
+    Agents are found by convention unless supplied. A previous verified bundle makes the run check
+    that this one is a genuine new revision; earlier reports are never carried into this run.
     """
     prep = prepare(snapshot, mode)
     bundle = Bundle(context=prep.context, registry=prep.registry, notes=prep.notes)
     for stage in workflow_stages():
         for role in stage:
             _run_role(role, prep, bundle, agents or {}, timeout_s)
+    if previous is not None:
+        try:
+            verify_bundle(bundle, previous)
+        except BundleError as error:
+            raise BundleError(f"not a valid next revision: {error}") from error
     return bundle

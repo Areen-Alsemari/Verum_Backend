@@ -2,7 +2,7 @@
 
 The validators check each message against its own request. The bundle rules check the whole set:
 every report belongs to one snapshot and mode, each response consumed the reports attached to its
-request, and identifiers do not collide. Agent 7's report
+request, identifiers do not collide, and a later revision is a new analysis. Agent 7's report
 assembly receives only a verified bundle.
 """
 
@@ -117,7 +117,24 @@ def _check_ids(bundle: Bundle) -> None:
         raise BundleError("report identifier collides with an evidence identifier")
 
 
-def verify_bundle(bundle: Bundle) -> VerifiedBundle:
+def _check_revision(bundle: Bundle, previous: VerifiedBundle) -> None:
+    old, new = previous.context, bundle.context
+    if new["case_id"] != old["case_id"]:
+        raise BundleError("a revision belongs to the same case")
+    if new["revision"] <= old["revision"]:
+        raise BundleError("revision does not increase")
+    if new["analysis_id"] == old["analysis_id"]:
+        raise BundleError("analysis identifier did not change with the revision")
+    if new["as_of_s"] < old["as_of_s"]:
+        raise BundleError("a revision cannot move the cutoff backwards")
+    reused = {r["report_id"] for r in bundle.reports.values() if r} & {
+        r["report_id"] for r in previous.responses.values()
+    }
+    if reused:
+        raise BundleError("a report of an earlier revision is reused as current")
+
+
+def verify_bundle(bundle: Bundle, previous: VerifiedBundle | None = None) -> VerifiedBundle:
     """Check every message and every cross-cutting rule, and return the verified bundle."""
     _check_ids(bundle)
     for role, request in bundle.requests.items():
@@ -129,6 +146,8 @@ def verify_bundle(bundle: Bundle) -> VerifiedBundle:
             raise BundleError(f"{role} report has no request")
         check_same_snapshot(bundle.context, report["context"], f"{role} response")
         _check_report(role, bundle.requests[role], report, bundle.registry)
+    if previous is not None:
+        _check_revision(bundle, previous)
     return VerifiedBundle(
         context=copy.deepcopy(bundle.context),
         responses={r: copy.deepcopy(v) for r, v in bundle.reports.items() if v is not None},
