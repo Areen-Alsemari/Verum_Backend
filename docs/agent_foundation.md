@@ -79,3 +79,9 @@ Numbers keep the type they have, and the helpers never rewrite them. The contrac
 ## Shared files
 
 Edit the shared helpers, the contract validator, the schemas, `pyproject.toml` and `uv.lock` only through one reviewer so that parallel work does not collide. A new dependency is added with `uv add`, never by editing the lock file.
+
+## Chained fixtures
+
+The folder `tests/agents/fixtures/chained/` holds one runtime snapshot answered by all eight placeholders: a request and a response for every role, and `index.json` with the context, the run order and the report identifiers. Every request after the first carries the real, hashed reports of the roles it depends on, so you can test your agent against genuine upstream input instead of the empty contract examples. Load a request with `json.load`, call `check_request`, run your agent, and call `check_response`.
+
+Regenerate the files with `uv run python tools/agents/build_chained_fixtures.py` from a checkout that has the extracted release folder. The `--release` option points at another release folder and `--output` at another target. The script always answers with the placeholders so that the files stay the same while owners replace their agents; add `--installed-agents` to see a run with whatever is installed. The `--check` option compares the files on disk with a fresh run and exits with status 1 if they differ. Regenerate and commit the files only when the request builders or the contract change.
