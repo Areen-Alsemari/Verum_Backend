@@ -12,21 +12,16 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
-from verum.agents.common import ROLES, StubAgent, file_sha256, iter_role_records
-from verum.agents.runner import Snapshot, run_analysis, verify_bundle
-from verum.contracts.agent_interfaces import Agent
+from verum.agents.common import file_sha256, iter_role_records
+from verum.agents.runner import Snapshot
+from verum.agents.runner.chained import chained_files
 from verum.contracts.paths import repo_root
 
 DEFAULT_RELEASE = Path("data/reference_release_v2/verum_reference_v2")
 DEFAULT_OUTPUT = Path("tests/agents/fixtures/chained")
 CASE_ID = "chained-example"
 ROLE = "predictive_health"
-
-
-def _text(value: Any) -> str:
-    return json.dumps(value, indent=2, sort_keys=True) + "\n"
 
 
 def _snapshot(release: Path) -> Snapshot:
@@ -39,28 +34,6 @@ def _snapshot(release: Path) -> Snapshot:
     )
 
 
-def build(release: Path, installed: bool) -> dict[str, str]:
-    """Run all roles once and return the file contents keyed by file name."""
-    agents: dict[str, Agent] | None = None
-    if not installed:
-        agents = {role: StubAgent(role) for role in ROLES}
-    bundle = run_analysis(_snapshot(release), "runtime", agents=agents)
-    verified = verify_bundle(bundle)
-    if bundle.issues:
-        raise SystemExit(f"the run reported issues: {bundle.issues}")
-    files = {}
-    for role, request in bundle.requests.items():
-        files[f"{role}.request.json"] = _text(request)
-        files[f"{role}.response.json"] = _text(verified.responses[role])
-    order = list(bundle.requests)
-    index = {
-        "context": verified.context, "order": order,
-        "report_ids": {r: verified.responses[r]["report_id"] for r in order},
-    }
-    files["index.json"] = _text(index)
-    return files
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", type=Path, default=repo_root() / DEFAULT_RELEASE)
@@ -68,7 +41,7 @@ def main() -> int:
     parser.add_argument("--installed-agents", action="store_true")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    files = build(args.release, args.installed_agents)
+    files = chained_files(_snapshot(args.release), installed=args.installed_agents)
     if args.check:
         stale = [n for n, text in files.items() if not (args.output / n).exists()
                  or (args.output / n).read_text(encoding="utf-8") != text]
