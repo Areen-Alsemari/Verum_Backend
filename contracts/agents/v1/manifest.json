@@ -72,9 +72,12 @@
   "workflow": [
     [
       "predictive_health",
-      "anomaly_detection",
       "topology_dependency",
-      "historical_asset_intelligence"
+      "historical_asset_intelligence",
+      "inspection_quality_documentation"
+    ],
+    [
+      "anomaly_detection"
     ],
     [
       "diagnostic_reasoning"
@@ -86,6 +89,18 @@
       "evidence_verification_decision"
     ]
   ],
+  "workflow_notes": {
+    "first_stage": "These roles consume no report from another role.",
+    "anomaly_detection": "Optionally consumes the predictive_health report and runs without it.",
+    "diagnostic_reasoning": "Follows the first two stages and consumes their reports when available.",
+    "inspection_planning": "Follows diagnostic_reasoning.",
+    "evidence_verification_decision": "Follows diagnostic_reasoning, inspection_planning and inspection_quality_documentation."
+  },
+  "final_operation": {
+    "agent": "inspection_quality_documentation",
+    "operation": "build_report",
+    "follows": "evidence_verification_decision"
+  },
   "on_available_performed_inspection": "Create a new analysis revision, run inspection_quality_documentation, and reassess diagnosis, planning and evidence with causally current reports.",
   "agents_implemented": false
 }
