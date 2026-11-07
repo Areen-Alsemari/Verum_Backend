@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:agents:v1:diagnostic_reasoning",
+  "title": "Diagnostic Reasoning interface v1",
+  "$defs": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "observations": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/observations"
+        },
+        "forecast_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:predictive_health#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "anomaly_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:anomaly_detection#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "topology_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:topology_dependency#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "asset_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:historical_asset_intelligence#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inspection_quality_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:inspection_quality_documentation#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "observations",
+        "forecast_report",
+        "anomaly_report",
+        "topology_report",
+        "asset_report",
+        "inspection_quality_report"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hypotheses": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/hypothesis"
+          }
+        },
+        "assessment": {
+          "enum": [
+            "candidates_available",
+            "inconclusive"
+          ]
+        },
+        "upstream_checks": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/check"
+          }
+        },
+        "field_diagnosis_qualified": {
+          "const": false
+        },
+        "ranking_basis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "hypotheses",
+        "assessment",
+        "upstream_checks",
+        "field_diagnosis_qualified",
+        "ranking_basis"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "request"
+        },
+        "agent": {
+          "const": "diagnostic_reasoning"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/evidence"
+          }
+        },
+        "input": {
+          "$ref": "#/$defs/input"
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "context",
+        "evidence",
+        "input"
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "response"
+        },
+        "agent": {
+          "const": "diagnostic_reasoning"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "report_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "artifact_sha256": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "feature_profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "artifact_sha256",
+            "feature_profile_id"
+          ]
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "degraded",
+            "insufficient_evidence",
+            "error"
+          ]
+        },
+        "consumed_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/issue"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "advisory_only": {
+          "const": true
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/result"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "report_id",
+        "context",
+        "implementation",
+        "status",
+        "consumed_evidence_ids",
+        "issues",
+        "limitations",
+        "advisory_only",
+        "result"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "degraded"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "$ref": "#/$defs/result"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "insufficient_evidence",
+                  "error"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "null"
+              },
+              "issues": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ]
+}

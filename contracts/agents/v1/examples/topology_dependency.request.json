@@ -1,0 +1,204 @@
+{
+  "interface_version": "1.0.0",
+  "message_type": "request",
+  "agent": "topology_dependency",
+  "request_id": "contract-request-topology_dependency",
+  "context": {
+    "case_id": "contract-example",
+    "analysis_id": "contract-example-snapshot",
+    "revision": 0,
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "data_release": "verum_reference_v2",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "scope_id": "verum_supported_reference_v2",
+    "execution_mode": "contract_fixture"
+  },
+  "evidence": [
+    {
+      "evidence_id": "source-observations",
+      "kind": "observation_window",
+      "source_ref": "observations:training-prefix-at-300",
+      "available_at_s": 300.0,
+      "content_sha256": "baa8b00d4c8fc5d36b4bede20eae29b7d775084cd53ca650eb7e8a2f8bd6fec7",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "provenance": "simulated_observation"
+    },
+    {
+      "evidence_id": "source-reference",
+      "kind": "declared_reference",
+      "source_ref": "reference:public_reference",
+      "available_at_s": 0.0,
+      "content_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+      "root_evidence_ids": [
+        "source-reference"
+      ],
+      "provenance": "declared_design"
+    },
+    {
+      "evidence_id": "features-summary",
+      "kind": "observation_representation",
+      "source_ref": "features:training-summary-at-300",
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "provenance": "derived_observation"
+    }
+  ],
+  "input": {
+    "query_asset_ids": [
+      "TK-101"
+    ],
+    "direction": "both",
+    "declared_connections": [
+      {
+        "edge_id": "E001",
+        "from_node": "PIPELINE_RECEIPT_BOUNDARY",
+        "to_node": "RECEIPT_METER"
+      },
+      {
+        "edge_id": "E002",
+        "from_node": "RECEIPT_METER",
+        "to_node": "XV-R000"
+      },
+      {
+        "edge_id": "E003",
+        "from_node": "XV-R000",
+        "to_node": "RECEIPT_HEADER"
+      },
+      {
+        "edge_id": "E-R101a",
+        "from_node": "RECEIPT_HEADER",
+        "to_node": "XV-R101"
+      },
+      {
+        "edge_id": "E-R101b",
+        "from_node": "XV-R101",
+        "to_node": "TK-101:receipt_nozzle"
+      },
+      {
+        "edge_id": "E-S101a",
+        "from_node": "TK-101:outlet_nozzle",
+        "to_node": "XV-S101"
+      },
+      {
+        "edge_id": "E-S101b",
+        "from_node": "XV-S101",
+        "to_node": "SUCTION_HEADER"
+      },
+      {
+        "edge_id": "E-R102a",
+        "from_node": "RECEIPT_HEADER",
+        "to_node": "XV-R102"
+      },
+      {
+        "edge_id": "E-R102b",
+        "from_node": "XV-R102",
+        "to_node": "TK-102:receipt_nozzle"
+      },
+      {
+        "edge_id": "E-S102a",
+        "from_node": "TK-102:outlet_nozzle",
+        "to_node": "XV-S102"
+      },
+      {
+        "edge_id": "E-S102b",
+        "from_node": "XV-S102",
+        "to_node": "SUCTION_HEADER"
+      },
+      {
+        "edge_id": "E-R103a",
+        "from_node": "RECEIPT_HEADER",
+        "to_node": "XV-R103"
+      },
+      {
+        "edge_id": "E-R103b",
+        "from_node": "XV-R103",
+        "to_node": "TK-103:receipt_nozzle"
+      },
+      {
+        "edge_id": "E-S103a",
+        "from_node": "TK-103:outlet_nozzle",
+        "to_node": "XV-S103"
+      },
+      {
+        "edge_id": "E-S103b",
+        "from_node": "XV-S103",
+        "to_node": "SUCTION_HEADER"
+      },
+      {
+        "edge_id": "E-SH",
+        "from_node": "SUCTION_HEADER",
+        "to_node": "PUMP_SUCTION_TEE"
+      },
+      {
+        "edge_id": "E-PA0",
+        "from_node": "PUMP_SUCTION_TEE",
+        "to_node": "XV-PAI"
+      },
+      {
+        "edge_id": "E-PA1",
+        "from_node": "XV-PAI",
+        "to_node": "P-101A"
+      },
+      {
+        "edge_id": "E-PA2",
+        "from_node": "P-101A",
+        "to_node": "CV-PA"
+      },
+      {
+        "edge_id": "E-PA3",
+        "from_node": "CV-PA",
+        "to_node": "XV-PAO"
+      },
+      {
+        "edge_id": "E-PA4",
+        "from_node": "XV-PAO",
+        "to_node": "DISCHARGE_HEADER"
+      },
+      {
+        "edge_id": "E-PB0",
+        "from_node": "PUMP_SUCTION_TEE",
+        "to_node": "XV-PBI"
+      },
+      {
+        "edge_id": "E-PB1",
+        "from_node": "XV-PBI",
+        "to_node": "P-101B"
+      },
+      {
+        "edge_id": "E-PB2",
+        "from_node": "P-101B",
+        "to_node": "CV-PB"
+      },
+      {
+        "edge_id": "E-PB3",
+        "from_node": "CV-PB",
+        "to_node": "XV-PBO"
+      },
+      {
+        "edge_id": "E-PB4",
+        "from_node": "XV-PBO",
+        "to_node": "DISCHARGE_HEADER"
+      },
+      {
+        "edge_id": "E-D1",
+        "from_node": "DISCHARGE_HEADER",
+        "to_node": "DELIVERY_METER"
+      },
+      {
+        "edge_id": "E-D2",
+        "from_node": "DELIVERY_METER",
+        "to_node": "DISTRIBUTION_BOUNDARY"
+      }
+    ],
+    "reference_evidence_ids": [
+      "source-reference"
+    ],
+    "observations": null
+  }
+}
