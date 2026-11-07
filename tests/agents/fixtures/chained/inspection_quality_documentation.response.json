@@ -1,0 +1,46 @@
+{
+  "advisory_only": true,
+  "agent": "inspection_quality_documentation",
+  "consumed_evidence_ids": [
+    "source-observations",
+    "source-reference",
+    "features-summary"
+  ],
+  "context": {
+    "analysis_id": "AN-chained-example-r0",
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "case_id": "chained-example",
+    "data_release": "verum_reference_v2",
+    "execution_mode": "runtime",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "revision": 0,
+    "scope_id": "verum_supported_reference_v2"
+  },
+  "implementation": {
+    "artifact_sha256": null,
+    "feature_profile_id": null,
+    "name": "inspection_quality_documentation-stub",
+    "version": "0.0.0"
+  },
+  "interface_version": "1.0.0",
+  "issues": [
+    {
+      "code": "STUB_NOT_IMPLEMENTED",
+      "evidence_ids": [],
+      "message": "stub, not implemented"
+    }
+  ],
+  "limitations": [
+    "Stub implementation: no role logic is present; the result is unchanged."
+  ],
+  "message_type": "response",
+  "report_id": "inspection_quality_documentation-AN-chained-example-r0-ab045a71",
+  "request_id": "AN-chained-example-r0-inspection_quality_documentation",
+  "result": {
+    "observed_quality": [],
+    "record_checks": [],
+    "retest_result_ids": []
+  },
+  "status": "degraded"
+}

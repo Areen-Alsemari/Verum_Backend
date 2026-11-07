@@ -234,8 +234,9 @@ def test_every_stub_report_chains_through_the_registry() -> None:
     for role in order:
         request = requests[role]
         registry = EvidenceRegistry.from_rows(request["context"], request["evidence"])
+        registered = {source: registry.add_report(report) for source, report in reports.items()}
         for field, source in wiring.get(role, {}).items():
-            request["input"][field] = registry.add_report(reports[source])
+            request["input"][field] = registered[source]
         request["evidence"] = registry.rows()
         check_request(request)
         reports[role] = StubAgent(role).run(request)
