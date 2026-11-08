@@ -1,18 +1,161 @@
-"""Agent class of the Diagnostic Reasoning role, currently a placeholder.
+"""Agent class of the Diagnostic Reasoning role combining observation models and evidence rules.
 
-The class implements the run interface by answering with the conservative example result. The owner
-of the role replaces this base class with the real implementation.
+The agent produces candidate fault hypotheses from the observation summary and compares them with
+available upstream reports. It never forces a single root cause or claims field qualification.
 """
 
 from __future__ import annotations
 
-from verum.agents.common import StubAgent
+from pathlib import Path
+from typing import Any, Final
 
-ROLE = "diagnostic_reasoning"
+from verum.agents.common import (
+    attached_report_ids,
+    build_response,
+    check_request,
+    check_response,
+    implementation_block,
+    make_issue,
+)
+from verum.agents.diagnostic_reasoning.features import FEATURE_PROFILE_ID
+from verum.agents.diagnostic_reasoning.model import DiagnosticModel, format_hypotheses
+from verum.agents.diagnostic_reasoning.rules import (
+    enrich_hypothesis_with_rules,
+    evaluate_upstream_checks,
+)
+
+ROLE: Final = "diagnostic_reasoning"
+IMPL_NAME: Final = "diagnostic_reasoning_ovr_hgb"
+IMPL_VERSION: Final = "1.0.0"
+
+DEFAULT_LIMITATIONS: Final[tuple[str, ...]] = (
+    "Hypotheses are candidate explanations from simulated readings, not field-qualified causes.",
+    "Empty hypotheses mean inconclusive evidence, never verified healthy equipment.",
+    "Mechanisms without positive test support (misroute_a) are not evaluable on held-out data.",
+    "Roof failure, vapour damage and mechanical fault cascades are outside the supported scope.",
+)
 
 
-class DiagnosticReasoningAgent(StubAgent):
-    """Placeholder agent for the Diagnostic Reasoning role."""
+def _consumed_ids(request: dict[str, Any]) -> list[str]:
+    """Collect consumed evidence identifiers in a stable order without duplicates."""
+    known = {row["evidence_id"]: row for row in request["evidence"]}
+    obs_ids = list(request["input"]["observations"].get("evidence_ids", []))
+    roots: list[str] = []
+    for eid in obs_ids:
+        if eid in known:
+            for r in known[eid].get("root_evidence_ids", []):
+                if r in known and r not in roots:
+                    roots.append(r)
+    for r in ("source-observations", "source-reference"):
+        if r in known and r not in roots:
+            roots.append(r)
+    ordered: list[str] = []
+    for item in [*roots, *obs_ids, *attached_report_ids(request)]:
+        if item in known and item not in ordered:
+            ordered.append(item)
+    return ordered
 
-    def __init__(self) -> None:
-        super().__init__(ROLE)
+
+class DiagnosticReasoningAgent:
+    """Observation-based fault classifier and upstream evidence comparator for Agent 5."""
+
+    def __init__(self, artifact_path: Path | None = None) -> None:
+        self.role = ROLE
+        self.model = DiagnosticModel(artifact_path)
+
+    def _implementation(self) -> dict[str, Any]:
+        return implementation_block(
+            IMPL_NAME,
+            IMPL_VERSION,
+            artifact_sha256=self.model.sha256,
+            feature_profile_id=FEATURE_PROFILE_ID,
+        )
+
+    def run(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Validate the request, infer candidate hypotheses, compare upstream reports and return."""
+        check_request(request)
+        if request.get("agent") != self.role:
+            raise ValueError("request is addressed to a different role")
+
+        inputs = request["input"]
+        observations = inputs.get("observations")
+        consumed = _consumed_ids(request)
+
+        if observations is None or observations.get("representation") != "summary_v1":
+            issue = make_issue(
+                "UNSUPPORTED_OBSERVATION_REPRESENTATION",
+                "Diagnostic Reasoning v1 requires summary_v1 observations.",
+            )
+            response = build_response(
+                request,
+                status="insufficient_evidence",
+                result=None,
+                consumed_evidence_ids=attached_report_ids(request),
+                implementation=self._implementation(),
+                issues=[issue],
+                limitations=list(DEFAULT_LIMITATIONS),
+            )
+            check_response(request, response)
+            return response
+
+        try:
+            predictions = self.model.predict_candidates(observations)
+        except Exception as error:
+            issue = make_issue("MODEL_INFERENCE_ERROR", f"Inference failed: {error}")
+            response = build_response(
+                request,
+                status="error",
+                result=None,
+                consumed_evidence_ids=consumed,
+                implementation=self._implementation(),
+                issues=[issue],
+                limitations=list(DEFAULT_LIMITATIONS),
+            )
+            check_response(request, response)
+            return response
+
+        obs_ev_ids = [
+            eid for eid in observations.get("evidence_ids", []) if eid in set(consumed)
+        ]
+        raw_hypotheses = format_hypotheses(predictions)
+        hypotheses = [
+            enrich_hypothesis_with_rules(h, inputs, obs_ev_ids) for h in raw_hypotheses
+        ]
+        upstream_checks = evaluate_upstream_checks(inputs)
+
+        missing_upstreams = [
+            c["check_id"] for c in upstream_checks if c["outcome"] == "unknown"
+        ]
+        issues: list[dict[str, Any]] = []
+        status = "complete"
+        if missing_upstreams:
+            status = "degraded"
+            issues.append(
+                make_issue(
+                    "UPSTREAM_EVIDENCE_INCOMPLETE",
+                    f"Upstream checks unknown or unavailable: {', '.join(missing_upstreams)}",
+                )
+            )
+
+        assessment = "candidates_available" if hypotheses else "inconclusive"
+        ranking_basis = "decision_score_descending" if hypotheses else None
+
+        result: dict[str, Any] = {
+            "hypotheses": hypotheses,
+            "assessment": assessment,
+            "upstream_checks": upstream_checks,
+            "field_diagnosis_qualified": False,
+            "ranking_basis": ranking_basis,
+        }
+
+        response = build_response(
+            request,
+            status=status,
+            result=result,
+            consumed_evidence_ids=consumed,
+            implementation=self._implementation(),
+            issues=issues,
+            limitations=list(DEFAULT_LIMITATIONS),
+        )
+        check_response(request, response)
+        return response

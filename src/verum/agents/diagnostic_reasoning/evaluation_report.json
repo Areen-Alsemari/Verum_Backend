@@ -1,0 +1,159 @@
+{
+  "role": "diagnostic_reasoning",
+  "artifact_path": "model_artifact.joblib",
+  "artifact_sha256": "b165dc823fc9d2c040a133cf9d922e7f563a446d962f66e8ebff7b9175d45aee",
+  "feature_profile_id": "summary_v1_tabular_30tags_v1",
+  "named_seed": 20261108,
+  "runtime_s": 866.27,
+  "eligible_counts": {
+    "train_windows": 9832,
+    "validation_windows": 3980,
+    "test_windows": 2828,
+    "train_episodes": 1603,
+    "validation_episodes": 673,
+    "test_episodes": 543
+  },
+  "validation_model_comparison": {
+    "leak": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 0.1463,
+      "hist_gradient_boosting_val_f1": 0.0756,
+      "selected_threshold": 0.225
+    },
+    "restriction_position_visible": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 1.0,
+      "hist_gradient_boosting_val_f1": 0.8724,
+      "selected_threshold": 0.2
+    },
+    "restriction_obstruction": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 0.5185,
+      "hist_gradient_boosting_val_f1": 0.875,
+      "selected_threshold": 0.6
+    },
+    "pump": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 0.797,
+      "hist_gradient_boosting_val_f1": 0.875,
+      "selected_threshold": 0.25
+    },
+    "bias": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 0.1273,
+      "hist_gradient_boosting_val_f1": 0.1062,
+      "selected_threshold": 0.2
+    },
+    "drift": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 0.1413,
+      "hist_gradient_boosting_val_f1": 0.2835,
+      "selected_threshold": 0.2
+    },
+    "stuck": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 0.2835,
+      "hist_gradient_boosting_val_f1": 0.6429,
+      "selected_threshold": 0.2
+    },
+    "misroute_a": {
+      "constant_zero_f1": 0.0,
+      "logistic_regression_val_f1": 1.0,
+      "hist_gradient_boosting_val_f1": 0.6957,
+      "selected_threshold": 0.525
+    }
+  },
+  "test_overall": {
+    "micro_f1": 0.3196,
+    "macro_f1_evaluable": 0.2689,
+    "exact_set_accuracy": 0.814
+  },
+  "test_per_mechanism": {
+    "leak": {
+      "eligible_windows": 2828,
+      "positive_windows": 62,
+      "positive_episodes": 20,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 0.0804,
+      "recall": 0.2903,
+      "f1": 0.1259
+    },
+    "restriction_position_visible": {
+      "eligible_windows": 2828,
+      "positive_windows": 129,
+      "positive_episodes": 35,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 1.0,
+      "recall": 0.3876,
+      "f1": 0.5587
+    },
+    "restriction_obstruction": {
+      "eligible_windows": 2828,
+      "positive_windows": 65,
+      "positive_episodes": 16,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 0.1053,
+      "recall": 0.0308,
+      "f1": 0.0476
+    },
+    "pump": {
+      "eligible_windows": 2828,
+      "positive_windows": 82,
+      "positive_episodes": 21,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 0.6308,
+      "recall": 0.5,
+      "f1": 0.5578
+    },
+    "bias": {
+      "eligible_windows": 2828,
+      "positive_windows": 63,
+      "positive_episodes": 15,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 0.2571,
+      "recall": 0.1429,
+      "f1": 0.1837
+    },
+    "drift": {
+      "eligible_windows": 2828,
+      "positive_windows": 136,
+      "positive_episodes": 28,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 0.7091,
+      "recall": 0.2868,
+      "f1": 0.4084
+    },
+    "stuck": {
+      "eligible_windows": 2828,
+      "positive_windows": 7,
+      "positive_episodes": 1,
+      "total_episodes": 543,
+      "status": "evaluated",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "misroute_a": {
+      "eligible_windows": 2828,
+      "positive_windows": 0,
+      "positive_episodes": 0,
+      "total_episodes": 543,
+      "status": "not_evaluable",
+      "precision": null,
+      "recall": null,
+      "f1": null
+    }
+  },
+  "limitations": [
+    "Simulation evaluation only; does not establish real terminal diagnostic accuracy.",
+    "misroute_a has 0 test positive episodes and is reported as not_evaluable.",
+    "restriction_obstruction (2 val) and stuck (1 test) have very low episode support.",
+    "Roof failure, vapour damage and mechanical cascades are outside supported scope."
+  ]
+}
