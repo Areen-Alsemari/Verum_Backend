@@ -113,6 +113,16 @@ def _report_conflicts(
     quality = inputs["inspection_quality_report"]
 
     if diagnosis is not None and diagnosis["result"] is not None:
+        for hypothesis in diagnosis["result"]["hypotheses"]:
+            if hypothesis["conflict_evidence_ids"]:
+                conflicts.append(
+                    _conflict(
+                        "diagnosis:hypothesis:" + hypothesis["hypothesis_id"],
+                        "Conflicting evidence for diagnostic hypothesis.",
+                        hypothesis["conflict_evidence_ids"],
+                    )
+                )
+
         for check in diagnosis["result"]["upstream_checks"]:
             if check["outcome"] == "fail":
                 conflicts.append(

@@ -130,12 +130,12 @@ def _verified_proposal(proposal_id: str) -> dict[str, Any]:
     }
 
 
-def test_real_contract_reports_produce_inconclusive() -> None:
-    """Inconclusive upstream reports cannot support diagnosis."""
+def test_real_contract_reports_require_more_evidence() -> None:
+    """Independent: reports without verified evidence require more evidence."""
     response = _run(_request_with_reports())
     result = response["result"]
 
-    assert result["decision_state"] == "inconclusive"
+    assert result["decision_state"] == "more_evidence_required"
     assert result["hypothesis_report_ids"] == []
     assert result["human_decision_required"] is True
     assert result["automatic_action_authorized"] is False
@@ -215,6 +215,22 @@ def test_failed_diagnostic_check_is_reported_as_conflict() -> None:
 
     assert any(
         row["outcome"] == "fail"
+        for row in response["result"]["conflicts"]
+    )
+
+
+def test_hypothesis_conflict_evidence_is_reported() -> None:
+    """Independent: hypothesis conflict evidence remains visible."""
+    request = _registered_request_with_changes(diagnosis_candidates=True)
+    hypothesis = request["input"]["diagnosis_report"]["result"]["hypotheses"][0]
+    hypothesis["conflict_evidence_ids"] = ["source-observations"]
+    _reregister_reports(request)
+
+    response = _run(request)
+
+    assert any(
+        row["check_id"] == "diagnosis:hypothesis:hypothesis-1"
+        and "source-observations" in row["evidence_ids"]
         for row in response["result"]["conflicts"]
     )
 
