@@ -10,7 +10,7 @@ from jsonschema.exceptions import ValidationError
 
 from verum.agents.predictive_health import PredictiveHealthAgent
 from verum.agents.predictive_health import agent as predictive_agent
-from verum.contracts.agent_interfaces import contract_directory
+from verum.contracts.agent_interfaces import contract_directory, validate_response
 
 
 def _example_request() -> dict[str, Any]:
@@ -25,7 +25,9 @@ def test_persistence_forecasts_the_current_window_mean() -> None:
 
     Independent: yes, because the published request fixes the expected window mean.
     """
-    report = PredictiveHealthAgent().run(_example_request())
+    request = _example_request()
+    report = PredictiveHealthAgent().run(request)
+    validate_response(request, report)
     result = report["result"]
     (forecast,) = result["forecasts"]
 
@@ -36,7 +38,7 @@ def test_persistence_forecasts_the_current_window_mean() -> None:
     assert forecast["horizon_s"] == 300
     assert forecast["value"] == 594.78658931006
     assert forecast["interval"] is None
-    assert forecast["method"] == "persistence"
+    assert "Forecast method: persistence." in forecast["limitations"]
     assert result["health_score"] is None
     assert result["remaining_useful_life"] is None
     assert result["field_qualified"] is False
@@ -58,6 +60,7 @@ def test_persistence_reports_an_unavailable_window_mean() -> None:
     assert forecasts["FT-001"]["value"] == 594.78658931006
     assert forecasts["LSHH-101"]["value"] is None
     assert forecasts["LSHH-101"]["interval"] is None
+    assert "Forecast method: unavailable." in forecasts["LSHH-101"]["limitations"]
 
 
 def test_agent_uses_ridge_and_persistence_in_the_same_request(
@@ -84,9 +87,9 @@ def test_agent_uses_ridge_and_persistence_in_the_same_request(
 
     assert report["status"] == "complete"
     assert set(rows) == {"LT-101", "FT-001"}
-    assert rows["LT-101"]["method"] == "ridge"
+    assert "Forecast method: ridge." in rows["LT-101"]["limitations"]
     assert rows["LT-101"]["value"] == 8.75
-    assert rows["FT-001"]["method"] == "persistence"
+    assert "Forecast method: persistence." in rows["FT-001"]["limitations"]
     assert rows["FT-001"]["value"] == 594.78658931006
     assert report["implementation"]["artifact_sha256"] == "a" * 64
     assert report["implementation"]["feature_profile_id"] == "fixed-test-profile"
@@ -201,7 +204,7 @@ def test_ft201_uses_persistence() -> None:
     signal = next(row for row in signals if row["tag_id"] == "FT-201")
     report = PredictiveHealthAgent().run(request)
     (row,) = report["result"]["forecasts"]
-    assert row["method"] == "persistence"
+    assert "Forecast method: persistence." in row["limitations"]
     assert row["value"] == signal["mean"]
 
 

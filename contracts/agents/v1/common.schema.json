@@ -1079,9 +1079,6 @@
         "quantity": {
           "const": "reported_mean"
         },
-        "method": {
-          "enum": ["ridge", "persistence", "unavailable"]
-        },
         "horizon_s": {
           "const": 300.0
         },

@@ -26,7 +26,6 @@ dev = [
     "ruff>=0.5",
     "types-jsonschema",
     "hypothesis>=6.170.13",
-    "threadpoolctl>=3.8.0",
 ]
 
 [tool.hatch.build.targets.wheel]

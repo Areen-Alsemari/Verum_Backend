@@ -125,7 +125,9 @@ def _collect_forecasts(
     for tag in targets:
         signal = signals[tag]
         value, method, code, note = _predict(signal, artifact)
-        limitations = [] if value is None else ["No prediction interval has been calibrated."]
+        limitations = [f"Forecast method: {method}."]
+        if value is not None:
+            limitations.append("No prediction interval has been calibrated.")
         if code is not None and note is not None:
             issues.append(make_issue(code, f"{tag}: {note}", evidence_ids))
             limitations.append(note)
@@ -136,7 +138,6 @@ def _collect_forecasts(
                 "quantity": "reported_mean",
                 "horizon_s": payload["forecast_horizon_s"],
                 "value": value,
-                "method": method,
                 "interval": None,
                 "evidence_ids": evidence_ids,
                 "limitations": limitations,
