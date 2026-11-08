@@ -272,6 +272,31 @@ def test_empty_proposals_cannot_make_assessment_available() -> None:
     assert response["result"]["decision_state"] == "more_evidence_required"
 
 
+def test_shared_root_does_not_transfer_quality() -> None:
+    """Independent: quality must cite the proposal evidence itself."""
+    request = _registered_request_with_changes(
+        diagnosis_candidates=True,
+        quality_usable=True,
+    )
+    registry = {row["evidence_id"]: row for row in request["evidence"]}
+    derived = registry["features-summary"]
+    assert derived["root_evidence_ids"] == ["source-observations"]
+    request["input"]["evidence_proposals"] = [{
+        "proposal_id": "proposal-derived",
+        "source_ref": derived["source_ref"],
+        "claimed_available_at_s": derived["available_at_s"],
+        "claimed_evidence_ids": ["features-summary"],
+    }]
+
+    response = _run(request)
+    check = response["result"]["evidence_checks"][0]
+
+    assert check["quality_acceptable"] is None
+    assert check["scope_supported"] is None
+    assert check["usable"] is not True
+    assert response["result"]["decision_state"] == "more_evidence_required"
+
+
 def test_assessment_available_with_verified_evidence() -> None:
     """Verified evidence and diagnostic candidates allow an assessment."""
     request = _registered_request_with_changes(

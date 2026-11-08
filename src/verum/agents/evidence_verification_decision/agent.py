@@ -75,16 +75,12 @@ def _quality_for_proposal(
         return None, None
 
     claimed = set(proposal["claimed_evidence_ids"])
-    proposal_roots = _roots(list(claimed), registry)
     matches: list[dict[str, Any]] = []
 
     for record in quality_report["result"]["record_checks"]:
         record_ids = set(record["evidence_ids"])
-        record_roots = _roots(list(record_ids), registry)
 
-        if claimed & record_ids or (
-            proposal_roots and proposal_roots & record_roots
-        ):
+        if claimed & record_ids:
             matches.append(record)
 
     if not matches:
