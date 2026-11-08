@@ -144,10 +144,17 @@ def eligible_label(record: dict[str, Any]) -> bool | None:
 
 def prepare_split(
     records: list[dict[str, Any]],
-) -> tuple[list[dict[str, float]], np.ndarray]:
-    """Prepare eligible feature rows and their physical labels."""
+) -> tuple[
+    list[dict[str, float]],
+    np.ndarray,
+    list[str],
+    list[str],
+]:
+    """Prepare eligible features, labels, episode IDs, and mechanisms."""
     features: list[dict[str, float]] = []
     labels: list[bool] = []
+    sample_ids: list[str] = []
+    mechanisms: list[str] = []
 
     for record in records:
         label = eligible_label(record)
@@ -155,10 +162,31 @@ def prepare_split(
         if label is None:
             continue
 
+        supervision = record["target"]["reference_supervision"]
+
         features.append(extract_features(record))
         labels.append(label)
+        sample_ids.append(str(record.get("example_id", "unknown")))
 
-    return features, np.asarray(labels, dtype=int)
+        components = supervision.get("injected_components", [])
+        mechanism_names = sorted(
+            {
+                str(component.get("mechanism", "unknown"))
+                for component in components
+                if isinstance(component, dict)
+            }
+        )
+
+        mechanisms.append(
+            ", ".join(mechanism_names) if mechanism_names else "none"
+        )
+
+    return (
+        features,
+        np.asarray(labels, dtype=int),
+        sample_ids,
+        mechanisms,
+    )
 
 
 def feature_matrix(
@@ -199,6 +227,77 @@ def classification_metrics(
         "false_alarms": int(fp),
         "misses": int(fn),
     }
+def mechanism_metrics(
+    labels: np.ndarray,
+    predictions: np.ndarray,
+    mechanisms: list[str],
+) -> dict[str, Any]:
+    """Calculate detection results for each individual injected mechanism."""
+    results: dict[str, Any] = {}
+
+    individual_mechanisms = sorted(
+        {
+            mechanism
+            for value in mechanisms
+            if value != "none"
+            for mechanism in value.split(", ")
+        }
+    )
+
+    for mechanism in individual_mechanisms:
+        indices = np.asarray(
+            [
+                index
+                for index, value in enumerate(mechanisms)
+                if mechanism in value.split(", ")
+            ],
+            dtype=int,
+        )
+
+        mechanism_labels = labels[indices]
+        mechanism_predictions = predictions[indices]
+
+        tn, fp, fn, tp = confusion_matrix(
+            mechanism_labels,
+            mechanism_predictions,
+            labels=[0, 1],
+        ).ravel()
+
+        results[mechanism] = {
+            "sample_count": int(len(indices)),
+            "positive_count": int(np.sum(mechanism_labels == 1)),
+            "negative_count": int(np.sum(mechanism_labels == 0)),
+            "false_alarms": int(fp),
+            "misses": int(fn),
+            "true_positives": int(tp),
+            "true_negatives": int(tn),
+            "recall": float(recall_score(
+                mechanism_labels,
+                mechanism_predictions,
+                zero_division=0,
+            )),
+        }
+
+    negative_indices = np.asarray(
+        [
+            index
+            for index, value in enumerate(mechanisms)
+            if value == "none"
+        ],
+        dtype=int,
+    )
+
+    results["no_injected_mechanism"] = {
+        "sample_count": int(len(negative_indices)),
+        "false_alarms": int(
+            np.sum(predictions[negative_indices] == 1)
+        ),
+        "true_negatives": int(
+            np.sum(predictions[negative_indices] == 0)
+        ),
+    }
+
+    return results
 
 
 def select_threshold(
@@ -227,9 +326,9 @@ def main() -> None:
     validation_records = load_records("validation")
     test_records = load_records("test")
 
-    train_rows, y_train = prepare_split(train_records)
-    validation_rows, y_validation = prepare_split(validation_records)
-    test_rows, y_test = prepare_split(test_records)
+    train_rows, y_train, _, _ = prepare_split(train_records)
+    validation_rows, y_validation, _, _ = prepare_split(validation_records)
+    test_rows, y_test, test_sample_ids, test_mechanisms = prepare_split(test_records)
 
     if len(np.unique(y_train)) < 2:
         raise ValueError("Training data must contain both physical classes.")
@@ -238,12 +337,11 @@ def main() -> None:
         raise ValueError("Validation data must contain both physical classes.")
 
     feature_names = sorted(
-        {
-            feature_name
-            for row in train_rows
-            for feature_name in row
-        }
-    )
+    {
+        feature_name
+        for row in train_rows
+        for feature_name in row
+    })
 
     x_train = feature_matrix(train_rows, feature_names)
     x_validation = feature_matrix(validation_rows, feature_names)
@@ -359,6 +457,29 @@ def main() -> None:
         test_predictions,
         test_scores,
     )
+    test_metrics["sample_results"] = [
+        {
+            "sample_id": sample_id,
+            "mechanism": mechanism,
+            "actual": int(actual),
+            "predicted": int(predicted),
+            "false_alarm": bool(actual == 0 and predicted == 1),
+            "miss": bool(actual == 1 and predicted == 0),
+        }
+        for sample_id, mechanism, actual, predicted in zip(
+            test_sample_ids,
+            test_mechanisms,
+            y_test,
+            test_predictions,
+            strict=True,
+        )
+    ]
+
+    test_metrics["mechanism_breakdown"] = mechanism_metrics(
+        y_test,
+        test_predictions,
+        test_mechanisms,
+    )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -389,7 +510,8 @@ def main() -> None:
         "test_metrics": test_metrics,
         "limitations": [
             "The physical label represents an injected change in the reduced reference simulator.",
-            "A model prediction is a reported signal departure, not proof of a real equipment fault.",
+            "A model prediction is a reported signal departure," 
+            "not proof of a real equipment fault.",
             "Overlapping windows from the same episode are not independent fault events.",
             "The test split was evaluated only after model and threshold selection.",
         ],
