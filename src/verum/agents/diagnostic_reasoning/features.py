@@ -61,13 +61,15 @@ def feature_names() -> list[str]:
         names.append(f"{tag}__latest_quality_code")
         names.append(f"{tag}__latest_is_measured")
         names.append(f"{tag}__age_lower_bound")
-    names.extend([
-        "derived__flow_imbalance_m3h",
-        "derived__level_slope_sum_ms",
-        "derived__pump_a_dp_barg",
-        "derived__pump_b_dp_barg",
-        "derived__delivery_dp_barg",
-    ])
+    names.extend(
+        [
+            "derived__flow_imbalance_m3h",
+            "derived__level_slope_sum_ms",
+            "derived__pump_a_dp_barg",
+            "derived__pump_b_dp_barg",
+            "derived__delivery_dp_barg",
+        ]
+    )
     return names
 
 
@@ -98,18 +100,18 @@ def extract_observation_vector(observations: dict[str, Any]) -> np.ndarray:
         values.append(1.0 if sig.get("latest_received_age_is_lower_bound") is True else 0.0)
     ft001 = _num(by_tag["FT-001"].get("mean"))[0]
     ft201 = _num(by_tag["FT-201"].get("mean"))[0]
-    lt_slopes = sum(
-        _num(by_tag[t].get("slope_per_s"))[0] for t in ("LT-101", "LT-102", "LT-103")
-    )
+    lt_slopes = sum(_num(by_tag[t].get("slope_per_s"))[0] for t in ("LT-101", "LT-102", "LT-103"))
     pt201 = _num(by_tag["PT-201"].get("mean"))[0]
     pt202a = _num(by_tag["PT-202A"].get("mean"))[0]
     pt202b = _num(by_tag["PT-202B"].get("mean"))[0]
     pt203 = _num(by_tag["PT-203"].get("mean"))[0]
-    values.extend([
-        ft001 - ft201,
-        lt_slopes,
-        pt202a - pt201,
-        pt202b - pt201,
-        max(pt202a, pt202b) - pt203,
-    ])
+    values.extend(
+        [
+            ft001 - ft201,
+            lt_slopes,
+            pt202a - pt201,
+            pt202b - pt201,
+            max(pt202a, pt202b) - pt203,
+        ]
+    )
     return np.asarray(values, dtype=np.float64)
