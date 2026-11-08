@@ -1,8 +1,4 @@
-"""Topology and Dependency agent: placeholder until the role is implemented.
-
-The package exposes the role's agent class. Replace the placeholder base with the real
-implementation while keeping the run interface and the message contract unchanged.
-"""
+"""Topology and Dependency agent for declared graph queries."""
 
 from verum.agents.topology_dependency.agent import TopologyDependencyAgent
 

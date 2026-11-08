@@ -1,6 +1,14 @@
-"""Query the declared topology supplied with an investigation request.
+"""Query declared topology without inferring physical routing.
 
-The agent reports structural reachability without confirming physical routing.
+Downstream follows from_node to to_node; upstream follows the reverse.
+Both combines the two traversals without changing direction within a path.
+An asset ID matches its exact node and nodes named X:<port>. An exact edge
+ID also matches the declared edge itself: its to_node is reachable downstream
+and its from_node upstream, with traversal continuing in that direction.
+
+A node is reachable only after traversing at least one edge. This includes
+a queried node reached from another query, through a cycle, or by a self-loop.
+Observations are not used.
 """
 
 from __future__ import annotations
@@ -9,7 +17,6 @@ from collections import deque
 from typing import Any
 
 from verum.agents.common.envelope import (
-    attached_report_ids,
     build_response,
     implementation_block,
     make_issue,
@@ -17,78 +24,119 @@ from verum.agents.common.envelope import (
 from verum.agents.common.validation import check_request, check_response
 
 ROLE = "topology_dependency"
+Edge = dict[str, str]
 
 
 def build_topology_input(
     role_input: dict[str, Any],
     *,
-    direction: str,
     reference_evidence_ids: list[str],
+    direction: str = "both",
 ) -> dict[str, Any]:
-    """Build the topology input from a prepared role record."""
+    """Adapt a prepared record; its reference targets are direction-agnostic."""
     return {
         "query_asset_ids": [role_input["query"]["asset_id"]],
         "direction": direction,
-        "declared_connections": role_input["reference"]["connections"],
-        "reference_evidence_ids": reference_evidence_ids,
+        "declared_connections": [
+            dict(edge) for edge in role_input["reference"]["connections"]
+        ],
+        "reference_evidence_ids": list(reference_evidence_ids),
         "observations": None,
     }
 
 
 def _reachable(adjacency: dict[str, set[str]], starts: set[str]) -> set[str]:
-    visited = set(starts)
+    """Record each reached endpoint, even when it was also a starting node."""
+    expanded = set(starts)
     pending = deque(starts)
+    reached: set[str] = set()
     while pending:
         node = pending.popleft()
-        for neighbour in adjacency.get(node, set()):
-            if neighbour not in visited:
-                visited.add(neighbour)
+        for neighbour in adjacency.get(node, ()):
+            reached.add(neighbour)
+            if neighbour not in expanded:
+                expanded.add(neighbour)
                 pending.append(neighbour)
-    return visited - starts
+    return reached
+
+
+def _check_reachability(
+    arcs: list[tuple[str, str]],
+    starts: set[str],
+    edge_endpoints: set[str],
+    reached: set[str],
+) -> None:
+    """Verify the result independently by scanning declared arcs to closure."""
+    supported = set(edge_endpoints)
+    while True:
+        sources = starts | supported
+        next_supported = supported | {
+            target for source, target in arcs if source in sources
+        }
+        if next_supported == supported:
+            break
+        supported = next_supported
+
+    if reached != supported:
+        raise ValueError("Reachable nodes do not match the declared directional paths")
 
 
 def _query_graph(
     payload: dict[str, Any],
-) -> tuple[list[dict[str, str]], list[str], list[str]]:
-    edges: list[dict[str, str]] = payload["declared_connections"]
-    queries: list[str] = payload["query_asset_ids"]
+) -> tuple[list[Edge], list[str], list[str], list[str]]:
+    edges: list[Edge] = payload["declared_connections"]
+    queries = set(payload["query_asset_ids"])
     forward: dict[str, set[str]] = {}
     reverse: dict[str, set[str]] = {}
     nodes: set[str] = set()
+    endpoints_by_id: dict[str, set[tuple[str, str]]] = {}
 
     for edge in edges:
         source, target = edge["from_node"], edge["to_node"]
         forward.setdefault(source, set()).add(target)
         reverse.setdefault(target, set()).add(source)
+        endpoints_by_id.setdefault(edge["edge_id"], set()).add((source, target))
         nodes.update((source, target))
 
     starts: set[str] = set()
     missing: list[str] = []
     for asset in queries:
-        # An asset can be represented by named ports in the declared graph.
         matches = {node for node in nodes if node == asset or node.startswith(f"{asset}:")}
-        if matches:
-            starts.update(matches)
-        else:
+        starts.update(matches)
+        if not matches and asset not in endpoints_by_id:
             missing.append(asset)
 
+    queried_edges = [edge for edge in edges if edge["edge_id"] in queries]
     direction = payload["direction"]
     downstream = direction in {"downstream", "both"}
     upstream = direction in {"upstream", "both"}
     reachable: set[str] = set()
-    if downstream:
-        reachable.update(_reachable(forward, starts))
-    if upstream:
-        reachable.update(_reachable(reverse, starts))
 
-    # Keep original edges and collapse only identical repeated rows.
+    if downstream:
+        endpoints = {edge["to_node"] for edge in queried_edges}
+        reached = endpoints | _reachable(forward, starts | endpoints)
+        arcs = [(edge["from_node"], edge["to_node"]) for edge in edges]
+        _check_reachability(arcs, starts, endpoints, reached)
+        reachable.update(reached)
+
+    if upstream:
+        endpoints = {edge["from_node"] for edge in queried_edges}
+        reached = endpoints | _reachable(reverse, starts | endpoints)
+        arcs = [(edge["to_node"], edge["from_node"]) for edge in edges]
+        _check_reachability(arcs, starts, endpoints, reached)
+        reachable.update(reached)
+
     direct = {
         (edge["edge_id"], edge["from_node"], edge["to_node"]): edge
         for edge in edges
-        if (downstream and edge["from_node"] in starts)
+        if edge["edge_id"] in queries
+        or (downstream and edge["from_node"] in starts)
         or (upstream and edge["to_node"] in starts)
     }
-    return [direct[key] for key in sorted(direct)], sorted(reachable), sorted(missing)
+    conflicts = sorted(
+        edge_id for edge_id, endpoints in endpoints_by_id.items() if len(endpoints) > 1
+    )
+    return [direct[key] for key in sorted(direct)], sorted(reachable), sorted(missing), conflicts
 
 
 class TopologyDependencyAgent:
@@ -103,19 +151,26 @@ class TopologyDependencyAgent:
             raise ValueError("request is addressed to a different role")
 
         payload = request["input"]
-        direct, reachable, missing = _query_graph(payload)
-        queries = payload["query_asset_ids"]
+        direct, reachable, missing, conflicts = _query_graph(payload)
+        queries = set(payload["query_asset_ids"])
         evidence_ids: list[str] = payload["reference_evidence_ids"]
         issues = []
         if missing:
             issues.append(
                 make_issue(
                     "ASSET_NOT_IN_DECLARED_GRAPH",
-                    f"No declared graph endpoint for: {', '.join(missing)}",
+                    f"No declared node, port, or edge for: {', '.join(missing)}",
                 )
             )
         if not queries:
             issues.append(make_issue("EMPTY_TOPOLOGY_QUERY", "No assets were requested."))
+        if conflicts:
+            issues.append(
+                make_issue(
+                    "CONFLICTING_EDGE_ENDPOINTS",
+                    f"Declared edge IDs have different endpoints: {', '.join(conflicts)}",
+                )
+            )
 
         response = build_response(
             request,
@@ -123,11 +178,11 @@ class TopologyDependencyAgent:
             result={
                 "direct_connections": direct,
                 "reachable_nodes": reachable,
-                "routing_assessment": "declared_only" if len(queries) > len(missing) else "unknown",
+                "routing_assessment": "declared_only" if queries - set(missing) else "unknown",
                 "actual_routing_confirmed": False,
                 "evidence_ids": evidence_ids,
             },
-            consumed_evidence_ids=list(dict.fromkeys(evidence_ids + attached_report_ids(request))),
+            consumed_evidence_ids=list(dict.fromkeys(evidence_ids)),
             implementation=implementation_block(self.role, "1.0.0"),
             issues=issues,
             limitations=["Declared connectivity does not establish actual flow or valve position."],
