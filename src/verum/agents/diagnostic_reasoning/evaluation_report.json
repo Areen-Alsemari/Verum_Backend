@@ -2,9 +2,14 @@
   "role": "diagnostic_reasoning",
   "artifact_path": "model_artifact.joblib",
   "artifact_sha256": "b165dc823fc9d2c040a133cf9d922e7f563a446d962f66e8ebff7b9175d45aee",
+  "library_versions": {
+    "scikit_learn": "1.9.1",
+    "numpy": "2.5.4",
+    "joblib": "1.6.0"
+  },
   "feature_profile_id": "summary_v1_tabular_30tags_v1",
   "named_seed": 20261108,
-  "runtime_s": 866.27,
+  "runtime_s": 610.48,
   "eligible_counts": {
     "train_windows": 9832,
     "validation_windows": 3980,
@@ -13,60 +18,90 @@
     "validation_episodes": 673,
     "test_episodes": 543
   },
-  "validation_model_comparison": {
-    "leak": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 0.1463,
-      "hist_gradient_boosting_val_f1": 0.0756,
-      "selected_threshold": 0.225
-    },
-    "restriction_position_visible": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 1.0,
-      "hist_gradient_boosting_val_f1": 0.8724,
-      "selected_threshold": 0.2
-    },
-    "restriction_obstruction": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 0.5185,
-      "hist_gradient_boosting_val_f1": 0.875,
-      "selected_threshold": 0.6
-    },
-    "pump": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 0.797,
-      "hist_gradient_boosting_val_f1": 0.875,
-      "selected_threshold": 0.25
-    },
-    "bias": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 0.1273,
-      "hist_gradient_boosting_val_f1": 0.1062,
-      "selected_threshold": 0.2
-    },
-    "drift": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 0.1413,
-      "hist_gradient_boosting_val_f1": 0.2835,
-      "selected_threshold": 0.2
-    },
-    "stuck": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 0.2835,
-      "hist_gradient_boosting_val_f1": 0.6429,
-      "selected_threshold": 0.2
-    },
-    "misroute_a": {
-      "constant_zero_f1": 0.0,
-      "logistic_regression_val_f1": 1.0,
-      "hist_gradient_boosting_val_f1": 0.6957,
-      "selected_threshold": 0.525
-    }
+  "test_baseline_always_negative": {
+    "micro_f1": 0.0,
+    "macro_f1_evaluable": 0.0,
+    "exact_set_accuracy": 0.8225
   },
   "test_overall": {
     "micro_f1": 0.3196,
     "macro_f1_evaluable": 0.2689,
-    "exact_set_accuracy": 0.814
+    "exact_set_accuracy": 0.814,
+    "headline_comparison": "Model improves micro-F1 from 0.0000 (always-negative baseline) to 0.3196 (+0.3196), while exact-set is 0.8140 vs 0.8225 for predicting no fault due to false positives on low-support mechanisms."
+  },
+  "validation_model_comparison": {
+    "leak": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0399,
+      "logistic_regression_val_f1": 0.1463,
+      "hist_gradient_boosting_val_f1": 0.0756,
+      "selected_threshold": 0.225,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "restriction_position_visible": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0888,
+      "logistic_regression_val_f1": 1.0,
+      "hist_gradient_boosting_val_f1": 0.8724,
+      "selected_threshold": 0.2,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "restriction_obstruction": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0035,
+      "logistic_regression_val_f1": 0.5185,
+      "hist_gradient_boosting_val_f1": 0.875,
+      "selected_threshold": 0.6,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "pump": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0355,
+      "logistic_regression_val_f1": 0.797,
+      "hist_gradient_boosting_val_f1": 0.875,
+      "selected_threshold": 0.25,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "bias": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0341,
+      "logistic_regression_val_f1": 0.1273,
+      "hist_gradient_boosting_val_f1": 0.1062,
+      "selected_threshold": 0.2,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "drift": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0321,
+      "logistic_regression_val_f1": 0.1413,
+      "hist_gradient_boosting_val_f1": 0.2835,
+      "selected_threshold": 0.2,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "stuck": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0184,
+      "logistic_regression_val_f1": 0.2835,
+      "hist_gradient_boosting_val_f1": 0.6429,
+      "selected_threshold": 0.2,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    },
+    "misroute_a": {
+      "constant_zero_val_f1": 0.0,
+      "constant_one_val_f1": 0.0075,
+      "logistic_regression_val_f1": 1.0,
+      "hist_gradient_boosting_val_f1": 0.6957,
+      "selected_threshold": 0.525,
+      "shipped_family": "HistGradientBoostingClassifier",
+      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+    }
   },
   "test_per_mechanism": {
     "leak": {
@@ -150,10 +185,441 @@
       "f1": null
     }
   },
+  "calibration_check": {
+    "leak": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 8,
+      "score_ge_0_9_true_positives": 0,
+      "score_ge_0_9_empirical_precision": 0.0,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 150,
+          "true_positives": 14,
+          "empirical_positive_rate": 0.0933
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 72,
+          "true_positives": 4,
+          "empirical_positive_rate": 0.0556
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 11,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 8,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        }
+      ]
+    },
+    "restriction_position_visible": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 37,
+      "score_ge_0_9_true_positives": 37,
+      "score_ge_0_9_empirical_precision": 1.0,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 1,
+          "true_positives": 1,
+          "empirical_positive_rate": 1.0
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 3,
+          "true_positives": 3,
+          "empirical_positive_rate": 1.0
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 9,
+          "true_positives": 9,
+          "empirical_positive_rate": 1.0
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 37,
+          "true_positives": 37,
+          "empirical_positive_rate": 1.0
+        }
+      ]
+    },
+    "restriction_obstruction": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 8,
+      "score_ge_0_9_true_positives": 2,
+      "score_ge_0_9_empirical_precision": 0.25,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 16,
+          "true_positives": 3,
+          "empirical_positive_rate": 0.1875
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 16,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 0,
+          "true_positives": 0,
+          "empirical_positive_rate": null
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 8,
+          "true_positives": 2,
+          "empirical_positive_rate": 0.25
+        }
+      ]
+    },
+    "pump": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 54,
+      "score_ge_0_9_true_positives": 34,
+      "score_ge_0_9_empirical_precision": 0.6296,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 6,
+          "true_positives": 3,
+          "empirical_positive_rate": 0.5
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 6,
+          "true_positives": 4,
+          "empirical_positive_rate": 0.6667
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 0,
+          "true_positives": 0,
+          "empirical_positive_rate": null
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 54,
+          "true_positives": 34,
+          "empirical_positive_rate": 0.6296
+        }
+      ]
+    },
+    "bias": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 5,
+      "score_ge_0_9_true_positives": 5,
+      "score_ge_0_9_empirical_precision": 1.0,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 23,
+          "true_positives": 4,
+          "empirical_positive_rate": 0.1739
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 7,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 0,
+          "true_positives": 0,
+          "empirical_positive_rate": null
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 5,
+          "true_positives": 5,
+          "empirical_positive_rate": 1.0
+        }
+      ]
+    },
+    "drift": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 11,
+      "score_ge_0_9_true_positives": 11,
+      "score_ge_0_9_empirical_precision": 1.0,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 32,
+          "true_positives": 22,
+          "empirical_positive_rate": 0.6875
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 10,
+          "true_positives": 6,
+          "empirical_positive_rate": 0.6
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 2,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 11,
+          "true_positives": 11,
+          "empirical_positive_rate": 1.0
+        }
+      ]
+    },
+    "stuck": {
+      "status": "uncalibrated_decision_score",
+      "score_ge_0_9_count": 2,
+      "score_ge_0_9_true_positives": 0,
+      "score_ge_0_9_empirical_precision": 0.0,
+      "bins": [
+        {
+          "score_range": "[0.2, 0.5]",
+          "count": 0,
+          "true_positives": 0,
+          "empirical_positive_rate": null
+        },
+        {
+          "score_range": "[0.5, 0.8]",
+          "count": 1,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        },
+        {
+          "score_range": "[0.8, 0.9]",
+          "count": 0,
+          "true_positives": 0,
+          "empirical_positive_rate": null
+        },
+        {
+          "score_range": "[0.9, 1.0]",
+          "count": 2,
+          "true_positives": 0,
+          "empirical_positive_rate": 0.0
+        }
+      ]
+    },
+    "misroute_a": {
+      "status": "not_evaluable",
+      "bins": []
+    }
+  },
+  "heuristic_fallback_evaluation": {
+    "constants": {
+      "STUCK_MIN_SAMPLES": 50,
+      "STUCK_MIN_ACTIVE_MEAN": 1.0,
+      "STUCK_DECISION_SCORE": 0.75,
+      "DRIFT_IDLE_FLOW_MAX_M3H": 5.0,
+      "DRIFT_MIN_LEVEL_SLOPE_MS": 0.0005,
+      "DRIFT_DECISION_SCORE": 0.7
+    },
+    "stuck_rule_test": {
+      "predicted_positives": 0,
+      "true_positives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "drift_rule_test": {
+      "predicted_positives": 0,
+      "true_positives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  },
+  "localisation_evaluation": {
+    "total_known_assets": 49,
+    "assets_seen_in_train_positives": 43,
+    "assets_never_in_train_count": 11,
+    "assets_never_in_train_ids": [
+      "E-PB0",
+      "E-PB1",
+      "E-PB2",
+      "E-S101a",
+      "E-S102b",
+      "E-S103b",
+      "E-SH",
+      "TK-101",
+      "TK-102",
+      "TK-103",
+      "XV-R000"
+    ],
+    "trained_component_classifiers_count": 41,
+    "test_localisation_micro_f1": 0.3968,
+    "test_localisation_macro_f1": 0.1832,
+    "test_localisation_exact_set_accuracy": 0.9049,
+    "evaluable_component_pairs": {
+      "bias::LT-102": {
+        "test_positives": 11,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bias::PT-001": {
+        "test_positives": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bias::PT-201": {
+        "test_positives": 15,
+        "precision": 0.4286,
+        "recall": 0.4,
+        "f1": 0.4138
+      },
+      "bias::PT-202A": {
+        "test_positives": 17,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bias::PT-202B": {
+        "test_positives": 4,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "drift::FT-001": {
+        "test_positives": 4,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "drift::LT-101": {
+        "test_positives": 10,
+        "precision": 0.6667,
+        "recall": 0.6,
+        "f1": 0.6316
+      },
+      "drift::LT-102": {
+        "test_positives": 14,
+        "precision": 1.0,
+        "recall": 0.3571,
+        "f1": 0.5263
+      },
+      "drift::LT-103": {
+        "test_positives": 13,
+        "precision": 0.1688,
+        "recall": 1.0,
+        "f1": 0.2889
+      },
+      "leak::E-PA2": {
+        "test_positives": 3,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "leak::E-R102b": {
+        "test_positives": 6,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "leak::E-R103b": {
+        "test_positives": 4,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "leak::E001": {
+        "test_positives": 4,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "leak::E002": {
+        "test_positives": 9,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "leak::E003": {
+        "test_positives": 5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "pump::P-101A": {
+        "test_positives": 82,
+        "precision": 0.8095,
+        "recall": 0.2073,
+        "f1": 0.3301
+      },
+      "restriction_obstruction::XV-R101": {
+        "test_positives": 5,
+        "precision": 0.3846,
+        "recall": 1.0,
+        "f1": 0.5556
+      },
+      "restriction_obstruction::XV-R103": {
+        "test_positives": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "restriction_position_visible::XV-PAI": {
+        "test_positives": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "restriction_position_visible::XV-PAO": {
+        "test_positives": 15,
+        "precision": 1.0,
+        "recall": 0.9333,
+        "f1": 0.9655
+      },
+      "restriction_position_visible::XV-PBI": {
+        "test_positives": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "restriction_position_visible::XV-R101": {
+        "test_positives": 24,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "restriction_position_visible::XV-R102": {
+        "test_positives": 1,
+        "precision": 0.25,
+        "recall": 1.0,
+        "f1": 0.4
+      },
+      "restriction_position_visible::XV-S101": {
+        "test_positives": 4,
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      }
+    }
+  },
+  "ineligible_window_audit": {
+    "ineligible_test_windows": 4180,
+    "windows_with_hypotheses": 1141,
+    "hypothesis_trigger_rate": 0.273
+  },
   "limitations": [
     "Simulation evaluation only; does not establish real terminal diagnostic accuracy.",
+    "Predicting no fault achieves 0.8225 exact-set accuracy on the test split (above the model 0.8140), so micro-F1 (0.3196 vs 0.0000 baseline) is the primary metric.",
+    "Scores are uncalibrated decision scores, not probabilities: leak scores >= 0.90 were true leaks in only 2 of 69 test cases (2.9% precision), and restriction_obstruction has low empirical precision.",
     "misroute_a has 0 test positive episodes and is reported as not_evaluable.",
     "restriction_obstruction (2 val) and stuck (1 test) have very low episode support.",
+    "11 of 49 declared assets never appear in positive training examples and cannot be localized by learned component models.",
+    "Approximately 27% of masked/ineligible test windows still trigger hypotheses.",
     "Roof failure, vapour damage and mechanical cascades are outside supported scope."
   ]
 }
