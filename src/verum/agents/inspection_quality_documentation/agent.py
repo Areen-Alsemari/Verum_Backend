@@ -43,21 +43,26 @@ class InspectionQualityDocumentationAgent:
         limitations: list[str] = []
         consumed_ids: set[str] = set()
 
+        assessment_context = {
+            "request": request,
+            "inputs": inputs,
+            "requests": requests,
+            "catalog": catalog,
+            "registered_ids": registered_ids,
+            "result_evidence_ids": result_evidence_ids,
+            "catalog_evidence_ids": catalog_evidence_ids,
+        }
+
         for record in results:
-            self._assess_record(
-                record,
-                request,
-                inputs,
-                requests,
-                catalog,
-                registered_ids,
-                result_evidence_ids,
-                catalog_evidence_ids,
-                record_checks,
-                retest_result_ids,
-                issues,
-                consumed_ids,
-            )
+            assessment = self._assess_record(record, assessment_context)
+            record_checks.append(assessment["record_check"])
+            consumed_ids.update(assessment["consumed_evidence_ids"])
+
+            if assessment["retest_required"]:
+                retest_result_ids.append(record["result_id"])
+
+            if assessment["issue"] is not None:
+                issues.append(assessment["issue"])
 
         observed_quality = self._observed_quality(
             inputs.get("observations"),
@@ -106,42 +111,111 @@ class InspectionQualityDocumentationAgent:
     def _assess_record(
         self,
         record: dict[str, Any],
-        request: dict[str, Any],
-        inputs: dict[str, Any],
-        requests: dict[str, Any],
-        catalog: dict[str, Any],
-        registered_ids: set[str],
-        result_evidence_ids: set[str],
-        catalog_evidence_ids: set[str],
-        record_checks: list[dict[str, Any]],
-        retest_result_ids: list[str],
-        issues: list[dict[str, Any]],
-        consumed_ids: set[str],
-    ) -> None:
-        """Assess one inspection result and collect its evidence-bound findings."""
-        result_id = record["result_id"]
-        inspection_request = requests.get(record["request_id"])
-        action = catalog.get(record["action_id"])
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Assess one inspection result and return its findings and side effects."""
+        request = context["request"]
+        inputs = context["inputs"]
+        inspection_request = context["requests"].get(record["request_id"])
+        action = context["catalog"].get(record["action_id"])
+        registered_ids = context["registered_ids"]
 
-        checks: list[dict[str, Any]] = []
+        request_assessment = self._assess_request_context(
+            record, request, inspection_request, registered_ids
+        )
 
-        def add_check(
-            check_id: str,
-            description: str,
-            outcome: str,
-            evidence_ids: list[str] | None = None,
-            checks: list[dict[str, Any]] = checks,
-        ) -> None:
-            """Append an evidence-bound inspection quality check."""
-            checks.append(
-                {
-                    "check_id": check_id,
-                    "description": description,
-                    "outcome": outcome,
-                    "evidence_ids": evidence_ids or [],
-                }
+        measurement = self._assess_measurement(
+            record,
+            request,
+            inputs["process_coverage"],
+            inspection_request,
+            action,
+            registered_ids,
+            context["catalog_evidence_ids"],
+        )
+
+        evidence = self._assess_record_evidence(
+            record,
+            request,
+            context["result_evidence_ids"],
+            registered_ids,
+        )
+
+        checks = [
+            request_assessment["request_link"],
+            measurement["performed_status"],
+            measurement["evidence_availability"],
+            measurement["calibration_validity"],
+            evidence["source_provenance"],
+            measurement["required_fields"],
+            request_assessment["chronology"],
+            request_assessment["human_approval"],
+            measurement["measurement_unit"],
+            measurement["measurement_uncertainty"],
+            measurement["process_coverage"],
+            measurement["validation_status"],
+            evidence["source_quality"],
+        ]
+
+        scope_supported = self._scope_supported(
+            action,
+            measurement["metric"],
+            measurement["unit_outcome"],
+            measurement["coverage_outcome"],
+        )
+
+        outcomes = [check["outcome"] for check in checks]
+
+        if scope_supported is False or "fail" in outcomes:
+            measurement_usable: bool | None = False
+        elif scope_supported is True and all(outcome == "pass" for outcome in outcomes):
+            measurement_usable = True
+        else:
+            measurement_usable = None
+
+        record_check = {
+            "result_id": record["result_id"],
+            "checks": checks,
+            "measurement_usable": measurement_usable,
+            "scope_supported": scope_supported,
+            "equipment_condition_confirmed": False,
+            "evidence_ids": evidence["source_ids"],
+        }
+
+        consumed_ids = set(request_assessment["request_ids"])
+        consumed_ids.update(evidence["source_ids"])
+        consumed_ids.update(measurement["coverage_ids"])
+
+        if measurement["unit_outcome"] != "unknown":
+            consumed_ids.update(measurement["catalog_ids"])
+
+        validation_status = measurement["validation_status_value"]
+
+        issue = None
+        if measurement_usable is not True:
+            issue = make_issue(
+                "INSPECTION_QUALITY_UNRESOLVED",
+                f"Inspection {record['result_id']} is not confirmed usable.",
+                evidence["source_ids"],
             )
 
+        return {
+            "record_check": record_check,
+            "retest_required": (
+                measurement_usable is False or validation_status == "RETEST_REQUIRED"
+            ),
+            "issue": issue,
+            "consumed_evidence_ids": consumed_ids,
+        }
+
+    def _assess_request_context(
+        self,
+        record: dict[str, Any],
+        request: dict[str, Any],
+        inspection_request: dict[str, Any] | None,
+        registered_ids: set[str],
+    ) -> dict[str, Any]:
+        """Assess request linkage, chronology, and human approval."""
         linked = (
             inspection_request is not None
             and inspection_request["action_id"] == record["action_id"]
@@ -161,18 +235,77 @@ class InspectionQualityDocumentationAgent:
             if inspection_request is not None
             else []
         )
-        consumed_ids.update(request_ids)
 
-        add_check(
+        request_link = self._make_check(
             "request_link",
             "Inspection result matches its originating request and action.",
             "pass" if linked else "unknown" if inspection_request is None else "fail",
             request_ids,
         )
 
+        chronological = False
+        if linked and inspection_request is not None:
+            performed_at = record.get("performed_at_t_sim_s")
+            requested_at = inspection_request.get("t_requested_sim_s")
+
+            chronological = (
+                isinstance(performed_at, (int, float))
+                and not isinstance(performed_at, bool)
+                and math.isfinite(performed_at)
+                and performed_at >= 0
+                and isinstance(requested_at, (int, float))
+                and not isinstance(requested_at, bool)
+                and math.isfinite(requested_at)
+                and requested_at >= 0
+                and performed_at >= requested_at
+            )
+
+        chronology = self._make_check(
+            "chronology",
+            "Inspection was performed no earlier than its request.",
+            ("pass" if chronological else "fail" if inspection_request is not None else "unknown"),
+            request_ids,
+        )
+
+        approval = (
+            inspection_request.get("human_approval", {}) if inspection_request is not None else {}
+        )
+        approval_status = approval.get("status")
+
+        human_approval = self._make_check(
+            "human_approval",
+            "The originating inspection request was approved.",
+            (
+                "pass"
+                if approval_status == "APPROVED"
+                else "fail"
+                if approval_status == "REJECTED"
+                else "unknown"
+            ),
+            request_ids,
+        )
+
+        return {
+            "request_link": request_link,
+            "chronology": chronology,
+            "human_approval": human_approval,
+            "request_ids": request_ids,
+        }
+
+    def _assess_measurement(
+        self,
+        record: dict[str, Any],
+        request: dict[str, Any],
+        process_coverage: list[dict[str, Any]],
+        inspection_request: dict[str, Any] | None,
+        action: dict[str, Any] | None,
+        registered_ids: set[str],
+        catalog_evidence_ids: set[str],
+    ) -> dict[str, Any]:
+        """Assess inspection execution, calibration, and measurement validity."""
         performed = record["workflow_status"] == "performed"
 
-        add_check(
+        performed_status = self._make_check(
             "performed_status",
             "Inspection was recorded as performed.",
             "pass" if performed else "fail",
@@ -180,7 +313,7 @@ class InspectionQualityDocumentationAgent:
 
         evidence_status = record.get("evidence_status")
 
-        add_check(
+        evidence_availability = self._make_check(
             "evidence_availability",
             "Inspection evidence is available and marked valid.",
             (
@@ -195,6 +328,7 @@ class InspectionQualityDocumentationAgent:
         valid_until = record.get("calibration_valid_until")
         as_of_utc = request["context"].get("as_of_utc")
         calibration_outcome = "unknown"
+
         if valid_until is not None and as_of_utc is not None:
             calibration_outcome = (
                 "pass"
@@ -202,24 +336,11 @@ class InspectionQualityDocumentationAgent:
                 >= datetime.fromisoformat(as_of_utc.replace("Z", "+00:00")).date()
                 else "fail"
             )
-        add_check(
+
+        calibration_validity = self._make_check(
             "calibration_validity",
             "Tool calibration remains valid at the assessment date.",
             calibration_outcome,
-        )
-
-        source_ids = self._source_evidence_ids(
-            record,
-            request,
-            result_evidence_ids,
-            registered_ids,
-        )
-
-        add_check(
-            "source_provenance",
-            "Registered evidence is explicitly linked to this result.",
-            "pass" if source_ids else "unknown",
-            source_ids,
         )
 
         findings = record.get("findings")
@@ -237,47 +358,10 @@ class InspectionQualityDocumentationAgent:
             and self._nonnegative_finite(metric.get("uncertainty_k2"))
         )
 
-        add_check(
+        required_fields = self._make_check(
             "required_fields",
             "Required inspection and measurement fields are complete.",
             "pass" if required_fields_present else "fail",
-        )
-
-        chronological = False
-
-        if linked and inspection_request is not None:
-            performed_at = record.get("performed_at_t_sim_s")
-            requested_at = inspection_request.get("t_requested_sim_s")
-
-            chronological = (
-                self._nonnegative_finite(performed_at)
-                and self._nonnegative_finite(requested_at)
-                and performed_at >= requested_at
-            )
-
-        add_check(
-            "chronology",
-            "Inspection was performed no earlier than its request.",
-            ("pass" if chronological else "fail" if inspection_request is not None else "unknown"),
-            request_ids,
-        )
-
-        approval = (
-            inspection_request.get("human_approval", {}) if inspection_request is not None else {}
-        )
-        approval_status = approval.get("status")
-
-        add_check(
-            "human_approval",
-            "The originating inspection request was approved.",
-            (
-                "pass"
-                if approval_status == "APPROVED"
-                else "fail"
-                if approval_status == "REJECTED"
-                else "unknown"
-            ),
-            request_ids,
         )
 
         metric_name = metric.get("name") if isinstance(metric, dict) else None
@@ -305,7 +389,7 @@ class InspectionQualityDocumentationAgent:
         if unit_outcome == "pass" and not catalog_ids:
             unit_outcome = "unknown"
 
-        add_check(
+        measurement_unit = self._make_check(
             "measurement_unit",
             "Measurement name and unit match the supplied action catalog.",
             unit_outcome,
@@ -319,39 +403,84 @@ class InspectionQualityDocumentationAgent:
                 "pass" if self._nonnegative_finite(metric.get("uncertainty_k2")) else "fail"
             )
 
-        add_check(
+        measurement_uncertainty = self._make_check(
             "measurement_uncertainty",
             "Measurement uncertainty is finite and nonnegative.",
             uncertainty_outcome,
         )
 
         coverage_outcome, coverage_ids = self._coverage_outcome(
-            inputs["process_coverage"],
+            process_coverage,
             record,
             registered_ids,
             inspection_request,
         )
 
-        add_check(
+        process_coverage_check = self._make_check(
             "process_coverage",
             "The supplied process coverage supports this inspection.",
             coverage_outcome,
             coverage_ids,
         )
 
-        validation_status = record.get("validation_status")
+        validation_status_value = record.get("validation_status")
 
-        add_check(
+        validation_status = self._make_check(
             "validation_status",
             "Inspection passed its recorded quality assurance.",
             (
                 "pass"
-                if validation_status == "PASSED_QA"
+                if validation_status_value == "PASSED_QA"
                 else "fail"
-                if validation_status in {"FLAGGED_INCONSISTENT", "RETEST_REQUIRED"}
+                if validation_status_value
+                in {
+                    "FLAGGED_INCONSISTENT",
+                    "RETEST_REQUIRED",
+                }
                 else "unknown"
             ),
         )
+
+        return {
+            "performed_status": performed_status,
+            "evidence_availability": evidence_availability,
+            "calibration_validity": calibration_validity,
+            "required_fields": required_fields,
+            "measurement_unit": measurement_unit,
+            "measurement_uncertainty": measurement_uncertainty,
+            "process_coverage": process_coverage_check,
+            "validation_status": validation_status,
+            "metric": metric,
+            "unit_outcome": unit_outcome,
+            "coverage_outcome": coverage_outcome,
+            "coverage_ids": coverage_ids,
+            "catalog_ids": catalog_ids,
+            "validation_status_value": validation_status_value,
+        }
+
+    def _assess_record_evidence(
+        self,
+        record: dict[str, Any],
+        request: dict[str, Any],
+        result_evidence_ids: set[str],
+        registered_ids: set[str],
+    ) -> dict[str, Any]:
+        """Assess result provenance and the quality status of its source."""
+        source_ids = self._source_evidence_ids(
+            record,
+            request,
+            result_evidence_ids,
+            registered_ids,
+        )
+
+        source_provenance = self._make_check(
+            "source_provenance",
+            "Registered evidence is explicitly linked to this result.",
+            "pass" if source_ids else "unknown",
+            source_ids,
+        )
+
+        evidence_status = record.get("evidence_status")
 
         source_quality = (
             "pass"
@@ -361,57 +490,33 @@ class InspectionQualityDocumentationAgent:
             else "unknown"
         )
 
-        add_check(
+        source_quality_check = self._make_check(
             "source_quality",
             "Inspection source quality is supported by registered evidence.",
             source_quality,
             source_ids,
         )
 
-        scope_supported = self._scope_supported(
-            action,
-            metric,
-            unit_outcome,
-            coverage_outcome,
-        )
+        return {
+            "source_ids": source_ids,
+            "source_provenance": source_provenance,
+            "source_quality": source_quality_check,
+        }
 
-        outcomes = [check["outcome"] for check in checks]
-
-        if scope_supported is False or "fail" in outcomes:
-            measurement_usable: bool | None = False
-        elif scope_supported is True and all(outcome == "pass" for outcome in outcomes):
-            measurement_usable = True
-        else:
-            measurement_usable = None
-
-        record_checks.append(
-            {
-                "result_id": result_id,
-                "checks": checks,
-                "measurement_usable": measurement_usable,
-                "scope_supported": scope_supported,
-                "equipment_condition_confirmed": False,
-                "evidence_ids": source_ids,
-            }
-        )
-
-        consumed_ids.update(source_ids)
-        consumed_ids.update(coverage_ids)
-
-        if unit_outcome != "unknown":
-            consumed_ids.update(catalog_ids)
-
-        if measurement_usable is False or validation_status == "RETEST_REQUIRED":
-            retest_result_ids.append(result_id)
-
-        if measurement_usable is not True:
-            issues.append(
-                make_issue(
-                    "INSPECTION_QUALITY_UNRESOLVED",
-                    f"Inspection {result_id} is not confirmed usable.",
-                    source_ids,
-                )
-            )
+    @staticmethod
+    def _make_check(
+        check_id: str,
+        description: str,
+        outcome: str,
+        evidence_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Build one evidence-bound inspection quality check."""
+        return {
+            "check_id": check_id,
+            "description": description,
+            "outcome": outcome,
+            "evidence_ids": evidence_ids or [],
+        }
 
     @staticmethod
     def _nonempty(value: Any) -> bool:
