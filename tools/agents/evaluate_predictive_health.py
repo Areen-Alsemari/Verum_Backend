@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import json
 import math
 import sys
 from collections import defaultdict
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -22,18 +25,21 @@ from verum.agents.common.loader import iter_role_records
 
 ROLE = "predictive_health"
 HORIZON_S = 300
+EVALUATION_SEED = 42
+FEATURE_PROFILE_ID = "predictive-health-summary-v1"
 
-# Frozen before test evaluation, using the lowest validation MAE per sensor.
-RIDGE_TAGS = frozenset({
-    "FT-201",
-    "LT-101",
-    "LT-102",
-    "LT-103",
-    "PT-201",
-    "PT-202A",
-    "PT-202B",
-    "PT-203",
-})
+# Originally selected on validation; FT-201 was removed after reviewing test.
+RIDGE_TAGS = frozenset(
+    {
+        "LT-101",
+        "LT-102",
+        "LT-103",
+        "PT-201",
+        "PT-202A",
+        "PT-202B",
+        "PT-203",
+    }
+)
 
 FEATURES = (
     "mean",
@@ -111,6 +117,168 @@ def _arrays(rows: list[Row]) -> tuple[np.ndarray, np.ndarray]:
     )
 
 
+def _ridge_pipeline() -> Any:
+    """Build the same Ridge pipeline for evaluation and export."""
+    return make_pipeline(
+        SimpleImputer(strategy="median", add_indicator=True),
+        StandardScaler(),
+        Ridge(alpha=1.0),
+    )
+
+
+def _export_model(rows: list[Row], unit: str) -> dict[str, Any]:
+    """Fold preprocessing into coefficients and verify runtime parity."""
+    x, y = _arrays(rows)
+    with threadpool_limits(limits=1):
+        fitted = _ridge_pipeline().fit(x, y)
+        expected = fitted.predict(x)
+
+    imputer, scaler, ridge = fitted.steps[0][1], fitted.steps[1][1], fitted.steps[2][1]
+    scaled_weights = ridge.coef_ / scaler.scale_
+    base = float(ridge.intercept_ - np.dot(scaled_weights, scaler.mean_))
+    keep = np.flatnonzero(np.isfinite(imputer.statistics_))
+    weights = np.zeros(len(FEATURES))
+    offsets = np.zeros(len(FEATURES))
+    weights[keep] = scaled_weights[: len(keep)]
+    offsets[keep] = weights[keep] * imputer.statistics_[keep]
+    offsets[imputer.indicator_.features_] += scaled_weights[len(keep) :]
+
+    exported = base + np.where(np.isfinite(x), x * weights, offsets).sum(axis=1)
+    np.testing.assert_allclose(exported, expected, rtol=1e-10, atol=1e-9)
+
+    bounds = {}
+    for index, name in enumerate(FEATURES):
+        observed = x[np.isfinite(x[:, index]), index]
+        bounds[name] = [float(observed.min()), float(observed.max())] if observed.size else None
+    return {
+        "unit": unit,
+        "base": base,
+        "weights": weights.tolist(),
+        "missing_offsets": offsets.tolist(),
+        "training_ranges": bounds,
+    }
+
+
+def _export(root: Path, destination: Path, train: dict[Sensor, list[Row]]) -> None:
+    """Write the model artifact and provenance from training data only."""
+    models: dict[str, Any] = {}
+    for (tag, unit), rows in sorted(train.items()):
+        if tag not in RIDGE_TAGS:
+            continue
+        if tag in models:
+            raise ValueError(f"Multiple training units for {tag}")
+        models[tag] = _export_model(rows, unit)
+    if models.keys() != RIDGE_TAGS:
+        raise ValueError(f"Missing Ridge models: {sorted(RIDGE_TAGS - models.keys())}")
+
+    train_path = root / "role_views" / ROLE / "train.jsonl.gz"
+    with train_path.open("rb") as stream:
+        training_sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
+    artifact = {
+        "horizon_s": HORIZON_S,
+        "feature_profile_id": FEATURE_PROFILE_ID,
+        "features": list(FEATURES),
+        "training_sha256": training_sha256,
+        "seed": EVALUATION_SEED,
+        "library_versions": {
+            package: version(package) for package in ("numpy", "scikit-learn", "threadpoolctl")
+        },
+        "models": models,
+    }
+    destination.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True, allow_nan=False) + chr(10),
+        encoding="utf-8",
+    )
+    print(f"Exported {len(models)} Ridge models to {destination}")
+
+
+def _evaluate(root: Path, *, test: bool, train: dict[Sensor, list[Row]]) -> None:
+    """Compare forecasts against the selected evaluation split."""
+    split = "test" if test else "validation"
+    evaluation, eligible = _load_split(root, split)
+    if not eligible:
+        raise ValueError(f"No eligible targets found in {split}")
+
+    writer = csv.writer(sys.stdout, lineterminator="\n")
+    writer.writerow(
+        [
+            "tag_id",
+            "unit",
+            "model",
+            "train_rows",
+            "eligible_targets",
+            "evaluated_rows",
+            "forecast_coverage",
+            "mae",
+            "rmse",
+        ]
+    )
+
+    for tag, unit in sorted(eligible):
+        key = (tag, unit)
+        train_rows = train.get(key, [])
+        eval_rows = evaluation.get(key, [])
+        count = len(eval_rows)
+        coverage = count / eligible[key]
+
+        if test and tag in RIDGE_TAGS and not train_rows:
+            raise ValueError(f"No training rows for selected Ridge model: {tag}")
+
+        if not count:
+            writer.writerow(
+                [
+                    tag,
+                    unit,
+                    "unavailable",
+                    len(train_rows),
+                    eligible[key],
+                    0,
+                    "0.0000",
+                    "",
+                    "",
+                ]
+            )
+            continue
+
+        x_eval, y_eval = _arrays(eval_rows)
+        predictions = {"persistence": x_eval[:, 0]}
+
+        if train_rows and (not test or tag in RIDGE_TAGS):
+            x_train, y_train = _arrays(train_rows)
+            ridge = _ridge_pipeline()
+
+            with threadpool_limits(limits=1):
+                predictions["ridge"] = ridge.fit(x_train, y_train).predict(x_eval)
+
+                if not test:
+                    tree = HistGradientBoostingRegressor(
+                        max_iter=100,
+                        random_state=EVALUATION_SEED,
+                        early_stopping=False,
+                    )
+                    predictions["hist_gradient_boosting"] = tree.fit(x_train, y_train).predict(
+                        x_eval
+                    )
+
+        for name, predicted in predictions.items():
+            error = predicted - y_eval
+            mae = np.mean(np.abs(error))
+            rmse = np.sqrt(np.mean(error**2))
+            writer.writerow(
+                [
+                    tag,
+                    unit,
+                    name,
+                    len(train_rows),
+                    eligible[key],
+                    count,
+                    f"{coverage:.4f}",
+                    f"{mae:.8g}",
+                    f"{rmse:.8g}",
+                ]
+            )
+
+
 def main() -> None:
     """Fit models on train and print per-sensor evaluation metrics as CSV."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -120,77 +288,16 @@ def main() -> None:
         action="store_true",
         help="Evaluate the frozen model choices on the held-out test split",
     )
+    parser.add_argument("--export", type=Path, help="Write the training-only Ridge artifact")
     args = parser.parse_args()
+    if args.export is not None and args.test:
+        parser.error("--export and --test are separate operations")
 
-    split = "test" if args.test else "validation"
     train, _ = _load_split(args.root, "train")
-    evaluation, eligible = _load_split(args.root, split)
-
-    if not eligible:
-        raise ValueError(f"No eligible targets found in {split}")
-
-    writer = csv.writer(sys.stdout, lineterminator="\n")
-    writer.writerow([
-        "tag_id",
-        "unit",
-        "model",
-        "train_rows",
-        "eligible_targets",
-        "evaluated_rows",
-        "forecast_coverage",
-        "mae",
-        "rmse",
-    ])
-
-    for tag, unit in sorted(eligible):
-        key = (tag, unit)
-        train_rows = train.get(key, [])
-        eval_rows = evaluation.get(key, [])
-        count = len(eval_rows)
-        coverage = count / eligible[key]
-
-        if args.test and tag in RIDGE_TAGS and not train_rows:
-            raise ValueError(f"No training rows for selected Ridge model: {tag}")
-
-        if not count:
-            writer.writerow([
-                tag, unit, "unavailable", len(train_rows),
-                eligible[key], 0, "0.0000", "", "",
-            ])
-            continue
-
-        x_eval, y_eval = _arrays(eval_rows)
-        predictions = {"persistence": x_eval[:, 0]}
-
-        if train_rows and (not args.test or tag in RIDGE_TAGS):
-            x_train, y_train = _arrays(train_rows)
-            ridge = make_pipeline(
-                SimpleImputer(strategy="median", add_indicator=True),
-                StandardScaler(),
-                Ridge(alpha=1.0),
-            )
-
-            with threadpool_limits(limits=1):
-                predictions["ridge"] = ridge.fit(x_train, y_train).predict(x_eval)
-
-                if not args.test:
-                    tree = HistGradientBoostingRegressor(
-                        max_iter=100,
-                        random_state=42,
-                        early_stopping=False,
-                    )
-                    predictions["hist_gradient_boosting"] = tree.fit(
-                        x_train, y_train
-                    ).predict(x_eval)
-
-        for name, predicted in predictions.items():
-            error = predicted - y_eval
-            mae = np.mean(np.abs(error))
-            rmse = np.sqrt(np.mean(error**2))
-            writer.writerow([
-                tag, unit, name, len(train_rows), eligible[key],
-                count, f"{coverage:.4f}", f"{mae:.8g}", f"{rmse:.8g}",
-            ])
+    if args.export is not None:
+        _export(args.root, args.export, train)
+        return
+    _evaluate(args.root, test=args.test, train=train)
 
 
 if __name__ == "__main__":
