@@ -7,6 +7,9 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+from jsonschema import ValidationError
+
 from verum.agents.inspection_quality_documentation import (
     InspectionQualityDocumentationAgent,
 )
@@ -68,79 +71,6 @@ def test_missing_observations_produce_no_quality_rows() -> None:
     response = InspectionQualityDocumentationAgent().run(request)
 
     assert response["result"]["observed_quality"] == []
-
-
-def test_coverage_requires_matching_asset_time_and_evidence() -> None:
-    """Independent: coverage requires a matching asset, time, and source."""
-    agent = InspectionQualityDocumentationAgent()
-    record = {
-        "performed_at_t_sim_s": 120.0,
-    }
-    inspection_request = {
-        "target_asset": "TANK-001",
-    }
-    coverage = [
-        {
-            "coverage_id": "COV-001",
-            "target_asset": "TANK-001",
-            "start_s": 100.0,
-            "end_s": 150.0,
-            "evidence_ids": ["source-reference"],
-        }
-    ]
-
-    assert agent._coverage_outcome(
-        coverage,
-        record,
-        {"source-reference"},
-        inspection_request,
-    ) == ("pass", ["source-reference"])
-
-    assert agent._coverage_outcome(
-        coverage,
-        record,
-        {"source-reference"},
-        {"target_asset": "TANK-002"},
-    ) == ("unknown", [])
-
-    assert agent._coverage_outcome(
-        coverage,
-        {"performed_at_t_sim_s": 200.0},
-        {"source-reference"},
-        inspection_request,
-    ) == ("unknown", [])
-
-    assert agent._coverage_outcome(
-        coverage,
-        record,
-        set(),
-        inspection_request,
-    ) == ("unknown", [])
-
-
-def test_scope_does_not_accept_unknown_coverage() -> None:
-    """Independent: unknown coverage cannot establish supported scope."""
-    agent = InspectionQualityDocumentationAgent()
-    action = {"action_id": "ACT-INSP-01"}
-    metric = {"name": "maximum_rim_seal_gap", "unit": "mm"}
-
-    assert agent._scope_supported(action, metric, "pass", "unknown") is None
-
-    assert agent._scope_supported(action, metric, "pass", "pass") is True
-
-    assert agent._scope_supported(action, metric, "fail", "pass") is False
-
-
-def test_numeric_validation_rejects_invalid_values() -> None:
-    """Independent: invalid numeric values must not be usable."""
-    agent = InspectionQualityDocumentationAgent()
-
-    assert agent._finite(2.5)
-    assert not agent._finite(float("nan"))
-    assert not agent._finite(float("inf"))
-    assert not agent._finite(True)
-    assert not agent._nonnegative_finite(-1.0)
-    assert agent._nonnegative_finite(0.0)
 
 
 def inspection_request_with_result() -> dict[str, Any]:
@@ -449,3 +379,53 @@ def test_request_evidence_is_cited_and_consumed() -> None:
         check = next(c for c in record["checks"] if c["check_id"] == name)
         assert "inspection-request-evidence" in check["evidence_ids"]
     assert "inspection-request-evidence" in response["consumed_evidence_ids"]
+
+
+def test_coverage_outside_time_is_unknown():
+    request = inspection_request_with_result()
+    request["input"]["process_coverage"][0]["end_s"] = 110.0
+    _, record = run_inspection(request)
+    assert inspection_check(record, "process_coverage") == "unknown"
+    assert record["scope_supported"] is None
+    assert record["measurement_usable"] is None
+
+
+def test_coverage_without_evidence_is_unknown():
+    request = inspection_request_with_result()
+    request["input"]["process_coverage"][0]["evidence_ids"] = []
+    _, record = run_inspection(request)
+    assert inspection_check(record, "process_coverage") == "unknown"
+    assert record["scope_supported"] is None
+
+
+def test_invalid_numeric_measurements_are_rejected():
+    """Reject invalid measurement values at the public contract boundary."""
+    for field, value in [("value", True), ("uncertainty_k2", -1.0)]:
+        request = inspection_request_with_result()
+        metric = request["input"]["inspection_results"][0]["findings"]["primary_metric"]
+        metric[field] = value
+        with pytest.raises(ValidationError):
+            run_inspection(request)
+
+
+def test_coverage_wrong_asset_is_unknown() -> None:
+    request = inspection_request_with_result()
+    request["input"]["process_coverage"][0]["target_asset"] = "TANK-002"
+    _, record = run_inspection(request)
+    assert inspection_check(record, "process_coverage") == "unknown"
+    assert record["scope_supported"] is None
+
+
+def test_valid_coverage_supports_scope() -> None:
+    _, record = run_inspection(inspection_request_with_result())
+    assert inspection_check(record, "process_coverage") == "pass"
+    assert record["scope_supported"] is True
+
+
+def test_mismatched_measurement_unit_rejects_scope() -> None:
+    """A catalog unit mismatch must not support inspection scope."""
+    request = inspection_request_with_result()
+    request["input"]["inspection_results"][0]["findings"]["primary_metric"]["unit"] = "cm"
+    _, record = run_inspection(request)
+    assert inspection_check(record, "measurement_unit") == "fail"
+    assert record["scope_supported"] is False
