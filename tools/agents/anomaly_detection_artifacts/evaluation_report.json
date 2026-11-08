@@ -1,0 +1,93 @@
+{
+  "eligible_records": {
+    "train": 9832,
+    "validation": 3980,
+    "test": 2828
+  },
+  "feature_count": 66,
+  "validation_candidate_results": {
+    "always_negative": {
+      "positive_count": 496,
+      "negative_count": 3484,
+      "precision": 0.0,
+      "recall": 0.0,
+      "average_precision": 0.12462311557788945,
+      "confusion_matrix": {
+        "true_negative": 3484,
+        "false_positive": 0,
+        "false_negative": 496,
+        "true_positive": 0
+      },
+      "false_alarms": 0,
+      "misses": 496
+    },
+    "logistic_regression": {
+      "positive_count": 496,
+      "negative_count": 3484,
+      "precision": 0.3760552570990023,
+      "recall": 0.9879032258064516,
+      "average_precision": 0.4000189714343704,
+      "confusion_matrix": {
+        "true_negative": 2671,
+        "false_positive": 813,
+        "false_negative": 6,
+        "true_positive": 490
+      },
+      "false_alarms": 813,
+      "misses": 6
+    },
+    "random_forest": {
+      "positive_count": 496,
+      "negative_count": 3484,
+      "precision": 0.1643192488262911,
+      "recall": 0.07056451612903226,
+      "average_precision": 0.16070656562735225,
+      "confusion_matrix": {
+        "true_negative": 3306,
+        "false_positive": 178,
+        "false_negative": 461,
+        "true_positive": 35
+      },
+      "false_alarms": 178,
+      "misses": 461
+    }
+  },
+  "selected_model": "logistic_regression",
+  "selected_threshold": 0.5442783641631266,
+  "selected_validation_metrics": {
+    "positive_count": 496,
+    "negative_count": 3484,
+    "precision": 0.3760552570990023,
+    "recall": 0.9879032258064516,
+    "average_precision": 0.4000189714343704,
+    "confusion_matrix": {
+      "true_negative": 2671,
+      "false_positive": 813,
+      "false_negative": 6,
+      "true_positive": 490
+    },
+    "false_alarms": 813,
+    "misses": 6
+  },
+  "test_metrics": {
+    "positive_count": 502,
+    "negative_count": 2326,
+    "precision": 0.5948275862068966,
+    "recall": 0.9621513944223108,
+    "average_precision": 0.5604910288355511,
+    "confusion_matrix": {
+      "true_negative": 1997,
+      "false_positive": 329,
+      "false_negative": 19,
+      "true_positive": 483
+    },
+    "false_alarms": 329,
+    "misses": 19
+  },
+  "limitations": [
+    "The physical label represents an injected change in the reduced reference simulator.",
+    "A model prediction is a reported signal departure, not proof of a real equipment fault.",
+    "Overlapping windows from the same episode are not independent fault events.",
+    "The test split was evaluated only after model and threshold selection."
+  ]
+}
