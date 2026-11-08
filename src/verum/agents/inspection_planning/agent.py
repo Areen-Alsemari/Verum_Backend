@@ -1,18 +1,219 @@
-"""Agent class of the Inspection Planning role, currently a placeholder.
-
-The class implements the run interface by answering with the conservative example result. The owner
-of the role replaces this base class with the real implementation.
-"""
+"""Runtime implementation of the Inspection Planning role."""
 
 from __future__ import annotations
 
-from verum.agents.common import StubAgent
+from typing import Any
+
+from verum.agents.common import (
+    attached_report_ids,
+    build_response,
+    check_request,
+    check_response,
+    implementation_block,
+    make_issue,
+)
 
 ROLE = "inspection_planning"
+VERSION = "1.0.0"
 
 
-class InspectionPlanningAgent(StubAgent):
-    """Placeholder agent for the Inspection Planning role."""
+def _hypotheses_for_target(
+    diagnosis: dict[str, Any] | None,
+    target_asset: str,
+) -> list[str]:
+    """Return hypotheses explicitly associated with the target asset."""
+    if diagnosis is None or diagnosis.get("result") is None:
+        return []
 
-    def __init__(self) -> None:
-        super().__init__(ROLE)
+    return [
+        hypothesis["hypothesis_id"]
+        for hypothesis in diagnosis["result"].get("hypotheses", [])
+        if any(
+            component["asset_id"] == target_asset
+            for component in hypothesis["components"]
+        )
+    ]
+
+
+def _within_budget(
+    action: dict[str, Any],
+    budget: dict[str, Any],
+) -> bool:
+    """Check whether the action fits the supplied budget."""
+    max_cost = budget["max_cost_usd"]
+    max_duration = budget["max_duration_min"]
+
+    return (
+        (max_cost is None or action["cost_usd"] <= max_cost)
+        and (
+            max_duration is None
+            or action["duration_min"] <= max_duration
+        )
+    )
+
+
+class InspectionPlanningAgent:
+    """Generate evidence-backed inspection options without dispatch authority."""
+
+    def run(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Validate a request, generate inspection options, and validate the response."""
+        check_request(request)
+
+        if request["agent"] != ROLE:
+            raise ValueError("request is addressed to a different role")
+
+        inputs = request["input"]
+        assets = {
+            asset["asset_id"]: asset["kind"]
+            for asset in inputs["assets"]
+        }
+        target_ids = inputs["target_asset_ids"]
+        diagnosis = inputs.get("diagnosis_report")
+        budget = inputs["budget"]
+
+        options: list[dict[str, Any]] = []
+        consumed = set(attached_report_ids(request))
+        limitations: list[str] = []
+
+        for action in inputs["catalog"]:
+            for target_asset in target_ids:
+                if assets.get(target_asset) != action["target_kind"]:
+                    continue
+
+                checks, feasibility = evaluate_action(
+                    action, request, target_asset
+                )
+
+                evidence_ids = sorted({
+                    evidence_id
+                    for check in checks
+                    for evidence_id in check["evidence_ids"]
+                })
+
+                consumed.update(evidence_ids)
+
+                option_limitations: list[str] = []
+
+                if not _within_budget(action, budget):
+                    feasibility = "blocked"
+                    option_limitations.append(
+                        "Action exceeds the supplied inspection budget."
+                    )
+
+                if feasibility == "unknown":
+                    option_limitations.append(
+                        "One or more preconditions lack sufficient scoped evidence."
+                    )
+
+                options.append(
+                    {
+                        "option_id": f"{action['action_id']}-{target_asset}",
+                        "action_id": action["action_id"],
+                        "target_asset": target_asset,
+                        "addresses_hypothesis_ids": _hypotheses_for_target(
+                            diagnosis, target_asset
+                        ),
+                        "feasibility": feasibility,
+                        "precondition_checks": checks,
+                        "cost_usd": action["cost_usd"],
+                        "duration_min": action["duration_min"],
+                        "expected_information_gain_bits": None,
+                        "information_gain_method_id": None,
+                        "limitations": option_limitations,
+                        "evidence_ids": evidence_ids,
+                    }
+                )
+
+        if not options:
+            return self._insufficient(
+                request,
+                "NO_COMPATIBLE_INSPECTION_OPTIONS",
+                "No catalog action matches the requested target assets.",
+            )
+
+        has_unknown = any(
+            option["feasibility"] == "unknown"
+            for option in options
+        )
+
+        if has_unknown:
+            limitations.append(
+                "Some inspection preconditions remain unknown because "
+                "the supplied evidence does not establish their target scope."
+            )
+
+        limitations.append(
+            "Options are advisory only. Human approval and operational "
+            "precondition verification remain mandatory."
+        )
+
+        result = {
+            "options": options,
+            "selection_policy_id": None,
+            "recommended_option_id": None,
+            "dispatch_authorized": False,
+        }
+
+        issues = (
+            [
+                make_issue(
+                    "INSPECTION_PRECONDITIONS_UNKNOWN",
+                    "Some inspection options cannot be established as eligible.",
+                )
+            ]
+            if has_unknown
+            else []
+        )
+
+        response = build_response(
+            request,
+            status="degraded" if has_unknown else "complete",
+            result=result,
+            consumed_evidence_ids=sorted(consumed),
+            implementation=implementation_block(
+                "inspection-planning",
+                VERSION,
+            ),
+            issues=issues,
+            limitations=limitations,
+        )
+
+        check_response(request, response)
+        return response
+
+    def _insufficient(
+        self,
+        request: dict[str, Any],
+        code: str,
+        message: str,
+    ) -> dict[str, Any]:
+        """Return a contract-valid resultless response."""
+        response = build_response(
+            request,
+            status="insufficient_evidence",
+            result=None,
+            consumed_evidence_ids=attached_report_ids(request),
+            implementation=implementation_block(
+                "inspection-planning",
+                VERSION,
+            ),
+            issues=[make_issue(code, message)],
+            limitations=[
+                "No inspection dispatch or operational action is authorized."
+            ],
+        )
+        check_response(request, response)
+        return response
+
+
+def evaluate_action(
+    action: dict[str, Any],
+    request: dict[str, Any],
+    target_asset: str,
+) -> tuple[list[dict[str, Any]], str]:
+    """Evaluate one action using the evidence-backed precondition evaluator."""
+    from verum.agents.inspection_planning.preconditions import (
+        evaluate_preconditions,
+    )
+
+    return evaluate_preconditions(action, request, target_asset)

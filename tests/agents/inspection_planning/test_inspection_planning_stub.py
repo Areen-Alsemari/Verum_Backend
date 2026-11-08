@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
+from verum.agents.inspection_planning.agent import InspectionPlanningAgent
 from verum.agents.inspection_planning.preconditions import (
     evaluate_preconditions,
 )
@@ -290,3 +293,105 @@ def test_multiple_target_assets_prevent_ambiguous_scoping() -> None:
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["unknown", "unknown"]
+
+
+def make_runtime_request() -> dict[str, Any]:
+    """Load the repository's chained inspection-planning request fixture."""
+    fixture = (
+        Path(__file__).resolve().parents[3]
+        / "tests"
+        / "agents"
+        / "fixtures"
+        / "chained"
+        / "inspection_planning.request.json"
+    )
+    return json.loads(fixture.read_text(encoding="utf-8"))
+
+
+def test_runtime_generates_contract_valid_options() -> None:
+    """Runtime generates options and preserves advisory-only behavior.
+
+    Independent: yes, because this exercises the complete agent runtime.
+    """
+    request = make_runtime_request()
+    response = InspectionPlanningAgent().run(request)
+
+    assert response["status"] == "degraded"
+    assert len(response["result"]["options"]) == 55
+    assert response["result"]["recommended_option_id"] is None
+    assert response["result"]["dispatch_authorized"] is False
+
+
+def test_runtime_only_matches_compatible_asset_kinds() -> None:
+    """An inspection action is only offered for its required asset kind.
+
+    Independent: yes, because compatibility is checked against the fixture catalog.
+    """
+    request = make_runtime_request()
+    response = InspectionPlanningAgent().run(request)
+
+    assets = {
+        asset["asset_id"]: asset["kind"]
+        for asset in request["input"]["assets"]
+    }
+    actions = {
+        action["action_id"]: action
+        for action in request["input"]["catalog"]
+    }
+
+    for option in response["result"]["options"]:
+        action = actions[option["action_id"]]
+        assert assets[option["target_asset"]] == action["target_kind"]
+
+
+def test_runtime_keeps_missing_preconditions_unknown() -> None:
+    """Missing constraint checks never create eligible inspection options.
+
+    Independent: yes, because the fixture supplies no constraint checks.
+    """
+    request = make_runtime_request()
+    response = InspectionPlanningAgent().run(request)
+
+    assert request["input"]["constraint_checks"] == []
+    assert all(
+        option["feasibility"] == "unknown"
+        for option in response["result"]["options"]
+    )
+
+
+def test_runtime_respects_inspection_budget() -> None:
+    """Actions exceeding the supplied budget are marked blocked.
+
+    Independent: yes, because the budget is changed for this test only.
+    """
+    request = make_runtime_request()
+    request["input"]["budget"]["max_cost_usd"] = 100.0
+
+    response = InspectionPlanningAgent().run(request)
+
+    expensive_options = [
+        option
+        for option in response["result"]["options"]
+        if option["cost_usd"] > 100.0
+    ]
+
+    assert expensive_options
+    assert all(
+        option["feasibility"] == "blocked"
+        for option in expensive_options
+    )
+
+
+def test_runtime_does_not_invent_diagnostic_hypotheses() -> None:
+    """An empty diagnostic hypothesis list produces no hypothesis links.
+
+    Independent: yes, because the fixture diagnostic report has no hypotheses.
+    """
+    request = make_runtime_request()
+    response = InspectionPlanningAgent().run(request)
+
+    assert request["input"]["diagnosis_report"]["result"]["hypotheses"] == []
+    assert all(
+        option["addresses_hypothesis_ids"] == []
+        for option in response["result"]["options"]
+    )
