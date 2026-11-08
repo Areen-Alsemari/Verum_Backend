@@ -1,32 +1,68 @@
-"""Placeholder checks for the predictive health agent.
-
-The placeholder must accept the role's example request and return a response the contract accepts.
-"""
+"""Test the Predictive Health agent's Ridge and persistence forecasts."""
 
 from __future__ import annotations
 
-from _agent_stubs import assert_stub_answers_example, example_request
-from verum.agents.common import check_request, check_response
+import json
+from typing import Any
+
 from verum.agents.predictive_health import PredictiveHealthAgent
+from verum.contracts.agent_interfaces import contract_directory
 
 
-def test_predictive_health_stub_passes_the_contract_on_its_example() -> None:
-    """The placeholder answers its example request with a valid response marked as a stub.
+def _example_request() -> dict[str, Any]:
+    """Load a fresh copy of the published request for each test."""
+    path = contract_directory() / "examples" / "predictive_health.request.json"
+    request: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return request
 
-    Independent: yes, because the contract validators are separate from the placeholder.
-    """
-    assert_stub_answers_example(PredictiveHealthAgent(), "predictive_health")
+
+def test_persistence_forecasts_the_current_window_mean() -> None:
+    """Use the published flow example to distinguish mean from latest reading."""
+    report = PredictiveHealthAgent().run(_example_request())
+    result = report["result"]
+    (forecast,) = result["forecasts"]
+
+    assert report["status"] == "complete"
+    assert forecast["tag_id"] == "FT-001"
+    assert forecast["unit"] == "m3/h"
+    assert forecast["quantity"] == "reported_mean"
+    assert forecast["horizon_s"] == 300
+    assert forecast["value"] == 594.78658931006
+    assert forecast["interval"] is None
+    assert result["health_score"] is None
+    assert result["remaining_useful_life"] is None
+    assert result["field_qualified"] is False
 
 
-def test_predictive_health_stub_declines_when_its_example_does_not_fit() -> None:
-    """A request for a channel the example does not cover gets an insufficient-evidence answer.
+def test_persistence_reports_an_unavailable_window_mean() -> None:
+    """Keep the available forecast when another requested tag has no mean."""
+    request = _example_request()
+    request["input"]["target_tag_ids"] = ["FT-001", "LSHH-101"]
 
-    Independent: yes, because the contract validators judge the fallback answer.
-    """
-    request = example_request("predictive_health")
-    request["input"]["target_tag_ids"] = ["PT-001"]
-    check_request(request)
-    response = PredictiveHealthAgent().run(request)
-    check_response(request, response)
-    assert response["status"] == "insufficient_evidence" and response["result"] is None
-    assert [issue["message"] for issue in response["issues"]] == ["stub, not implemented"]
+    report = PredictiveHealthAgent().run(request)
+    forecasts = {row["tag_id"]: row for row in report["result"]["forecasts"]}
+
+    assert report["status"] == "degraded"
+    assert set(forecasts) == {"FT-001", "LSHH-101"}
+    assert forecasts["FT-001"]["value"] == 594.78658931006
+    assert forecasts["LSHH-101"]["value"] is None
+    assert forecasts["LSHH-101"]["interval"] is None
+
+
+def test_agent_uses_ridge_and_persistence_in_the_same_request() -> None:
+    """Keep the baseline for FT-001 while applying Ridge to LT-101."""
+    request = _example_request()
+    request["input"]["target_tag_ids"] = ["LT-101", "FT-001"]
+    signals = {
+        row["tag_id"]: row
+        for row in request["input"]["observations"]["summary"]["signals"]
+    }
+
+    report = PredictiveHealthAgent().run(request)
+    forecasts = {row["tag_id"]: row for row in report["result"]["forecasts"]}
+
+    assert report["status"] == "complete"
+    assert set(forecasts) == {"LT-101", "FT-001"}
+    assert forecasts["LT-101"]["value"] is not None
+    assert forecasts["LT-101"]["value"] != signals["LT-101"]["mean"]
+    assert forecasts["FT-001"]["value"] == signals["FT-001"]["mean"]
