@@ -341,3 +341,25 @@ def test_review_required_when_verified_proposals_share_roots() -> None:
     assert result["human_decision_required"] is True
     assert result["automatic_action_authorized"] is False
     assert result["equipment_condition_confirmed"] is False
+
+
+def test_run_returns_error_when_evidence_check_raises(monkeypatch):
+    """Independent: A processing exception produces a resultless error response."""
+    import verum.agents.evidence_verification_decision.agent as module
+
+    request = _registered_request_with_changes(
+        diagnosis_candidates=True, quality_usable=True
+    )
+    request["input"]["evidence_proposals"] = [_verified_proposal("proposal-error")]
+
+    def forced_failure(*args, **kwargs):
+        raise RuntimeError("forced verification failure")
+
+    monkeypatch.setattr(module, "check_proposal", forced_failure)
+
+    response = module.EvidenceVerificationDecisionAgent().run(request)
+
+    assert response["status"] == "error"
+    assert response["result"] is None
+    assert any(issue["code"] == "EVIDENCE_DECISION_ERROR" for issue in response["issues"])
+    assert response["consumed_evidence_ids"] == []

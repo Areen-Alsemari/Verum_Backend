@@ -294,115 +294,125 @@ class EvidenceVerificationDecisionAgent:
 
     def run(self, request: dict[str, Any]) -> dict[str, Any]:
         """Validate inputs, apply deterministic rules, and validate output."""
-        check_request(request)
+        try:
+            check_request(request)
 
-        if request["agent"] != ROLE:
-            raise ValueError("request is addressed to a different role")
+            if request["agent"] != ROLE:
+                raise ValueError("request is addressed to a different role")
 
-        inputs = request["input"]
-        context = request["context"]
-        registry = {
-            row["evidence_id"]: row
-            for row in request["evidence"]
-        }
-
-        quality_report = inputs["inspection_quality_report"]
-        evidence_checks: list[dict[str, Any]] = []
-
-        for proposal in inputs["evidence_proposals"]:
-            quality, scope = _quality_for_proposal(
-                proposal, quality_report, registry
-            )
-
-            evidence_checks.append(
-                check_proposal(
-                    proposal,
-                    registry,
-                    context["as_of_s"],
-                    quality_acceptable=quality,
-                    scope_supported=scope,
-                )
-            )
-
-        conflicts = _report_conflicts(inputs, registry)
-        conflicts.extend(_overlap_conflicts(evidence_checks, registry))
-
-        missing_reports = [
-            key
-            for key in REPORT_KEYS
-            if inputs[key] is None or inputs[key]["result"] is None
-        ]
-
-        state, summary, next_steps = _decision(
-            inputs["diagnosis_report"],
-            evidence_checks,
-            conflicts,
-            missing_reports,
-        )
-
-        diagnosis = inputs["diagnosis_report"]
-        hypothesis_report_ids = (
-            [diagnosis["report_id"]]
-            if diagnosis is not None
-            and diagnosis["result"] is not None
-            and diagnosis["result"]["assessment"] == "candidates_available"
-            else []
-        )
-
-        result = {
-            "decision_state": state,
-            "summary": summary,
-            "hypothesis_report_ids": hypothesis_report_ids,
-            "evidence_checks": evidence_checks,
-            "conflicts": conflicts,
-            "next_steps": next_steps,
-            "human_decision_required": True,
-            "automatic_action_authorized": False,
-            "equipment_condition_confirmed": False,
-        }
-
-        consumed = sorted(
-            set(attached_report_ids(request))
-            | {
-                ident
-                for check in evidence_checks
-                for ident in check["evidence_ids"]
+            inputs = request["input"]
+            context = request["context"]
+            registry = {
+                row["evidence_id"]: row
+                for row in request["evidence"]
             }
-            | {
-                ident
-                for conflict in conflicts
-                for ident in conflict["evidence_ids"]
-            }
-        )
 
-        issues = []
-        if state != "assessment_available":
-            issues.append(
-                make_issue(
-                    "EVIDENCE_DECISION_" + state.upper(),
-                    summary,
+            quality_report = inputs["inspection_quality_report"]
+            evidence_checks: list[dict[str, Any]] = []
+
+            for proposal in inputs["evidence_proposals"]:
+                quality, scope = _quality_for_proposal(
+                    proposal, quality_report, registry
                 )
+
+                evidence_checks.append(
+                    check_proposal(
+                        proposal,
+                        registry,
+                        context["as_of_s"],
+                        quality_acceptable=quality,
+                        scope_supported=scope,
+                    )
+                )
+
+            conflicts = _report_conflicts(inputs, registry)
+            conflicts.extend(_overlap_conflicts(evidence_checks, registry))
+
+            missing_reports = [
+                key
+                for key in REPORT_KEYS
+                if inputs[key] is None or inputs[key]["result"] is None
+            ]
+
+            state, summary, next_steps = _decision(
+                inputs["diagnosis_report"],
+                evidence_checks,
+                conflicts,
+                missing_reports,
             )
 
-        response = build_response(
-            request,
-            status=(
-                "complete"
-                if state == "assessment_available"
-                else "degraded"
-            ),
-            result=result,
-            consumed_evidence_ids=consumed,
-            implementation=implementation_block(
-                ROLE + "-rules", VERSION
-            ),
-            issues=issues,
-            limitations=[
-                "Advisory assessment only; human decision is required.",
-                "Evidence identity does not establish physical truth.",
-                "No equipment condition or automatic action is confirmed.",
-            ],
-        )
+            diagnosis = inputs["diagnosis_report"]
+            hypothesis_report_ids = (
+                [diagnosis["report_id"]]
+                if diagnosis is not None
+                and diagnosis["result"] is not None
+                and diagnosis["result"]["assessment"] == "candidates_available"
+                else []
+            )
 
-        check_response(request, response)
-        return response
+            result = {
+                "decision_state": state,
+                "summary": summary,
+                "hypothesis_report_ids": hypothesis_report_ids,
+                "evidence_checks": evidence_checks,
+                "conflicts": conflicts,
+                "next_steps": next_steps,
+                "human_decision_required": True,
+                "automatic_action_authorized": False,
+                "equipment_condition_confirmed": False,
+            }
+
+            consumed = sorted(
+                set(attached_report_ids(request))
+                | {
+                    ident
+                    for check in evidence_checks
+                    for ident in check["evidence_ids"]
+                }
+                | {
+                    ident
+                    for conflict in conflicts
+                    for ident in conflict["evidence_ids"]
+                }
+            )
+
+            issues = []
+            if state != "assessment_available":
+                issues.append(
+                    make_issue(
+                        "EVIDENCE_DECISION_" + state.upper(),
+                        summary,
+                    )
+                )
+
+            response = build_response(
+                request,
+                status=(
+                    "complete"
+                    if state == "assessment_available"
+                    else "degraded"
+                ),
+                result=result,
+                consumed_evidence_ids=consumed,
+                implementation=implementation_block(
+                    ROLE + "-rules", VERSION
+                ),
+                issues=issues,
+                limitations=[
+                    "Advisory assessment only; human decision is required.",
+                    "Evidence identity does not establish physical truth.",
+                    "No equipment condition or automatic action is confirmed.",
+                ],
+            )
+
+            check_response(request, response)
+            return response
+        except Exception as error:
+            return build_response(
+                request,
+                status="error",
+                result=None,
+                consumed_evidence_ids=[],
+                implementation=implementation_block(ROLE + "-rules", VERSION),
+                issues=[make_issue("EVIDENCE_DECISION_ERROR", f"{type(error).__name__}: {error}")],
+            )
