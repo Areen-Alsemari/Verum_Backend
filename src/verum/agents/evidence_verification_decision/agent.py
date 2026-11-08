@@ -219,7 +219,7 @@ def _decision(
     missing_reports: list[str],
 ) -> tuple[str, str, list[dict[str, Any]]]:
     """Apply explicit, conservative decision precedence."""
-    if missing_reports or any(
+    if missing_reports or not checks or any(
         check["usable"] is not True for check in checks
     ):
         return (

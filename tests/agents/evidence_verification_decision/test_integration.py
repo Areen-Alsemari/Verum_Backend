@@ -243,6 +243,19 @@ def test_all_decisions_remain_advisory() -> None:
     assert request == original
 
 
+def test_empty_proposals_cannot_make_assessment_available() -> None:
+    """Independent: empty proposals and quality checks require evidence."""
+    request = _registered_request_with_changes(diagnosis_candidates=True)
+    request["input"]["evidence_proposals"] = []
+    request["input"]["inspection_quality_report"]["result"]["record_checks"] = []
+    _reregister_reports(request)
+
+    response = _run(request)
+
+    assert response["result"]["evidence_checks"] == []
+    assert response["result"]["decision_state"] == "more_evidence_required"
+
+
 def test_assessment_available_with_verified_evidence() -> None:
     """Verified evidence and diagnostic candidates allow an assessment."""
     request = _registered_request_with_changes(
