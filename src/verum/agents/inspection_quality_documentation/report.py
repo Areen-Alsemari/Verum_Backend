@@ -201,6 +201,24 @@ def _inspection_options(
     return options
 
 
+def _unavailable_assessment(
+    decision: dict[str, Any],
+    registered: dict[str, dict[str, Any]],
+) -> tuple[str, str, list[str]]:
+    """Describe an unavailable Agent 8 assessment and its cited issues."""
+    status = decision["status"]
+    state = (
+        "more_evidence_required"
+        if status == "insufficient_evidence"
+        else "inconclusive"
+    )
+    citations = _checked_evidence_ids(
+        decision["consumed_evidence_ids"], registered
+    )
+    summary = f"Assessment unavailable: Agent 8 status is {status}."
+    return state, summary, citations
+
+
 def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
     """Assemble a schema-validated, advisory-only maintenance report."""
     context = bundle.context
@@ -228,24 +246,26 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
     decision_id = decision["report_id"]
     result = decision["result"]
 
-    if result["human_decision_required"] is not True:
-        raise ValueError("Agent 8 must require a human decision")
-
-    if result["automatic_action_authorized"] is not False:
-        raise ValueError("Automatic action cannot be authorized")
-
-    if result["equipment_condition_confirmed"] is not False:
-        raise ValueError("Equipment condition cannot be confirmed")
-
-    summary = result["summary"]
-
-    if not isinstance(summary, str) or not summary.strip():
-        raise ValueError("Agent 8 assessment summary is required")
-
-    assessment_citations = _checked_evidence_ids(
-        decision["consumed_evidence_ids"],
-        registered,
-    )
+    if result is None:
+        if decision["status"] not in {"insufficient_evidence", "error"}:
+            raise ValueError("Agent 8 result is unexpectedly null")
+        assessment_state, summary, assessment_citations = (
+            _unavailable_assessment(decision, registered)
+        )
+    else:
+        if result["human_decision_required"] is not True:
+            raise ValueError("Agent 8 must require a human decision")
+        if result["automatic_action_authorized"] is not False:
+            raise ValueError("Automatic action cannot be authorized")
+        if result["equipment_condition_confirmed"] is not False:
+            raise ValueError("Equipment condition cannot be confirmed")
+        summary = result["summary"]
+        if not isinstance(summary, str) or not summary.strip():
+            raise ValueError("Agent 8 assessment summary is required")
+        assessment_state = result["decision_state"]
+        assessment_citations = _checked_evidence_ids(
+            decision["consumed_evidence_ids"], registered
+        )
 
     findings = [{
         "finding_id": f"assessment-{decision_id}",
@@ -258,7 +278,7 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
 
     next_steps: list[dict[str, Any]] = []
 
-    for step in result["next_steps"]:
+    for step in (result["next_steps"] if result is not None else []):
         next_steps.append({
             "description": step["description"],
             "source_report_id": decision_id,
@@ -274,6 +294,13 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
         if role not in responses
     ]
 
+    if result is None:
+        missing_information.append("Agent 8 assessment unavailable")
+        for issue in decision["issues"]:
+            _checked_evidence_ids(issue["evidence_ids"], registered)
+            missing_information.append(
+                f"Agent 8 issue: {issue['code']}: {issue['message']}"
+            )
     for issue in bundle.issues:
         missing_information.append(
             f"Bundle issue: {issue['code']}: {issue['message']}"
@@ -298,7 +325,7 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
         "report_type": "maintenance_assessment",
         "title": "Maintenance assessment",
         "review_status": "human_review_required",
-        "assessment_state": result["decision_state"],
+        "assessment_state": assessment_state,
         "source_reports": sources,
         "findings": findings,
         "inspection_options": _inspection_options(

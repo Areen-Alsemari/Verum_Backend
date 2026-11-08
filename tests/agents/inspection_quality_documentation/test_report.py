@@ -386,3 +386,43 @@ def test_report_builds_from_full_runner_chain() -> None:
         item.startswith("Missing agent report:")
         for item in report["missing_information"]
     )
+
+
+@pytest.mark.parametrize("status", ["insufficient_evidence", "error"])
+def test_report_handles_unavailable_agent_8(status: str) -> None:
+    """Unavailable Agent 8 assessment produces an advisory report."""
+    bundle = _bundle()
+    decision = bundle.responses["evidence_verification_decision"]
+    decision["status"] = status
+    decision["result"] = None
+    decision["issues"] = [{
+        "code": "ASSESSMENT_UNAVAILABLE",
+        "message": "Assessment cannot be completed",
+        "evidence_ids": [],
+    }]
+    bundle.evidence[0]["content_sha256"] = content_hash(decision)
+
+    report = build_report(bundle)
+    assert report["assessment_state"] == (
+        "more_evidence_required" if status == "insufficient_evidence" else "inconclusive"
+    )
+    assert any(
+        "assessment unavailable" in row["statement"].lower()
+        for row in report["findings"]
+    )
+    assert report["human_decision_required"] is True
+    assert report["automatic_action_authorized"] is False
+    assert report["advisory_only"] is True
+    assert report["equipment_condition_confirmed"] is False
+    assert "Assessment unavailable" in report["narrative"]["text"]
+    assert "Agent 8 assessment unavailable" in report["missing_information"]
+    assert any("ASSESSMENT_UNAVAILABLE" in item for item in report["missing_information"])
+
+
+def test_report_rejects_null_agent_8_response() -> None:
+    """A null Agent 8 response must raise a clear ValueError."""
+    bundle = _bundle()
+    bundle.responses["evidence_verification_decision"] = None
+
+    with pytest.raises(ValueError, match="Agent 8 assessment is required"):
+        build_report(bundle)
