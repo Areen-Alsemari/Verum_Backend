@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from verum.agents.common import envelope, validation
 from verum.agents.common.envelope import (
     build_response,
     implementation_block,
@@ -38,7 +39,11 @@ def _duplicate_issues(payload: dict[str, Any]) -> list[dict[str, Any]]:
 def _collect_result(
     payload: dict[str, Any],
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Select exact asset matches and report gaps in the supplied records."""
+    """Select exact asset matches and report gaps in the supplied records.
+
+    For duplicate asset IDs, the last supplied record wins. Duplicate facts
+    for matched assets are both returned in input order. Both are flagged.
+    """
     issues = _duplicate_issues(payload)
     asset_index = {asset["asset_id"]: asset for asset in payload["assets"]}
     query_ids: list[str] = payload["query_asset_ids"]
@@ -98,25 +103,8 @@ class HistoricalAssetIntelligenceAgent:
         if request["agent"] != self.role:
             raise ValueError("request is addressed to a different role")
 
-        payload = request["input"]
         try:
-            result, issues = _collect_result(payload)
-        except Exception:
-            response = build_response(
-                request,
-                status="error",
-                result=None,
-                consumed_evidence_ids=[],
-                implementation=implementation_block(self.role, "1.0.0"),
-                issues=[
-                    make_issue(
-                        "HISTORICAL_ASSET_LOOKUP_FAILED",
-                        "The historical asset lookup could not be completed.",
-                    )
-                ],
-                limitations=list(_LIMITATIONS),
-            )
-        else:
+            result, issues = _collect_result(request["input"])
             response = build_response(
                 request,
                 status="degraded" if issues else "complete",
@@ -126,5 +114,27 @@ class HistoricalAssetIntelligenceAgent:
                 issues=issues,
                 limitations=list(_LIMITATIONS),
             )
-        check_response(request, response)
+            check_response(request, response)
+        except Exception:
+            return _error_response(request)
         return response
+
+
+def _error_response(request: dict[str, Any]) -> dict[str, Any]:
+    """Build and validate an error report after the normal report path fails."""
+    response = envelope.build_response(
+        request,
+        status="error",
+        result=None,
+        consumed_evidence_ids=[],
+        implementation=envelope.implementation_block(ROLE, "1.0.0"),
+        issues=[
+            envelope.make_issue(
+                "HISTORICAL_ASSET_LOOKUP_FAILED",
+                "The historical asset lookup could not be completed.",
+            )
+        ],
+        limitations=list(_LIMITATIONS),
+    )
+    validation.check_response(request, response)
+    return response

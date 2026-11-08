@@ -6,9 +6,9 @@ import json
 from typing import Any
 
 import pytest
-from tools.agents.historical_asset_intelligence_role_view import build_historical_asset_input
 
 from verum.agents.historical_asset_intelligence import agent as historical_agent
+from verum.agents.historical_asset_intelligence.adapter import build_historical_asset_input
 from verum.agents.historical_asset_intelligence.agent import (
     HistoricalAssetIntelligenceAgent,
 )
@@ -81,7 +81,8 @@ def test_history_accepts_cutoff_and_rejects_future_records() -> None:
     Independent: yes, because the fixture fixes the timestamps at and after the cutoff.
     """
     request = _example_request()
-    cutoff = request["context"]["as_of_s"]
+    cutoff = max(1, request["context"]["as_of_s"])
+    request["context"]["as_of_s"] = cutoff
     eligible = {
         "schema_version": "0.7.0",
         "dataset": "inspection_history",
@@ -92,11 +93,12 @@ def test_history_accepts_cutoff_and_rejects_future_records() -> None:
         "description": "Simulated maintenance record.",
         "work_type": "routine",
     }
-    request["input"]["history"] = [eligible]
+    earlier = {**eligible, "record_id": "HIST-000003", "t_recorded_s": cutoff - 1}
+    request["input"]["history"] = [earlier, eligible]
 
     result = HistoricalAssetIntelligenceAgent().run(request)["result"]
 
-    assert result["history"] == [eligible]
+    assert result["history"] == [earlier, eligible]
     assert result["history_status"] == "simulated_records_available"
 
     future = {**eligible, "record_id": "HIST-000002", "t_recorded_s": cutoff + 1}
@@ -146,7 +148,7 @@ def test_partial_history_names_each_matched_asset_without_records() -> None:
     )
 
 
-@pytest.mark.parametrize("asset_id", ["tk-101", " TK-101", "TK-101 "])
+@pytest.mark.parametrize("asset_id", ["tk-101", " TK-101", "TK-101 ", "TK-1011"])
 def test_near_miss_does_not_match(asset_id: str) -> None:
     """Keep asset lookup case and whitespace sensitive.
 
@@ -251,16 +253,21 @@ def test_fact_evidence_is_preserved_and_consumed() -> None:
     assert report["consumed_evidence_ids"] == [*ref_ids, fact_id]
 
 
-def test_lookup_failure_returns_error_report(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    "operation", ["_collect_result", "make_issue", "build_response", "check_response"]
+)
+def test_lookup_failure_returns_error_report(
+    monkeypatch: pytest.MonkeyPatch, operation: str
+) -> None:
     """Turn a processing failure into a contract-valid error report.
 
     Independent: yes, because the lookup is forced to fail on a valid request.
     """
 
-    def fail(_payload: dict[str, Any]) -> Any:
-        raise RuntimeError("forced lookup failure")
+    def fail(*_args: Any, **_kwargs: Any) -> Any:
+        raise RuntimeError("forced report failure")
 
-    monkeypatch.setattr(historical_agent, "_collect_result", fail)
+    monkeypatch.setattr(historical_agent, operation, fail)
     report = HistoricalAssetIntelligenceAgent().run(_example_request())
 
     assert report["status"] == "error"
@@ -295,3 +302,38 @@ def test_role_view_adapter_builds_a_runnable_request() -> None:
     assert fact["value"] == 30
     assert fact["source_locator"] == "Example design record"
     assert fact["evidence_ids"] == [evidence_id]
+
+
+def test_reference_evidence_is_preserved_without_facts() -> None:
+    """Keep reference evidence even if there are no declared facts.
+
+    Independent: yes, because the request supplies evidence and an empty fact list.
+    """
+    request = _example_request()
+    payload = request["input"]
+    expected = list(payload["reference_evidence_ids"])
+    assert expected
+    payload["declared_facts"] = []
+
+    report = HistoricalAssetIntelligenceAgent().run(request)
+
+    assert report["result"]["facts"] == []
+    assert report["result"]["evidence_ids"] == expected
+    assert report["consumed_evidence_ids"] == expected
+
+
+def test_history_before_zero_is_preserved_when_before_cutoff() -> None:
+    """Preserve a negative history timestamp when it precedes the cutoff.
+
+    Independent: yes, because the request supplies a specific timestamp of -1.
+    """
+    request = _example_request()
+    assert request["context"]["as_of_s"] > -1
+    record = _history_record("TK-101", -1, "HIST-000001")
+    request["input"]["history"] = [record]
+
+    report = HistoricalAssetIntelligenceAgent().run(request)
+
+    assert report["status"] == "complete"
+    assert report["result"]["history"] == [record]
+    assert report["result"]["history_status"] == "simulated_records_available"
