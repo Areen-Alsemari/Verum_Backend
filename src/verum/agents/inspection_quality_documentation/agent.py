@@ -396,6 +396,8 @@ class InspectionQualityDocumentationAgent:
             catalog_ids,
         )
 
+        # Scope: validate finite, nonnegative uncertainty only.
+        # Comparison against catalog uncertainty limits is out of scope.
         uncertainty_outcome = "unknown"
 
         if isinstance(metric, dict):
