@@ -1,15 +1,4 @@
-"""Query declared topology without inferring physical routing.
-
-Downstream follows from_node to to_node; upstream follows the reverse.
-Both combines the two traversals without changing direction within a path.
-An asset ID matches its exact node and nodes named X:<port>. An exact edge
-ID also matches the declared edge itself: its to_node is reachable downstream
-and its from_node upstream, with traversal continuing in that direction.
-
-A node is reachable only after traversing at least one edge. This includes
-a queried node reached from another query, through a cycle, or by a self-loop.
-Observations are not used.
-"""
+"""Query the declared facility topology without confirming physical routing."""
 
 from __future__ import annotations
 
@@ -60,6 +49,10 @@ def _reachable(adjacency: dict[str, set[str]], starts: set[str]) -> set[str]:
     return reached
 
 
+class _ReachabilityCheckError(ValueError):
+    """Signal a mismatch between traversal and the declared paths."""
+
+
 def _check_reachability(
     arcs: list[tuple[str, str]],
     starts: set[str],
@@ -78,7 +71,9 @@ def _check_reachability(
         supported = next_supported
 
     if reached != supported:
-        raise ValueError("Reachable nodes do not match the declared directional paths")
+        raise _ReachabilityCheckError(
+            "Reachable nodes do not match the declared directional paths"
+        )
 
 
 def _query_graph(
@@ -140,20 +135,44 @@ def _query_graph(
 
 
 class TopologyDependencyAgent:
-    """Report direct connections and reachable nodes for a topology query."""
+    """Report connections and nodes reachable through at least one edge.
+    An asset X matches X and X:<port>; other identifiers match exactly.
+    An edge query includes the edge and starts at its directional endpoint.
+    """
 
     role = ROLE
 
     def run(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Validate the request and return a source-linked topology report."""
+        """Follow from_node to to_node downstream and reverse it upstream.
+        The caller sets direction; the adapter defaults to both. Observations are ignored.
+        Routing is declared_only if any query resolves, and unknown otherwise.
+        """
         check_request(request)
         if request["agent"] != self.role:
             raise ValueError("request is addressed to a different role")
 
         payload = request["input"]
-        direct, reachable, missing, conflicts = _query_graph(payload)
-        queries = set(payload["query_asset_ids"])
         evidence_ids: list[str] = payload["reference_evidence_ids"]
+        limitations = [
+            "Declared connectivity does not establish actual flow or valve position.",
+            "Observations are not used; asset IDs also match their declared ports.",
+        ]
+        try:
+            direct, reachable, missing, conflicts = _query_graph(payload)
+        except _ReachabilityCheckError as exc:
+            response = build_response(
+                request,
+                status="error",
+                result=None,
+                consumed_evidence_ids=list(dict.fromkeys(evidence_ids)),
+                implementation=implementation_block(self.role, "1.0.0"),
+                issues=[make_issue("TOPOLOGY_REACHABILITY_CHECK_FAILED", str(exc))],
+                limitations=limitations,
+            )
+            check_response(request, response)
+            return response
+
+        queries = set(payload["query_asset_ids"])
         issues = []
         if missing:
             issues.append(
@@ -185,7 +204,7 @@ class TopologyDependencyAgent:
             consumed_evidence_ids=list(dict.fromkeys(evidence_ids)),
             implementation=implementation_block(self.role, "1.0.0"),
             issues=issues,
-            limitations=["Declared connectivity does not establish actual flow or valve position."],
+            limitations=limitations,
         )
         check_response(request, response)
         return response
