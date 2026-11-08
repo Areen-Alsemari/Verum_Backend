@@ -1,3 +1,4 @@
+
 """Tests for evidence-backed inspection precondition evaluation."""
 
 from __future__ import annotations
@@ -12,23 +13,48 @@ from verum.agents.inspection_planning.preconditions import (
 def make_request(
     constraint_checks: list[dict[str, Any]],
     target_asset_ids: list[str] | None = None,
+    approval_status: str = "APPROVED",
 ) -> dict[str, Any]:
     """Build a minimal request for precondition tests."""
     return {
         "evidence": [
             {
                 "evidence_id": "EV-001",
-                "kind": "declared_reference",
-                "source_ref": "reference:catalog",
+                "kind": "observation_window",
+                "source_ref": "observations:window-001",
                 "available_at_s": 0.0,
                 "content_sha256": "a" * 64,
-                "root_evidence_ids": [],
-                "provenance": "declared_design",
-            }
+                "root_evidence_ids": ["EV-001"],
+                "provenance": "simulated_observation",
+            },
+            {
+                "evidence_id": "EV-002",
+                "kind": "inspection_request",
+                "source_ref": "inspection_request:REQ-INSP-00001",
+                "available_at_s": 0.0,
+                "content_sha256": "b" * 64,
+                "root_evidence_ids": ["EV-002"],
+                "provenance": "simulated_workflow",
+            },
         ],
         "input": {
             "constraint_checks": constraint_checks,
             "target_asset_ids": target_asset_ids or ["TK-101"],
+            "workflow_requests": [
+                {
+                    "request_id": "REQ-INSP-00001",
+                    "action_id": "ACT-INSP-01",
+                    "target_asset": "TK-101",
+                    "human_approval": {
+                        "status": approval_status,
+                        "work_permit_number": (
+                            "PERMIT-001"
+                            if approval_status == "APPROVED"
+                            else None
+                        ),
+                    },
+                }
+            ],
         },
     }
 
@@ -45,7 +71,7 @@ def make_action() -> dict[str, Any]:
 
 
 def test_all_sourced_preconditions_pass() -> None:
-    """All explicitly supported checks allow human review.
+    """All supported checks allow human review.
 
     Independent: yes, because this tests the evaluator without the agent runtime.
     """
@@ -61,7 +87,7 @@ def test_all_sourced_preconditions_pass() -> None:
                 "check_id": "CHK-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
-                "evidence_ids": ["EV-001"],
+                "evidence_ids": ["EV-002"],
             },
         ]
     )
@@ -113,9 +139,9 @@ def test_failed_precondition_blocks_the_action() -> None:
 
 
 def test_unregistered_evidence_cannot_support_a_check() -> None:
-    """Evidence IDs absent from the request cannot establish a precondition.
+    """Unregistered evidence cannot establish a precondition.
 
-    Independent: yes, because the check references an unregistered evidence ID.
+    Independent: yes, because the check references a missing evidence ID.
     """
     request = make_request(
         [
@@ -129,7 +155,7 @@ def test_unregistered_evidence_cannot_support_a_check() -> None:
                 "check_id": "CHK-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
-                "evidence_ids": ["EV-001"],
+                "evidence_ids": ["EV-002"],
             },
         ]
     )
@@ -140,6 +166,99 @@ def test_unregistered_evidence_cannot_support_a_check() -> None:
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["unknown", "pass"]
+
+
+def test_pending_approval_does_not_satisfy_permit() -> None:
+    """Pending approval cannot establish permit eligibility.
+
+    Independent: yes, because the workflow has not received approval.
+    """
+    request = make_request(
+        [
+            {
+                "check_id": "CHK-01",
+                "description": "Tank level above 1.8 m",
+                "outcome": "pass",
+                "evidence_ids": ["EV-001"],
+            },
+            {
+                "check_id": "CHK-02",
+                "description": "Authorised permit issued by the approval",
+                "outcome": "pass",
+                "evidence_ids": ["EV-002"],
+            },
+        ],
+        approval_status="PENDING",
+    )
+
+    checks, feasibility = evaluate_preconditions(
+        make_action(), request, "TK-101"
+    )
+
+    assert feasibility == "unknown"
+    assert [check["outcome"] for check in checks] == ["pass", "unknown"]
+
+
+def test_rejected_approval_does_not_satisfy_permit() -> None:
+    """Rejected approval cannot establish permit eligibility.
+
+    Independent: yes, because the workflow explicitly records rejection.
+    """
+    request = make_request(
+        [
+            {
+                "check_id": "CHK-01",
+                "description": "Tank level above 1.8 m",
+                "outcome": "pass",
+                "evidence_ids": ["EV-001"],
+            },
+            {
+                "check_id": "CHK-02",
+                "description": "Authorised permit issued by the approval",
+                "outcome": "pass",
+                "evidence_ids": ["EV-002"],
+            },
+        ],
+        approval_status="REJECTED",
+    )
+
+    checks, feasibility = evaluate_preconditions(
+        make_action(), request, "TK-101"
+    )
+
+    assert feasibility == "unknown"
+    assert [check["outcome"] for check in checks] == ["pass", "unknown"]
+
+
+def test_conflicting_checks_remain_unknown() -> None:
+    """Conflicting outcomes cannot establish a precondition.
+
+    Independent: yes, because two checks disagree about the same condition.
+    """
+    request = make_request(
+        [
+            {
+                "check_id": "CHK-01",
+                "description": "Tank level above 1.8 m",
+                "outcome": "pass",
+                "evidence_ids": ["EV-001"],
+            },
+            {
+                "check_id": "CHK-02",
+                "description": "Tank level above 1.8 m",
+                "outcome": "fail",
+                "evidence_ids": ["EV-001"],
+            },
+        ]
+    )
+
+    checks, feasibility = evaluate_preconditions(
+        make_action(), request, "TK-101"
+    )
+
+    assert feasibility == "unknown"
+    assert checks[0]["outcome"] == "unknown"
+    assert checks[1]["outcome"] == "unknown"
 
 
 def test_multiple_target_assets_prevent_ambiguous_scoping() -> None:
@@ -159,7 +278,7 @@ def test_multiple_target_assets_prevent_ambiguous_scoping() -> None:
                 "check_id": "CHK-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
-                "evidence_ids": ["EV-001"],
+                "evidence_ids": ["EV-002"],
             },
         ],
         ["TK-101", "TK-102"],
