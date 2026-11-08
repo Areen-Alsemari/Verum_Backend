@@ -1,9 +1,9 @@
-
 """Rule-based inspection quality and documentation agent."""
 
 from __future__ import annotations
 
 import math
+from datetime import date, datetime
 from typing import Any
 
 from verum.agents.common import (
@@ -30,14 +30,8 @@ class InspectionQualityDocumentationAgent:
         inputs = request["input"]
         results = inputs["inspection_results"]
 
-        requests = {
-            row["request_id"]: row
-            for row in inputs["inspection_requests"]
-        }
-        catalog = {
-            row["action_id"]: row
-            for row in inputs["catalog"]
-        }
+        requests = {row["request_id"]: row for row in inputs["inspection_requests"]}
+        catalog = {row["action_id"]: row for row in inputs["catalog"]}
 
         registered_ids = self._registered_evidence_ids(request)
         result_evidence_ids = set(inputs["result_evidence_ids"])
@@ -78,10 +72,27 @@ class InspectionQualityDocumentationAgent:
                 and inspection_request["action_id"] == record["action_id"]
             )
 
+            request_ids = (
+                sorted(
+                    {
+                        entry["evidence_id"]
+                        for entry in request["evidence"]
+                        if isinstance(entry, dict)
+                        and entry.get("kind") == "inspection_request"
+                        and entry.get("source_ref") == f"inspection_request:{record['request_id']}"
+                        and entry.get("evidence_id") in registered_ids
+                    }
+                )
+                if inspection_request is not None
+                else []
+            )
+            consumed_ids.update(request_ids)
+
             add_check(
                 "request_link",
                 "Inspection result matches its originating request and action.",
-                "pass" if linked else "fail",
+                "pass" if linked else "unknown" if inspection_request is None else "fail",
+                request_ids,
             )
 
             performed = record["workflow_status"] == "performed"
@@ -106,6 +117,22 @@ class InspectionQualityDocumentationAgent:
                 ),
             )
 
+            valid_until = record.get("calibration_valid_until")
+            as_of_utc = request["context"].get("as_of_utc")
+            calibration_outcome = "unknown"
+            if valid_until is not None and as_of_utc is not None:
+                calibration_outcome = (
+                    "pass"
+                    if date.fromisoformat(valid_until)
+                    >= datetime.fromisoformat(as_of_utc.replace("Z", "+00:00")).date()
+                    else "fail"
+                )
+            add_check(
+                "calibration_validity",
+                "Tool calibration remains valid at the assessment date.",
+                calibration_outcome,
+            )
+
             source_ids = self._source_evidence_ids(
                 record,
                 request,
@@ -121,11 +148,7 @@ class InspectionQualityDocumentationAgent:
             )
 
             findings = record.get("findings")
-            metric = (
-                findings.get("primary_metric")
-                if isinstance(findings, dict)
-                else None
-            )
+            metric = findings.get("primary_metric") if isinstance(findings, dict) else None
 
             required_fields_present = (
                 self._nonempty(record.get("technician_id"))
@@ -136,9 +159,7 @@ class InspectionQualityDocumentationAgent:
                 and self._nonempty(metric.get("name"))
                 and self._nonempty(metric.get("unit"))
                 and self._finite(metric.get("value"))
-                and self._nonnegative_finite(
-                    metric.get("uncertainty_k2")
-                )
+                and self._nonnegative_finite(metric.get("uncertainty_k2"))
             )
 
             add_check(
@@ -166,9 +187,10 @@ class InspectionQualityDocumentationAgent:
                     "pass"
                     if chronological
                     else "fail"
-                    if linked
+                    if inspection_request is not None
                     else "unknown"
                 ),
+                request_ids,
             )
 
             approval = (
@@ -188,29 +210,16 @@ class InspectionQualityDocumentationAgent:
                     if approval_status == "REJECTED"
                     else "unknown"
                 ),
+                request_ids,
             )
 
-            metric_name = (
-                metric.get("name")
-                if isinstance(metric, dict)
-                else None
-            )
-            metric_unit = (
-                metric.get("unit")
-                if isinstance(metric, dict)
-                else None
-            )
+            metric_name = metric.get("name") if isinstance(metric, dict) else None
+            metric_unit = metric.get("unit") if isinstance(metric, dict) else None
 
-            expected_outputs = (
-                action.get("outputs", [])
-                if action is not None
-                else []
-            )
+            expected_outputs = action.get("outputs", []) if action is not None else []
 
             matching_outputs = [
-                output
-                for output in expected_outputs
-                if output.get("name") == metric_name
+                output for output in expected_outputs if output.get("name") == metric_name
             ]
 
             if action is None or not self._nonempty(metric_name):
@@ -219,17 +228,12 @@ class InspectionQualityDocumentationAgent:
                 unit_outcome = "fail"
             elif not self._nonempty(metric_unit):
                 unit_outcome = "fail"
-            elif any(
-                output.get("unit") == metric_unit
-                for output in matching_outputs
-            ):
+            elif any(output.get("unit") == metric_unit for output in matching_outputs):
                 unit_outcome = "pass"
             else:
                 unit_outcome = "fail"
 
-            catalog_ids = sorted(
-                catalog_evidence_ids.intersection(registered_ids)
-            )
+            catalog_ids = sorted(catalog_evidence_ids.intersection(registered_ids))
 
             if unit_outcome == "pass" and not catalog_ids:
                 unit_outcome = "unknown"
@@ -245,11 +249,7 @@ class InspectionQualityDocumentationAgent:
 
             if isinstance(metric, dict):
                 uncertainty_outcome = (
-                    "pass"
-                    if self._nonnegative_finite(
-                        metric.get("uncertainty_k2")
-                    )
-                    else "fail"
+                    "pass" if self._nonnegative_finite(metric.get("uncertainty_k2")) else "fail"
                 )
 
             add_check(
@@ -281,8 +281,7 @@ class InspectionQualityDocumentationAgent:
                     "pass"
                     if validation_status == "PASSED_QA"
                     else "fail"
-                    if validation_status
-                    in {"FLAGGED_INCONSISTENT", "RETEST_REQUIRED"}
+                    if validation_status in {"FLAGGED_INCONSISTENT", "RETEST_REQUIRED"}
                     else "unknown"
                 ),
             )
@@ -291,8 +290,7 @@ class InspectionQualityDocumentationAgent:
                 "pass"
                 if evidence_status == "valid" and source_ids
                 else "fail"
-                if evidence_status
-                in {"missing", "contradictory", "low_confidence"}
+                if evidence_status in {"missing", "contradictory", "low_confidence"}
                 else "unknown"
             )
 
@@ -314,9 +312,7 @@ class InspectionQualityDocumentationAgent:
 
             if scope_supported is False or "fail" in outcomes:
                 measurement_usable: bool | None = False
-            elif scope_supported is True and all(
-                outcome == "pass" for outcome in outcomes
-            ):
+            elif scope_supported is True and all(outcome == "pass" for outcome in outcomes):
                 measurement_usable = True
             else:
                 measurement_usable = None
@@ -338,10 +334,7 @@ class InspectionQualityDocumentationAgent:
             if unit_outcome != "unknown":
                 consumed_ids.update(catalog_ids)
 
-            if (
-                measurement_usable is False
-                or validation_status == "RETEST_REQUIRED"
-            ):
+            if measurement_usable is False or validation_status == "RETEST_REQUIRED":
                 retest_result_ids.append(result_id)
 
             if measurement_usable is not True:
@@ -368,21 +361,12 @@ class InspectionQualityDocumentationAgent:
                     "No performed inspection results were supplied.",
                 )
             )
-            limitations.append(
-                "Inspection quality cannot be established without results."
-            )
+            limitations.append("Inspection quality cannot be established without results.")
 
-        if any(
-            row["measurement_usable"] is not True
-            for row in record_checks
-        ):
-            limitations.append(
-                "One or more inspection measurements remain unusable or unknown."
-            )
+        if any(row["measurement_usable"] is not True for row in record_checks):
+            limitations.append("One or more inspection measurements remain unusable or unknown.")
 
-        limitations.append(
-            "Inspection quality does not confirm physical equipment condition."
-        )
+        limitations.append("Inspection quality does not confirm physical equipment condition.")
 
         result: dict[str, Any] = {
             "record_checks": record_checks,
@@ -415,9 +399,7 @@ class InspectionQualityDocumentationAgent:
     def _finite(value: Any) -> bool:
         """Return whether a value is a finite numeric measurement."""
         return (
-            isinstance(value, (int, float))
-            and not isinstance(value, bool)
-            and math.isfinite(value)
+            isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
         )
 
     @classmethod
@@ -436,16 +418,14 @@ class InspectionQualityDocumentationAgent:
             return {
                 row["evidence_id"]
                 for row in evidence
-                if isinstance(row, dict)
-                and isinstance(row.get("evidence_id"), str)
+                if isinstance(row, dict) and isinstance(row.get("evidence_id"), str)
             }
 
         if isinstance(evidence, dict):
             return {
                 row["evidence_id"]
                 for row in evidence.get("items", [])
-                if isinstance(row, dict)
-                and isinstance(row.get("evidence_id"), str)
+                if isinstance(row, dict) and isinstance(row.get("evidence_id"), str)
             }
 
         return set()
@@ -477,16 +457,10 @@ class InspectionQualityDocumentationAgent:
 
             evidence_id = entry.get("evidence_id")
 
-            if (
-                evidence_id not in allowed_ids
-                or evidence_id not in registered_ids
-            ):
+            if evidence_id not in allowed_ids or evidence_id not in registered_ids:
                 continue
 
-            if (
-                entry.get("kind") == "inspection_result"
-                and entry.get("source_ref") == expected_ref
-            ):
+            if entry.get("kind") == "inspection_result" and entry.get("source_ref") == expected_ref:
                 matched.add(evidence_id)
 
         return sorted(matched)
@@ -507,10 +481,7 @@ class InspectionQualityDocumentationAgent:
         )
         performed_at = record.get("performed_at_t_sim_s")
 
-        if (
-            not cls._nonempty(target)
-            or not cls._nonnegative_finite(performed_at)
-        ):
+        if not cls._nonempty(target) or not cls._nonnegative_finite(performed_at):
             return "unknown", []
 
         matching = [
@@ -534,11 +505,7 @@ class InspectionQualityDocumentationAgent:
             }
         )
 
-        return (
-            ("pass", supported_ids)
-            if supported_ids
-            else ("unknown", [])
-        )
+        return ("pass", supported_ids) if supported_ids else ("unknown", [])
 
     @classmethod
     def _scope_supported(
@@ -575,41 +542,24 @@ class InspectionQualityDocumentationAgent:
 
         summary = observations.get("summary")
 
-        if (
-            observations.get("representation") != "summary_v1"
-            or not isinstance(summary, dict)
-        ):
+        if observations.get("representation") != "summary_v1" or not isinstance(summary, dict):
             return []
 
-        evidence_ids = sorted(
-            set(observations.get("evidence_ids", []))
-            & registered_ids
-        )
+        evidence_ids = sorted(set(observations.get("evidence_ids", [])) & registered_ids)
 
         observed_quality: list[dict[str, Any]] = []
 
         for signal in summary.get("signals", []):
-            if (
-                not isinstance(signal, dict)
-                or not cls._nonempty(signal.get("tag_id"))
-            ):
+            if not isinstance(signal, dict) or not cls._nonempty(signal.get("tag_id")):
                 continue
 
             missing = signal.get("missing_samples")
             non_good = signal.get("bad_quality_samples")
 
-            if (
-                not isinstance(missing, int)
-                or isinstance(missing, bool)
-                or missing < 0
-            ):
+            if not isinstance(missing, int) or isinstance(missing, bool) or missing < 0:
                 continue
 
-            if (
-                not isinstance(non_good, int)
-                or isinstance(non_good, bool)
-                or non_good < 0
-            ):
+            if not isinstance(non_good, int) or isinstance(non_good, bool) or non_good < 0:
                 continue
 
             availability = signal.get("latest_availability")

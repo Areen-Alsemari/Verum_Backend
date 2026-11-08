@@ -1,4 +1,3 @@
-
 """Independent tests for maintenance report generation."""
 
 from __future__ import annotations
@@ -27,18 +26,22 @@ def _bundle() -> VerifiedBundle:
     )
     response: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
 
-    evidence = [{
-        "evidence_id": response["report_id"],
-        "kind": "agent_report",
-        "content_sha256": content_hash(response),
-    }]
+    evidence = [
+        {
+            "evidence_id": response["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(response),
+        }
+    ]
 
     for identifier in response["consumed_evidence_ids"]:
-        evidence.append({
-            "evidence_id": identifier,
-            "kind": "observation_window",
-            "content_sha256": "0" * 64,
-        })
+        evidence.append(
+            {
+                "evidence_id": identifier,
+                "kind": "observation_window",
+                "content_sha256": "0" * 64,
+            }
+        )
 
     return VerifiedBundle(
         context=copy.deepcopy(response["context"]),
@@ -139,9 +142,7 @@ def test_report_records_missing_agent_sections() -> None:
 
     assert "Missing agent report: diagnostic_reasoning" in report["missing_information"]
     assert "Missing agent report: inspection_planning" in report["missing_information"]
-    assert "Missing agent report: inspection_quality_documentation" in report[
-        "missing_information"
-    ]
+    assert "Missing agent report: inspection_quality_documentation" in report["missing_information"]
 
 
 def test_report_preserves_inspection_option_values() -> None:
@@ -155,29 +156,35 @@ def test_report_preserves_inspection_option_values() -> None:
         "context": copy.deepcopy(bundle.context),
         "limitations": [],
         "result": {
-            "options": [{
-                "option_id": "option-1",
-                "action_id": "ACT-INSP-01",
-                "target_asset": "test-asset",
-                "feasibility": "eligible_for_human_review",
-                "cost_usd": 125.5,
-                "duration_min": 45.0,
-                "evidence_ids": ["planning-evidence"],
-            }],
+            "options": [
+                {
+                    "option_id": "option-1",
+                    "action_id": "ACT-INSP-01",
+                    "target_asset": "test-asset",
+                    "feasibility": "eligible_for_human_review",
+                    "cost_usd": 125.5,
+                    "duration_min": 45.0,
+                    "evidence_ids": ["planning-evidence"],
+                }
+            ],
         },
     }
 
     bundle.responses["inspection_planning"] = planning
-    bundle.evidence.append({
-        "evidence_id": "planning-evidence",
-        "kind": "inspection_request",
-        "content_sha256": "0" * 64,
-    })
-    bundle.evidence.append({
-        "evidence_id": planning["report_id"],
-        "kind": "agent_report",
-        "content_sha256": content_hash(planning),
-    })
+    bundle.evidence.append(
+        {
+            "evidence_id": "planning-evidence",
+            "kind": "inspection_request",
+            "content_sha256": "0" * 64,
+        }
+    )
+    bundle.evidence.append(
+        {
+            "evidence_id": planning["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(planning),
+        }
+    )
 
     report = build_report(bundle)
     option = report["inspection_options"][0]
@@ -205,14 +212,16 @@ def test_report_rejects_nonfinite_planning_cost() -> None:
         "context": copy.deepcopy(bundle.context),
         "limitations": [],
         "result": {
-            "options": [{
-                "action_id": "ACT-INSP-01",
-                "target_asset": "test-asset",
-                "feasibility": "unknown",
-                "cost_usd": float("inf"),
-                "duration_min": 20.0,
-                "evidence_ids": [],
-            }],
+            "options": [
+                {
+                    "action_id": "ACT-INSP-01",
+                    "target_asset": "test-asset",
+                    "feasibility": "unknown",
+                    "cost_usd": float("inf"),
+                    "duration_min": 20.0,
+                    "evidence_ids": [],
+                }
+            ],
         },
     }
 
@@ -240,23 +249,27 @@ def test_report_rejects_changed_planning_values() -> None:
         "context": copy.deepcopy(bundle.context),
         "limitations": [],
         "result": {
-            "options": [{
-                "action_id": "ACT-INSP-01",
-                "target_asset": "asset-1",
-                "feasibility": "unknown",
-                "cost_usd": 100.0,
-                "duration_min": 30.0,
-                "evidence_ids": [],
-            }],
+            "options": [
+                {
+                    "action_id": "ACT-INSP-01",
+                    "target_asset": "asset-1",
+                    "feasibility": "unknown",
+                    "cost_usd": 100.0,
+                    "duration_min": 30.0,
+                    "evidence_ids": [],
+                }
+            ],
         },
     }
 
     bundle.responses["inspection_planning"] = planning
-    bundle.evidence.append({
-        "evidence_id": planning["report_id"],
-        "kind": "agent_report",
-        "content_sha256": content_hash(planning),
-    })
+    bundle.evidence.append(
+        {
+            "evidence_id": planning["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(planning),
+        }
+    )
 
     bundle.responses["inspection_planning"]["result"]["options"][0]["duration_min"] = 60.0
 
@@ -274,23 +287,27 @@ def test_report_rejects_unknown_option_evidence() -> None:
         "context": copy.deepcopy(bundle.context),
         "limitations": [],
         "result": {
-            "options": [{
-                "action_id": "ACT-INSP-01",
-                "target_asset": "asset-1",
-                "feasibility": "unknown",
-                "cost_usd": 100.0,
-                "duration_min": 30.0,
-                "evidence_ids": ["unknown-option-evidence"],
-            }],
+            "options": [
+                {
+                    "action_id": "ACT-INSP-01",
+                    "target_asset": "asset-1",
+                    "feasibility": "unknown",
+                    "cost_usd": 100.0,
+                    "duration_min": 30.0,
+                    "evidence_ids": ["unknown-option-evidence"],
+                }
+            ],
         },
     }
 
     bundle.responses["inspection_planning"] = planning
-    bundle.evidence.append({
-        "evidence_id": planning["report_id"],
-        "kind": "agent_report",
-        "content_sha256": content_hash(planning),
-    })
+    bundle.evidence.append(
+        {
+            "evidence_id": planning["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(planning),
+        }
+    )
 
     with pytest.raises(ValueError, match="Unknown evidence"):
         build_report(bundle)
@@ -300,10 +317,7 @@ def test_report_does_not_invent_measurements() -> None:
     """Independent: no measured values appear without a measured source."""
     report = build_report(_bundle())
 
-    assert all(
-        finding["measurement"] is None
-        for finding in report["findings"]
-    )
+    assert all(finding["measurement"] is None for finding in report["findings"])
 
 
 def test_report_preserves_analysis_cutoff() -> None:
@@ -323,11 +337,13 @@ def test_report_rejects_unknown_role() -> None:
     response["agent"] = "unknown_role"
     response["report_id"] = "unknown_role-report-001"
     bundle.responses["unknown_role"] = response
-    bundle.evidence.append({
-        "evidence_id": response["report_id"],
-        "kind": "agent_report",
-        "content_sha256": content_hash(response),
-    })
+    bundle.evidence.append(
+        {
+            "evidence_id": response["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(response),
+        }
+    )
 
     with pytest.raises(ValueError, match="Unknown agent role"):
         build_report(bundle)
@@ -343,30 +359,31 @@ def test_report_accepts_all_eight_roles() -> None:
     for role in ROLES:
         if role in bundle.responses:
             continue
-        response = json.loads(
-            (examples / f"{role}.response.json").read_text()
-        )
+        response = json.loads((examples / f"{role}.response.json").read_text())
         response["context"] = copy.deepcopy(bundle.context)
         bundle.responses[role] = response
-        bundle.evidence.append({
-            "evidence_id": response["report_id"],
-            "kind": "agent_report",
-            "content_sha256": content_hash(response),
-        })
+        bundle.evidence.append(
+            {
+                "evidence_id": response["report_id"],
+                "kind": "agent_report",
+                "content_sha256": content_hash(response),
+            }
+        )
         for identifier in response["consumed_evidence_ids"]:
             known = {row["evidence_id"] for row in bundle.evidence}
             if identifier not in known:
-                bundle.evidence.append({
-                    "evidence_id": identifier,
-                    "kind": "observation_window",
-                    "content_sha256": "0" * 64,
-                })
+                bundle.evidence.append(
+                    {
+                        "evidence_id": identifier,
+                        "kind": "observation_window",
+                        "content_sha256": "0" * 64,
+                    }
+                )
 
     report = build_report(bundle)
     assert {row["agent"] for row in report["source_reports"]} == set(ROLES)
     assert not any(
-        item.startswith("Missing agent report:")
-        for item in report["missing_information"]
+        item.startswith("Missing agent report:") for item in report["missing_information"]
     )
 
 
@@ -383,8 +400,7 @@ def test_report_builds_from_full_runner_chain() -> None:
     report = build_report(verified)
     assert {row["agent"] for row in report["source_reports"]} == set(ROLES)
     assert not any(
-        item.startswith("Missing agent report:")
-        for item in report["missing_information"]
+        item.startswith("Missing agent report:") for item in report["missing_information"]
     )
 
 
@@ -395,21 +411,20 @@ def test_report_handles_unavailable_agent_8(status: str) -> None:
     decision = bundle.responses["evidence_verification_decision"]
     decision["status"] = status
     decision["result"] = None
-    decision["issues"] = [{
-        "code": "ASSESSMENT_UNAVAILABLE",
-        "message": "Assessment cannot be completed",
-        "evidence_ids": [],
-    }]
+    decision["issues"] = [
+        {
+            "code": "ASSESSMENT_UNAVAILABLE",
+            "message": "Assessment cannot be completed",
+            "evidence_ids": [],
+        }
+    ]
     bundle.evidence[0]["content_sha256"] = content_hash(decision)
 
     report = build_report(bundle)
     assert report["assessment_state"] == (
         "more_evidence_required" if status == "insufficient_evidence" else "inconclusive"
     )
-    assert any(
-        "assessment unavailable" in row["statement"].lower()
-        for row in report["findings"]
-    )
+    assert any("assessment unavailable" in row["statement"].lower() for row in report["findings"])
     assert report["human_decision_required"] is True
     assert report["automatic_action_authorized"] is False
     assert report["advisory_only"] is True
@@ -426,3 +441,111 @@ def test_report_rejects_null_agent_8_response() -> None:
 
     with pytest.raises(ValueError, match="Agent 8 assessment is required"):
         build_report(bundle)
+
+
+def test_report_includes_agent_5_hypotheses() -> None:
+    """Agent 5 hypotheses retain their source, details and citations."""
+    bundle = _bundle()
+    path = repo_root() / "contracts/agents/v1/examples/diagnostic_reasoning.response.json"
+    agent5 = json.loads(path.read_text(encoding="utf-8"))
+    agent5["result"]["hypotheses"] = [
+        {
+            "hypothesis_id": "hyp-test-1",
+            "components": [{"mechanism": "leak", "asset_id": "asset-test", "tag_id": None}],
+            "score": {
+                "value": 0.7,
+                "kind": "decision_score",
+                "method_id": "test-method",
+                "calibration_id": None,
+            },
+            "support_evidence_ids": ["source-observations"],
+            "conflict_evidence_ids": ["source-reference"],
+            "unresolved_questions": ["Confirm leak location"],
+        }
+    ]
+    bundle.responses["diagnostic_reasoning"] = agent5
+    bundle.evidence.append(
+        {
+            "evidence_id": agent5["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(agent5),
+        }
+    )
+    report = build_report(bundle)
+    findings = [f for f in report["findings"] if f["kind"] == "hypothesis"]
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding["source_report_id"] == agent5["report_id"]
+    assert set(finding["evidence_ids"]) == {"source-observations", "source-reference"}
+    assert "leak" in finding["statement"]
+    assert "decision_score" in finding["statement"]
+    assert "test-method" in finding["statement"]
+    assert "Confirm leak location" in report["missing_information"]
+
+
+def test_report_includes_agent_7_checks_and_retests() -> None:
+    """Preserve Agent 7 checks and retest recommendations."""
+    bundle = _bundle()
+    path = (
+        repo_root() / "contracts/agents/v1/examples/inspection_quality_documentation.response.json"
+    )
+    agent7 = json.loads(path.read_text(encoding="utf-8"))
+    checks = [
+        {"check_id": k, "description": k, "outcome": v, "evidence_ids": ["source-observations"]}
+        for k, v in [("provenance", "pass"), ("validation", "fail"), ("chronology", "unknown")]
+    ]
+    agent7["result"]["record_checks"] = [
+        {
+            "result_id": "result-test-1",
+            "checks": checks,
+            "measurement_usable": False,
+            "scope_supported": None,
+            "equipment_condition_confirmed": False,
+            "evidence_ids": ["source-observations"],
+        }
+    ]
+    agent7["result"]["retest_result_ids"] = ["result-test-1"]
+    bundle.responses["inspection_quality_documentation"] = agent7
+    bundle.evidence.append(
+        {
+            "evidence_id": agent7["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(agent7),
+        }
+    )
+    report = build_report(bundle)
+    findings = [x for x in report["findings"] if x["kind"] == "inspection_check"]
+    assert len(findings) == 3
+    assert all(x["source_report_id"] == agent7["report_id"] for x in findings)
+    assert all(x["evidence_ids"] == ["source-observations"] for x in findings)
+    assert all(
+        any(outcome in x["statement"] for x in findings) for outcome in ("pass", "fail", "unknown")
+    )
+    assert any("result-test-1" in str(step) for step in report["next_steps"])
+
+
+def test_report_includes_agent_8_conflicts() -> None:
+    """Agent 8 conflicts retain their outcomes and evidence citations."""
+    bundle = _bundle()
+    decision = bundle.responses["evidence_verification_decision"]
+    evidence_id = decision["consumed_evidence_ids"][0]
+    decision["result"]["conflicts"] = [
+        {
+            "check_id": "conflict-test",
+            "description": "Contradictory inspection evidence",
+            "outcome": "fail",
+            "evidence_ids": [evidence_id],
+        }
+    ]
+    bundle.evidence[0]["content_sha256"] = content_hash(decision)
+
+    report = build_report(bundle)
+    findings = [
+        item for item in report["findings"] if item["finding_id"] == "conflict-conflict-test"
+    ]
+
+    assert len(findings) == 1
+    assert "Contradictory inspection evidence" in findings[0]["statement"]
+    assert "fail" in findings[0]["statement"]
+    assert findings[0]["evidence_ids"] == [evidence_id]
+    assert findings[0]["source_report_id"] == decision["report_id"]

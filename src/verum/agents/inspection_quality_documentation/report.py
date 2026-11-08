@@ -1,4 +1,3 @@
-
 """Build conservative maintenance reports from verified agent evidence."""
 
 from __future__ import annotations
@@ -15,10 +14,9 @@ from verum.agents.common import ROLES
 from verum.contracts.agent_interfaces import content_hash
 from verum.contracts.paths import repo_root
 
+AGENT_5 = "diagnostic_reasoning"
 AGENT_8 = "evidence_verification_decision"
 AGENT_6 = "inspection_planning"
-
-
 
 
 class VerifiedReportBundle(Protocol):
@@ -160,11 +158,13 @@ def _source_reports(
         if record.get("content_sha256") != expected_hash:
             raise ValueError(f"Source report hash mismatch: {report_id}")
 
-        sources.append({
-            "report_id": report_id,
-            "agent": role,
-            "content_sha256": expected_hash,
-        })
+        sources.append(
+            {
+                "report_id": report_id,
+                "agent": role,
+                "content_sha256": expected_hash,
+            }
+        )
 
     return sources
 
@@ -188,15 +188,17 @@ def _inspection_options(
             registered,
         )
 
-        options.append({
-            "action_id": option["action_id"],
-            "target_asset": option["target_asset"],
-            "feasibility": option["feasibility"],
-            "cost_usd": option["cost_usd"],
-            "duration_min": option["duration_min"],
-            "source_report_id": report_id,
-            "evidence_ids": citations,
-        })
+        options.append(
+            {
+                "action_id": option["action_id"],
+                "target_asset": option["target_asset"],
+                "feasibility": option["feasibility"],
+                "cost_usd": option["cost_usd"],
+                "duration_min": option["duration_min"],
+                "source_report_id": report_id,
+                "evidence_ids": citations,
+            }
+        )
 
     return options
 
@@ -207,16 +209,51 @@ def _unavailable_assessment(
 ) -> tuple[str, str, list[str]]:
     """Describe an unavailable Agent 8 assessment and its cited issues."""
     status = decision["status"]
-    state = (
-        "more_evidence_required"
-        if status == "insufficient_evidence"
-        else "inconclusive"
-    )
-    citations = _checked_evidence_ids(
-        decision["consumed_evidence_ids"], registered
-    )
+    state = "more_evidence_required" if status == "insufficient_evidence" else "inconclusive"
+    citations = _checked_evidence_ids(decision["consumed_evidence_ids"], registered)
     summary = f"Assessment unavailable: Agent 8 status is {status}."
     return state, summary, citations
+
+
+def _hypothesis_findings(
+    responses: dict[str, dict[str, Any]], registered: dict[str, dict[str, Any]]
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Collect Agent 5 hypotheses and unresolved questions."""
+    findings: list[dict[str, Any]] = []
+    missing: list[str] = []
+    agent = responses.get(AGENT_5)
+    if agent is None or agent.get("result") is None:
+        return findings, missing
+    for hypothesis in agent["result"]["hypotheses"]:
+        citations = _checked_evidence_ids(
+            hypothesis["support_evidence_ids"] + hypothesis["conflict_evidence_ids"], registered
+        )
+        components = ", ".join(
+            f"{c['mechanism']} (asset={c['asset_id']}, tag={c['tag_id']})"
+            for c in hypothesis["components"]
+        )
+        score = hypothesis["score"]
+        score_text = (
+            "unavailable"
+            if score is None
+            else (
+                f"{score['kind']}={score['value']}, "
+                f"method={score['method_id']}, "
+                f"calibration={score['calibration_id']}"
+            )
+        )
+        findings.append(
+            {
+                "finding_id": f"hypothesis-{hypothesis['hypothesis_id']}",
+                "kind": "hypothesis",
+                "statement": f"Unconfirmed hypothesis: {components}; score: {score_text}",
+                "measurement": None,
+                "source_report_id": agent["report_id"],
+                "evidence_ids": citations,
+            }
+        )
+        missing.extend(hypothesis["unresolved_questions"])
+    return findings, missing
 
 
 def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
@@ -227,9 +264,7 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
     decision = responses.get(AGENT_8)
 
     if decision is None:
-        raise ValueError(
-            "Agent 8 assessment is required before building a maintenance report"
-        )
+        raise ValueError("Agent 8 assessment is required before building a maintenance report")
 
     _check_finite(context)
     _check_finite(responses)
@@ -249,8 +284,8 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
     if result is None:
         if decision["status"] not in {"insufficient_evidence", "error"}:
             raise ValueError("Agent 8 result is unexpectedly null")
-        assessment_state, summary, assessment_citations = (
-            _unavailable_assessment(decision, registered)
+        assessment_state, summary, assessment_citations = _unavailable_assessment(
+            decision, registered
         )
     else:
         if result["human_decision_required"] is not True:
@@ -263,48 +298,104 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
         if not isinstance(summary, str) or not summary.strip():
             raise ValueError("Agent 8 assessment summary is required")
         assessment_state = result["decision_state"]
-        assessment_citations = _checked_evidence_ids(
-            decision["consumed_evidence_ids"], registered
-        )
+        assessment_citations = _checked_evidence_ids(decision["consumed_evidence_ids"], registered)
 
-    findings = [{
-        "finding_id": f"assessment-{decision_id}",
-        "kind": "assessment",
-        "statement": summary,
-        "measurement": None,
-        "source_report_id": decision_id,
-        "evidence_ids": assessment_citations,
-    }]
+    findings = [
+        {
+            "finding_id": f"assessment-{decision_id}",
+            "kind": "assessment",
+            "statement": summary,
+            "measurement": None,
+            "source_report_id": decision_id,
+            "evidence_ids": assessment_citations,
+        }
+    ]
+
+    hypothesis_findings, hypothesis_missing = _hypothesis_findings(responses, registered)
+    findings.extend(hypothesis_findings)
+
+    agent7 = responses.get("inspection_quality_documentation")
+    inspection_retests: list[str] = []
+    if agent7 is not None and agent7.get("result") is not None:
+        quality = agent7["result"]
+        inspection_retests = quality["retest_result_ids"]
+        for record in quality["record_checks"]:
+            for check in record["checks"]:
+                findings.append(
+                    {
+                        "finding_id": f"check-{record['result_id']}-{check['check_id']}",
+                        "kind": "inspection_check",
+                        "statement": (
+                            f"{record['result_id']}: {check['description']} — {check['outcome']};"
+                            f"measurement usable={record['measurement_usable']}"
+                        ),
+                        "measurement": None,
+                        "source_report_id": agent7["report_id"],
+                        "evidence_ids": _checked_evidence_ids(check["evidence_ids"], registered),
+                    }
+                )
+
+    if result is not None:
+        for conflict in result["conflicts"]:
+            findings.append(
+                {
+                    "finding_id": f"conflict-{conflict['check_id']}",
+                    "kind": "assessment",
+                    "statement": (
+                        f"Evidence conflict: {conflict['description']};"
+                        f"outcome={conflict['outcome']}"
+                    ),
+                    "measurement": None,
+                    "source_report_id": decision_id,
+                    "evidence_ids": _checked_evidence_ids(conflict["evidence_ids"], registered),
+                }
+            )
 
     next_steps: list[dict[str, Any]] = []
 
-    for step in (result["next_steps"] if result is not None else []):
-        next_steps.append({
-            "description": step["description"],
-            "source_report_id": decision_id,
-            "evidence_ids": _checked_evidence_ids(
-                step["evidence_ids"],
-                registered,
-            ),
-        })
+    for step in result["next_steps"] if result is not None else []:
+        next_steps.append(
+            {
+                "description": step["description"],
+                "source_report_id": decision_id,
+                "evidence_ids": _checked_evidence_ids(
+                    step["evidence_ids"],
+                    registered,
+                ),
+            }
+        )
 
     missing_information = [
-        f"Missing agent report: {role}"
-        for role in ROLES
-        if role not in responses
+        f"Missing agent report: {role}" for role in ROLES if role not in responses
     ]
+
+    if agent7 is not None and agent7.get("result") is not None:
+        for result_id in inspection_retests:
+            retest_evidence: list[str] = next(
+                (
+                    row["evidence_ids"]
+                    for row in agent7["result"]["record_checks"]
+                    if row["result_id"] == result_id
+                ),
+                [],
+            )
+            next_steps.append(
+                {
+                    "description": f"Retest required for inspection result {result_id}",
+                    "source_report_id": agent7["report_id"],
+                    "evidence_ids": _checked_evidence_ids(retest_evidence, registered),
+                }
+            )
+
+    missing_information.extend(hypothesis_missing)
 
     if result is None:
         missing_information.append("Agent 8 assessment unavailable")
         for issue in decision["issues"]:
             _checked_evidence_ids(issue["evidence_ids"], registered)
-            missing_information.append(
-                f"Agent 8 issue: {issue['code']}: {issue['message']}"
-            )
+            missing_information.append(f"Agent 8 issue: {issue['code']}: {issue['message']}")
     for issue in bundle.issues:
-        missing_information.append(
-            f"Bundle issue: {issue['code']}: {issue['message']}"
-        )
+        missing_information.append(f"Bundle issue: {issue['code']}: {issue['message']}")
 
     limitations: list[str] = []
 

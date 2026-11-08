@@ -1,4 +1,3 @@
-
 """Independent tests for the inspection quality documentation agent."""
 
 from __future__ import annotations
@@ -13,9 +12,7 @@ from verum.agents.inspection_quality_documentation import (
 )
 from verum.contracts.agent_interfaces import content_hash
 
-EXAMPLE_PATH = Path(
-    "contracts/agents/v1/examples/inspection_quality_documentation.request.json"
-)
+EXAMPLE_PATH = Path("contracts/agents/v1/examples/inspection_quality_documentation.request.json")
 
 
 def example_request() -> dict[str, Any]:
@@ -41,10 +38,7 @@ def test_no_inspection_results_reports_limitation() -> None:
     response = InspectionQualityDocumentationAgent().run(example_request())
 
     assert response["status"] == "degraded"
-    assert any(
-        issue["code"] == "NO_INSPECTION_RESULTS"
-        for issue in response["issues"]
-    )
+    assert any(issue["code"] == "NO_INSPECTION_RESULTS" for issue in response["issues"])
 
 
 def test_observed_quality_uses_supplied_signal_counts() -> None:
@@ -53,10 +47,7 @@ def test_observed_quality_uses_supplied_signal_counts() -> None:
     response = InspectionQualityDocumentationAgent().run(request)
 
     signals = request["input"]["observations"]["summary"]["signals"]
-    observed = {
-        row["tag_id"]: row
-        for row in response["result"]["observed_quality"]
-    }
+    observed = {row["tag_id"]: row for row in response["result"]["observed_quality"]}
 
     assert len(observed) == len(signals)
 
@@ -65,9 +56,7 @@ def test_observed_quality_uses_supplied_signal_counts() -> None:
 
         assert row["missing_samples"] == signal["missing_samples"]
         assert row["non_good_samples"] == signal["bad_quality_samples"]
-        assert row["latest_reading_missing"] == (
-            signal["latest_availability"] != "measured"
-        )
+        assert row["latest_reading_missing"] == (signal["latest_availability"] != "measured")
         assert row["evidence_ids"] == ["features-summary"]
 
 
@@ -135,17 +124,11 @@ def test_scope_does_not_accept_unknown_coverage() -> None:
     action = {"action_id": "ACT-INSP-01"}
     metric = {"name": "maximum_rim_seal_gap", "unit": "mm"}
 
-    assert agent._scope_supported(
-        action, metric, "pass", "unknown"
-    ) is None
+    assert agent._scope_supported(action, metric, "pass", "unknown") is None
 
-    assert agent._scope_supported(
-        action, metric, "pass", "pass"
-    ) is True
+    assert agent._scope_supported(action, metric, "pass", "pass") is True
 
-    assert agent._scope_supported(
-        action, metric, "fail", "pass"
-    ) is False
+    assert agent._scope_supported(action, metric, "fail", "pass") is False
 
 
 def test_numeric_validation_rejects_invalid_values() -> None:
@@ -184,6 +167,7 @@ def inspection_request_with_result() -> dict[str, Any]:
         }
     ]
 
+    request["context"]["as_of_utc"] = "2026-11-08T12:00:00Z"
     request["input"]["inspection_results"] = [
         {
             "schema_version": "0.5.0",
@@ -195,6 +179,7 @@ def inspection_request_with_result() -> dict[str, Any]:
             "evidence_status": "valid",
             "performed_at_t_sim_s": 120.0,
             "technician_id": "TECH-001",
+            "calibration_valid_until": "2026-12-31",
             "findings": {
                 "outcome_category": "NORMAL_INTACT",
                 "primary_metric": {
@@ -226,14 +211,10 @@ def inspection_request_with_result() -> dict[str, Any]:
     evidence["source_ref"] = "inspection_result:RES-INSP-00001"
     evidence["available_at_s"] = 120.0
     evidence["provenance"] = "simulated_inspection"
-    evidence["content_sha256"] = content_hash(
-        request["input"]["inspection_results"][0]
-    )
+    evidence["content_sha256"] = content_hash(request["input"]["inspection_results"][0])
 
     request["evidence"].append(evidence)
-    request["input"]["result_evidence_ids"] = [
-        "inspection-result-evidence"
-    ]
+    request["input"]["result_evidence_ids"] = ["inspection-result-evidence"]
 
     return request
 
@@ -254,9 +235,7 @@ def run_inspection(
 
     workflow_evidence = deepcopy(request["evidence"][0])
     workflow_evidence["evidence_id"] = "inspection-request-evidence"
-    workflow_evidence["root_evidence_ids"] = [
-        "inspection-request-evidence"
-    ]
+    workflow_evidence["root_evidence_ids"] = ["inspection-request-evidence"]
     workflow_evidence["kind"] = "inspection_request"
     workflow_evidence["provenance"] = "simulated_workflow"
     workflow_evidence["source_ref"] = workflow_ref
@@ -276,9 +255,7 @@ def inspection_check(
 ) -> str:
     """Return the outcome of a named inspection quality check."""
     return next(
-        str(check["outcome"])
-        for check in record["checks"]
-        if check["check_id"] == check_id
+        str(check["outcome"]) for check in record["checks"] if check["check_id"] == check_id
     )
 
 
@@ -299,48 +276,36 @@ def test_valid_inspection_measurement_is_usable() -> None:
 def test_retest_required_result_is_unusable() -> None:
     """Independent: a result requiring retest must not be usable."""
     request = inspection_request_with_result()
-    request["input"]["inspection_results"][0][
-        "validation_status"
-    ] = "RETEST_REQUIRED"
+    request["input"]["inspection_results"][0]["validation_status"] = "RETEST_REQUIRED"
 
     response, record = run_inspection(request)
 
     assert record["measurement_usable"] is False
     assert inspection_check(record, "validation_status") == "fail"
-    assert response["result"]["retest_result_ids"] == [
-        "RES-INSP-00001"
-    ]
+    assert response["result"]["retest_result_ids"] == ["RES-INSP-00001"]
 
 
 def test_inconsistent_result_is_unusable() -> None:
     """Independent: inconsistent validation must trigger a retest."""
     request = inspection_request_with_result()
-    request["input"]["inspection_results"][0][
-        "validation_status"
-    ] = "FLAGGED_INCONSISTENT"
+    request["input"]["inspection_results"][0]["validation_status"] = "FLAGGED_INCONSISTENT"
 
     response, record = run_inspection(request)
 
     assert record["measurement_usable"] is False
-    assert response["result"]["retest_result_ids"] == [
-        "RES-INSP-00001"
-    ]
+    assert response["result"]["retest_result_ids"] == ["RES-INSP-00001"]
 
 
 def test_missing_evidence_is_unusable() -> None:
     """Independent: missing evidence must prevent measurement acceptance."""
     request = inspection_request_with_result()
-    request["input"]["inspection_results"][0][
-        "evidence_status"
-    ] = "missing"
+    request["input"]["inspection_results"][0]["evidence_status"] = "missing"
 
     response, record = run_inspection(request)
 
     assert record["measurement_usable"] is False
     assert inspection_check(record, "evidence_availability") == "fail"
-    assert response["result"]["retest_result_ids"] == [
-        "RES-INSP-00001"
-    ]
+    assert response["result"]["retest_result_ids"] == ["RES-INSP-00001"]
 
 
 def test_missing_result_provenance_is_unknown() -> None:
@@ -358,9 +323,7 @@ def test_missing_result_provenance_is_unknown() -> None:
 def test_pending_approval_is_unknown() -> None:
     """Independent: pending approval must not establish usable inspection."""
     request = inspection_request_with_result()
-    request["input"]["inspection_requests"][0]["human_approval"][
-        "status"
-    ] = "PENDING"
+    request["input"]["inspection_requests"][0]["human_approval"]["status"] = "PENDING"
 
     _, record = run_inspection(request)
 
@@ -371,58 +334,44 @@ def test_pending_approval_is_unknown() -> None:
 def test_rejected_approval_is_unusable() -> None:
     """Independent: rejected inspection must not be usable."""
     request = inspection_request_with_result()
-    request["input"]["inspection_requests"][0]["human_approval"][
-        "status"
-    ] = "REJECTED"
+    request["input"]["inspection_requests"][0]["human_approval"]["status"] = "REJECTED"
 
     response, record = run_inspection(request)
 
     assert inspection_check(record, "human_approval") == "fail"
     assert record["measurement_usable"] is False
-    assert response["result"]["retest_result_ids"] == [
-        "RES-INSP-00001"
-    ]
+    assert response["result"]["retest_result_ids"] == ["RES-INSP-00001"]
 
 
 def test_inspection_before_request_is_unusable() -> None:
     """Independent: inspection performed before request must fail chronology."""
     request = inspection_request_with_result()
-    request["input"]["inspection_results"][0][
-        "performed_at_t_sim_s"
-    ] = 90.0
+    request["input"]["inspection_results"][0]["performed_at_t_sim_s"] = 90.0
 
     response, record = run_inspection(request)
 
     assert inspection_check(record, "chronology") == "fail"
     assert record["measurement_usable"] is False
-    assert response["result"]["retest_result_ids"] == [
-        "RES-INSP-00001"
-    ]
+    assert response["result"]["retest_result_ids"] == ["RES-INSP-00001"]
 
 
 def test_wrong_measurement_unit_is_unusable() -> None:
     """Independent: mismatched measurement units must require retest."""
     request = inspection_request_with_result()
-    request["input"]["inspection_results"][0]["findings"][
-        "primary_metric"
-    ]["unit"] = "cm"
+    request["input"]["inspection_results"][0]["findings"]["primary_metric"]["unit"] = "cm"
 
     response, record = run_inspection(request)
 
     assert inspection_check(record, "measurement_unit") == "fail"
     assert record["measurement_usable"] is False
     assert record["scope_supported"] is False
-    assert response["result"]["retest_result_ids"] == [
-        "RES-INSP-00001"
-    ]
+    assert response["result"]["retest_result_ids"] == ["RES-INSP-00001"]
 
 
 def test_uncovered_asset_is_unknown() -> None:
     """Independent: coverage for another asset cannot establish scope."""
     request = inspection_request_with_result()
-    request["input"]["process_coverage"][0][
-        "target_asset"
-    ] = "TANK-002"
+    request["input"]["process_coverage"][0]["target_asset"] = "TANK-002"
 
     response, record = run_inspection(request)
 
@@ -454,3 +403,49 @@ def test_coverage_uses_inspection_request_target_asset() -> None:
 
     assert inspection_check(record, "process_coverage") == "pass"
     assert record["scope_supported"] is True
+
+
+def test_missing_request_is_unknown_without_retest() -> None:
+    """Missing request context must not imply a failed inspection."""
+    request = inspection_request_with_result()
+    request["input"]["inspection_requests"] = []
+
+    response = InspectionQualityDocumentationAgent().run(request)
+    record = response["result"]["record_checks"][0]
+    checks = {check["check_id"]: check["outcome"] for check in record["checks"]}
+
+    assert checks["request_link"] == "unknown"
+    assert checks["chronology"] == "unknown"
+    assert checks["human_approval"] == "unknown"
+    assert record["measurement_usable"] is None
+    assert response["result"]["retest_result_ids"] == []
+
+
+def test_calibration_validity_outcomes() -> None:
+    """Calibration validity depends on both expiry and assessment date."""
+    for expiry, as_of, expected, usable in [
+        ("2026-12-31", "2026-11-08T12:00:00Z", "pass", True),
+        ("2026-01-01", "2026-11-08T12:00:00Z", "fail", False),
+        ("2026-12-31", None, "unknown", None),
+        (None, "2026-11-08T12:00:00Z", "unknown", None),
+    ]:
+        request = inspection_request_with_result()
+        request["context"]["as_of_utc"] = as_of
+        if expiry is None:
+            request["input"]["inspection_results"][0].pop("calibration_valid_until", None)
+        else:
+            request["input"]["inspection_results"][0]["calibration_valid_until"] = expiry
+
+        _, record = run_inspection(request)
+
+        assert inspection_check(record, "calibration_validity") == expected
+        assert record["measurement_usable"] is usable
+
+
+def test_request_evidence_is_cited_and_consumed() -> None:
+    """Request-dependent checks cite the originating request evidence."""
+    response, record = run_inspection(inspection_request_with_result())
+    for name in ("request_link", "chronology", "human_approval"):
+        check = next(c for c in record["checks"] if c["check_id"] == name)
+        assert "inspection-request-evidence" in check["evidence_ids"]
+    assert "inspection-request-evidence" in response["consumed_evidence_ids"]
