@@ -314,3 +314,75 @@ def test_report_preserves_analysis_cutoff() -> None:
     assert report["context"]["as_of_s"] == bundle.context["as_of_s"]
     assert report["context"]["revision"] == bundle.context["revision"]
     assert report["context"]["analysis_id"] == bundle.context["analysis_id"]
+
+
+def test_report_rejects_unknown_role() -> None:
+    """Reject a registered response from an unknown role."""
+    bundle = _bundle()
+    response = copy.deepcopy(bundle.responses["evidence_verification_decision"])
+    response["agent"] = "unknown_role"
+    response["report_id"] = "unknown_role-report-001"
+    bundle.responses["unknown_role"] = response
+    bundle.evidence.append({
+        "evidence_id": response["report_id"],
+        "kind": "agent_report",
+        "content_sha256": content_hash(response),
+    })
+
+    with pytest.raises(ValueError, match="Unknown agent role"):
+        build_report(bundle)
+
+
+def test_report_accepts_all_eight_roles() -> None:
+    """Assemble the complete official eight-role bundle."""
+    from verum.agents.common import ROLES
+
+    bundle = _bundle()
+    examples = repo_root() / "contracts/agents/v1/examples"
+
+    for role in ROLES:
+        if role in bundle.responses:
+            continue
+        response = json.loads(
+            (examples / f"{role}.response.json").read_text()
+        )
+        response["context"] = copy.deepcopy(bundle.context)
+        bundle.responses[role] = response
+        bundle.evidence.append({
+            "evidence_id": response["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(response),
+        })
+        for identifier in response["consumed_evidence_ids"]:
+            known = {row["evidence_id"] for row in bundle.evidence}
+            if identifier not in known:
+                bundle.evidence.append({
+                    "evidence_id": identifier,
+                    "kind": "observation_window",
+                    "content_sha256": "0" * 64,
+                })
+
+    report = build_report(bundle)
+    assert {row["agent"] for row in report["source_reports"]} == set(ROLES)
+    assert not any(
+        item.startswith("Missing agent report:")
+        for item in report["missing_information"]
+    )
+
+
+def test_report_builds_from_full_runner_chain() -> None:
+    """Build a report from the verified eight-role runner chain."""
+    from _runner_cases import run
+    from verum.agents.common import ROLES
+    from verum.agents.runner import verify_bundle
+
+    bundle = run()
+    verified = verify_bundle(bundle)
+
+    assert set(verified.responses) == set(ROLES)
+    report = build_report(verified)
+    assert {row["agent"] for row in report["source_reports"]} == set(ROLES)
+    assert not any(
+        item.startswith("Missing agent report:")
+        for item in report["missing_information"]
+    )

@@ -11,22 +11,14 @@ from typing import Any, Protocol
 import jsonschema
 from referencing import Registry, Resource
 
+from verum.agents.common import ROLES
 from verum.contracts.agent_interfaces import content_hash
 from verum.contracts.paths import repo_root
 
 AGENT_8 = "evidence_verification_decision"
 AGENT_6 = "inspection_planning"
 
-EXPECTED_ROLES = (
-    "data_preparation",
-    "anomaly_detection",
-    "predictive_health",
-    "maintenance_recommendation",
-    "diagnostic_reasoning",
-    "inspection_planning",
-    "inspection_quality_documentation",
-    "evidence_verification_decision",
-)
+
 
 
 class VerifiedReportBundle(Protocol):
@@ -136,7 +128,7 @@ def _source_reports(
     seen_report_ids: set[str] = set()
 
     for role, response in sorted(responses.items()):
-        if role not in EXPECTED_ROLES:
+        if role not in ROLES:
             raise ValueError(f"Unknown agent role: {role}")
 
         if response.get("agent") != role:
@@ -278,7 +270,7 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
 
     missing_information = [
         f"Missing agent report: {role}"
-        for role in EXPECTED_ROLES
+        for role in ROLES
         if role not in responses
     ]
 
