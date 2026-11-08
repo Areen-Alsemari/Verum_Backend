@@ -290,6 +290,75 @@ def test_upstream_rules_populate_both_support_and_conflict_evidence_ids(
     assert insp_rep["report_id"] in pump_hyp["conflict_evidence_ids"]
 
 
+def _set_forecast_value(
+    request: dict[str, Any], tag_id: str, unit: str, value: float | None
+) -> dict[str, Any]:
+    """Build a non-stub forecast_report on a copy of request with one tag forecast value."""
+    req = copy.deepcopy(request)
+    fc = copy.deepcopy(req["input"]["forecast_report"])
+    fc["issues"] = []
+    fc["status"] = "complete"
+    fc["result"]["forecasts"] = [
+        {
+            "tag_id": tag_id,
+            "quantity": "reported_mean",
+            "horizon_s": 300.0,
+            "value": value,
+            "interval": None,
+            "unit": unit,
+            "evidence_ids": ["source-observations"],
+            "limitations": ["Test forecast."],
+        }
+    ]
+    req["input"]["forecast_report"] = fc
+    for row in req["evidence"]:
+        if row["evidence_id"] == fc["report_id"]:
+            row["content_sha256"] = stable_hash(fc)
+    return req
+
+
+def test_forecast_report_check_compares_direction_with_hypothesis(
+    tmp_path: Path,
+) -> None:
+    """Forecast check returns unknown on flat overlap, pass on agreement, and fail on conflict.
+
+    Independent: yes, because neutral, dropping and rising forecast values are supplied explicitly.
+    """
+    path, sha = _write_mock_artifact(tmp_path)
+    agent = DiagnosticReasoningAgent(path, expected_sha256=sha)
+    base_req = _chained_request()
+
+    neutral_req = _set_forecast_value(base_req, "PT-202A", "barg", 2.0001)
+    neutral_res = agent.run(neutral_req)
+    check_response(neutral_req, neutral_res)
+    fc_id = neutral_req["input"]["forecast_report"]["report_id"]
+    fc_check = next(
+        c for c in neutral_res["result"]["upstream_checks"] if c["check_id"] == "forecast_report"
+    )
+    pump_hyp = neutral_res["result"]["hypotheses"][0]
+    assert fc_check["outcome"] == "unknown"
+    assert fc_id not in pump_hyp["support_evidence_ids"]
+    assert fc_id not in pump_hyp["conflict_evidence_ids"]
+
+    agree_req = _set_forecast_value(base_req, "PT-202A", "barg", 1.50)
+    agree_res = agent.run(agree_req)
+    check_response(agree_req, agree_res)
+    fc_check_agree = next(
+        c for c in agree_res["result"]["upstream_checks"] if c["check_id"] == "forecast_report"
+    )
+    assert fc_check_agree["outcome"] == "pass"
+    assert fc_id in agree_res["result"]["hypotheses"][0]["support_evidence_ids"]
+
+    conflict_req = _set_forecast_value(base_req, "PT-202A", "barg", 2.60)
+    conflict_res = agent.run(conflict_req)
+    check_response(conflict_req, conflict_res)
+    fc_check_conflict = next(
+        c for c in conflict_res["result"]["upstream_checks"] if c["check_id"] == "forecast_report"
+    )
+    assert fc_check_conflict["outcome"] == "fail"
+    assert fc_id in conflict_res["result"]["hypotheses"][0]["conflict_evidence_ids"]
+
+
 def test_runtime_exception_in_execution_returns_error_status_with_issue(
     tmp_path: Path,
 ) -> None:

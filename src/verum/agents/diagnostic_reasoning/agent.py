@@ -37,6 +37,8 @@ DEFAULT_LIMITATIONS: Final[tuple[str, ...]] = (
     "Localisation is limited to 38 assets seen in training; 11 declared assets never appear "
     "in positive training examples.",
     "Approximately 27% of masked/ineligible test windows still trigger candidate hypotheses.",
+    "Forecast check compares forecast direction and value with candidate hypotheses on matching "
+    "tags and returns unknown when no hypothesis is present or forecast deltas are neutral.",
     "Roof failure, vapour damage and mechanical fault cascades are outside the supported scope.",
 )
 
@@ -112,7 +114,7 @@ class DiagnosticReasoningAgent:
         obs_ev_ids = [eid for eid in observations.get("evidence_ids", []) if eid in set(consumed)]
         raw_hypotheses = format_hypotheses(predictions)
         hypotheses = [enrich_hypothesis_with_rules(h, inputs, obs_ev_ids) for h in raw_hypotheses]
-        upstream_checks = evaluate_upstream_checks(inputs)
+        upstream_checks = evaluate_upstream_checks(inputs, hypotheses)
         missing_upstreams = [c["check_id"] for c in upstream_checks if c["outcome"] == "unknown"]
         issues: list[dict[str, Any]] = []
         status = "complete"
