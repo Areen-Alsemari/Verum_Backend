@@ -79,7 +79,7 @@ def check_proposal(
         time_admissible = True
 
     # Check 2: source and provenance.
-    source_matches = any(
+    source_matches = all(
         row["source_ref"] == source_ref
         for row in admissible
     )

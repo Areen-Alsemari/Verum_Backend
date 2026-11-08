@@ -138,6 +138,23 @@ def test_unknown_source_cannot_verify_provenance() -> None:
     assert result["usable"] is False
 
 
+def test_mixed_sources_cannot_verify_provenance() -> None:
+    """Independent: every claimed evidence item must match the source."""
+    registry = _registry()
+    registry["evidence-2"]["source_ref"] = "observations:other"
+
+    result = check_proposal(
+        _proposal(claimed_evidence_ids=["evidence-1", "evidence-2"]),
+        registry,
+        300.0,
+        quality_acceptable=True,
+        scope_supported=True,
+    )
+
+    assert result["provenance_verified"] is False
+    assert result["usable"] is False
+
+
 def test_missing_evidence_identifier_is_rejected() -> None:
     """Independent: unregistered evidence cannot establish provenance."""
     result = check_proposal(
