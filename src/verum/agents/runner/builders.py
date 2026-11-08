@@ -2,6 +2,8 @@
 
 Each builder returns the role's input object. Where the reference or the snapshot lacks something,
 the builder uses the contract's null or empty value and records a note instead of inventing it.
+The default topology query keeps only the assets the declared graph can resolve, in reference
+order, and notes the rest; a query the caller names is passed on as given.
 """
 
 from __future__ import annotations
@@ -32,13 +34,33 @@ def anomaly_detection(prep: Prepared, reports: Reports) -> dict[str, Any]:
     return {"observations": prep.observations, "forecast_report": reports["predictive_health"]}
 
 
+def _resolvable_in_graph(asset_id: str, connections: list[dict[str, Any]]) -> bool:
+    """Whether the graph names the asset as an edge, a node, or the owner of a port node."""
+    if any(edge["edge_id"] == asset_id for edge in connections):
+        return True
+    nodes = {node for edge in connections for node in (edge["from_node"], edge["to_node"])}
+    return any(node == asset_id or node.startswith(f"{asset_id}:") for node in nodes)
+
+
+def _topology_query(prep: Prepared) -> list[str]:
+    """The assets to ask Agent 3 about: those the declared graph can resolve, in input order."""
+    if not prep.connections or prep.snapshot.query_asset_ids is not None:
+        return prep.query_assets
+    kept = [a for a in prep.query_assets if _resolvable_in_graph(a, prep.connections)]
+    skipped = [a for a in prep.query_assets if a not in set(kept)]
+    if skipped:
+        note(prep, "topology_dependency", "ASSETS_NOT_IN_DECLARED_GRAPH",
+             f"Not queried because the declared graph does not name them: {', '.join(skipped)}.")
+    return kept
+
+
 def topology_dependency(prep: Prepared, reports: Reports) -> dict[str, Any]:
     """The declared graph of the reference and the queried assets."""
     if not prep.connections:
         note(prep, "topology_dependency", "NO_DECLARED_CONNECTIONS",
              "The reference declares no connections.")
     return {
-        "query_asset_ids": prep.query_assets, "direction": prep.snapshot.direction,
+        "query_asset_ids": _topology_query(prep), "direction": prep.snapshot.direction,
         "declared_connections": prep.connections, "reference_evidence_ids": [REFERENCE],
         "observations": prep.observations,
     }
