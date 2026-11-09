@@ -168,3 +168,82 @@ def test_report_builds_when_planning_has_no_result(status: str) -> None:
     assert code in notes[0]
     assert {key: report[key] for key in FIXED_FLAGS} == FIXED_FLAGS
     assert report["review_status"] == "human_review_required"
+
+
+FAILURE_ROLES = [
+    "predictive_health",
+    "anomaly_detection",
+    "topology_dependency",
+    "historical_asset_intelligence",
+    "diagnostic_reasoning",
+    "inspection_planning",
+    "evidence_verification_decision",
+]
+
+
+@pytest.mark.parametrize("role", FAILURE_ROLES)
+@pytest.mark.parametrize("status", ["insufficient_evidence", "error"])
+def test_failed_agent_is_listed_and_report_still_builds(role: str, status: str) -> None:
+    """Independent: each failing agent appears once with its role, status and first issue code."""
+    bundle = _full_bundle(lambda responses: _fail(responses, role, status, "FORCED_FAILURE"))
+
+    report = build_report(bundle)
+
+    listed = [note for note in report["missing_information"] if note.startswith("Failed agent")]
+    assert listed == [f"Failed agent report: {role} status={status}; first issue: FORCED_FAILURE"]
+    assert {key: report[key] for key in FIXED_FLAGS} == FIXED_FLAGS
+
+
+def test_failed_agent_without_issues_lists_only_role_and_status() -> None:
+    """Independent: a failure without an issue still names the role and status."""
+
+    def edit(responses: Responses) -> None:
+        _fail(responses, "predictive_health", "error")
+        responses["predictive_health"]["issues"] = []
+
+    report = build_report(_full_bundle(edit))
+
+    assert "Failed agent report: predictive_health status=error" in report["missing_information"]
+
+
+def test_failed_agents_are_listed_in_role_order() -> None:
+    """Independent: several failures appear in the fixed role order, not the bundle order."""
+
+    def edit(responses: Responses) -> None:
+        for role in ("evidence_verification_decision", "predictive_health", "inspection_planning"):
+            _fail(responses, role, "error", "FORCED_FAILURE")
+
+    report = build_report(_full_bundle(edit))
+
+    roles = [
+        note.split()[3] for note in report["missing_information"] if note.startswith("Failed agent")
+    ]
+    assert roles == ["predictive_health", "inspection_planning", "evidence_verification_decision"]
+
+
+def test_complete_agents_add_no_failure_notes() -> None:
+    """Independent: when every agent is complete no failure or absence is listed."""
+
+    def edit(responses: Responses) -> None:
+        for response in responses.values():
+            response["status"] = "complete"
+            response["issues"] = []
+
+    report = build_report(_full_bundle(edit))
+
+    assert report["missing_information"] == []
+
+
+def test_absent_agent_and_failed_agent_are_both_listed() -> None:
+    """Independent: an absent role and a failed role are reported separately."""
+
+    def edit(responses: Responses) -> None:
+        del responses["anomaly_detection"]
+        _fail(responses, "topology_dependency", "error", "FORCED_FAILURE")
+
+    report = build_report(_full_bundle(edit))
+
+    assert report["missing_information"] == [
+        "Missing agent report: anomaly_detection",
+        "Failed agent report: topology_dependency status=error; first issue: FORCED_FAILURE",
+    ]

@@ -203,6 +203,26 @@ def _inspection_options(
     return options
 
 
+FAILED_STATUSES = frozenset({"insufficient_evidence", "error"})
+
+
+def _failed_agent_notes(responses: dict[str, dict[str, Any]]) -> list[str]:
+    """List present agent reports that returned no usable result, in role order."""
+    notes: list[str] = []
+
+    for role in ROLES:
+        response = responses.get(role)
+
+        if response is None or response.get("status") not in FAILED_STATUSES:
+            continue
+
+        issues = response.get("issues", [])
+        top_issue = f"; first issue: {issues[0]['code']}" if issues else ""
+        notes.append(f"Failed agent report: {role} status={response['status']}{top_issue}")
+
+    return notes
+
+
 def _options_unavailable_note(responses: dict[str, dict[str, Any]]) -> list[str]:
     """Say why inspection options are missing when planning returned no result."""
     planning = responses.get(AGENT_6)
@@ -381,6 +401,7 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
     missing_information = [
         f"Missing agent report: {role}" for role in ROLES if role not in responses
     ]
+    missing_information.extend(_failed_agent_notes(responses))
     missing_information.extend(_options_unavailable_note(responses))
 
     if agent7 is not None and agent7.get("result") is not None:
