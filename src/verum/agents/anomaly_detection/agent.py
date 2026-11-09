@@ -21,9 +21,9 @@ from verum.agents.common import (
 
 ROLE = "anomaly_detection"
 VERSION = "1.0.0"
-FEATURE_PROFILE_ID = "anomaly_detection_summary_v1_66"
+FEATURE_PROFILE_ID = "anomaly_detection_physical_v1_28"
 QUALITY_METHOD_ID = "quality_summary_rules_v1"
-MODEL_METHOD_ID = "logistic_regression_v1"
+MODEL_METHOD_ID = "random_forest_v1"
 
 NUMERIC_FIELDS = (
     "latest_value",
@@ -177,6 +177,124 @@ def make_event(
     }
 
 
+def build_quality_events(
+    request_id: str,
+    signals: list[dict[str, Any]],
+    evidence_ids: list[str],
+) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+
+    missing_tags = [
+        signal["tag_id"]
+        for signal in signals
+        if signal["missing_samples"] > 0 or signal["latest_availability"] == "missing_sample"
+    ]
+
+    quality_tags = [
+        signal["tag_id"]
+        for signal in signals
+        if signal["bad_quality_samples"] > 0 or signal["latest_quality"] in ("suspect", "bad")
+    ]
+
+    if missing_tags:
+        events.append(
+            make_event(
+                event_id=f"{request_id}-missing-reading",
+                category="missing_reading",
+                tag_ids=missing_tags,
+                evidence_ids=evidence_ids,
+                method_id=QUALITY_METHOD_ID,
+                limitations=[
+                    "Identifies reported missing readings only.",
+                    "Does not establish equipment health.",
+                ],
+            )
+        )
+
+    if quality_tags:
+        events.append(
+            make_event(
+                event_id=f"{request_id}-non-good-quality",
+                category="non_good_quality",
+                tag_ids=quality_tags,
+                evidence_ids=evidence_ids,
+                method_id=QUALITY_METHOD_ID,
+                limitations=[
+                    "Identifies reported signal quality conditions only.",
+                    "Does not establish equipment health.",
+                ],
+            )
+        )
+
+    return events
+
+
+def run_model_inference(
+    request_id: str,
+    signals: list[dict[str, Any]],
+    evidence_ids: list[str],
+) -> tuple[dict[str, Any] | None, str]:
+    if not has_physical_measurements(signals):
+        raise InsufficientMeasurementsError("insufficient physical measurements")
+
+    artifact = load_artifact()
+    artifact_hash = file_sha256(ARTIFACT_PATH)
+
+    feature_values = extract_features(signals)
+    feature_names = artifact["feature_names"]
+    threshold = float(artifact["threshold"])
+    model = artifact["model"]
+
+    vector = np.asarray(
+        [[feature_values[name] for name in feature_names]],
+        dtype=float,
+    )
+
+    probabilities = model.predict_proba(vector)[0]
+    positive_index = list(model.classes_).index(True)
+    decision_score = float(probabilities[positive_index])
+
+    if decision_score < threshold:
+        return None, artifact_hash
+
+    event = make_event(
+        event_id=f"{request_id}-signal-departure",
+        category="reported_signal_departure",
+        tag_ids=[],
+        evidence_ids=evidence_ids,
+        method_id=MODEL_METHOD_ID,
+        score={
+            "value": decision_score,
+            "kind": "decision_score",
+            "method_id": MODEL_METHOD_ID,
+            "calibration_id": None,
+        },
+        limitations=[
+            "Trained using injected changes in a reduced reference simulator.",
+            "A detected departure is not proof of a real equipment fault.",
+            "Aggregate features do not identify a specific tag or asset.",
+            "Overlapping observation windows are not independent fault events.",
+            "The score is not a calibrated probability.",
+        ],
+    )
+
+    return event, artifact_hash
+
+
+def calculate_coverage(
+    evidence_ids: list[str],
+    insufficient_measurements: bool,
+    status: str,
+) -> str:
+    if not evidence_ids or insufficient_measurements:
+        return "unknown"
+
+    if status == "degraded":
+        return "partial"
+
+    return "assessed"
+
+
 class AnomalyDetectionAgent:
     """Detect reported data-quality issues and aggregate signal departures."""
 
@@ -234,51 +352,11 @@ class AnomalyDetectionAgent:
                 )
             )
 
-            events: list[dict[str, Any]] = []
-
-            missing_tags = [
-                signal["tag_id"]
-                for signal in signals
-                if signal["missing_samples"] > 0
-                or signal["latest_availability"] == "missing_sample"
-            ]
-
-            quality_tags = [
-                signal["tag_id"]
-                for signal in signals
-                if signal["bad_quality_samples"] > 0
-                or signal["latest_quality"] in ("suspect", "bad")
-            ]
-
-            if missing_tags:
-                events.append(
-                    make_event(
-                        event_id=f"{request['request_id']}-missing-reading",
-                        category="missing_reading",
-                        tag_ids=missing_tags,
-                        evidence_ids=evidence_ids,
-                        method_id=QUALITY_METHOD_ID,
-                        limitations=[
-                            "Identifies reported missing readings only.",
-                            "Does not establish equipment health.",
-                        ],
-                    )
-                )
-
-            if quality_tags:
-                events.append(
-                    make_event(
-                        event_id=f"{request['request_id']}-non-good-quality",
-                        category="non_good_quality",
-                        tag_ids=quality_tags,
-                        evidence_ids=evidence_ids,
-                        method_id=QUALITY_METHOD_ID,
-                        limitations=[
-                            "Identifies reported signal quality conditions only.",
-                            "Does not establish equipment health.",
-                        ],
-                    )
-                )
+            events = build_quality_events(
+                request["request_id"],
+                signals,
+                evidence_ids,
+            )
 
             artifact_hash: str | None = None
             issues: list[dict[str, Any]] = []
@@ -300,49 +378,14 @@ class AnomalyDetectionAgent:
                 )
 
             try:
-                if not has_physical_measurements(valid_signals):
-                    raise InsufficientMeasurementsError("insufficient physical measurements")
-
-                artifact = load_artifact()
-                artifact_hash = file_sha256(ARTIFACT_PATH)
-
-                feature_values = extract_features(valid_signals)
-                feature_names = artifact["feature_names"]
-                threshold = float(artifact["threshold"])
-                model = artifact["model"]
-
-                vector = np.asarray(
-                    [[feature_values[name] for name in feature_names]],
-                    dtype=float,
+                event, artifact_hash = run_model_inference(
+                    request["request_id"],
+                    valid_signals,
+                    evidence_ids,
                 )
 
-                probabilities = model.predict_proba(vector)[0]
-                positive_index = list(model.classes_).index(True)
-                decision_score = float(probabilities[positive_index])
-
-                if decision_score >= threshold:
-                    events.append(
-                        make_event(
-                            event_id=f"{request['request_id']}-signal-departure",
-                            category="reported_signal_departure",
-                            tag_ids=[],
-                            evidence_ids=evidence_ids,
-                            method_id=MODEL_METHOD_ID,
-                            score={
-                                "value": decision_score,
-                                "kind": "decision_score",
-                                "method_id": MODEL_METHOD_ID,
-                                "calibration_id": None,
-                            },
-                            limitations=[
-                                "Trained using injected changes in a reduced reference simulator.",
-                                "A detected departure is not proof of a real equipment fault.",
-                                "Aggregate features do not identify a specific tag or asset.",
-                                "Overlapping observation windows are not independent fault events.",
-                                "The score is not a calibrated probability.",
-                            ],
-                        )
-                    )
+                if event is not None:
+                    events.append(event)
 
             except InsufficientMeasurementsError:
                 status = "degraded"
@@ -366,12 +409,11 @@ class AnomalyDetectionAgent:
                     )
                 )
 
-            if not evidence_ids or insufficient_measurements:
-                coverage = "unknown"
-            elif status == "degraded":
-                coverage = "partial"
-            else:
-                coverage = "assessed"
+            coverage = calculate_coverage(
+                evidence_ids,
+                insufficient_measurements,
+                status,
+            )
 
             response = build_response(
                 request,
