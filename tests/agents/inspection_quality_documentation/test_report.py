@@ -97,6 +97,9 @@ def test_report_rejects_mixed_revision() -> None:
     bundle = _bundle()
     bundle.responses["evidence_verification_decision"]["context"]["revision"] += 1
 
+    with pytest.raises(ValueError, match="Mixed analysis context"):
+        build_report(bundle)
+
 
 Responses = dict[str, dict[str, Any]]
 
@@ -247,3 +250,121 @@ def test_absent_agent_and_failed_agent_are_both_listed() -> None:
         "Missing agent report: anomaly_detection",
         "Failed agent report: topology_dependency status=error; first issue: FORCED_FAILURE",
     ]
+
+
+HUMAN_REVIEW_STATEMENT = (
+    "Advisory assessment only; human review is required and equipment condition is not confirmed."
+)
+
+
+def test_report_keeps_the_human_review_statement() -> None:
+    """Independent: the human-review limitation is always part of the report."""
+    for bundle in (_bundle(), _full_bundle()):
+        assert HUMAN_REVIEW_STATEMENT in build_report(bundle)["limitations"]
+
+
+@pytest.mark.parametrize(
+    ("status", "state"),
+    [("insufficient_evidence", "more_evidence_required"), ("error", "inconclusive")],
+)
+def test_failed_agent_8_is_never_shown_as_available(status: str, state: str) -> None:
+    """Independent: an unavailable decision is reported as unresolved, not as an assessment."""
+    bundle = _full_bundle(
+        lambda responses: _fail(responses, "evidence_verification_decision", status)
+    )
+
+    report = build_report(bundle)
+
+    assert report["assessment_state"] == state
+    assert report["assessment_state"] != "assessment_available"
+    assert report["narrative"]["text"] == f"Assessment unavailable: Agent 8 status is {status}."
+
+
+def _option(action_id: str, target: str, feasibility: str, cost: float | None) -> dict[str, Any]:
+    """Build one planning option with the fields the contract requires."""
+    return {
+        "option_id": f"{action_id}-{target}",
+        "action_id": action_id,
+        "target_asset": target,
+        "addresses_hypothesis_ids": [],
+        "feasibility": feasibility,
+        "precondition_checks": [],
+        "cost_usd": cost,
+        "duration_min": 60.0,
+        "expected_information_gain_bits": None,
+        "information_gain_method_id": None,
+        "limitations": [],
+        "evidence_ids": [],
+    }
+
+
+PLANNED_OPTIONS = [
+    _option("ACT-INSP-06", "TK-101", "unknown", 160.0),
+    _option("ACT-INSP-03", "P-101A", "blocked", 140.0),
+    _option("ACT-INSP-05", "TK-102", "eligible_for_human_review", None),
+]
+
+
+def test_report_copies_each_option_with_its_own_feasibility() -> None:
+    """Independent: unknown, blocked and eligible options keep their state and numbers."""
+
+    def edit(responses: Responses) -> None:
+        responses["inspection_planning"]["result"]["options"] = copy.deepcopy(PLANNED_OPTIONS)
+
+    bundle = _full_bundle(edit)
+    report = build_report(bundle)
+    source_id = bundle.responses["inspection_planning"]["report_id"]
+
+    assert [
+        (row["action_id"], row["target_asset"], row["feasibility"], row["cost_usd"])
+        for row in report["inspection_options"]
+    ] == [
+        ("ACT-INSP-06", "TK-101", "unknown", 160.0),
+        ("ACT-INSP-03", "P-101A", "blocked", 140.0),
+        ("ACT-INSP-05", "TK-102", "eligible_for_human_review", None),
+    ]
+    assert {row["source_report_id"] for row in report["inspection_options"]} == {source_id}
+
+
+def test_report_lists_agent_5_hypotheses_as_unconfirmed() -> None:
+    """Independent: a diagnosis hypothesis is a finding marked unconfirmed with its questions."""
+
+    def edit(responses: Responses) -> None:
+        result = responses["diagnostic_reasoning"]["result"]
+        result["assessment"] = "candidates_available"
+        result["hypotheses"] = [
+            {
+                "hypothesis_id": "HYP-01-leak-E003",
+                "components": [{"mechanism": "leak", "asset_id": "E003", "tag_id": None}],
+                "score": None,
+                "support_evidence_ids": ["source-observations"],
+                "conflict_evidence_ids": [],
+                "unresolved_questions": ["Is the flow reading confirmed on site?"],
+            }
+        ]
+
+    report = build_report(_full_bundle(edit))
+
+    (finding,) = [row for row in report["findings"] if row["kind"] == "hypothesis"]
+    assert finding["finding_id"] == "hypothesis-HYP-01-leak-E003"
+    assert finding["statement"].startswith("Unconfirmed hypothesis: leak")
+    assert finding["evidence_ids"] == ["source-observations"]
+    assert "Is the flow reading confirmed on site?" in report["missing_information"]
+
+
+@pytest.mark.parametrize(
+    ("field", "wrong", "message"),
+    [
+        ("human_decision_required", False, "human decision"),
+        ("automatic_action_authorized", True, "Automatic action"),
+        ("equipment_condition_confirmed", True, "Equipment condition"),
+    ],
+)
+def test_report_rejects_a_wrong_agent_8_flag(field: str, wrong: bool, message: str) -> None:
+    """Independent: an Agent 8 safety flag with the wrong value stops the report."""
+
+    def edit(responses: Responses) -> None:
+        responses["evidence_verification_decision"]["result"][field] = wrong
+
+    with pytest.raises(ValueError, match=message):
+        build_report(_full_bundle(edit))
