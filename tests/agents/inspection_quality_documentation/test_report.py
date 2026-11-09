@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import copy
 import json
+from collections.abc import Callable
 from typing import Any
 
 import pytest
 
+from verum.agents.common import ROLES
 from verum.agents.inspection_quality_documentation.report import build_report
 from verum.agents.runner.bundle import VerifiedBundle
 from verum.contracts.agent_interfaces import content_hash
@@ -94,3 +96,75 @@ def test_report_rejects_mixed_revision() -> None:
     """Independent: responses from another revision are rejected."""
     bundle = _bundle()
     bundle.responses["evidence_verification_decision"]["context"]["revision"] += 1
+
+
+Responses = dict[str, dict[str, Any]]
+
+
+def _chained(role: str, kind: str) -> dict[str, Any]:
+    """Load one chained fixture message for a role."""
+    path = repo_root() / "tests" / "agents" / "fixtures" / "chained" / f"{role}.{kind}.json"
+    loaded: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return loaded
+
+
+def _full_bundle(edit: Callable[[Responses], None] | None = None) -> VerifiedBundle:
+    """Create an eight-role bundle from the chained fixtures with registered hashes."""
+    responses: Responses = {role: _chained(role, "response") for role in ROLES}
+    if edit is not None:
+        edit(responses)
+
+    evidence: dict[str, dict[str, Any]] = {}
+    for role in ROLES:
+        for row in _chained(role, "request")["evidence"]:
+            evidence.setdefault(row["evidence_id"], row)
+    for response in responses.values():
+        evidence[response["report_id"]] = {
+            "evidence_id": response["report_id"],
+            "kind": "agent_report",
+            "content_sha256": content_hash(response),
+        }
+
+    return VerifiedBundle(
+        context=copy.deepcopy(responses["evidence_verification_decision"]["context"]),
+        responses=responses,
+        evidence=list(evidence.values()),
+        issues=(),
+    )
+
+
+def _fail(responses: Responses, role: str, status: str, code: str = "UPSTREAM_FAILED") -> None:
+    """Turn one response into a resultless failure with a single issue."""
+    responses[role]["status"] = status
+    responses[role]["result"] = None
+    responses[role]["issues"] = [{"code": code, "message": "Forced failure.", "evidence_ids": []}]
+
+
+FIXED_FLAGS = {
+    "advisory_only": True,
+    "human_decision_required": True,
+    "automatic_action_authorized": False,
+    "equipment_condition_confirmed": False,
+}
+
+
+@pytest.mark.parametrize("status", ["insufficient_evidence", "error"])
+def test_report_builds_when_planning_has_no_result(status: str) -> None:
+    """Independent: a resultless planning report leaves the options section empty and explained.
+
+    The planning response carries a null result, as the planner returns when no catalogue action
+    matches, so the report must state that options are unavailable instead of failing.
+    """
+    code = "NO_COMPATIBLE_INSPECTION_OPTIONS"
+    bundle = _full_bundle(lambda responses: _fail(responses, "inspection_planning", status, code))
+
+    report = build_report(bundle)
+
+    assert report["inspection_options"] == []
+    notes = [note for note in report["missing_information"] if "options unavailable" in note]
+    assert len(notes) == 1
+    assert "inspection_planning" in notes[0]
+    assert f"status={status}" in notes[0]
+    assert code in notes[0]
+    assert {key: report[key] for key in FIXED_FLAGS} == FIXED_FLAGS
+    assert report["review_status"] == "human_review_required"

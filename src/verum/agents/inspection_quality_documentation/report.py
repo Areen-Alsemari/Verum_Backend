@@ -176,7 +176,7 @@ def _inspection_options(
     """Copy planning options without changing feasibility or numeric values."""
     planning = responses.get(AGENT_6)
 
-    if planning is None:
+    if planning is None or planning.get("result") is None:
         return []
 
     report_id = planning["report_id"]
@@ -201,6 +201,19 @@ def _inspection_options(
         )
 
     return options
+
+
+def _options_unavailable_note(responses: dict[str, dict[str, Any]]) -> list[str]:
+    """Say why inspection options are missing when planning returned no result."""
+    planning = responses.get(AGENT_6)
+
+    if planning is None or planning.get("result") is not None:
+        return []
+
+    codes = ", ".join(str(issue["code"]) for issue in planning.get("issues", []))
+    reason = f"; issues: {codes}" if codes else ""
+
+    return [f"Inspection options unavailable: {AGENT_6} status={planning['status']}{reason}"]
 
 
 def _unavailable_assessment(
@@ -368,6 +381,7 @@ def build_report(bundle: VerifiedReportBundle) -> dict[str, Any]:
     missing_information = [
         f"Missing agent report: {role}" for role in ROLES if role not in responses
     ]
+    missing_information.extend(_options_unavailable_note(responses))
 
     if agent7 is not None and agent7.get("result") is not None:
         for result_id in inspection_retests:
