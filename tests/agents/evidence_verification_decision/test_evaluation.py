@@ -1,7 +1,8 @@
-
 """Test Agent 8 synthetic labels and validated role-view evaluation."""
 
 from pathlib import Path
+
+import pytest
 
 from verum.agents.common.loader import iter_role_records
 from verum.agents.evidence_verification_decision.evaluation import (
@@ -9,13 +10,11 @@ from verum.agents.evidence_verification_decision.evaluation import (
     evaluate_reference_example,
 )
 
-ROOT = (
-    Path(__file__).resolve().parents[3]
-    / "data/reference_release_v2/verum_reference_v2"
-)
+ROOT = Path(__file__).resolve().parents[3] / "data/reference_release_v2/verum_reference_v2"
 ROLE = "evidence_verification_decision"
 
 
+@pytest.mark.skipif(not ROOT.exists(), reason="Reference dataset not available")
 def test_reference_admission_targets() -> None:
     """Independent: preserve legacy synthetic adapter compatibility."""
     count = 0
@@ -28,6 +27,7 @@ def test_reference_admission_targets() -> None:
     assert count == 7008
 
 
+@pytest.mark.skipif(not ROOT.exists(), reason="Reference dataset not available")
 def test_full_agent_evaluation() -> None:
     """Independent: validate full Agent 8 test-split evaluation."""
     records = iter_role_records(ROOT, ROLE, "test")
@@ -44,6 +44,7 @@ def test_full_agent_evaluation() -> None:
     assert summary["evaluation_limitations"]
 
 
+@pytest.mark.skipif(not ROOT.exists(), reason="Reference dataset not available")
 def test_all_inspection_records() -> None:
     """Independent: process all twelve inspection review records."""
     records = (
@@ -111,6 +112,7 @@ def test_agent_rejects_future_evidence() -> None:
     assert check["usable"] is False
     assert result["decision_state"] == "more_evidence_required"
     assert result["automatic_action_authorized"] is False
+
 
 def test_agent_distinguishes_valid_and_future_time() -> None:
     """Independent: distinguish timely evidence from future evidence."""

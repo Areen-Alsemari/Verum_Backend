@@ -1,4 +1,3 @@
-
 """Agent 8 role-view evaluation; not independent field validation."""
 
 from __future__ import annotations
@@ -26,26 +25,18 @@ REPORT_FILES = {
     "inspection_quality_report": "inspection_quality_documentation.response.json",
 }
 
-LABEL_MEANING = (
-    "Reference targets measure synthetic time admissibility, "
-    "measurement usability, and unsupported equipment confirmation. "
-    "Inspection targets describe retrospective record quality, "
-    "workflow timing, process coverage, and equipment-condition "
-    "acceptance support. They do not establish independent provenance "
-    "or diagnostic accuracy."
-)
+LABEL_MEANING = "Contract and rule consistency over 36,012 inputs, not accuracy."
 
 LIMITATIONS = (
-    "Agent decisions use registered contract fixtures, not independently "
-    "verified evidence for each role-view record. The temporal comparison "
-    "tests the Agent 8 time check against synthetic reference labels. "
-    "Measurement usability cannot be independently scored without "
-    "record-specific provenance, quality, and scope verification. "
-    "Inspection records are retrospective reviews, not registered "
-    "measurement proposals or independently verified Agent 7 reports. "
-    "Inspection decisions therefore test the conservative no-proposal "
-    "path, not the quality of individual measurements. No diagnostic "
-    "or equipment-condition accuracy is claimed."
+    "The 36,000 temporal labels use the same rule as Agent 8. "
+    "A one-line baseline also matches all 36,000. "
+    "The 12 inspection records do not establish independent accuracy. "
+    "Role-view records use registered contract fixtures, not independently verified evidence. "
+    "Measurement usability needs record-specific provenance, quality, and scope verification. "
+    "Inspection records are retrospective reviews, not registered measurement proposals "
+    "or independently verified Agent 7 reports. Their decisions test the conservative "
+    "no-proposal path, not individual measurement quality. "
+    "No diagnostic or equipment-condition accuracy is claimed."
 )
 
 
@@ -76,9 +67,7 @@ def evaluate_reference_example(
         },
         cutoff,
         quality_acceptable=(
-            proposal["quality_flag"] == "good"
-            if proposal["quality_flag"] is not None
-            else None
+            proposal["quality_flag"] == "good" if proposal["quality_flag"] is not None else None
         ),
         scope_supported=True,
     )
@@ -93,12 +82,10 @@ def evaluate_reference_example(
 @lru_cache(maxsize=1)
 def _base_request() -> dict[str, Any]:
     """Load and register complete contract interface fixtures."""
-    request = json.loads(
+    request: dict[str, Any] = json.loads(
         (FIXTURES / "evidence_verification_decision.request.json").read_text()
     )
-    registry = EvidenceRegistry.from_rows(
-        request["context"], request["evidence"]
-    )
+    registry = EvidenceRegistry.from_rows(request["context"], request["evidence"])
 
     for field, filename in REPORT_FILES.items():
         report = json.loads((FIXTURES / filename).read_text())
@@ -122,9 +109,7 @@ def _reference_request(record: Any) -> dict[str, Any]:
     request = _new_request(record.example_id)
     proposal = record.input["proposal"]
 
-    offset = (
-        proposal["available_relative_s"] - record.input["query_time_s"]
-    )
+    offset = proposal["available_relative_s"] - record.input["query_time_s"]
     claimed_at = request["context"]["as_of_s"] + offset
 
     request["input"]["evidence_proposals"] = [
@@ -143,9 +128,7 @@ def _inspection_request(record: Any) -> dict[str, Any]:
     request = _new_request(record.example_id)
     inspection = record.input
 
-    request["request_id"] = (
-        f"evaluation-{record.example_id}-{inspection['action_id']}"
-    )
+    request["request_id"] = f"evaluation-{record.example_id}-{inspection['action_id']}"
 
     # No independently registered measurement proposal exists.
     request["input"]["evidence_proposals"] = []
@@ -161,9 +144,7 @@ def evaluate_full_agent_request(
     check_response(request, response)
 
     if response["status"] == "error" or response["result"] is None:
-        raise ValueError(
-            f"Agent 8 evaluation failed: {response.get('issues')}"
-        )
+        raise ValueError(f"Agent 8 evaluation failed: {response.get('issues')}")
     return response
 
 
@@ -232,10 +213,7 @@ def _score_inspection(
     scores[f"timing_verified:{inspection['workflow_timing_verified']}"] += 1
     scores[f"record_complete:{inspection['measurement_record_complete']}"] += 1
     scores[f"target_decision:{target['decision']}"] += 1
-    scores[
-        f"condition_acceptance:{target['condition_acceptance_supported']}"
-    ] += 1
-
+    scores[f"condition_acceptance:{target['condition_acceptance_supported']}"] += 1
 
 
 def _summary(
@@ -300,6 +278,4 @@ def evaluate_reference_dataset(
             inspections[result["decision_state"]] += 1
             _score_inspection(record, result, inspection_labels)
 
-    return _summary(
-        counts, decisions, inspections, scores, inspection_labels
-    )
+    return _summary(counts, decisions, inspections, scores, inspection_labels)
