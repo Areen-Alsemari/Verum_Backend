@@ -10,12 +10,10 @@ from verum.agents.evidence_verification_decision.evaluation import (
 
 def test_reference_admission_targets() -> None:
     """Independent: reference admission targets."""
-    root = Path("data/reference_release_v2/verum_reference_v2")
+    root = Path(__file__).resolve().parents[3] / "data/reference_release_v2/verum_reference_v2"
     count = 0
 
-    for record in iter_role_records(
-        root, "evidence_verification_decision", "test"
-    ):
+    for record in iter_role_records(root, "evidence_verification_decision", "test"):
         if record.use != "reference_input_target_pair":
             continue
 

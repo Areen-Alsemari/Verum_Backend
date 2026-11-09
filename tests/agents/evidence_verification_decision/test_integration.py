@@ -1,4 +1,3 @@
-
 """Integration tests for Agent 8 using registered upstream reports."""
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ from verum.agents.evidence_verification_decision import (
     EvidenceVerificationDecisionAgent,
 )
 
-EXAMPLES = Path("contracts/agents/v1/examples")
+EXAMPLES = Path(__file__).resolve().parents[3] / "contracts/agents/v1/examples"
 ROLES = (
     ("diagnostic_reasoning", "diagnosis_report"),
     ("inspection_planning", "inspection_plan_report"),
@@ -26,18 +25,14 @@ ROLES = (
 
 def _load(filename: str) -> dict[str, Any]:
     """Load a version-controlled contract example."""
-    result: dict[str, Any] = json.loads(
-        (EXAMPLES / filename).read_text(encoding="utf-8")
-    )
+    result: dict[str, Any] = json.loads((EXAMPLES / filename).read_text(encoding="utf-8"))
     return result
 
 
 def _request_with_reports() -> dict[str, Any]:
     """Build an Agent 8 request with registered upstream reports."""
     request = _load("evidence_verification_decision.request.json")
-    registry = EvidenceRegistry.from_rows(
-        request["context"], request["evidence"]
-    )
+    registry = EvidenceRegistry.from_rows(request["context"], request["evidence"])
 
     for role, field in ROLES:
         report = _load(f"{role}.response.json")
@@ -59,11 +54,7 @@ def _reregister_reports(request: dict[str, Any]) -> None:
     """Refresh report evidence hashes after modifying embedded reports."""
     registry = EvidenceRegistry.from_rows(
         request["context"],
-        [
-            row
-            for row in request["evidence"]
-            if row["kind"] != "agent_report"
-        ],
+        [row for row in request["evidence"] if row["kind"] != "agent_report"],
     )
 
     for _, field in ROLES:
@@ -148,10 +139,7 @@ def test_all_attached_reports_are_consumed() -> None:
     request = _request_with_reports()
     response = _run(request)
 
-    expected = {
-        request["input"][field]["report_id"]
-        for _, field in ROLES
-    }
+    expected = {request["input"][field]["report_id"] for _, field in ROLES}
 
     assert expected <= set(response["consumed_evidence_ids"])
 
@@ -159,10 +147,7 @@ def test_all_attached_reports_are_consumed() -> None:
 def test_registered_report_hash_matches_content() -> None:
     """Independent: Registry hashes must match the complete report content."""
     request = _request_with_reports()
-    registry = {
-        row["evidence_id"]: row
-        for row in request["evidence"]
-    }
+    registry = {row["evidence_id"]: row for row in request["evidence"]}
 
     for _, field in ROLES:
         report = request["input"][field]
@@ -185,9 +170,7 @@ def test_report_context_mismatch_is_rejected() -> None:
 def test_report_hash_tampering_is_rejected() -> None:
     """Independent: Modified report content must invalidate its registry hash."""
     request = _request_with_reports()
-    request["input"]["diagnosis_report"]["limitations"].append(
-        "Tampered after registration"
-    )
+    request["input"]["diagnosis_report"]["limitations"].append("Tampered after registration")
 
     with pytest.raises(ValueError):
         check_request(request)
@@ -213,10 +196,7 @@ def test_failed_diagnostic_check_is_reported_as_conflict() -> None:
 
     response = _run(request)
 
-    assert any(
-        row["outcome"] == "fail"
-        for row in response["result"]["conflicts"]
-    )
+    assert any(row["outcome"] == "fail" for row in response["result"]["conflicts"])
 
 
 def test_hypothesis_conflict_evidence_is_reported() -> None:
@@ -281,12 +261,14 @@ def test_shared_root_does_not_transfer_quality() -> None:
     registry = {row["evidence_id"]: row for row in request["evidence"]}
     derived = registry["features-summary"]
     assert derived["root_evidence_ids"] == ["source-observations"]
-    request["input"]["evidence_proposals"] = [{
-        "proposal_id": "proposal-derived",
-        "source_ref": derived["source_ref"],
-        "claimed_available_at_s": derived["available_at_s"],
-        "claimed_evidence_ids": ["features-summary"],
-    }]
+    request["input"]["evidence_proposals"] = [
+        {
+            "proposal_id": "proposal-derived",
+            "source_ref": derived["source_ref"],
+            "claimed_available_at_s": derived["available_at_s"],
+            "claimed_evidence_ids": ["features-summary"],
+        }
+    ]
 
     response = _run(request)
     check = response["result"]["evidence_checks"][0]
@@ -304,19 +286,14 @@ def test_assessment_available_with_verified_evidence() -> None:
         quality_usable=True,
     )
 
-    request["input"]["evidence_proposals"] = [
-        _verified_proposal("proposal-verified-1")
-    ]
+    request["input"]["evidence_proposals"] = [_verified_proposal("proposal-verified-1")]
 
     response = _run(request)
     result = response["result"]
 
     assert result["decision_state"] == "assessment_available"
     assert result["evidence_checks"]
-    assert all(
-        check["usable"] is True
-        for check in result["evidence_checks"]
-    )
+    assert all(check["usable"] is True for check in result["evidence_checks"])
     assert result["human_decision_required"] is True
     assert result["automatic_action_authorized"] is False
     assert result["equipment_condition_confirmed"] is False
@@ -347,9 +324,7 @@ def test_run_returns_error_when_evidence_check_raises(monkeypatch):
     """Independent: A processing exception produces a resultless error response."""
     import verum.agents.evidence_verification_decision.agent as module
 
-    request = _registered_request_with_changes(
-        diagnosis_candidates=True, quality_usable=True
-    )
+    request = _registered_request_with_changes(diagnosis_candidates=True, quality_usable=True)
     request["input"]["evidence_proposals"] = [_verified_proposal("proposal-error")]
 
     def forced_failure(*args, **kwargs):
