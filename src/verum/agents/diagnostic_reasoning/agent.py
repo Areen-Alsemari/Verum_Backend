@@ -6,6 +6,7 @@ available upstream reports. It never forces a single root cause or claims field 
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any, Final
 
@@ -16,10 +17,12 @@ from verum.agents.common import (
     check_response,
     implementation_block,
     make_issue,
+    report_id,
 )
 from verum.agents.diagnostic_reasoning.features import FEATURE_PROFILE_ID
 from verum.agents.diagnostic_reasoning.model import DiagnosticModel, format_hypotheses
 from verum.agents.diagnostic_reasoning.rules import (
+    build_default_limitations,
     enrich_hypothesis_with_rules,
     evaluate_upstream_checks,
 )
@@ -28,25 +31,13 @@ ROLE: Final = "diagnostic_reasoning"
 IMPL_NAME: Final = "diagnostic_reasoning_ovr_hgb"
 IMPL_VERSION: Final = "1.0.0"
 
-DEFAULT_LIMITATIONS: Final[tuple[str, ...]] = (
-    "Hypotheses are candidate explanations from simulated readings, not field-qualified causes.",
-    "Empty hypotheses mean inconclusive evidence, never verified healthy equipment.",
-    "Scores are uncalibrated method decision scores, never calibrated probabilities.",
-    "Low-support mechanisms (leak, restriction_obstruction, bias, stuck, misroute_a) carry "
-    "high false-discovery risk; misroute_a is not evaluable on held-out test data.",
-    "Localisation is limited to 38 assets seen in training; 11 declared assets never appear "
-    "in positive training examples.",
-    "Approximately 27% of masked/ineligible test windows still trigger candidate hypotheses.",
-    "Forecast check compares forecast direction and value with candidate hypotheses on matching "
-    "tags and returns unknown when no hypothesis is present or forecast deltas are neutral.",
-    "Roof failure, vapour damage and mechanical fault cascades are outside the supported scope.",
-)
+DEFAULT_LIMITATIONS: Final[tuple[str, ...]] = build_default_limitations()
 
 
 def _consumed_ids(request: dict[str, Any]) -> list[str]:
     """Collect consumed evidence identifiers in a stable order without duplicates."""
     known = {row["evidence_id"]: row for row in request["evidence"]}
-    obs_ids = list(request["input"]["observations"].get("evidence_ids", []))
+    obs_ids = list((request["input"].get("observations") or {}).get("evidence_ids", []))
     roots: list[str] = []
     for eid in obs_ids:
         if eid in known:
@@ -89,18 +80,44 @@ class DiagnosticReasoningAgent:
         )
 
     def _error_response(self, request: dict[str, Any], code: str, message: str) -> dict[str, Any]:
-        """Build and validate a structured error response when execution fails."""
-        response = build_response(
-            request,
-            status="error",
-            result=None,
-            consumed_evidence_ids=_consumed_ids(request),
-            implementation=self._implementation(),
-            issues=[make_issue(code, message)],
-            limitations=list(DEFAULT_LIMITATIONS),
-        )
-        check_response(request, response)
-        return response
+        """Build a valid error response, guarding against helper failures so run() never raises."""
+        try:
+            consumed = _consumed_ids(request)
+        except Exception:
+            consumed = []
+        try:
+            issue = make_issue(code, message)
+        except Exception:
+            issue = {"code": code, "message": message, "evidence_ids": []}
+        try:
+            response = build_response(
+                request,
+                status="error",
+                result=None,
+                consumed_evidence_ids=consumed,
+                implementation=self._implementation(),
+                issues=[issue],
+                limitations=list(DEFAULT_LIMITATIONS),
+            )
+            check_response(request, response)
+            return response
+        except Exception:
+            analysis = request["context"]["analysis_id"]
+            return {
+                "interface_version": request.get("interface_version", "1.0.0"),
+                "message_type": "response",
+                "agent": request["agent"],
+                "request_id": request["request_id"],
+                "report_id": report_id(request["agent"], analysis, request["request_id"]),
+                "context": copy.deepcopy(request["context"]),
+                "implementation": self._implementation(),
+                "status": "error",
+                "consumed_evidence_ids": consumed,
+                "issues": [issue],
+                "limitations": list(DEFAULT_LIMITATIONS),
+                "advisory_only": True,
+                "result": None,
+            }
 
     def _execute(
         self, request: dict[str, Any], consumed: list[str]
@@ -118,6 +135,14 @@ class DiagnosticReasoningAgent:
         missing_upstreams = [c["check_id"] for c in upstream_checks if c["outcome"] == "unknown"]
         issues: list[dict[str, Any]] = []
         status = "complete"
+        if self._model.artifact is None:
+            status = "degraded"
+            issues.append(
+                make_issue(
+                    "MODEL_ARTIFACT_MISSING",
+                    "Saved model artifact is missing; predictions use heuristic rules only.",
+                )
+            )
         if missing_upstreams:
             status = "degraded"
             issues.append(
@@ -141,25 +166,25 @@ class DiagnosticReasoningAgent:
         if request.get("agent") != self.role:
             raise ValueError("request is addressed to a different role")
 
-        observations = request["input"].get("observations")
-        if observations is None or observations.get("representation") != "summary_v1":
-            issue = make_issue(
-                "UNSUPPORTED_OBSERVATION_REPRESENTATION",
-                "Diagnostic Reasoning v1 requires summary_v1 observations.",
-            )
-            response = build_response(
-                request,
-                status="insufficient_evidence",
-                result=None,
-                consumed_evidence_ids=attached_report_ids(request),
-                implementation=self._implementation(),
-                issues=[issue],
-                limitations=list(DEFAULT_LIMITATIONS),
-            )
-            check_response(request, response)
-            return response
-
         try:
+            observations = request["input"].get("observations")
+            if observations is None or observations.get("representation") != "summary_v1":
+                issue = make_issue(
+                    "UNSUPPORTED_OBSERVATION_REPRESENTATION",
+                    "Diagnostic Reasoning v1 requires summary_v1 observations.",
+                )
+                response = build_response(
+                    request,
+                    status="insufficient_evidence",
+                    result=None,
+                    consumed_evidence_ids=attached_report_ids(request),
+                    implementation=self._implementation(),
+                    issues=[issue],
+                    limitations=list(DEFAULT_LIMITATIONS),
+                )
+                check_response(request, response)
+                return response
+
             consumed = _consumed_ids(request)
             status, result, issues = self._execute(request, consumed)
             response = build_response(
@@ -171,9 +196,9 @@ class DiagnosticReasoningAgent:
                 issues=issues,
                 limitations=list(DEFAULT_LIMITATIONS),
             )
+            check_response(request, response)
+            return response
         except Exception as error:
             return self._error_response(
                 request, "DIAGNOSTIC_EXECUTION_ERROR", f"Execution failed: {error}"
             )
-        check_response(request, response)
-        return response
