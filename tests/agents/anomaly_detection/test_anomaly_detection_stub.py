@@ -10,7 +10,7 @@ import pytest
 from verum.agents.anomaly_detection import AnomalyDetectionAgent
 from verum.agents.common import check_request, check_response
 from verum.contracts.agent_interfaces import contract_directory
-
+from verum.agents.anomaly_detection import agent as anomaly_agent
 
 def example_request() -> dict[str, Any]:
     """Load the official anomaly detection request example."""
@@ -23,7 +23,33 @@ def example_request() -> dict[str, Any]:
         path.read_text(encoding="utf-8")
     )
     return loaded
+def test_artifact_hash_mismatch_prevents_deserialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A mismatched artifact hash prevents unsafe deserialization.
 
+    Independent: yes, because the test verifies the hash check
+    blocks the deserializer directly.
+    """
+    anomaly_agent.load_artifact.cache_clear()
+
+    monkeypatch.setattr(
+        anomaly_agent,
+        "file_sha256",
+        lambda _: "0" * 64,
+    )
+
+    def reject_deserialization(path: Any) -> None:
+        pytest.fail("joblib.load must not run for an unverified artifact")
+
+    monkeypatch.setattr(
+        anomaly_agent.joblib,
+        "load",
+        reject_deserialization,
+    )
+
+    with pytest.raises(ValueError, match="hash mismatch"):
+        anomaly_agent.load_artifact()
 
 def test_anomaly_detection_runtime_passes_the_contract() -> None:
     """The runtime returns a contract-valid advisory response.

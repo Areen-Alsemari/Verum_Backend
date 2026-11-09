@@ -49,13 +49,24 @@ ARTIFACT_PATH = (
     / "anomaly_detection_model.joblib"
 )
 
+EXPECTED_ARTIFACT_SHA256 = (
+    "766d3a4f20c2388a4d5319936ce715af3f74a69b933e8a20e2829256f92be547"
+)
+
 
 @cache
 def load_artifact() -> dict[str, Any]:
-    """Load the trained anomaly detection artifact."""
+    """Load the verified anomaly detection artifact."""
+    actual_hash = file_sha256(ARTIFACT_PATH)
+
+    if actual_hash != EXPECTED_ARTIFACT_SHA256:
+        raise ValueError("anomaly detection artifact hash mismatch")
+
     artifact = joblib.load(ARTIFACT_PATH)
+
     if not isinstance(artifact, dict):
         raise ValueError("invalid anomaly detection artifact")
+
     return artifact
 
 
