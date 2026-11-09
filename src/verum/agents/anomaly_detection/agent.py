@@ -67,11 +67,7 @@ EXPECTED_UNITS = {
     "XV-S103": "bool",
 }
 
-ARTIFACT_PATH = (
-    Path(__file__).resolve().parent
-    / "artifacts"
-    / "anomaly_detection_model.joblib"
-)
+ARTIFACT_PATH = Path(__file__).resolve().parent / "artifacts" / "anomaly_detection_model.joblib"
 
 EXPECTED_ARTIFACT_SHA256 = "56a63c52c4781908e0e87a801449f12756508e8c20f385ff654362fc825465ea"
 
@@ -343,6 +339,7 @@ class AnomalyDetectionAgent:
                                 "A detected departure is not proof of a real equipment fault.",
                                 "Aggregate features do not identify a specific tag or asset.",
                                 "Overlapping observation windows are not independent fault events.",
+                                "The score is not a calibrated probability.",
                             ],
                         )
                     )

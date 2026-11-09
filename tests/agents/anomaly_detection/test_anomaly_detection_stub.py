@@ -176,6 +176,49 @@ def test_anomaly_detection_degrades_on_memory_error(
     assert any(issue["code"] == "MODEL_UNAVAILABLE" for issue in response["issues"])
 
 
+def test_detected_event_explains_score_interpretation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Detected events clarify that their score is not a probability.
+
+    Independent: yes, because model output is explicitly controlled.
+    """
+
+    class FakeModel:
+        classes_ = [False, True]
+
+        def predict_proba(self, features: Any) -> list[list[float]]:
+            return [[0.01, 0.99]]
+
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+    valid_signals = anomaly_agent.filter_valid_unit_signals(signals)
+    feature_names = list(anomaly_agent.extract_features(valid_signals))
+
+    monkeypatch.setattr(
+        anomaly_agent,
+        "load_artifact",
+        lambda: {
+            "feature_names": feature_names,
+            "threshold": 0.5,
+            "model": FakeModel(),
+        },
+    )
+
+    response = AnomalyDetectionAgent().run(request)
+
+    detected_events = [
+        event
+        for event in response["result"]["events"]
+        if event["category"] == "reported_signal_departure"
+    ]
+
+    assert len(detected_events) == 1
+    assert "The score is not a calibrated probability." in detected_events[0]["limitations"]
+    assert detected_events[0]["score"]["kind"] == "decision_score"
+    check_response(request, response)
+
+
 def test_successful_model_run_omits_unavailable_limitation() -> None:
     """A successful model run does not report model unavailability.
 
