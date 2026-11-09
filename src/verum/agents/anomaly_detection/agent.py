@@ -247,7 +247,7 @@ class AnomalyDetectionAgent:
                     )
                 )
 
-        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        except Exception:
             status = "degraded"
             issues.append(
                 make_issue(

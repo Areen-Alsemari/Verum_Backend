@@ -161,3 +161,28 @@ def test_anomaly_detection_consumes_attached_forecast_report():
 
     assert forecast["report_id"] in response["consumed_evidence_ids"]
     check_response(request, response)
+
+def test_anomaly_detection_degrades_on_memory_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A memory failure during model loading produces a degraded response.
+
+    Independent: yes, because the test injects the failure and checks
+    the resulting response status and issue.
+    """
+
+    def fail_load() -> dict[str, Any]:
+        raise MemoryError("simulated memory failure")
+
+    monkeypatch.setattr(
+        "verum.agents.anomaly_detection.agent.load_artifact",
+        fail_load,
+    )
+
+    response = AnomalyDetectionAgent().run(example_request())
+
+    assert response["status"] == "degraded"
+    assert any(
+        issue["code"] == "MODEL_UNAVAILABLE"
+        for issue in response["issues"]
+    )
