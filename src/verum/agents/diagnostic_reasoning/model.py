@@ -2,13 +2,12 @@
 
 The model predicts supported fault mechanisms and candidate component locations from observation
 summaries alone. Before loading a saved artifact from disk its SHA-256 digest is verified against
-the pinned hash; deterministic observation rules supplement or serve as a fallback.
+the compiled-in pinned hash; deterministic observation rules supplement or serve as a fallback.
 """
 
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -51,17 +50,8 @@ def default_artifact_path() -> Path:
     return Path(__file__).resolve().parent / "model_artifact.joblib"
 
 
-def expected_artifact_sha256(artifact_path: Path) -> str:
-    """Return the pinned SHA-256 digest from the evaluation report or the module constant."""
-    report_path = artifact_path.with_name("evaluation_report.json")
-    if report_path.is_file():
-        try:
-            data = json.loads(report_path.read_text(encoding="utf-8"))
-            sha = data.get("artifact_sha256")
-            if isinstance(sha, str) and len(sha) == 64:
-                return sha
-        except Exception:
-            pass
+def expected_artifact_sha256(artifact_path: Path | None = None) -> str:
+    """Return the authoritative compiled-in SHA-256 digest for the saved model artifact."""
     return PINNED_ARTIFACT_SHA256
 
 
@@ -202,9 +192,6 @@ def format_hypotheses(predictions: list[CandidatePrediction]) -> list[dict[str, 
         comp = valid_component(pred.mechanism, pred.asset_id, pred.tag_id)
         target_label = comp["asset_id"] or comp["tag_id"] or "unlocalised"
         hyp_id = f"HYP-{idx:02d}-{comp['mechanism']}-{target_label}"
-        questions: list[str] = []
-        if comp["mechanism"] in LOW_SUPPORT_MECHANISMS:
-            questions.append(LOW_SUPPORT_MECHANISMS[comp["mechanism"]])
         hypotheses.append(
             {
                 "hypothesis_id": hyp_id,
@@ -217,7 +204,7 @@ def format_hypotheses(predictions: list[CandidatePrediction]) -> list[dict[str, 
                 },
                 "support_evidence_ids": [],
                 "conflict_evidence_ids": [],
-                "unresolved_questions": questions,
+                "unresolved_questions": [],
             }
         )
     return hypotheses
