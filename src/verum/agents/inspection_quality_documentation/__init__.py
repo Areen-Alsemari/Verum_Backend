@@ -1,9 +1,6 @@
-"""Inspection Quality and Documentation agent: placeholder until the role is implemented.
-
-The package exposes the role's agent class. Replace the placeholder base with the real
-implementation while keeping the run interface and the message contract unchanged.
-"""
+"""Inspection quality assessment and evidence-backed maintenance reporting."""
 
 from verum.agents.inspection_quality_documentation.agent import InspectionQualityDocumentationAgent
+from verum.agents.inspection_quality_documentation.report import build_report
 
-__all__ = ["InspectionQualityDocumentationAgent"]
+__all__ = ["InspectionQualityDocumentationAgent", "build_report"]
