@@ -369,3 +369,63 @@ def test_shipped_ridge_uses_missing_offsets_and_distinct_ages() -> None:
     assert forecast["unit"] == "m"
     assert "Forecast method: ridge." in forecast["limitations"]
     assert forecast["value"] == pytest.approx(10.486795164239792, abs=1e-10, rel=0)
+
+
+ALL_TAGS = [
+    "FT-001",
+    "FT-201",
+    "LT-101",
+    "LT-102",
+    "LT-103",
+    "PT-001",
+    "PT-201",
+    "PT-202A",
+    "PT-202B",
+    "PT-203",
+    "TT-001",
+    "TT-101",
+    "TT-102",
+    "TT-103",
+]
+NO_INTERVAL = "No prediction interval has been calibrated."
+FT201_DISCLOSURE = "FT-201 was switched to persistence after reviewing the test results."
+
+
+def test_every_numeric_forecast_states_that_no_interval_is_calibrated() -> None:
+    """Independent: each forecast with a value says its interval is not calibrated.
+
+    The expected text is fixed here and every sensor of the published request is forecast.
+    """
+    request = _example_request()
+    request["input"]["target_tag_ids"] = ALL_TAGS
+
+    report = PredictiveHealthAgent().run(request)
+    validate_response(request, report)
+    forecasts = report["result"]["forecasts"]
+
+    assert [row["tag_id"] for row in forecasts] == ALL_TAGS
+    assert all(row["value"] is not None for row in forecasts)
+    assert all(NO_INTERVAL in row["limitations"] for row in forecasts)
+    assert all(row["interval"] is None for row in forecasts)
+
+
+@pytest.mark.parametrize("path", ["complete", "insufficient_evidence", "error"])
+def test_response_discloses_the_ft201_switch_on_every_path(
+    monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    """Independent: the FT-201 persistence disclosure is in the response limitations."""
+
+    def fail(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("forced artifact failure")
+
+    request = _example_request()
+    if path == "insufficient_evidence":
+        request["input"]["target_tag_ids"] = []
+    if path == "error":
+        monkeypatch.setattr(predictive_agent, "_ridge_artifact", fail)
+
+    report = PredictiveHealthAgent().run(request)
+    validate_response(request, report)
+
+    assert report["status"] == path
+    assert FT201_DISCLOSURE in report["limitations"]
