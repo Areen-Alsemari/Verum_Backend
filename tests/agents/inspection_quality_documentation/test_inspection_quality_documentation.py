@@ -1,22 +1,29 @@
-
 """Independent tests for the inspection quality documentation agent."""
 
 from __future__ import annotations
 
 import json
 from copy import deepcopy
-from pathlib import Path
 from typing import Any, cast
 
 import pytest
 from jsonschema import ValidationError
 
+from verum.agents.common import check_response
 from verum.agents.inspection_quality_documentation import (
     InspectionQualityDocumentationAgent,
 )
 from verum.contracts.agent_interfaces import content_hash
+from verum.contracts.paths import repo_root
 
-EXAMPLE_PATH = Path("contracts/agents/v1/examples/inspection_quality_documentation.request.json")
+EXAMPLE_PATH = (
+    repo_root()
+    / "contracts"
+    / "agents"
+    / "v1"
+    / "examples"
+    / "inspection_quality_documentation.request.json"
+)
 
 
 def example_request() -> dict[str, Any]:
@@ -449,3 +456,31 @@ def test_mismatched_measurement_unit_rejects_scope() -> None:
     _, record = run_inspection(request)
     assert inspection_check(record, "measurement_unit") == "fail"
     assert record["scope_supported"] is False
+
+
+def test_internal_failure_returns_a_validated_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Independent: an unexpected failure in a helper still gives a valid error response."""
+    request = example_request()
+
+    def fail(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("forced failure")
+
+    monkeypatch.setattr(InspectionQualityDocumentationAgent, "_observed_quality", fail)
+
+    response = InspectionQualityDocumentationAgent().run(request)
+
+    check_response(request, response)
+    assert response["status"] == "error"
+    assert response["result"] is None
+    assert [issue["code"] for issue in response["issues"]] == ["INSPECTION_QUALITY_FAILED"]
+    assert response["consumed_evidence_ids"] == ["features-summary", "source-reference"]
+    assert response["issues"][0]["evidence_ids"] == response["consumed_evidence_ids"]
+
+
+def test_invalid_request_is_still_rejected() -> None:
+    """Independent: the guard covers internal failures only, not invalid requests."""
+    request = example_request()
+    request["input"]["unexpected_field"] = True
+
+    with pytest.raises(ValidationError):
+        InspectionQualityDocumentationAgent().run(request)

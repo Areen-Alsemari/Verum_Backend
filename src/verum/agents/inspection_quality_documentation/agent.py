@@ -27,84 +27,137 @@ class InspectionQualityDocumentationAgent:
         if request["agent"] != ROLE:
             raise ValueError("Request is addressed to a different agent")
 
-        inputs = request["input"]
-        results = inputs["inspection_results"]
+        try:
+            inputs = request["input"]
+            results = inputs["inspection_results"]
 
-        requests = {row["request_id"]: row for row in inputs["inspection_requests"]}
-        catalog = {row["action_id"]: row for row in inputs["catalog"]}
+            requests = {row["request_id"]: row for row in inputs["inspection_requests"]}
+            catalog = {row["action_id"]: row for row in inputs["catalog"]}
 
-        registered_ids = self._registered_evidence_ids(request)
-        result_evidence_ids = set(inputs["result_evidence_ids"])
-        catalog_evidence_ids = set(inputs["catalog_evidence_ids"])
+            registered_ids = self._registered_evidence_ids(request)
+            result_evidence_ids = set(inputs["result_evidence_ids"])
+            catalog_evidence_ids = set(inputs["catalog_evidence_ids"])
 
-        record_checks: list[dict[str, Any]] = []
-        retest_result_ids: list[str] = []
-        issues: list[dict[str, Any]] = []
-        limitations: list[str] = []
-        consumed_ids: set[str] = set()
+            record_checks: list[dict[str, Any]] = []
+            retest_result_ids: list[str] = []
+            issues: list[dict[str, Any]] = []
+            limitations: list[str] = []
+            consumed_ids: set[str] = set()
 
-        assessment_context = {
-            "request": request,
-            "inputs": inputs,
-            "requests": requests,
-            "catalog": catalog,
-            "registered_ids": registered_ids,
-            "result_evidence_ids": result_evidence_ids,
-            "catalog_evidence_ids": catalog_evidence_ids,
-        }
+            assessment_context = {
+                "request": request,
+                "inputs": inputs,
+                "requests": requests,
+                "catalog": catalog,
+                "registered_ids": registered_ids,
+                "result_evidence_ids": result_evidence_ids,
+                "catalog_evidence_ids": catalog_evidence_ids,
+            }
 
-        for record in results:
-            assessment = self._assess_record(record, assessment_context)
-            record_checks.append(assessment["record_check"])
-            consumed_ids.update(assessment["consumed_evidence_ids"])
+            for record in results:
+                assessment = self._assess_record(record, assessment_context)
+                record_checks.append(assessment["record_check"])
+                consumed_ids.update(assessment["consumed_evidence_ids"])
 
-            if assessment["retest_required"]:
-                retest_result_ids.append(record["result_id"])
+                if assessment["retest_required"]:
+                    retest_result_ids.append(record["result_id"])
 
-            if assessment["issue"] is not None:
-                issues.append(assessment["issue"])
+                if assessment["issue"] is not None:
+                    issues.append(assessment["issue"])
 
-        observed_quality = self._observed_quality(
-            inputs.get("observations"),
-            registered_ids,
-        )
-
-        for row in observed_quality:
-            consumed_ids.update(row["evidence_ids"])
-
-        if not results:
-            issues.append(
-                make_issue(
-                    "NO_INSPECTION_RESULTS",
-                    "No performed inspection results were supplied.",
-                )
+            observed_quality = self._observed_quality(
+                inputs.get("observations"),
+                registered_ids,
             )
-            limitations.append("Inspection quality cannot be established without results.")
 
-        if any(row["measurement_usable"] is not True for row in record_checks):
-            limitations.append("One or more inspection measurements remain unusable or unknown.")
+            for row in observed_quality:
+                consumed_ids.update(row["evidence_ids"])
 
-        limitations.append("Inspection quality does not confirm physical equipment condition.")
+            if not results:
+                issues.append(
+                    make_issue(
+                        "NO_INSPECTION_RESULTS",
+                        "No performed inspection results were supplied.",
+                    )
+                )
+                limitations.append("Inspection quality cannot be established without results.")
 
-        result: dict[str, Any] = {
-            "record_checks": record_checks,
-            "observed_quality": observed_quality,
-            "retest_result_ids": sorted(set(retest_result_ids)),
-        }
+            if any(row["measurement_usable"] is not True for row in record_checks):
+                limitations.append(
+                    "One or more inspection measurements remain unusable or unknown."
+                )
 
+            limitations.append("Inspection quality does not confirm physical equipment condition.")
+
+            result: dict[str, Any] = {
+                "record_checks": record_checks,
+                "observed_quality": observed_quality,
+                "retest_result_ids": sorted(set(retest_result_ids)),
+            }
+
+            response = build_response(
+                request,
+                status="degraded" if issues else "complete",
+                result=result,
+                consumed_evidence_ids=sorted(consumed_ids),
+                implementation=implementation_block(
+                    "inspection_quality_documentation",
+                    "1.0.0",
+                ),
+                issues=issues,
+                limitations=limitations,
+            )
+
+            check_response(request, response)
+            return response
+        except Exception as error:
+            return self._error_response(request, error)
+
+    @staticmethod
+    def _input_evidence_ids(request: dict[str, Any]) -> list[str]:
+        """List the registered evidence the request names, without trusting its contents."""
+        try:
+            inputs = request["input"]
+            observations = inputs.get("observations") or {}
+            named = [
+                *inputs.get("result_evidence_ids", []),
+                *inputs.get("catalog_evidence_ids", []),
+                *observations.get("evidence_ids", []),
+            ]
+            named.extend(
+                row["evidence_id"]
+                for row in request["evidence"]
+                if row.get("kind") == "inspection_request"
+            )
+            known = {row["evidence_id"] for row in request["evidence"]}
+            return sorted({identifier for identifier in named if identifier in known})
+        except Exception:
+            return []
+
+    def _error_response(self, request: dict[str, Any], error: Exception) -> dict[str, Any]:
+        """Return a validated error response after an unexpected internal failure."""
+        evidence_ids = self._input_evidence_ids(request)
         response = build_response(
             request,
-            status="degraded" if issues else "complete",
-            result=result,
-            consumed_evidence_ids=sorted(consumed_ids),
+            status="error",
+            result=None,
+            consumed_evidence_ids=evidence_ids,
             implementation=implementation_block(
                 "inspection_quality_documentation",
                 "1.0.0",
             ),
-            issues=issues,
-            limitations=limitations,
+            issues=[
+                make_issue(
+                    "INSPECTION_QUALITY_FAILED",
+                    f"Inspection quality could not be assessed ({type(error).__name__}).",
+                    evidence_ids,
+                )
+            ],
+            limitations=[
+                "No inspection quality conclusion was reached.",
+                "Inspection quality does not confirm physical equipment condition.",
+            ],
         )
-
         check_response(request, response)
         return response
 
