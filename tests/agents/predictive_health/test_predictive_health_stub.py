@@ -230,3 +230,35 @@ def test_ridge_numeric_forecast_includes_missing_offset(
     assert method == "ridge"
     assert code is None
     assert note is None
+
+def test_shipped_ridge_forecasts_match_fixed_request() -> None:
+    """Validate and pin forecasts from the shipped Ridge models.
+
+    Independent: yes, because the published request fixes the inputs and the
+    expected values are fixed independently of the agent's runtime code.
+    """
+    expected = {
+        "LT-101": 10.47763323788805,
+        "LT-102": 4.947545199195054,
+        "LT-103": 7.32104518651137,
+        "PT-201": 0.7355710447572119,
+        "PT-202A": 2.0038613014409963,
+        "PT-202B": 1.9936718978634957,
+        "PT-203": 2.022606427624992,
+    }
+    request = _example_request()
+    request["input"]["target_tag_ids"] = list(expected)
+
+    report = PredictiveHealthAgent().run(request)
+    validate_response(request, report)
+
+    assert report["status"] == "complete"
+    forecasts = report["result"]["forecasts"]
+    assert [row["tag_id"] for row in forecasts] == list(expected)
+    for row in forecasts:
+        assert "Forecast method: ridge." in row["limitations"]
+        assert row["value"] == pytest.approx(
+            expected[row["tag_id"]], rel=1e-10, abs=1e-10
+        )
+
+    assert PredictiveHealthAgent().run(request) == report
