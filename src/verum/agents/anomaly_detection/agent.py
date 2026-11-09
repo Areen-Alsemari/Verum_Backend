@@ -283,11 +283,19 @@ class AnomalyDetectionAgent:
                 feature_profile_id=FEATURE_PROFILE_ID,
             ),
             issues=issues,
-            limitations=[
-                "Forecast reports are not used as model features.",
-                "The anomaly model could not be loaded or evaluated;"
-                "only quality rules were applied.",
-                "No detected event does not establish healthy equipment.",
+            limitations=["Forecast reports are not used as model features.",
+    *(
+        [
+            "The anomaly model could not be loaded or evaluated; "
+            "only quality rules were applied."
+        ]
+        if any(
+            issue["code"] == "MODEL_UNAVAILABLE"
+            for issue in issues
+        )
+        else []
+    ),
+    "No detected event does not establish healthy equipment.",
             ],
         )
 

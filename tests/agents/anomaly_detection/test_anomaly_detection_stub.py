@@ -186,3 +186,16 @@ def test_anomaly_detection_degrades_on_memory_error(
         issue["code"] == "MODEL_UNAVAILABLE"
         for issue in response["issues"]
     )
+
+def test_successful_model_run_omits_unavailable_limitation() -> None:
+    """A successful model run does not report model unavailability.
+
+    Independent: yes, because the response limitations are checked
+    against the successful runtime result.
+    """
+    response = AnomalyDetectionAgent().run(example_request())
+
+    assert not any(
+        "could not be loaded or evaluated" in limitation
+        for limitation in response["limitations"]
+    )
