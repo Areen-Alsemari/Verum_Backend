@@ -34,6 +34,38 @@ NUMERIC_FIELDS = (
     "slope_per_s",
     "standard_deviation",
 )
+EXPECTED_UNITS = {
+    "FT-001": "m3/h",
+    "FT-201": "m3/h",
+    "LSHH-101": "bool",
+    "LSHH-102": "bool",
+    "LSHH-103": "bool",
+    "LT-101": "m",
+    "LT-102": "m",
+    "LT-103": "m",
+    "P-101A": "bool",
+    "P-101B": "bool",
+    "PT-001": "barg",
+    "PT-201": "barg",
+    "PT-202A": "barg",
+    "PT-202B": "barg",
+    "PT-203": "barg",
+    "TT-001": "C",
+    "TT-101": "C",
+    "TT-102": "C",
+    "TT-103": "C",
+    "XV-PAI": "bool",
+    "XV-PAO": "bool",
+    "XV-PBI": "bool",
+    "XV-PBO": "bool",
+    "XV-R000": "bool",
+    "XV-R101": "bool",
+    "XV-R102": "bool",
+    "XV-R103": "bool",
+    "XV-S101": "bool",
+    "XV-S102": "bool",
+    "XV-S103": "bool",
+}
 
 ARTIFACT_PATH = (
     Path(__file__).resolve().parents[4]
@@ -62,6 +94,29 @@ def load_artifact() -> dict[str, Any]:
     return artifact
 
 
+def find_invalid_unit_signals(
+    signals: list[dict[str, Any]],
+) -> list[str]:
+    """Identify signals with unknown tags or unexpected units."""
+    invalid_tags = []
+
+    for signal in signals:
+        tag_id = signal["tag_id"]
+        expected_unit = EXPECTED_UNITS.get(tag_id)
+
+        if expected_unit is None or signal["unit"] != expected_unit:
+            invalid_tags.append(tag_id)
+
+    return sorted(set(invalid_tags))
+
+
+def filter_valid_unit_signals(
+    signals: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Keep signals with recognized tags and expected units."""
+    return [signal for signal in signals if EXPECTED_UNITS.get(signal["tag_id"]) == signal["unit"]]
+
+
 def extract_features(signals: list[dict[str, Any]]) -> dict[str, float]:
     """Extract the physical measurement features used during training."""
     features: dict[str, float] = {}
@@ -88,6 +143,21 @@ def extract_features(signals: list[dict[str, Any]]) -> dict[str, float]:
             features[f"{field}_max"] = 0.0
 
     return features
+
+
+class InsufficientMeasurementsError(Exception):
+    """Raised when a window has no usable physical measurements."""
+
+
+def has_physical_measurements(signals: list[dict[str, Any]]) -> bool:
+    """Check whether any finite physical measurement is available."""
+    return any(
+        isinstance(signal.get(field), (int, float))
+        and not isinstance(signal.get(field), bool)
+        and np.isfinite(signal[field])
+        for signal in signals
+        for field in NUMERIC_FIELDS
+    )
 
 
 def make_event(
@@ -188,12 +258,30 @@ class AnomalyDetectionAgent:
         artifact_hash: str | None = None
         issues: list[dict[str, Any]] = []
         status = "complete"
+        insufficient_measurements = False
+
+        invalid_unit_tags = find_invalid_unit_signals(signals)
+        valid_signals = filter_valid_unit_signals(signals)
+
+        if invalid_unit_tags:
+            status = "degraded"
+            issues.append(
+                make_issue(
+                    "INVALID_SIGNAL_UNIT",
+                    "Signals with unknown tags or unexpected units were"
+                    " excluded from model inference.",
+                    evidence_ids,
+                )
+            )
 
         try:
+            if not has_physical_measurements(valid_signals):
+                raise InsufficientMeasurementsError("insufficient physical measurements")
+
             artifact = load_artifact()
             artifact_hash = file_sha256(ARTIFACT_PATH)
 
-            feature_values = extract_features(signals)
+            feature_values = extract_features(valid_signals)
             feature_names = artifact["feature_names"]
             threshold = float(artifact["threshold"])
             model = artifact["model"]
@@ -230,6 +318,17 @@ class AnomalyDetectionAgent:
                     )
                 )
 
+        except InsufficientMeasurementsError:
+            status = "degraded"
+            insufficient_measurements = True
+            issues.append(
+                make_issue(
+                    "INSUFFICIENT_EVIDENCE",
+                    "No usable physical measurements were available for model inference.",
+                    evidence_ids,
+                )
+            )
+
         except Exception:
             status = "degraded"
             issues.append(
@@ -241,7 +340,7 @@ class AnomalyDetectionAgent:
                 )
             )
 
-        if not evidence_ids:
+        if not evidence_ids or insufficient_measurements:
             coverage = "unknown"
         elif status == "degraded":
             coverage = "partial"

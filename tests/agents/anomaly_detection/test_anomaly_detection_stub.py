@@ -10,7 +10,7 @@ import pytest
 from verum.agents.anomaly_detection import AnomalyDetectionAgent
 from verum.agents.anomaly_detection import agent as anomaly_agent
 from verum.agents.common import check_request, check_response
-from verum.contracts.agent_interfaces import contract_directory
+from verum.contracts.agent_interfaces import content_hash, contract_directory
 
 
 def example_request() -> dict[str, Any]:
@@ -187,3 +187,147 @@ def test_successful_model_run_omits_unavailable_limitation() -> None:
     assert not any(
         "could not be loaded or evaluated" in limitation for limitation in response["limitations"]
     )
+
+
+def update_observation_evidence_hash(request: dict[str, Any]) -> None:
+    observations = request["input"]["observations"]
+    summary_hash = content_hash(observations["summary"])
+
+    for evidence in request["evidence"]:
+        if (
+            evidence["kind"] == "observation_representation"
+            and evidence["evidence_id"] in observations["evidence_ids"]
+        ):
+            evidence["content_sha256"] = summary_hash
+            return
+
+    raise AssertionError("Observation representation evidence was not found")
+
+
+def test_empty_signals_return_insufficient_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Empty signal windows do not trigger model inference.
+
+    Independent: yes, because model loading is explicitly blocked.
+    """
+    request = example_request()
+    request["input"]["observations"]["summary"]["signals"] = []
+    update_observation_evidence_hash(request)
+
+    def reject_model_loading() -> dict[str, Any]:
+        pytest.fail("Model inference must not run without signals")
+
+    monkeypatch.setattr(anomaly_agent, "load_artifact", reject_model_loading)
+
+    response = AnomalyDetectionAgent().run(request)
+
+    assert response["status"] == "degraded"
+    assert response["result"]["coverage"] == "unknown"
+    assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
+    check_response(request, response)
+
+
+def test_all_missing_measurements_return_insufficient_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """All-missing physical measurements do not trigger model inference.
+
+    Independent: yes, because model loading is explicitly blocked.
+    """
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+
+    for signal in signals:
+        for field in anomaly_agent.NUMERIC_FIELDS:
+            signal[field] = None
+
+    update_observation_evidence_hash(request)
+
+    def reject_model_loading() -> dict[str, Any]:
+        pytest.fail("Model inference must not run without physical measurements")
+
+    monkeypatch.setattr(anomaly_agent, "load_artifact", reject_model_loading)
+
+    response = AnomalyDetectionAgent().run(request)
+
+    assert response["status"] == "degraded"
+    assert response["result"]["coverage"] == "unknown"
+    assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
+    check_response(request, response)
+
+
+def test_expected_signal_units_are_accepted() -> None:
+    """Official tag-unit pairs are recognized.
+
+    Independent: yes, because the helper is tested against the
+    official request fixture without model inference.
+    """
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+
+    assert anomaly_agent.find_invalid_unit_signals(signals) == []
+    assert len(anomaly_agent.filter_valid_unit_signals(signals)) == len(signals)
+
+
+def test_unexpected_signal_unit_is_excluded() -> None:
+    """A signal with an unexpected unit is excluded.
+
+    Independent: yes, because the helper is tested directly using
+    a controlled mutation of one fixture signal.
+    """
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+    signals[0]["unit"] = "C"
+
+    invalid_tags = anomaly_agent.find_invalid_unit_signals(signals)
+    valid_signals = anomaly_agent.filter_valid_unit_signals(signals)
+
+    assert invalid_tags == ["FT-001"]
+    assert all(signal["tag_id"] != "FT-001" for signal in valid_signals)
+
+
+def test_unknown_signal_tag_is_excluded() -> None:
+    """Signals with unknown tags are excluded from inference.
+
+    Independent: yes, because the unit-validation helpers are tested
+    directly with a controlled unknown tag.
+    """
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+    signals[0]["tag_id"] = "UNKNOWN-TAG"
+
+    invalid_tags = anomaly_agent.find_invalid_unit_signals(signals)
+    valid_signals = anomaly_agent.filter_valid_unit_signals(signals)
+
+    assert invalid_tags == ["UNKNOWN-TAG"]
+    assert all(signal["tag_id"] != "UNKNOWN-TAG" for signal in valid_signals)
+
+
+def test_all_invalid_units_return_insufficient_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """All invalid signal units prevent model inference.
+
+    Independent: yes, because model loading is explicitly blocked.
+    """
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+
+    for signal in signals:
+        signal["unit"] = "invalid-unit"
+
+    update_observation_evidence_hash(request)
+
+    def reject_model_loading() -> dict[str, Any]:
+        pytest.fail("Model inference must not run without valid-unit signals")
+
+    monkeypatch.setattr(anomaly_agent, "load_artifact", reject_model_loading)
+
+    response = AnomalyDetectionAgent().run(request)
+
+    assert response["status"] == "degraded"
+    assert response["result"]["coverage"] == "unknown"
+    assert any(issue["code"] == "INVALID_SIGNAL_UNIT" for issue in response["issues"])
+    assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
+    check_response(request, response)
