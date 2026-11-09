@@ -5,12 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from copy import deepcopy
 from functools import cache
 from pathlib import Path
 from typing import Any, TypeGuard
 
 from verum.agents.common import envelope
 from verum.agents.common.envelope import build_response, implementation_block, make_issue
+from verum.agents.common.ids import report_id
 from verum.agents.common.validation import check_request, check_response
 
 ROLE = "predictive_health"
@@ -124,39 +126,37 @@ def _forecast_rows(
     return forecasts, issues
 
 
+def _requested_signals(
+    payload: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    """Find the requested signals or explain why forecasting cannot proceed."""
+    observations = payload["observations"]
+    targets = payload["target_tag_ids"]
+    if not targets:
+        return {}, [make_issue("NO_FORECAST_TARGETS", "No instruments were requested.")]
+    if observations["representation"] != "summary_v1":
+        return {}, [make_issue("SUMMARY_REQUIRED", "Forecasting requires summary_v1 observations.")]
+    signals = {signal["tag_id"]: signal for signal in observations["summary"]["signals"]}
+    missing = [tag for tag in targets if tag not in signals]
+    if missing:
+        return {}, [
+            make_issue(
+                "TARGET_SIGNAL_MISSING", f"No signal summary or unit for: {', '.join(missing)}."
+            )
+        ]
+    return signals, []
+
+
 def _collect_forecasts(
     payload: dict[str, Any], artifact: dict[str, Any], evidence_ids: list[str]
 ) -> tuple[str, dict[str, Any] | None, list[dict[str, Any]]]:
     """Build forecast rows and retain issues for each affected instrument."""
-    observations = payload["observations"]
-    targets = payload["target_tag_ids"]
-    if not targets:
-        return (
-            "insufficient_evidence",
-            None,
-            [make_issue("NO_FORECAST_TARGETS", "No instruments were requested.")],
-        )
-    if observations["representation"] != "summary_v1":
-        return (
-            "insufficient_evidence",
-            None,
-            [make_issue("SUMMARY_REQUIRED", "Forecasting requires summary_v1 observations.")],
-        )
-    signals = {signal["tag_id"]: signal for signal in observations["summary"]["signals"]}
-    missing = [tag for tag in targets if tag not in signals]
-    if missing:
-        return (
-            "insufficient_evidence",
-            None,
-            [
-                make_issue(
-                    "TARGET_SIGNAL_MISSING", f"No signal summary or unit for: {', '.join(missing)}."
-                )
-            ],
-        )
+    signals, issues = _requested_signals(payload)
+    if issues:
+        return "insufficient_evidence", None, issues
 
     forecasts, issues = _forecast_rows(
-        targets, signals, artifact, payload["forecast_horizon_s"], evidence_ids
+        payload["target_tag_ids"], signals, artifact, payload["forecast_horizon_s"], evidence_ids
     )
     result = {
         "forecasts": forecasts,
@@ -165,6 +165,68 @@ def _collect_forecasts(
         "field_qualified": False,
     }
     return ("degraded" if issues else "complete"), result, issues
+
+
+def _forecast_report(request: dict[str, Any]) -> dict[str, Any]:
+    """Compute forecasts and validate the assembled response."""
+    payload = request["input"]
+    evidence_ids = list(dict.fromkeys(payload["observations"]["evidence_ids"]))
+    artifact, digest = _ridge_artifact()
+    implementation = implementation_block(
+        "predictive_health_ridge_persistence",
+        "1.0.0",
+        artifact_sha256=digest,
+        feature_profile_id=artifact["feature_profile_id"],
+    )
+    status, result, issues = _collect_forecasts(payload, artifact, evidence_ids)
+    response = build_response(
+        request,
+        status=status,
+        result=result,
+        consumed_evidence_ids=evidence_ids,
+        implementation=implementation,
+        issues=issues,
+        limitations=list(_LIMITATIONS),
+    )
+    check_response(request, response)
+    return response
+
+
+def _error_report(request: dict[str, Any]) -> dict[str, Any]:
+    """Return a minimal error response even if the shared builder fails."""
+    fields: dict[str, Any] = {
+        "status": "error",
+        "result": None,
+        "consumed_evidence_ids": [],
+        "implementation": {
+            "name": "predictive_health_ridge_persistence",
+            "version": "1.0.0",
+            "artifact_sha256": None,
+            "feature_profile_id": None,
+        },
+        "issues": [
+            {
+                "code": "PREDICTIVE_HEALTH_FAILED",
+                "message": "Could not produce a valid forecast report.",
+                "evidence_ids": [],
+            }
+        ],
+        "limitations": list(_LIMITATIONS),
+    }
+    try:
+        return envelope.build_response(request, **fields)
+    except Exception:
+        context = deepcopy(request["context"])
+        return {
+            "interface_version": envelope.INTERFACE_VERSION,
+            "message_type": "response",
+            "agent": request["agent"],
+            "request_id": request["request_id"],
+            "report_id": report_id(request["agent"], context["analysis_id"], request["request_id"]),
+            "context": context,
+            "advisory_only": True,
+            **fields,
+        }
 
 
 class PredictiveHealthAgent:
@@ -177,44 +239,7 @@ class PredictiveHealthAgent:
         check_request(request)
         if request["agent"] != self.role:
             raise ValueError("request is addressed to a different role")
-
-        payload = request["input"]
-        evidence_ids = list(dict.fromkeys(payload["observations"]["evidence_ids"]))
         try:
-            artifact, digest = _ridge_artifact()
-            implementation = implementation_block(
-                "predictive_health_ridge_persistence",
-                "1.0.0",
-                artifact_sha256=digest,
-                feature_profile_id=artifact["feature_profile_id"],
-            )
-            status, result, issues = _collect_forecasts(payload, artifact, evidence_ids)
-            response = build_response(
-                request,
-                status=status,
-                result=result,
-                consumed_evidence_ids=evidence_ids,
-                implementation=implementation,
-                issues=issues,
-                limitations=list(_LIMITATIONS),
-            )
-            check_response(request, response)
-            return response
+            return _forecast_report(request)
         except Exception:
-            return envelope.build_response(
-                request,
-                status="error",
-                result=None,
-                consumed_evidence_ids=[],
-                implementation=implementation_block(
-                    "predictive_health_ridge_persistence", "1.0.0"
-                ),
-                issues=[
-                    {
-                        "code": "PREDICTIVE_HEALTH_FAILED",
-                        "message": "Could not produce a valid forecast report.",
-                        "evidence_ids": [],
-                    }
-                ],
-                limitations=list(_LIMITATIONS),
-            )
+            return _error_report(request)

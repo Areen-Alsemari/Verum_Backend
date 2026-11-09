@@ -178,9 +178,7 @@ def _export(root: Path, destination: Path, train: dict[Sensor, list[Row]]) -> No
         "features": list(FEATURES),
         "training_sha256": training_sha256,
         "seed": EVALUATION_SEED,
-        "library_versions": {
-            package: version(package) for package in ("numpy", "scikit-learn")
-        },
+        "library_versions": {package: version(package) for package in ("numpy", "scikit-learn")},
         "models": models,
     }
     destination.write_text(
@@ -238,52 +236,47 @@ def _evaluate(root: Path, *, test: bool, train: dict[Sensor, list[Row]]) -> None
         ]
     )
 
-    for tag, unit in sorted(eligible):
-        key = (tag, unit)
-        train_rows = train.get(key, [])
-        eval_rows = evaluation.get(key, [])
-        count = len(eval_rows)
-        coverage = count / eligible[key]
-
-        if test and tag in RIDGE_TAGS and not train_rows:
-            raise ValueError(f"No training rows for selected Ridge model: {tag}")
-
-        if not count:
-            writer.writerow(
-                [
-                    tag,
-                    unit,
-                    "unavailable",
-                    len(train_rows),
-                    eligible[key],
-                    0,
-                    "0.0000",
-                    "",
-                    "",
-                ]
+    for key in sorted(eligible):
+        writer.writerows(
+            _sensor_evaluation_rows(
+                key, train.get(key, []), evaluation.get(key, []), eligible[key], test=test
             )
-            continue
+        )
 
-        x_eval, y_eval = _arrays(eval_rows)
-        predictions = _evaluation_predictions(tag, train_rows, x_eval, test=test)
 
-        for name, predicted in predictions.items():
-            error = predicted - y_eval
-            mae = np.mean(np.abs(error))
-            rmse = np.sqrt(np.mean(error**2))
-            writer.writerow(
-                [
-                    tag,
-                    unit,
-                    name,
-                    len(train_rows),
-                    eligible[key],
-                    count,
-                    f"{coverage:.4f}",
-                    f"{mae:.8g}",
-                    f"{rmse:.8g}",
-                ]
-            )
+def _sensor_evaluation_rows(
+    key: Sensor, train_rows: list[Row], eval_rows: list[Row], eligible: int, *, test: bool
+) -> list[list[Any]]:
+    """Compute the CSV rows for one sensor, including unavailable forecasts."""
+    tag, unit = key
+    if test and tag in RIDGE_TAGS and not train_rows:
+        raise ValueError(f"No training rows for selected Ridge model: {tag}")
+    count = len(eval_rows)
+    if not count:
+        return [[tag, unit, "unavailable", len(train_rows), eligible, 0, "0.0000", "", ""]]
+
+    x_eval, y_eval = _arrays(eval_rows)
+    predictions = _evaluation_predictions(tag, train_rows, x_eval, test=test)
+    coverage = count / eligible
+    rows: list[list[Any]] = []
+    for name, predicted in predictions.items():
+        error = predicted - y_eval
+        mae = np.mean(np.abs(error))
+        rmse = np.sqrt(np.mean(error**2))
+        rows.append(
+            [
+                tag,
+                unit,
+                name,
+                len(train_rows),
+                eligible,
+                count,
+                f"{coverage:.4f}",
+                f"{mae:.8g}",
+                f"{rmse:.8g}",
+            ]
+        )
+    return rows
 
 
 def main() -> None:

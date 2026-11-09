@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -256,6 +258,11 @@ def test_shipped_ridge_forecasts_match_fixed_request() -> None:
     assert report["status"] == "complete"
     forecasts = report["result"]["forecasts"]
     assert [row["tag_id"] for row in forecasts] == list(expected)
+    artifact = Path(predictive_agent.__file__).with_name("ridge_models.json")
+    implementation = report["implementation"]
+    assert implementation["artifact_sha256"] == hashlib.sha256(artifact.read_bytes()).hexdigest()
+    assert implementation["feature_profile_id"] == "predictive-health-summary-v1"
+    assert [row["unit"] for row in forecasts] == ["m"] * 3 + ["barg"] * 4
     for row in forecasts:
         assert "Forecast method: ridge." in row["limitations"]
         assert row["value"] == pytest.approx(expected[row["tag_id"]], rel=1e-10, abs=1e-10)
@@ -301,10 +308,11 @@ def test_shipped_ridge_rejects_extreme_level() -> None:
     assert [issue["code"] for issue in report["issues"]] == ["RIDGE_INPUT_OUT_OF_RANGE"]
 
 
-@pytest.mark.parametrize("helper", ["build_response", "make_issue", "check_response"])
-def test_report_failure_returns_valid_error(
-    monkeypatch: pytest.MonkeyPatch, helper: str
-) -> None:
+@pytest.mark.parametrize(
+    "helper",
+    ["build_response", "make_issue", "check_response", "implementation_block", "shared_builder"],
+)
+def test_report_failure_returns_valid_error(monkeypatch: pytest.MonkeyPatch, helper: str) -> None:
     """Return a valid error report when a normal report step fails.
 
     Independent: yes, because the selected helper is forced to raise.
@@ -317,10 +325,46 @@ def test_report_failure_returns_valid_error(
     if helper == "make_issue":
         request["input"]["target_tag_ids"] = []
 
-    monkeypatch.setattr(predictive_agent, helper, fail)
+    if helper == "shared_builder":
+        monkeypatch.setattr(predictive_agent, "build_response", fail)
+        monkeypatch.setattr(predictive_agent.envelope, "build_response", fail)
+    else:
+        monkeypatch.setattr(predictive_agent, helper, fail)
     report = PredictiveHealthAgent().run(request)
 
     validate_response(request, report)
     assert report["status"] == "error"
     assert report["result"] is None
     assert [issue["code"] for issue in report["issues"]] == ["PREDICTIVE_HEALTH_FAILED"]
+
+
+def test_shipped_ridge_uses_missing_offsets_and_distinct_ages() -> None:
+    """Pin a real Ridge forecast with a missing slope and distinct signal ages.
+
+    Independent: yes, because the expected value was calculated separately
+    from the shipped LT-101 coefficients and the fixed request.
+    """
+    request = _example_request()
+    payload = request["input"]
+    payload["target_tag_ids"] = ["LT-101"]
+    observations = payload["observations"]
+    summary = observations["summary"]
+    signal = next(row for row in summary["signals"] if row["tag_id"] == "LT-101")
+    signal["slope_per_s"] = None
+    signal["previous_measured_age_s"] = 7.0
+
+    for row in request["evidence"]:
+        if (
+            row["evidence_id"] in observations["evidence_ids"]
+            and row["kind"] == "observation_representation"
+        ):
+            row["content_sha256"] = content_hash(summary)
+
+    report = PredictiveHealthAgent().run(request)
+    validate_response(request, report)
+    assert report["status"] == "complete"
+    (forecast,) = report["result"]["forecasts"]
+    assert forecast["tag_id"] == "LT-101"
+    assert forecast["unit"] == "m"
+    assert "Forecast method: ridge." in forecast["limitations"]
+    assert forecast["value"] == pytest.approx(10.486795164239792, abs=1e-10, rel=0)
