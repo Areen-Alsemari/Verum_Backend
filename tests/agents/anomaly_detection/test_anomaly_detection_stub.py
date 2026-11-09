@@ -331,3 +331,31 @@ def test_all_invalid_units_return_insufficient_evidence(
     assert any(issue["code"] == "INVALID_SIGNAL_UNIT" for issue in response["issues"])
     assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
     check_response(request, response)
+
+
+def test_unexpected_runtime_error_returns_error_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unexpected failures outside model inference return an error response.
+
+    Independent: yes, because unit validation is explicitly forced to fail.
+    """
+    request = example_request()
+
+    def reject_unit_validation(
+        signals: list[dict[str, Any]],
+    ) -> list[str]:
+        raise RuntimeError("simulated internal failure")
+
+    monkeypatch.setattr(
+        anomaly_agent,
+        "find_invalid_unit_signals",
+        reject_unit_validation,
+    )
+
+    response = AnomalyDetectionAgent().run(request)
+
+    assert response["status"] == "error"
+    assert response["result"] is None
+    assert any(issue["code"] == "INTERNAL_ERROR" for issue in response["issues"])
+    check_response(request, response)

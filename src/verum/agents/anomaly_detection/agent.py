@@ -186,6 +186,32 @@ def make_event(
 class AnomalyDetectionAgent:
     """Detect reported data-quality issues and aggregate signal departures."""
 
+    def error_response(
+        self,
+        request: dict[str, Any],
+        evidence_ids: list[str],
+    ) -> dict[str, Any]:
+        """Build a result-less response for an unexpected runtime failure."""
+        return build_response(
+            request,
+            status="error",
+            result=None,
+            consumed_evidence_ids=evidence_ids,
+            implementation=implementation_block(
+                "anomaly_detection",
+                VERSION,
+                feature_profile_id=FEATURE_PROFILE_ID,
+            ),
+            issues=[
+                make_issue(
+                    "INTERNAL_ERROR",
+                    "An unexpected internal error prevented anomaly analysis.",
+                    evidence_ids,
+                )
+            ],
+            limitations=["The anomaly analysis could not be completed."],
+        )
+
     def run(self, request: dict[str, Any]) -> dict[str, Any]:
         """Validate a request, analyze its observations, and validate the response."""
         check_request(request)
@@ -193,191 +219,197 @@ class AnomalyDetectionAgent:
         if request["agent"] != ROLE:
             raise ValueError("request is addressed to a different role")
 
-        observations = request["input"]["observations"]
-        summary = observations["summary"]
-        signals = summary["signals"]
-
-        known_evidence = {row["evidence_id"] for row in request["evidence"]}
-        evidence_ids = list(
-            dict.fromkeys(
-                [
-                    *[
-                        evidence_id
-                        for evidence_id in observations["evidence_ids"]
-                        if evidence_id in known_evidence
-                    ],
-                    *attached_report_ids(request),
-                ]
-            )
-        )
-
-        events: list[dict[str, Any]] = []
-
-        missing_tags = [
-            signal["tag_id"]
-            for signal in signals
-            if signal["missing_samples"] > 0 or signal["latest_availability"] == "missing_sample"
-        ]
-
-        quality_tags = [
-            signal["tag_id"]
-            for signal in signals
-            if signal["bad_quality_samples"] > 0 or signal["latest_quality"] in ("suspect", "bad")
-        ]
-
-        if missing_tags:
-            events.append(
-                make_event(
-                    event_id=f"{request['request_id']}-missing-reading",
-                    category="missing_reading",
-                    tag_ids=missing_tags,
-                    evidence_ids=evidence_ids,
-                    method_id=QUALITY_METHOD_ID,
-                    limitations=[
-                        "Identifies reported missing readings only.",
-                        "Does not establish equipment health.",
-                    ],
-                )
-            )
-
-        if quality_tags:
-            events.append(
-                make_event(
-                    event_id=f"{request['request_id']}-non-good-quality",
-                    category="non_good_quality",
-                    tag_ids=quality_tags,
-                    evidence_ids=evidence_ids,
-                    method_id=QUALITY_METHOD_ID,
-                    limitations=[
-                        "Identifies reported signal quality conditions only.",
-                        "Does not establish equipment health.",
-                    ],
-                )
-            )
-
-        artifact_hash: str | None = None
-        issues: list[dict[str, Any]] = []
-        status = "complete"
-        insufficient_measurements = False
-
-        invalid_unit_tags = find_invalid_unit_signals(signals)
-        valid_signals = filter_valid_unit_signals(signals)
-
-        if invalid_unit_tags:
-            status = "degraded"
-            issues.append(
-                make_issue(
-                    "INVALID_SIGNAL_UNIT",
-                    "Signals with unknown tags or unexpected units were"
-                    " excluded from model inference.",
-                    evidence_ids,
-                )
-            )
+        evidence_ids = [row["evidence_id"] for row in request["evidence"]]
 
         try:
-            if not has_physical_measurements(valid_signals):
-                raise InsufficientMeasurementsError("insufficient physical measurements")
+            observations = request["input"]["observations"]
+            summary = observations["summary"]
+            signals = summary["signals"]
 
-            artifact = load_artifact()
-            artifact_hash = file_sha256(ARTIFACT_PATH)
-
-            feature_values = extract_features(valid_signals)
-            feature_names = artifact["feature_names"]
-            threshold = float(artifact["threshold"])
-            model = artifact["model"]
-
-            vector = np.asarray(
-                [[feature_values[name] for name in feature_names]],
-                dtype=float,
+            known_evidence = set(evidence_ids)
+            evidence_ids = list(
+                dict.fromkeys(
+                    [
+                        *[
+                            evidence_id
+                            for evidence_id in observations["evidence_ids"]
+                            if evidence_id in known_evidence
+                        ],
+                        *attached_report_ids(request),
+                    ]
+                )
             )
 
-            probabilities = model.predict_proba(vector)[0]
-            positive_index = list(model.classes_).index(True)
-            decision_score = float(probabilities[positive_index])
+            events: list[dict[str, Any]] = []
 
-            if decision_score >= threshold:
+            missing_tags = [
+                signal["tag_id"]
+                for signal in signals
+                if signal["missing_samples"] > 0
+                or signal["latest_availability"] == "missing_sample"
+            ]
+
+            quality_tags = [
+                signal["tag_id"]
+                for signal in signals
+                if signal["bad_quality_samples"] > 0
+                or signal["latest_quality"] in ("suspect", "bad")
+            ]
+
+            if missing_tags:
                 events.append(
                     make_event(
-                        event_id=f"{request['request_id']}-signal-departure",
-                        category="reported_signal_departure",
-                        tag_ids=[],
+                        event_id=f"{request['request_id']}-missing-reading",
+                        category="missing_reading",
+                        tag_ids=missing_tags,
                         evidence_ids=evidence_ids,
-                        method_id=MODEL_METHOD_ID,
-                        score={
-                            "value": decision_score,
-                            "kind": "decision_score",
-                            "method_id": MODEL_METHOD_ID,
-                            "calibration_id": None,
-                        },
+                        method_id=QUALITY_METHOD_ID,
                         limitations=[
-                            "Trained using injected changes in a reduced reference simulator.",
-                            "A detected departure is not proof of a real equipment fault.",
-                            "Aggregate features do not identify a specific tag or asset.",
-                            "Overlapping observation windows are not independent fault events.",
+                            "Identifies reported missing readings only.",
+                            "Does not establish equipment health.",
                         ],
                     )
                 )
 
-        except InsufficientMeasurementsError:
-            status = "degraded"
-            insufficient_measurements = True
-            issues.append(
-                make_issue(
-                    "INSUFFICIENT_EVIDENCE",
-                    "No usable physical measurements were available for model inference.",
-                    evidence_ids,
+            if quality_tags:
+                events.append(
+                    make_event(
+                        event_id=f"{request['request_id']}-non-good-quality",
+                        category="non_good_quality",
+                        tag_ids=quality_tags,
+                        evidence_ids=evidence_ids,
+                        method_id=QUALITY_METHOD_ID,
+                        limitations=[
+                            "Identifies reported signal quality conditions only.",
+                            "Does not establish equipment health.",
+                        ],
+                    )
                 )
+
+            artifact_hash: str | None = None
+            issues: list[dict[str, Any]] = []
+            status = "complete"
+            insufficient_measurements = False
+
+            invalid_unit_tags = find_invalid_unit_signals(signals)
+            valid_signals = filter_valid_unit_signals(signals)
+
+            if invalid_unit_tags:
+                status = "degraded"
+                issues.append(
+                    make_issue(
+                        "INVALID_SIGNAL_UNIT",
+                        "Signals with unknown tags or unexpected units were "
+                        "excluded from model inference.",
+                        evidence_ids,
+                    )
+                )
+
+            try:
+                if not has_physical_measurements(valid_signals):
+                    raise InsufficientMeasurementsError("insufficient physical measurements")
+
+                artifact = load_artifact()
+                artifact_hash = file_sha256(ARTIFACT_PATH)
+
+                feature_values = extract_features(valid_signals)
+                feature_names = artifact["feature_names"]
+                threshold = float(artifact["threshold"])
+                model = artifact["model"]
+
+                vector = np.asarray(
+                    [[feature_values[name] for name in feature_names]],
+                    dtype=float,
+                )
+
+                probabilities = model.predict_proba(vector)[0]
+                positive_index = list(model.classes_).index(True)
+                decision_score = float(probabilities[positive_index])
+
+                if decision_score >= threshold:
+                    events.append(
+                        make_event(
+                            event_id=f"{request['request_id']}-signal-departure",
+                            category="reported_signal_departure",
+                            tag_ids=[],
+                            evidence_ids=evidence_ids,
+                            method_id=MODEL_METHOD_ID,
+                            score={
+                                "value": decision_score,
+                                "kind": "decision_score",
+                                "method_id": MODEL_METHOD_ID,
+                                "calibration_id": None,
+                            },
+                            limitations=[
+                                "Trained using injected changes in a reduced reference simulator.",
+                                "A detected departure is not proof of a real equipment fault.",
+                                "Aggregate features do not identify a specific tag or asset.",
+                                "Overlapping observation windows are not independent fault events.",
+                            ],
+                        )
+                    )
+
+            except InsufficientMeasurementsError:
+                status = "degraded"
+                insufficient_measurements = True
+                issues.append(
+                    make_issue(
+                        "INSUFFICIENT_EVIDENCE",
+                        "No usable physical measurements were available for model inference.",
+                        evidence_ids,
+                    )
+                )
+
+            except Exception:
+                status = "degraded"
+                issues.append(
+                    make_issue(
+                        "MODEL_UNAVAILABLE",
+                        "The anomaly model could not be loaded or evaluated; "
+                        "only quality rules were applied.",
+                        evidence_ids,
+                    )
+                )
+
+            if not evidence_ids or insufficient_measurements:
+                coverage = "unknown"
+            elif status == "degraded":
+                coverage = "partial"
+            else:
+                coverage = "assessed"
+
+            response = build_response(
+                request,
+                status=status,
+                result={
+                    "events": events,
+                    "coverage": coverage,
+                    "no_event_means_healthy": False,
+                },
+                consumed_evidence_ids=evidence_ids,
+                implementation=implementation_block(
+                    "anomaly_detection",
+                    VERSION,
+                    artifact_sha256=artifact_hash,
+                    feature_profile_id=FEATURE_PROFILE_ID,
+                ),
+                issues=issues,
+                limitations=[
+                    "Forecast reports are not used as model features.",
+                    *(
+                        [
+                            "The anomaly model could not be loaded or evaluated; "
+                            "only quality rules were applied."
+                        ]
+                        if any(issue["code"] == "MODEL_UNAVAILABLE" for issue in issues)
+                        else []
+                    ),
+                    "No detected event does not establish healthy equipment.",
+                ],
             )
+
+            check_response(request, response)
+            return response
 
         except Exception:
-            status = "degraded"
-            issues.append(
-                make_issue(
-                    "MODEL_UNAVAILABLE",
-                    "The anomaly model could not be loaded or evaluated; "
-                    "only quality rules were applied.",
-                    evidence_ids,
-                )
-            )
-
-        if not evidence_ids or insufficient_measurements:
-            coverage = "unknown"
-        elif status == "degraded":
-            coverage = "partial"
-        else:
-            coverage = "assessed"
-
-        result = {
-            "events": events,
-            "coverage": coverage,
-            "no_event_means_healthy": False,
-        }
-
-        response = build_response(
-            request,
-            status=status,
-            result=result,
-            consumed_evidence_ids=evidence_ids,
-            implementation=implementation_block(
-                "anomaly_detection",
-                VERSION,
-                artifact_sha256=artifact_hash,
-                feature_profile_id=FEATURE_PROFILE_ID,
-            ),
-            issues=issues,
-            limitations=[
-                "Forecast reports are not used as model features.",
-                *(
-                    [
-                        "The anomaly model could not be loaded or evaluated; "
-                        "only quality rules were applied."
-                    ]
-                    if any(issue["code"] == "MODEL_UNAVAILABLE" for issue in issues)
-                    else []
-                ),
-                "No detected event does not establish healthy equipment.",
-            ],
-        )
-
-        check_response(request, response)
-        return response
+            return self.error_response(request, evidence_ids)
