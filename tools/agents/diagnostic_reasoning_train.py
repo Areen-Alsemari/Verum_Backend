@@ -2,7 +2,8 @@
 
 Compares computed baselines, one-vs-rest LogisticRegression, and HistGradientBoostingClassifier
 across all eight supported mechanisms and candidate (mechanism, asset) pairs. Evaluates existing
-artifacts without retraining when --eval-only is passed, preventing 21 MB binary bloat in git.
+artifacts without retraining when --eval-only is passed, refusing to write into the package folder
+by default.
 """
 
 from __future__ import annotations
@@ -59,6 +60,7 @@ def _load_split(
     list[str],
     list[dict[str, Any]],
     list[dict[str, Any]],
+    np.ndarray,
 ]:
     """Load eligible vectors, mechanism/component labels, episodes, summaries and masked rows."""
     ep_map = episode_lookup(release, split)
@@ -68,25 +70,27 @@ def _load_split(
     episodes: list[str] = []
     raw_summaries: list[dict[str, Any]] = []
     ineligible_summaries: list[dict[str, Any]] = []
+    ineligible_leak_flags: list[int] = []
 
     for rec in iter_role_records(release, ROLE, split):
         raw_obs = rec.input["observations"]
         obs = raw_obs if "representation" in raw_obs else summary_representation(raw_obs, [])
         target = rec.target
+        comps = target.get("injected_components") or []
+        present_mechs = {c["mechanism"] for c in comps if c["mechanism"] in SUPPORTED_MECHANISMS}
         if not target.get("supervised_loss_mask"):
             ineligible_summaries.append(obs)
+            ineligible_leak_flags.append(1 if "leak" in present_mechs else 0)
             continue
         x_rows.append(extract_observation_vector(obs))
         raw_summaries.append(obs)
-        comps = target.get("injected_components") or []
-        present_mechs = {c["mechanism"] for c in comps if c["mechanism"] in SUPPORTED_MECHANISMS}
         for m in SUPPORTED_MECHANISMS:
             mech_lists[m].append(1 if m in present_mechs else 0)
         comp_sets.append(
             {
                 f"{c['mechanism']}::{c['asset_id']}"
                 for c in comps
-                if c.get("mechanism") in SUPPORTED_MECHANISMS and c.get("asset_id")
+                if c.get("mechanism") in SUPPORTED_MECHANISMS and c.get("asset_id") in KNOWN_ASSETS
             }
         )
         ep_ref = ep_map.get(rec.example_id)
@@ -98,7 +102,8 @@ def _load_split(
     y_comp = {
         k: np.asarray([1 if k in s else 0 for s in comp_sets], dtype=np.int32) for k in all_keys
     }
-    return x_mat, y_mech, y_comp, episodes, raw_summaries, ineligible_summaries
+    inelig_leak = np.asarray(ineligible_leak_flags, dtype=np.int32)
+    return x_mat, y_mech, y_comp, episodes, raw_summaries, ineligible_summaries, inelig_leak
 
 
 def _best_threshold(y_true: np.ndarray, probs: np.ndarray) -> float:
@@ -144,6 +149,8 @@ def _metrics(y_true: np.ndarray, y_pred: np.ndarray, episodes: list[str]) -> dic
 def _compute_calibration_check(
     y_true_by_mech: dict[str, np.ndarray],
     probs_by_mech: dict[str, np.ndarray],
+    all_leak_y: np.ndarray | None = None,
+    all_leak_ge_09: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Audit empirical precision across high-score bins to show scores are not probabilities."""
     audit: dict[str, Any] = {}
@@ -169,13 +176,23 @@ def _compute_calibration_check(
         hi_mask = probs >= 0.9
         hi_cnt = int(hi_mask.sum())
         hi_pos = int(y_true[hi_mask].sum()) if hi_cnt > 0 else 0
-        audit[mech] = {
+        entry: dict[str, Any] = {
             "status": "uncalibrated_decision_score",
             "score_ge_0_9_count": hi_cnt,
             "score_ge_0_9_true_positives": hi_pos,
             "score_ge_0_9_empirical_precision": round(hi_pos / hi_cnt, 4) if hi_cnt > 0 else None,
             "bins": bins,
         }
+        if mech == "leak" and all_leak_y is not None and all_leak_ge_09 is not None:
+            all_cnt = int(all_leak_ge_09.sum())
+            all_pos = int((all_leak_ge_09 & all_leak_y).sum()) if all_cnt > 0 else 0
+            entry["all_records_score_ge_0_9_count"] = all_cnt
+            entry["all_records_score_ge_0_9_true_positives"] = all_pos
+            entry["population_note"] = (
+                f"{hi_pos} of {hi_cnt} on eligible windows, "
+                f"{all_pos} of {all_cnt} across all records"
+            )
+        audit[mech] = entry
     return audit
 
 
@@ -189,7 +206,6 @@ def _evaluate_heuristic_and_localisation(
     ineligible_te: list[dict[str, Any]],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Evaluate the heuristic fallback, asset localisation, and ineligible trigger rate."""
-    # 1. Heuristic evaluation on test split
     heur_stuck = np.zeros(len(te_summaries), dtype=np.int32)
     heur_drift = np.zeros(len(te_summaries), dtype=np.int32)
     for i, obs in enumerate(te_summaries):
@@ -228,8 +244,9 @@ def _evaluate_heuristic_and_localisation(
         },
     }
 
-    # 2. Localisation evaluation (separate from mechanism detection)
-    seen_train_assets = {k.split("::", 1)[1] for k, v in yc_tr.items() if int(v.sum()) > 0}
+    seen_train_assets = {k.split("::", 1)[1] for k, v in yc_tr.items() if int(v.sum()) > 0} & set(
+        KNOWN_ASSETS
+    )
     unseen_assets = sorted(KNOWN_ASSETS - seen_train_assets)
     comp_models = (model.artifact or {}).get("component_models", {})
     comp_thresholds = (model.artifact or {}).get("component_thresholds", {})
@@ -269,7 +286,6 @@ def _evaluate_heuristic_and_localisation(
         "evaluable_component_pairs": per_pair,
     }
 
-    # 3. Ineligible / masked test window trigger audit
     triggered_ineligible = 0
     for obs in ineligible_te:
         if model.predict_candidates(obs):
@@ -283,12 +299,28 @@ def _evaluate_heuristic_and_localisation(
     return heuristic_eval, localisation_eval, ineligible_audit
 
 
-def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, Any]:
+def evaluate_existing_artifact(
+    release: Path,
+    artifact_path: Path,
+    *,
+    report_out: Path | None = None,
+    allow_package_write: bool = False,
+) -> dict[str, Any]:
     """Evaluate an already-saved model artifact on the dataset without re-serializing it."""
+    pkg_dir = default_artifact_path().resolve().parent
+    if (
+        report_out is not None
+        and report_out.resolve().parent == pkg_dir
+        and not allow_package_write
+    ):
+        raise ValueError("--eval-only refuses to write into the package folder by default")
+
     t0 = time.time()
-    x_tr, ym_tr, yc_tr, ep_tr, _, _ = _load_split(release, "train")
-    x_va, ym_va, _, ep_va, _, _ = _load_split(release, "validation")
-    x_te, ym_te, yc_te, ep_te, te_summaries, ineligible_te = _load_split(release, "test")
+    x_tr, ym_tr, yc_tr, ep_tr, _, _, _ = _load_split(release, "train")
+    x_va, ym_va, _, ep_va, _, _, _ = _load_split(release, "validation")
+    x_te, ym_te, yc_te, ep_te, te_summaries, ineligible_te, inelig_leak = _load_split(
+        release, "test"
+    )
 
     sha256 = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
     model = DiagnosticModel(artifact_path, expected_sha256=sha256)
@@ -301,7 +333,8 @@ def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, 
     mech_models = model.artifact["mechanism_models"]
     mech_thresholds = model.artifact["mechanism_thresholds"]
 
-    val_comparison: dict[str, Any] = {}
+    raw_val: dict[str, dict[str, Any]] = {}
+    lr_wins: list[str] = []
     for idx, mech in enumerate(SUPPORTED_MECHANISMS):
         y_train, y_val = ym_tr[mech], ym_va[mech]
         zero_preds = np.zeros_like(y_val)
@@ -325,20 +358,25 @@ def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, 
         hgb_f1 = round(
             float(f1_score(y_val, (hgb_probs >= hgb_t).astype(np.int32), zero_division=0)), 4
         )
-        val_comparison[mech] = {
+        if lr_f1 > hgb_f1:
+            lr_wins.append(mech)
+        raw_val[mech] = {
             "constant_zero_val_f1": c0_f1,
             "constant_one_val_f1": c1_f1,
             "logistic_regression_val_f1": lr_f1,
             "hist_gradient_boosting_val_f1": hgb_f1,
             "selected_threshold": hgb_t,
             "shipped_family": "HistGradientBoostingClassifier",
-            "selection_rationale": (
-                "Uniform HistGradientBoostingClassifier family kept across all mechanisms to "
-                "capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB "
-                "binary artifact; where LogisticRegression scored higher on validation (leak, "
-                "bias, misroute_a), mechanisms are explicitly flagged as low-support."
-            ),
         }
+
+    rationale = (
+        "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a "
+        "second 21 MB binary artifact to git history; LogisticRegression achieved higher "
+        f"validation F1 on {len(lr_wins)} mechanisms ({', '.join(lr_wins)})."
+    )
+    val_comparison = {
+        mech: {**entry, "selection_rationale": rationale} for mech, entry in raw_val.items()
+    }
 
     test_per_label: dict[str, Any] = {}
     probs_te_by_mech: dict[str, np.ndarray] = {}
@@ -359,6 +397,20 @@ def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, 
             y_te_mat.append(y_true)
             y_pred_mat.append(preds)
 
+    all_summaries = te_summaries + ineligible_te
+    all_leak_y = (
+        np.concatenate([ym_te["leak"], inelig_leak]) if len(inelig_leak) > 0 else ym_te["leak"]
+    )
+    all_leak_ge_09 = np.asarray(
+        [
+            1
+            if any(p.mechanism == "leak" and p.score >= 0.9 for p in model.predict_candidates(o))
+            else 0
+            for o in all_summaries
+        ],
+        dtype=np.int32,
+    )
+
     y_te_all = np.column_stack(y_te_mat)
     y_pr_all = np.column_stack(y_pred_mat)
     zero_te_all = np.zeros_like(y_te_all)
@@ -373,14 +425,22 @@ def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, 
         "exact_set_accuracy": round(float(np.mean(np.all(y_te_all == zero_te_all, axis=1))), 4),
     }
 
-    exact_set = float(np.mean(np.all(y_te_all == y_pr_all, axis=1)))
-    micro_f1 = float(f1_score(y_te_all, y_pr_all, average="micro", zero_division=0))
-    macro_f1 = float(f1_score(y_te_all, y_pr_all, average="macro", zero_division=0))
+    exact_set = round(float(np.mean(np.all(y_te_all == y_pr_all, axis=1))), 4)
+    micro_f1 = round(float(f1_score(y_te_all, y_pr_all, average="micro", zero_division=0)), 4)
+    macro_f1 = round(float(f1_score(y_te_all, y_pr_all, average="macro", zero_division=0)), 4)
 
-    calibration_check = _compute_calibration_check(ym_te, probs_te_by_mech)
+    calibration_check = _compute_calibration_check(
+        ym_te, probs_te_by_mech, all_leak_y=all_leak_y, all_leak_ge_09=all_leak_ge_09
+    )
     heur_eval, loc_eval, inelig_audit = _evaluate_heuristic_and_localisation(
         model, x_te_s, yc_tr, yc_te, te_summaries, ym_te, ineligible_te
     )
+    cal_leak = calibration_check["leak"]
+    elig_pos = cal_leak["score_ge_0_9_true_positives"]
+    elig_cnt = cal_leak["score_ge_0_9_count"]
+    all_pos = cal_leak["all_records_score_ge_0_9_true_positives"]
+    all_cnt = cal_leak["all_records_score_ge_0_9_count"]
+    inelig_pct = round(inelig_audit["hypothesis_trigger_rate"] * 100)
 
     summary_report = {
         "role": ROLE,
@@ -404,9 +464,9 @@ def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, 
         },
         "test_baseline_always_negative": baseline_no_fault,
         "test_overall": {
-            "micro_f1": round(micro_f1, 4),
-            "macro_f1_evaluable": round(macro_f1, 4),
-            "exact_set_accuracy": round(exact_set, 4),
+            "micro_f1": micro_f1,
+            "macro_f1_evaluable": macro_f1,
+            "exact_set_accuracy": exact_set,
             "headline_comparison": (
                 f"Model improves micro-F1 from {baseline_no_fault['micro_f1']:.4f} "
                 f"(always-negative baseline) to {micro_f1:.4f} (+{micro_f1:.4f}), while "
@@ -422,28 +482,34 @@ def evaluate_existing_artifact(release: Path, artifact_path: Path) -> dict[str, 
         "ineligible_window_audit": inelig_audit,
         "limitations": [
             "Simulation evaluation only; does not establish real terminal diagnostic accuracy.",
-            "Predicting no fault achieves 0.8225 exact-set accuracy on the test split (above the "
-            "model 0.8140), so micro-F1 (0.3196 vs 0.0000 baseline) is the primary metric.",
-            "Scores are uncalibrated decision scores, not probabilities: leak scores >= 0.90 "
-            "were true leaks in only 2 of 69 test cases (2.9% precision), and "
-            "restriction_obstruction has low empirical precision.",
+            f"Predicting no fault achieves {baseline_no_fault['exact_set_accuracy']:.4f} "
+            f"exact-set accuracy on the test split (above the model {exact_set:.4f}), so "
+            f"micro-F1 ({micro_f1:.4f} vs {baseline_no_fault['micro_f1']:.4f} baseline) is "
+            "the primary metric.",
+            f"Scores are uncalibrated decision scores, not probabilities: leak scores >= 0.90 "
+            f"were true leaks in {elig_pos} of {elig_cnt} eligible windows and {all_pos} of "
+            f"{all_cnt} across all records, and restriction_obstruction has low empirical "
+            "precision.",
             "misroute_a has 0 test positive episodes and is reported as not_evaluable.",
             "restriction_obstruction (2 val) and stuck (1 test) have very low episode support.",
-            "11 of 49 declared assets never appear in positive training examples and cannot be "
-            "localized by learned component models.",
-            "Approximately 27% of masked/ineligible test windows still trigger hypotheses.",
+            f"{loc_eval['assets_never_in_train_count']} of {loc_eval['total_known_assets']} "
+            f"declared assets ({loc_eval['assets_seen_in_train_positives']} seen in training) "
+            "never appear in positive training examples and cannot be localized by learned "
+            "component models.",
+            f"Approximately {inelig_pct}% of masked/ineligible test windows still trigger "
+            "hypotheses.",
             "Roof failure, vapour damage and mechanical cascades are outside supported scope.",
         ],
     }
-    report_path = artifact_path.with_name("evaluation_report.json")
-    report_path.write_text(json.dumps(summary_report, indent=2) + "\n", encoding="utf-8")
+    if report_out is not None:
+        report_out.write_text(json.dumps(summary_report, indent=2) + "\n", encoding="utf-8")
     return summary_report
 
 
 def train_and_evaluate(release: Path, output_artifact: Path) -> dict[str, Any]:
     """Fit models on train, select thresholds on validation, save artifact and evaluate."""
-    x_tr, ym_tr, yc_tr, _, _, _ = _load_split(release, "train")
-    x_va, ym_va, yc_va, _, _, _ = _load_split(release, "validation")
+    x_tr, ym_tr, yc_tr, _, _, _, _ = _load_split(release, "train")
+    x_va, ym_va, yc_va, _, _, _, _ = _load_split(release, "validation")
     scaler = StandardScaler()
     x_tr_s = scaler.fit_transform(x_tr)
     x_va_s = scaler.transform(x_va)
@@ -505,7 +571,12 @@ def train_and_evaluate(release: Path, output_artifact: Path) -> dict[str, Any]:
     }
     output_artifact.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, output_artifact)
-    return evaluate_existing_artifact(release, output_artifact)
+    return evaluate_existing_artifact(
+        release,
+        output_artifact,
+        report_out=output_artifact.with_name("evaluation_report.json"),
+        allow_package_write=True,
+    )
 
 
 def run_standalone_check() -> int:
@@ -534,13 +605,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", type=Path, default=repo_root() / DEFAULT_RELEASE)
     parser.add_argument("--artifact", type=Path, default=default_artifact_path())
+    parser.add_argument("--report-out", type=Path, default=None)
+    parser.add_argument("--allow-package-write", action="store_true")
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--eval-only", action="store_true")
     args = parser.parse_args()
     if args.check_only or not args.release.exists():
         return run_standalone_check()
     if args.eval_only and args.artifact.is_file():
-        report = evaluate_existing_artifact(args.release, args.artifact)
+        report = evaluate_existing_artifact(
+            args.release,
+            args.artifact,
+            report_out=args.report_out,
+            allow_package_write=args.allow_package_write,
+        )
     else:
         report = train_and_evaluate(args.release, args.artifact)
     print(json.dumps(report["test_overall"], indent=2))

@@ -9,7 +9,7 @@
   },
   "feature_profile_id": "summary_v1_tabular_30tags_v1",
   "named_seed": 20261108,
-  "runtime_s": 610.48,
+  "runtime_s": 776.29,
   "eligible_counts": {
     "train_windows": 9832,
     "validation_windows": 3980,
@@ -37,7 +37,7 @@
       "hist_gradient_boosting_val_f1": 0.0756,
       "selected_threshold": 0.225,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "restriction_position_visible": {
       "constant_zero_val_f1": 0.0,
@@ -46,7 +46,7 @@
       "hist_gradient_boosting_val_f1": 0.8724,
       "selected_threshold": 0.2,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "restriction_obstruction": {
       "constant_zero_val_f1": 0.0,
@@ -55,7 +55,7 @@
       "hist_gradient_boosting_val_f1": 0.875,
       "selected_threshold": 0.6,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "pump": {
       "constant_zero_val_f1": 0.0,
@@ -64,7 +64,7 @@
       "hist_gradient_boosting_val_f1": 0.875,
       "selected_threshold": 0.25,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "bias": {
       "constant_zero_val_f1": 0.0,
@@ -73,7 +73,7 @@
       "hist_gradient_boosting_val_f1": 0.1062,
       "selected_threshold": 0.2,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "drift": {
       "constant_zero_val_f1": 0.0,
@@ -82,7 +82,7 @@
       "hist_gradient_boosting_val_f1": 0.2835,
       "selected_threshold": 0.2,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "stuck": {
       "constant_zero_val_f1": 0.0,
@@ -91,7 +91,7 @@
       "hist_gradient_boosting_val_f1": 0.6429,
       "selected_threshold": 0.2,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     },
     "misroute_a": {
       "constant_zero_val_f1": 0.0,
@@ -100,7 +100,7 @@
       "hist_gradient_boosting_val_f1": 0.6957,
       "selected_threshold": 0.525,
       "shipped_family": "HistGradientBoostingClassifier",
-      "selection_rationale": "Uniform HistGradientBoostingClassifier family kept across all mechanisms to capture non-linear cross-sensor interactions and avoid re-serializing a 21 MB binary artifact; where LogisticRegression scored higher on validation (leak, bias, misroute_a), mechanisms are explicitly flagged as low-support."
+      "selection_rationale": "HistGradientBoostingClassifier is kept across all mechanisms to avoid committing a second 21 MB binary artifact to git history; LogisticRegression achieved higher validation F1 on 4 mechanisms (leak, restriction_position_visible, bias, misroute_a)."
     }
   },
   "test_per_mechanism": {
@@ -216,7 +216,10 @@
           "true_positives": 0,
           "empirical_positive_rate": 0.0
         }
-      ]
+      ],
+      "all_records_score_ge_0_9_count": 69,
+      "all_records_score_ge_0_9_true_positives": 2,
+      "population_note": "0 of 8 on eligible windows, 2 of 69 across all records"
     },
     "restriction_position_visible": {
       "status": "uncalibrated_decision_score",
@@ -441,7 +444,7 @@
   },
   "localisation_evaluation": {
     "total_known_assets": 49,
-    "assets_seen_in_train_positives": 43,
+    "assets_seen_in_train_positives": 38,
     "assets_never_in_train_count": 11,
     "assets_never_in_train_ids": [
       "E-PB0",
@@ -457,16 +460,10 @@
       "XV-R000"
     ],
     "trained_component_classifiers_count": 41,
-    "test_localisation_micro_f1": 0.3968,
-    "test_localisation_macro_f1": 0.1832,
+    "test_localisation_micro_f1": 0.3356,
+    "test_localisation_macro_f1": 0.1479,
     "test_localisation_exact_set_accuracy": 0.9049,
     "evaluable_component_pairs": {
-      "bias::LT-102": {
-        "test_positives": 11,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
-      },
       "bias::PT-001": {
         "test_positives": 1,
         "precision": 0.0,
@@ -490,30 +487,6 @@
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0
-      },
-      "drift::FT-001": {
-        "test_positives": 4,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
-      },
-      "drift::LT-101": {
-        "test_positives": 10,
-        "precision": 0.6667,
-        "recall": 0.6,
-        "f1": 0.6316
-      },
-      "drift::LT-102": {
-        "test_positives": 14,
-        "precision": 1.0,
-        "recall": 0.3571,
-        "f1": 0.5263
-      },
-      "drift::LT-103": {
-        "test_positives": 13,
-        "precision": 0.1688,
-        "recall": 1.0,
-        "f1": 0.2889
       },
       "leak::E-PA2": {
         "test_positives": 3,
@@ -615,10 +588,10 @@
   "limitations": [
     "Simulation evaluation only; does not establish real terminal diagnostic accuracy.",
     "Predicting no fault achieves 0.8225 exact-set accuracy on the test split (above the model 0.8140), so micro-F1 (0.3196 vs 0.0000 baseline) is the primary metric.",
-    "Scores are uncalibrated decision scores, not probabilities: leak scores >= 0.90 were true leaks in only 2 of 69 test cases (2.9% precision), and restriction_obstruction has low empirical precision.",
+    "Scores are uncalibrated decision scores, not probabilities: leak scores >= 0.90 were true leaks in 0 of 8 eligible windows and 2 of 69 across all records, and restriction_obstruction has low empirical precision.",
     "misroute_a has 0 test positive episodes and is reported as not_evaluable.",
     "restriction_obstruction (2 val) and stuck (1 test) have very low episode support.",
-    "11 of 49 declared assets never appear in positive training examples and cannot be localized by learned component models.",
+    "11 of 49 declared assets (38 seen in training) never appear in positive training examples and cannot be localized by learned component models.",
     "Approximately 27% of masked/ineligible test windows still trigger hypotheses.",
     "Roof failure, vapour damage and mechanical cascades are outside supported scope."
   ]
