@@ -341,7 +341,7 @@ def _build_evidence_checks(
                 scope_supported=scope,
             )
         )
-    return evidence_checks
+    return sorted(evidence_checks, key=lambda check: check["proposal_id"])
 
 
 def _build_decision_result(inputs, state, summary, next_steps, evidence_checks, conflicts):
@@ -354,6 +354,10 @@ def _build_decision_result(inputs, state, summary, next_steps, evidence_checks, 
         and diagnosis["result"]["assessment"] == "candidates_available"
         else []
     )
+
+    ids = sorted({eid for c in evidence_checks for eid in c["evidence_ids"]})
+    if ids:
+        summary += " Evidence IDs: " + ", ".join(ids) + "."
 
     result = {
         "decision_state": state,
@@ -432,7 +436,9 @@ def _process_decision(request):
 
     result = _build_decision_result(inputs, state, summary, next_steps, evidence_checks, conflicts)
 
-    response = _build_decision_response(request, result, evidence_checks, conflicts, state, summary)
+    response = _build_decision_response(
+        request, result, evidence_checks, conflicts, state, result["summary"]
+    )
     return response
 
 

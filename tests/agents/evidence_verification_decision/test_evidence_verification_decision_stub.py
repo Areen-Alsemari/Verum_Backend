@@ -347,3 +347,34 @@ def test_decision_precedence_adjacent_pairs(
 
     state, _, _ = _decision(diagnosis, checks, conflicts, missing_reports)
     assert state == expected
+
+
+def test_cutoff_and_noncandidate_regression():
+    """Independent: cutoff is inclusive and noncandidate hypotheses are insufficient."""
+    from verum.agents.evidence_verification_decision.agent import _decision
+
+    check = check_proposal(
+        _proposal(), _registry(), 100.0, quality_acceptable=True, scope_supported=True
+    )
+    assert check["time_admissible"] is True and check["usable"] is True
+    diagnosis = {"result": {"assessment": "inconclusive", "hypotheses": [{"hypothesis_id": "h1"}]}}
+    assert _decision(diagnosis, [{"usable": True}], [], [])[0] == "inconclusive"
+
+
+def test_sorted_checks_and_summary_ids():
+    """Independent: checks are ordered and summary lists distinct evidence IDs."""
+    from verum.agents.evidence_verification_decision.agent import (
+        _build_decision_result,
+        _build_evidence_checks,
+    )
+
+    inputs = {
+        "evidence_proposals": [_proposal(proposal_id="z"), _proposal(proposal_id="a")],
+        "inspection_quality_report": None,
+    }
+    checks = _build_evidence_checks(inputs, _registry(), 100.0)
+    assert [c["proposal_id"] for c in checks] == ["a", "z"]
+    result = _build_decision_result(
+        {"diagnosis_report": None}, "more_evidence_required", "Needs evidence.", [], checks, []
+    )
+    assert result["summary"] == "Needs evidence. Evidence IDs: evidence-1."
