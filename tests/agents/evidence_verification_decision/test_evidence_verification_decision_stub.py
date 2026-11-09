@@ -340,8 +340,11 @@ def test_repeated_run_is_deterministic() -> None:
     ],
 )
 def test_decision_precedence_adjacent_pairs(
-    checks: list[dict[str, Any]], conflicts: list[dict[str, Any]],
-    diagnosis: dict[str, Any] | None, missing_reports: list[str], expected: str
+    checks: list[dict[str, Any]],
+    conflicts: list[dict[str, Any]],
+    diagnosis: dict[str, Any] | None,
+    missing_reports: list[str],
+    expected: str,
 ) -> None:
     """Independent: each adjacent decision priority outranks the next state."""
     from verum.agents.evidence_verification_decision.agent import _decision

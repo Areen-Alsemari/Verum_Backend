@@ -1,4 +1,3 @@
-
 """Deterministic admission checks for Agent 8 evidence proposals.
 
 A proposal is usable only when time, provenance, quality, and scope
@@ -190,9 +189,7 @@ def check_proposal(
         return _future_claim_result(proposal_id)
 
     time_admissible, provenance_verified, admissible, admission_reasons = (
-        _check_time_and_provenance(
-            claimed_ids, claimed_time, source_ref, evidence, as_of_s
-        )
+        _check_time_and_provenance(claimed_ids, claimed_time, source_ref, evidence, as_of_s)
     )
     reasons.extend(admission_reasons)
 

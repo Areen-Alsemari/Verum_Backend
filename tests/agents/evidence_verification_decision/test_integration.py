@@ -298,9 +298,7 @@ def test_failing_quality_record_overrides_passing_record() -> None:
     _reregister_reports(request)
     check_request(request)
 
-    request["input"]["evidence_proposals"] = [
-        _verified_proposal("proposal-mixed-quality")
-    ]
+    request["input"]["evidence_proposals"] = [_verified_proposal("proposal-mixed-quality")]
 
     response = _run(request)
     result = response["result"]
@@ -337,9 +335,7 @@ def test_usable_proposal_with_missing_upstream_report() -> None:
         diagnosis_candidates=True,
         quality_usable=True,
     )
-    request["input"]["evidence_proposals"] = [
-        _verified_proposal("proposal-missing-report")
-    ]
+    request["input"]["evidence_proposals"] = [_verified_proposal("proposal-missing-report")]
 
     # Remove the planning report, not the quality report, so the
     # proposal can remain usable.
@@ -452,9 +448,7 @@ def test_error_handler_survives_response_helper_failure(
         diagnosis_candidates=True,
         quality_usable=True,
     )
-    request["input"]["evidence_proposals"] = [
-        _verified_proposal("proposal-helper-error")
-    ]
+    request["input"]["evidence_proposals"] = [_verified_proposal("proposal-helper-error")]
 
     def forced_failure(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("forced helper failure")
