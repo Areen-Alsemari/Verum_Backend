@@ -68,10 +68,8 @@ EXPECTED_UNITS = {
 }
 
 ARTIFACT_PATH = (
-    Path(__file__).resolve().parents[4]
-    / "tools"
-    / "agents"
-    / "anomaly_detection_artifacts"
+    Path(__file__).resolve().parent
+    / "artifacts"
     / "anomaly_detection_model.joblib"
 )
 

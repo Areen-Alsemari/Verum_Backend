@@ -31,7 +31,9 @@ DATA_DIR = (
     / "role_views"
     / "anomaly_detection"
 )
-OUTPUT_DIR = ROOT / "tools" / "agents" / "anomaly_detection_artifacts"
+MODEL_DIR = ROOT / "src" / "verum" / "agents" / "anomaly_detection" / "artifacts"
+
+REPORT_DIR = ROOT / "tools" / "agents" / "anomaly_detection_artifacts"
 
 NUMERIC_FIELDS = (
     "latest_value",
@@ -392,7 +394,8 @@ def main() -> None:
     print(f"\nSelected model: {selected_name}")
     print(f"Validation-selected threshold: {threshold:.6f}")
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     artifact = {
         "model": selected_model,
@@ -405,7 +408,7 @@ def main() -> None:
         ),
     }
 
-    joblib.dump(artifact, OUTPUT_DIR / "anomaly_detection_model.joblib")
+    joblib.dump(artifact, MODEL_DIR / "anomaly_detection_model.joblib")
 
     report = {
         "eligible_records": {
@@ -428,7 +431,7 @@ def main() -> None:
         ],
     }
 
-    with (OUTPUT_DIR / "evaluation_report.json").open(
+    with (REPORT_DIR / "evaluation_report.json").open(
         "w",
         encoding="utf-8",
     ) as file:
@@ -436,7 +439,8 @@ def main() -> None:
 
     print("\nValidation results:")
     print(json.dumps(validation_metrics, indent=2))
-    print(f"\nSaved model and report to: {OUTPUT_DIR}")
+    print(f"\nSaved model to: {MODEL_DIR}")
+    print(f"Saved evaluation report to: {REPORT_DIR}")
 
 
 if __name__ == "__main__":
