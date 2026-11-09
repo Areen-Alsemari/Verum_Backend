@@ -279,6 +279,38 @@ def test_shared_root_does_not_transfer_quality() -> None:
     assert response["result"]["decision_state"] == "more_evidence_required"
 
 
+def test_failing_quality_record_overrides_passing_record() -> None:
+    """Independent: a passing quality record must not hide a failing one."""
+    request = _registered_request_with_changes(
+        diagnosis_candidates=True,
+        quality_usable=True,
+    )
+
+    quality = request["input"]["inspection_quality_report"]
+    passing = quality["result"]["record_checks"][0]
+    failing = {
+        **passing,
+        "result_id": "inspection-result-failing",
+        "measurement_usable": False,
+    }
+    quality["result"]["record_checks"].append(failing)
+
+    _reregister_reports(request)
+    check_request(request)
+
+    request["input"]["evidence_proposals"] = [
+        _verified_proposal("proposal-mixed-quality")
+    ]
+
+    response = _run(request)
+    result = response["result"]
+    check = result["evidence_checks"][0]
+
+    assert check["quality_acceptable"] is False
+    assert check["usable"] is not True
+    assert result["decision_state"] == "more_evidence_required"
+
+
 def test_assessment_available_with_verified_evidence() -> None:
     """Independent: Verified evidence and diagnostic candidates allow an assessment."""
     request = _registered_request_with_changes(
@@ -297,6 +329,29 @@ def test_assessment_available_with_verified_evidence() -> None:
     assert result["human_decision_required"] is True
     assert result["automatic_action_authorized"] is False
     assert result["equipment_condition_confirmed"] is False
+
+
+def test_usable_proposal_with_missing_upstream_report() -> None:
+    """Independent: usable proposals cannot override a missing upstream report."""
+    request = _registered_request_with_changes(
+        diagnosis_candidates=True,
+        quality_usable=True,
+    )
+    request["input"]["evidence_proposals"] = [
+        _verified_proposal("proposal-missing-report")
+    ]
+
+    # Remove the planning report, not the quality report, so the
+    # proposal can remain usable.
+    request["input"]["inspection_plan_report"] = None
+
+    response = _run(request)
+    result = response["result"]
+
+    assert result["evidence_checks"]
+    assert all(check["usable"] is True for check in result["evidence_checks"])
+    assert result["decision_state"] == "more_evidence_required"
+    assert result["decision_state"] != "assessment_available"
 
 
 def test_review_required_when_verified_proposals_share_roots() -> None:
@@ -320,14 +375,14 @@ def test_review_required_when_verified_proposals_share_roots() -> None:
     assert result["equipment_condition_confirmed"] is False
 
 
-def test_run_returns_error_when_evidence_check_raises(monkeypatch):
+def test_run_returns_error_when_evidence_check_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """Independent: A processing exception produces a resultless error response."""
     import verum.agents.evidence_verification_decision.agent as module
 
     request = _registered_request_with_changes(diagnosis_candidates=True, quality_usable=True)
     request["input"]["evidence_proposals"] = [_verified_proposal("proposal-error")]
 
-    def forced_failure(*args, **kwargs):
+    def forced_failure(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("forced verification failure")
 
     monkeypatch.setattr(module, "check_proposal", forced_failure)
@@ -337,4 +392,51 @@ def test_run_returns_error_when_evidence_check_raises(monkeypatch):
     assert response["status"] == "error"
     assert response["result"] is None
     assert any(issue["code"] == "EVIDENCE_DECISION_ERROR" for issue in response["issues"])
-    assert response["consumed_evidence_ids"] == []
+    expected = {
+        request["input"][field]["report_id"]
+        for field in (
+            "diagnosis_report",
+            "inspection_plan_report",
+            "inspection_quality_report",
+        )
+    }
+    assert expected <= set(response["consumed_evidence_ids"])
+    check_response(request, response)
+
+
+@pytest.mark.parametrize("failing_function", ["make_issue", "build_response"])
+def test_error_handler_survives_response_helper_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    failing_function: str,
+) -> None:
+    """Independent: error handling survives failures in response helpers."""
+    import verum.agents.evidence_verification_decision.agent as module
+
+    request = _registered_request_with_changes(
+        diagnosis_candidates=True,
+        quality_usable=True,
+    )
+    request["input"]["evidence_proposals"] = [
+        _verified_proposal("proposal-helper-error")
+    ]
+
+    def forced_failure(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("forced helper failure")
+
+    monkeypatch.setattr(module, "check_proposal", forced_failure)
+    monkeypatch.setattr(module, failing_function, forced_failure)
+
+    response = module.EvidenceVerificationDecisionAgent().run(request)
+
+    assert response["status"] == "error"
+    assert response["result"] is None
+    expected = {
+        request["input"][field]["report_id"]
+        for field in (
+            "diagnosis_report",
+            "inspection_plan_report",
+            "inspection_quality_report",
+        )
+    }
+    assert expected <= set(response["consumed_evidence_ids"])
+    check_response(request, response)

@@ -8,6 +8,7 @@ All decisions are advisory and require human judgment.
 
 from __future__ import annotations
 
+import copy
 from typing import Any, Final
 
 from verum.agents.common import (
@@ -18,6 +19,7 @@ from verum.agents.common import (
     implementation_block,
     make_issue,
 )
+from verum.agents.common.ids import report_id
 from verum.agents.evidence_verification_decision.evidence import check_proposal
 
 ROLE: Final = "evidence_verification_decision"
@@ -344,7 +346,14 @@ def _build_evidence_checks(
     return sorted(evidence_checks, key=lambda check: check["proposal_id"])
 
 
-def _build_decision_result(inputs, state, summary, next_steps, evidence_checks, conflicts):
+def _build_decision_result(
+    inputs: dict[str, Any],
+    state: str,
+    summary: str,
+    next_steps: list[dict[str, Any]],
+    evidence_checks: list[dict[str, Any]],
+    conflicts: list[dict[str, Any]],
+) -> dict[str, Any]:
     """Assemble the advisory decision result."""
     diagnosis = inputs["diagnosis_report"]
     hypothesis_report_ids = (
@@ -373,7 +382,11 @@ def _build_decision_result(inputs, state, summary, next_steps, evidence_checks, 
     return result
 
 
-def _consumed_ids(request, evidence_checks, conflicts):
+def _consumed_ids(
+    request: dict[str, Any],
+    evidence_checks: list[dict[str, Any]],
+    conflicts: list[dict[str, Any]],
+) -> list[str]:
     """Collect distinct consumed evidence identifiers."""
     consumed = sorted(
         set(attached_report_ids(request))
@@ -383,7 +396,14 @@ def _consumed_ids(request, evidence_checks, conflicts):
     return consumed
 
 
-def _build_decision_response(request, result, evidence_checks, conflicts, state, summary):
+def _build_decision_response(
+    request: dict[str, Any],
+    result: dict[str, Any],
+    evidence_checks: list[dict[str, Any]],
+    conflicts: list[dict[str, Any]],
+    state: str,
+    summary: str,
+) -> dict[str, Any]:
     """Build the validated decision envelope fields."""
     consumed = _consumed_ids(request, evidence_checks, conflicts)
 
@@ -412,7 +432,7 @@ def _build_decision_response(request, result, evidence_checks, conflicts, state,
     return response
 
 
-def _process_decision(request):
+def _process_decision(request: dict[str, Any]) -> dict[str, Any]:
     """Evaluate evidence and construct the advisory response."""
     inputs = request["input"]
     context = request["context"]
@@ -442,6 +462,71 @@ def _process_decision(request):
     return response
 
 
+def _error_response(request: dict[str, Any], error: Exception) -> dict[str, Any]:
+    """Report processing errors without losing registered upstream provenance."""
+    message = f"{type(error).__name__}: {error}"
+    code = "EVIDENCE_DECISION_ERROR"
+
+    # Invalid requests may have no usable input or evidence registry.
+    try:
+        known = {row["evidence_id"] for row in request["evidence"]}
+        consumed = sorted(set(attached_report_ids(request)) & known)
+    except (KeyError, TypeError, AttributeError, ValueError):
+        consumed = []
+
+    try:
+        issue = make_issue(code, message)
+    except Exception:
+        issue = {"code": code, "message": message, "evidence_ids": []}
+
+    try:
+        return build_response(
+            request,
+            status="error",
+            result=None,
+            consumed_evidence_ids=consumed,
+            implementation=implementation_block(ROLE + "-rules", VERSION),
+            issues=[issue],
+        )
+    except Exception:
+        # A valid request can still receive a contract-shaped error if the
+        # shared response builder fails. Malformed requests cannot be promised
+        # a valid response envelope, because required fields may be absent.
+        try:
+            context = copy.deepcopy(request["context"])
+            return {
+                "interface_version": "1.0.0",
+                "message_type": "response",
+                "agent": request["agent"],
+                "request_id": request["request_id"],
+                "report_id": report_id(
+                    request["agent"], context["analysis_id"], request["request_id"]
+                ),
+                "context": context,
+                "implementation": {
+                    "name": ROLE + "-rules",
+                    "version": VERSION,
+                    "artifact_sha256": None,
+                    "feature_profile_id": None,
+                },
+                "status": "error",
+                "consumed_evidence_ids": consumed,
+                "issues": [issue],
+                "limitations": [],
+                "advisory_only": True,
+                "result": None,
+            }
+        except Exception:
+            # No contract-compliant envelope is possible without the required
+            # request identity/context; never let the error handler crash.
+            return {
+                "status": "error",
+                "result": None,
+                "issues": [issue],
+                "consumed_evidence_ids": consumed,
+            }
+
+
 class EvidenceVerificationDecisionAgent:
     """Verify available evidence and return a non-authoritative decision."""
 
@@ -457,11 +542,4 @@ class EvidenceVerificationDecisionAgent:
             check_response(request, response)
             return response
         except Exception as error:
-            return build_response(
-                request,
-                status="error",
-                result=None,
-                consumed_evidence_ids=[],
-                implementation=implementation_block(ROLE + "-rules", VERSION),
-                issues=[make_issue("EVIDENCE_DECISION_ERROR", f"{type(error).__name__}: {error}")],
-            )
+            return _error_response(request, error)
