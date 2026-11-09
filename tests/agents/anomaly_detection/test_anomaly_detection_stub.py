@@ -102,3 +102,36 @@ def test_anomaly_detection_degrades_when_model_is_unavailable(
         event["category"] == "missing_reading"
         for event in response["result"]["events"]
     )
+
+def test_anomaly_detection_consumes_attached_forecast_report():
+    """Verify attached upstream reports are included in consumed evidence. Independent: yes."""
+    request = example_request()
+    forecast_path = (
+        contract_directory()
+        / "examples"
+        / "predictive_health.response.json"
+    )
+    forecast = json.loads(forecast_path.read_text(encoding="utf-8"))
+    request["input"]["forecast_report"] = forecast
+
+    request["evidence"].append(
+    {
+        "evidence_id": forecast["report_id"],
+        "kind": "agent_report",
+        "source_ref": f"report:{forecast['report_id']}",
+        "available_at_s": forecast["context"]["as_of_s"],
+        "content_sha256": "2650cfd0ea46957f6b2bd4bcd5bff7228ff8a457e5688a2a13ec012807dac968",
+        "root_evidence_ids": sorted({
+         root
+        for evidence_id in forecast["consumed_evidence_ids"]
+        for row in request["evidence"]
+        if row["evidence_id"] == evidence_id
+        for root in row["root_evidence_ids"] }),
+        "provenance": "derived_agent_output",
+    }
+)
+
+    response = AnomalyDetectionAgent().run(request)
+
+    assert forecast["report_id"] in response["consumed_evidence_ids"]
+    check_response(request, response)

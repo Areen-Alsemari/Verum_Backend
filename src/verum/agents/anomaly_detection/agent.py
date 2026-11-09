@@ -10,6 +10,7 @@ import joblib  # type: ignore[import-untyped]
 import numpy as np
 
 from verum.agents.common import (
+    attached_report_ids,
     build_response,
     check_request,
     check_response,
@@ -132,11 +133,17 @@ class AnomalyDetectionAgent:
         known_evidence = {
             row["evidence_id"] for row in request["evidence"]
         }
-        evidence_ids = [
-            evidence_id
-            for evidence_id in observations["evidence_ids"]
-            if evidence_id in known_evidence
-        ]
+        evidence_ids = list(
+        dict.fromkeys(
+            [
+                *[
+                    evidence_id
+                    for evidence_id in observations["evidence_ids"]
+                    if evidence_id in known_evidence
+                ],
+                *attached_report_ids(request),
+            ]
+        ))
 
         events: list[dict[str, Any]] = []
 
