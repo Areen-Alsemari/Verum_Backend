@@ -9,6 +9,7 @@ from verum.agents.evidence_verification_decision.evaluation import (
 
 
 def test_reference_admission_targets() -> None:
+    """Independent: reference admission targets."""
     root = Path("data/reference_release_v2/verum_reference_v2")
     count = 0
 

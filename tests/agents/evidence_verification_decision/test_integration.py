@@ -144,7 +144,7 @@ def test_real_contract_reports_require_more_evidence() -> None:
 
 
 def test_all_attached_reports_are_consumed() -> None:
-    """Report provenance must appear in consumed evidence IDs."""
+    """Independent: Report provenance must appear in consumed evidence IDs."""
     request = _request_with_reports()
     response = _run(request)
 
@@ -157,7 +157,7 @@ def test_all_attached_reports_are_consumed() -> None:
 
 
 def test_registered_report_hash_matches_content() -> None:
-    """Registry hashes must match the complete report content."""
+    """Independent: Registry hashes must match the complete report content."""
     request = _request_with_reports()
     registry = {
         row["evidence_id"]: row
@@ -174,7 +174,7 @@ def test_registered_report_hash_matches_content() -> None:
 
 
 def test_report_context_mismatch_is_rejected() -> None:
-    """A report from another snapshot must be rejected."""
+    """Independent: A report from another snapshot must be rejected."""
     request = _request_with_reports()
     request["input"]["diagnosis_report"]["context"]["revision"] += 1
 
@@ -183,7 +183,7 @@ def test_report_context_mismatch_is_rejected() -> None:
 
 
 def test_report_hash_tampering_is_rejected() -> None:
-    """Modified report content must invalidate its registry hash."""
+    """Independent: Modified report content must invalidate its registry hash."""
     request = _request_with_reports()
     request["input"]["diagnosis_report"]["limitations"].append(
         "Tampered after registration"
@@ -194,7 +194,7 @@ def test_report_hash_tampering_is_rejected() -> None:
 
 
 def test_report_registration_is_deterministic() -> None:
-    """Identical reports must generate identical registry records."""
+    """Independent: Identical reports must generate identical registry records."""
     first = _request_with_reports()
     second = _request_with_reports()
 
@@ -203,7 +203,7 @@ def test_report_registration_is_deterministic() -> None:
 
 
 def test_failed_diagnostic_check_is_reported_as_conflict() -> None:
-    """Failed upstream diagnostic checks must create conflicts."""
+    """Independent: Failed upstream diagnostic checks must create conflicts."""
     request = _request_with_reports()
     diagnosis = request["input"]["diagnosis_report"]
 
@@ -236,7 +236,7 @@ def test_hypothesis_conflict_evidence_is_reported() -> None:
 
 
 def test_missing_quality_report_requires_more_evidence() -> None:
-    """Missing inspection quality must not be silently accepted."""
+    """Independent: Missing inspection quality must not be silently accepted."""
     request = _request_with_reports()
     request["input"]["inspection_quality_report"] = None
 
@@ -246,7 +246,7 @@ def test_missing_quality_report_requires_more_evidence() -> None:
 
 
 def test_all_decisions_remain_advisory() -> None:
-    """Upstream reports must never authorize equipment actions."""
+    """Independent: Upstream reports must never authorize equipment actions."""
     request = _request_with_reports()
     original = copy.deepcopy(request)
 
@@ -298,7 +298,7 @@ def test_shared_root_does_not_transfer_quality() -> None:
 
 
 def test_assessment_available_with_verified_evidence() -> None:
-    """Verified evidence and diagnostic candidates allow an assessment."""
+    """Independent: Verified evidence and diagnostic candidates allow an assessment."""
     request = _registered_request_with_changes(
         diagnosis_candidates=True,
         quality_usable=True,
@@ -323,7 +323,7 @@ def test_assessment_available_with_verified_evidence() -> None:
 
 
 def test_review_required_when_verified_proposals_share_roots() -> None:
-    """Overlapping evidence roots must trigger human review."""
+    """Independent: Overlapping evidence roots must trigger human review."""
     request = _registered_request_with_changes(
         quality_usable=True,
     )
