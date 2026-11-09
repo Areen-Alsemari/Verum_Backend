@@ -219,6 +219,51 @@ def test_detected_event_explains_score_interpretation(
     check_response(request, response)
 
 
+@pytest.mark.parametrize(
+    ("score", "expected_detection"),
+    [(0.49, False), (0.50, True)],
+)
+def test_detection_respects_inclusive_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+    score: float,
+    expected_detection: bool,
+) -> None:
+    """Detection occurs at or above the configured threshold.
+
+    Independent: yes, because model scores and threshold are controlled.
+    """
+
+    class FakeModel:
+        classes_ = [False, True]
+
+        def predict_proba(self, features: Any) -> list[list[float]]:
+            return [[1.0 - score, score]]
+
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+    valid_signals = anomaly_agent.filter_valid_unit_signals(signals)
+    feature_names = list(anomaly_agent.extract_features(valid_signals))
+
+    monkeypatch.setattr(
+        anomaly_agent,
+        "load_artifact",
+        lambda: {
+            "feature_names": feature_names,
+            "threshold": 0.50,
+            "model": FakeModel(),
+        },
+    )
+
+    response = AnomalyDetectionAgent().run(request)
+
+    detected = any(
+        event["category"] == "reported_signal_departure" for event in response["result"]["events"]
+    )
+
+    assert detected is expected_detection
+    check_response(request, response)
+
+
 def test_successful_model_run_omits_unavailable_limitation() -> None:
     """A successful model run does not report model unavailability.
 
@@ -401,4 +446,90 @@ def test_unexpected_runtime_error_returns_error_response(
     assert response["status"] == "error"
     assert response["result"] is None
     assert any(issue["code"] == "INTERNAL_ERROR" for issue in response["issues"])
+    check_response(request, response)
+
+
+def test_detection_uses_true_class_score(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Detection uses the score belonging to the True class.
+
+    Independent: yes, because class order and model scores are controlled.
+    """
+
+    class FakeModel:
+        classes_ = [True, False]
+
+        def predict_proba(self, features: Any) -> list[list[float]]:
+            return [[0.90, 0.10]]
+
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+    valid_signals = anomaly_agent.filter_valid_unit_signals(signals)
+    feature_names = list(anomaly_agent.extract_features(valid_signals))
+
+    monkeypatch.setattr(
+        anomaly_agent,
+        "load_artifact",
+        lambda: {
+            "feature_names": feature_names,
+            "threshold": 0.50,
+            "model": FakeModel(),
+        },
+    )
+
+    response = AnomalyDetectionAgent().run(request)
+
+    detected = any(
+        event["category"] == "reported_signal_departure" for event in response["result"]["events"]
+    )
+
+    assert detected
+    detected_event = next(
+        event
+        for event in response["result"]["events"]
+        if event["category"] == "reported_signal_departure"
+    )
+    assert detected_event["score"]["value"] == 0.90
+    check_response(request, response)
+
+
+def test_model_receives_features_in_artifact_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Model input follows the feature order stored in the artifact.
+
+    Independent: yes, because the model captures its controlled input.
+    """
+
+    class FakeModel:
+        classes_ = [False, True]
+        received_features: Any = None
+
+        def predict_proba(self, features: Any) -> list[list[float]]:
+            self.received_features = features.copy()
+            return [[0.01, 0.99]]
+
+    request = example_request()
+    signals = request["input"]["observations"]["summary"]["signals"]
+    valid_signals = anomaly_agent.filter_valid_unit_signals(signals)
+    feature_values = anomaly_agent.extract_features(valid_signals)
+    feature_names = list(reversed(list(feature_values)))
+    fake_model = FakeModel()
+
+    monkeypatch.setattr(
+        anomaly_agent,
+        "load_artifact",
+        lambda: {
+            "feature_names": feature_names,
+            "threshold": 0.50,
+            "model": fake_model,
+        },
+    )
+
+    response = AnomalyDetectionAgent().run(request)
+
+    expected_vector = [[feature_values[name] for name in feature_names]]
+
+    assert fake_model.received_features.tolist() == expected_vector
     check_response(request, response)
