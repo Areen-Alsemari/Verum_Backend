@@ -10,7 +10,7 @@ from jsonschema.exceptions import ValidationError
 
 from verum.agents.predictive_health import PredictiveHealthAgent
 from verum.agents.predictive_health import agent as predictive_agent
-from verum.contracts.agent_interfaces import contract_directory, validate_response
+from verum.contracts.agent_interfaces import content_hash, contract_directory, validate_response
 
 
 def _example_request() -> dict[str, Any]:
@@ -231,6 +231,7 @@ def test_ridge_numeric_forecast_includes_missing_offset(
     assert code is None
     assert note is None
 
+
 def test_shipped_ridge_forecasts_match_fixed_request() -> None:
     """Validate and pin forecasts from the shipped Ridge models.
 
@@ -257,8 +258,69 @@ def test_shipped_ridge_forecasts_match_fixed_request() -> None:
     assert [row["tag_id"] for row in forecasts] == list(expected)
     for row in forecasts:
         assert "Forecast method: ridge." in row["limitations"]
-        assert row["value"] == pytest.approx(
-            expected[row["tag_id"]], rel=1e-10, abs=1e-10
-        )
+        assert row["value"] == pytest.approx(expected[row["tag_id"]], rel=1e-10, abs=1e-10)
 
     assert PredictiveHealthAgent().run(request) == report
+
+
+def test_shipped_ridge_rejects_extreme_level() -> None:
+    """Flag a million-meter level without returning a numeric forecast.
+
+    Independent: yes, because one million meters exceeds the LT-101 training range.
+    """
+    request = _example_request()
+    payload = request["input"]
+    payload["target_tag_ids"] = ["LT-101"]
+    observations = payload["observations"]
+    summary = observations["summary"]
+    signal = next(row for row in summary["signals"] if row["tag_id"] == "LT-101")
+    signal.update(
+        mean=1e6,
+        minimum=1e6,
+        maximum=1e6,
+        latest_value=1e6,
+        previous_measured_value=1e6,
+        standard_deviation=0.0,
+        slope_per_s=0.0,
+    )
+
+    for row in request["evidence"]:
+        if (
+            row["evidence_id"] in observations["evidence_ids"]
+            and row["kind"] == "observation_representation"
+        ):
+            row["content_sha256"] = content_hash(summary)
+
+    report = PredictiveHealthAgent().run(request)
+    validate_response(request, report)
+
+    assert report["status"] == "degraded"
+    (forecast,) = report["result"]["forecasts"]
+    assert forecast["tag_id"] == "LT-101"
+    assert forecast["value"] is None
+    assert [issue["code"] for issue in report["issues"]] == ["RIDGE_INPUT_OUT_OF_RANGE"]
+
+
+@pytest.mark.parametrize("helper", ["build_response", "make_issue", "check_response"])
+def test_report_failure_returns_valid_error(
+    monkeypatch: pytest.MonkeyPatch, helper: str
+) -> None:
+    """Return a valid error report when a normal report step fails.
+
+    Independent: yes, because the selected helper is forced to raise.
+    """
+
+    def fail(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("forced report failure")
+
+    request = _example_request()
+    if helper == "make_issue":
+        request["input"]["target_tag_ids"] = []
+
+    monkeypatch.setattr(predictive_agent, helper, fail)
+    report = PredictiveHealthAgent().run(request)
+
+    validate_response(request, report)
+    assert report["status"] == "error"
+    assert report["result"] is None
+    assert [issue["code"] for issue in report["issues"]] == ["PREDICTIVE_HEALTH_FAILED"]

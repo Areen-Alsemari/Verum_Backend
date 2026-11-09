@@ -17,8 +17,7 @@
   "horizon_s": 300,
   "library_versions": {
     "numpy": "2.5.4",
-    "scikit-learn": "1.9.1",
-    "threadpoolctl": "3.8.0"
+    "scikit-learn": "1.9.1"
   },
   "models": {
     "LT-101": {
@@ -596,6 +595,6 @@
       ]
     }
   },
-  "seed": 42,
+  "seed": 20261108,
   "training_sha256": "5792e6e09622e1e5d2918f9de462d040de1ce29dcb04bf9d4d934d717c740f40"
 }

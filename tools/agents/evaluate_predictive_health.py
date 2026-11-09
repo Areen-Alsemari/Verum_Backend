@@ -19,13 +19,12 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-from threadpoolctl import threadpool_limits
 
 from verum.agents.common.loader import iter_role_records
 
 ROLE = "predictive_health"
 HORIZON_S = 300
-EVALUATION_SEED = 42
+EVALUATION_SEED = 20261108
 FEATURE_PROFILE_ID = "predictive-health-summary-v1"
 
 # Originally selected on validation; FT-201 was removed after reviewing test.
@@ -129,9 +128,8 @@ def _ridge_pipeline() -> Any:
 def _export_model(rows: list[Row], unit: str) -> dict[str, Any]:
     """Fold preprocessing into coefficients and verify runtime parity."""
     x, y = _arrays(rows)
-    with threadpool_limits(limits=1):
-        fitted = _ridge_pipeline().fit(x, y)
-        expected = fitted.predict(x)
+    fitted = _ridge_pipeline().fit(x, y)
+    expected = fitted.predict(x)
 
     imputer, scaler, ridge = fitted.steps[0][1], fitted.steps[1][1], fitted.steps[2][1]
     scaled_weights = ridge.coef_ / scaler.scale_
@@ -181,7 +179,7 @@ def _export(root: Path, destination: Path, train: dict[Sensor, list[Row]]) -> No
         "training_sha256": training_sha256,
         "seed": EVALUATION_SEED,
         "library_versions": {
-            package: version(package) for package in ("numpy", "scikit-learn", "threadpoolctl")
+            package: version(package) for package in ("numpy", "scikit-learn")
         },
         "models": models,
     }
@@ -190,6 +188,32 @@ def _export(root: Path, destination: Path, train: dict[Sensor, list[Row]]) -> No
         encoding="utf-8",
     )
     print(f"Exported {len(models)} Ridge models to {destination}")
+
+
+def _evaluation_predictions(
+    tag: str,
+    train_rows: list[Row],
+    x_eval: np.ndarray,
+    *,
+    test: bool,
+) -> dict[str, np.ndarray]:
+    """Predict with persistence and the models enabled for this split."""
+    predictions = {"persistence": x_eval[:, 0]}
+    if not train_rows or (test and tag not in RIDGE_TAGS):
+        return predictions
+
+    x_train, y_train = _arrays(train_rows)
+    predictions["ridge"] = _ridge_pipeline().fit(x_train, y_train).predict(x_eval)
+
+    if not test:
+        tree = HistGradientBoostingRegressor(
+            max_iter=100,
+            random_state=EVALUATION_SEED,
+            early_stopping=False,
+        )
+        predictions["hist_gradient_boosting"] = tree.fit(x_train, y_train).predict(x_eval)
+
+    return predictions
 
 
 def _evaluate(root: Path, *, test: bool, train: dict[Sensor, list[Row]]) -> None:
@@ -241,24 +265,7 @@ def _evaluate(root: Path, *, test: bool, train: dict[Sensor, list[Row]]) -> None
             continue
 
         x_eval, y_eval = _arrays(eval_rows)
-        predictions = {"persistence": x_eval[:, 0]}
-
-        if train_rows and (not test or tag in RIDGE_TAGS):
-            x_train, y_train = _arrays(train_rows)
-            ridge = _ridge_pipeline()
-
-            with threadpool_limits(limits=1):
-                predictions["ridge"] = ridge.fit(x_train, y_train).predict(x_eval)
-
-                if not test:
-                    tree = HistGradientBoostingRegressor(
-                        max_iter=100,
-                        random_state=EVALUATION_SEED,
-                        early_stopping=False,
-                    )
-                    predictions["hist_gradient_boosting"] = tree.fit(x_train, y_train).predict(
-                        x_eval
-                    )
+        predictions = _evaluation_predictions(tag, train_rows, x_eval, test=test)
 
         for name, predicted in predictions.items():
             error = predicted - y_eval

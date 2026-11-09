@@ -9,6 +9,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, TypeGuard
 
+from verum.agents.common import envelope
 from verum.agents.common.envelope import build_response, implementation_block, make_issue
 from verum.agents.common.validation import check_request, check_response
 
@@ -89,6 +90,40 @@ def _predict(
     return _ridge_value(signal, artifact["features"], model), "ridge", None, None
 
 
+def _forecast_rows(
+    targets: list[str],
+    signals: dict[str, dict[str, Any]],
+    artifact: dict[str, Any],
+    horizon_s: float,
+    evidence_ids: list[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build forecast rows and collect instrument-specific issues."""
+    forecasts = []
+    issues = []
+    for tag in targets:
+        signal = signals[tag]
+        value, method, code, note = _predict(signal, artifact)
+        limitations = [f"Forecast method: {method}."]
+        if value is not None:
+            limitations.append("No prediction interval has been calibrated.")
+        if code is not None and note is not None:
+            issues.append(make_issue(code, f"{tag}: {note}", evidence_ids))
+            limitations.append(note)
+        forecasts.append(
+            {
+                "tag_id": tag,
+                "unit": signal["unit"],
+                "quantity": "reported_mean",
+                "horizon_s": horizon_s,
+                "value": value,
+                "interval": None,
+                "evidence_ids": evidence_ids,
+                "limitations": limitations,
+            }
+        )
+    return forecasts, issues
+
+
 def _collect_forecasts(
     payload: dict[str, Any], artifact: dict[str, Any], evidence_ids: list[str]
 ) -> tuple[str, dict[str, Any] | None, list[dict[str, Any]]]:
@@ -120,29 +155,9 @@ def _collect_forecasts(
             ],
         )
 
-    forecasts = []
-    issues = []
-    for tag in targets:
-        signal = signals[tag]
-        value, method, code, note = _predict(signal, artifact)
-        limitations = [f"Forecast method: {method}."]
-        if value is not None:
-            limitations.append("No prediction interval has been calibrated.")
-        if code is not None and note is not None:
-            issues.append(make_issue(code, f"{tag}: {note}", evidence_ids))
-            limitations.append(note)
-        forecasts.append(
-            {
-                "tag_id": tag,
-                "unit": signal["unit"],
-                "quantity": "reported_mean",
-                "horizon_s": payload["forecast_horizon_s"],
-                "value": value,
-                "interval": None,
-                "evidence_ids": evidence_ids,
-                "limitations": limitations,
-            }
-        )
+    forecasts, issues = _forecast_rows(
+        targets, signals, artifact, payload["forecast_horizon_s"], evidence_ids
+    )
     result = {
         "forecasts": forecasts,
         "health_score": None,
@@ -165,7 +180,6 @@ class PredictiveHealthAgent:
 
         payload = request["input"]
         evidence_ids = list(dict.fromkeys(payload["observations"]["evidence_ids"]))
-        implementation = implementation_block("predictive_health_ridge_persistence", "1.0.0")
         try:
             artifact, digest = _ridge_artifact()
             implementation = implementation_block(
@@ -175,23 +189,32 @@ class PredictiveHealthAgent:
                 feature_profile_id=artifact["feature_profile_id"],
             )
             status, result, issues = _collect_forecasts(payload, artifact, evidence_ids)
+            response = build_response(
+                request,
+                status=status,
+                result=result,
+                consumed_evidence_ids=evidence_ids,
+                implementation=implementation,
+                issues=issues,
+                limitations=list(_LIMITATIONS),
+            )
+            check_response(request, response)
+            return response
         except Exception:
-            status, result = "error", None
-            issues = [
-                make_issue(
-                    "PREDICTIVE_HEALTH_FAILED",
-                    "Could not load the Ridge artifact or compute the forecasts.",
-                )
-            ]
-
-        response = build_response(
-            request,
-            status=status,
-            result=result,
-            consumed_evidence_ids=evidence_ids,
-            implementation=implementation,
-            issues=issues,
-            limitations=list(_LIMITATIONS),
-        )
-        check_response(request, response)
-        return response
+            return envelope.build_response(
+                request,
+                status="error",
+                result=None,
+                consumed_evidence_ids=[],
+                implementation=implementation_block(
+                    "predictive_health_ridge_persistence", "1.0.0"
+                ),
+                issues=[
+                    {
+                        "code": "PREDICTIVE_HEALTH_FAILED",
+                        "message": "Could not produce a valid forecast report.",
+                        "evidence_ids": [],
+                    }
+                ],
+                limitations=list(_LIMITATIONS),
+            )
