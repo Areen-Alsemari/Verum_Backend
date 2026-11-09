@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from verum.agents.runner.facts import reference_facts
+from verum.agents.historical_asset_intelligence.reference_facts import reference_facts
 
 
 def build_historical_asset_input(

@@ -12,7 +12,7 @@ from verum.agents.historical_asset_intelligence.adapter import build_historical_
 from verum.agents.historical_asset_intelligence.agent import (
     HistoricalAssetIntelligenceAgent,
 )
-from verum.contracts.agent_interfaces import contract_directory
+from verum.contracts.agent_interfaces import contract_directory, validate_request, validate_response
 
 
 def _example_request() -> dict[str, Any]:
@@ -337,3 +337,70 @@ def test_history_before_zero_is_preserved_when_before_cutoff() -> None:
     assert report["status"] == "complete"
     assert report["result"]["history"] == [record]
     assert report["result"]["history_status"] == "simulated_records_available"
+
+
+@pytest.mark.parametrize("has_specs", [True, False], ids=["declared-specs", "no-specs"])
+def test_adapter_preserves_reference_facts_and_ids(has_specs: bool) -> None:
+    """Check the request and report against facts declared by a small reference.
+
+    Independent: yes, because the expected fact IDs and values are fixed here.
+    """
+    request = _example_request()
+    evidence_id = request["input"]["reference_evidence_ids"][0]
+    asset = {"asset_id": "TK-101", "kind": "tank"}
+    record = {
+        "source": "Tank design record",
+        "diameter": 30,
+        "geometry": {
+            "height": {
+                "value": 12,
+                "unit": "m",
+                "status": "selected",
+                "provenance_id": "Tank height record",
+            },
+        },
+    }
+    role_input = {
+        "query": {"asset_id": "TK-101"},
+        "reference": {
+            "assets": [asset],
+            "asset_facts": {"TK-101": record} if has_specs else {},
+        },
+    }
+    expected = [
+        {
+            "fact_id": "TK-101:diameter",
+            "asset_id": "TK-101",
+            "field_path": "diameter",
+            "value": 30,
+            "unit": None,
+            "source_locator": "Tank design record",
+            "parameter_status": None,
+            "evidence_ids": [evidence_id],
+        },
+        {
+            "fact_id": "TK-101:geometry.height",
+            "asset_id": "TK-101",
+            "field_path": "geometry.height",
+            "value": 12,
+            "unit": "m",
+            "source_locator": "Tank height record",
+            "parameter_status": "selected",
+            "evidence_ids": [evidence_id],
+        },
+    ]
+    if not has_specs:
+        expected = []
+
+    payload = build_historical_asset_input(role_input, reference_evidence_id=evidence_id)
+    assert payload["query_asset_ids"] == ["TK-101"]
+    assert payload["reference_evidence_ids"] == [evidence_id]
+    assert payload["declared_facts"] == expected
+    request["input"] = payload
+    validate_request(request)
+    report = HistoricalAssetIntelligenceAgent().run(request)
+    validate_response(request, report)
+    assert report["status"] == "degraded"
+    assert report["result"]["asset_records"] == [asset]
+    assert report["result"]["facts"] == expected
+    assert report["consumed_evidence_ids"] == [evidence_id]
