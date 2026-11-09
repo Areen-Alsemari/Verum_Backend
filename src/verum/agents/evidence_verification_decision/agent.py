@@ -1,4 +1,10 @@
-"""Rule-based evidence verification and advisory decision agent."""
+"""Rule-based evidence verification and advisory decision agent.
+
+Decision precedence (highest first): more_evidence_required when reports or
+verified evidence are missing; review_required for conflicts; inconclusive
+when diagnostic candidates are unsupported; assessment_available otherwise.
+All decisions are advisory and require human judgment.
+"""
 
 from __future__ import annotations
 

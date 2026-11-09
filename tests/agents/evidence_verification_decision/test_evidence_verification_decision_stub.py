@@ -1,4 +1,3 @@
-
 """Independent behavioral tests for the evidence verification decision agent."""
 
 from __future__ import annotations
@@ -6,6 +5,8 @@ from __future__ import annotations
 import copy
 import json
 from typing import Any
+
+import pytest
 
 from verum.agents.common.validation import check_response
 from verum.agents.evidence_verification_decision import (
@@ -17,11 +18,7 @@ from verum.contracts.agent_interfaces import contract_directory
 
 def _example_request() -> dict[str, Any]:
     """Load the official contract fixture independently of the agent."""
-    path = (
-        contract_directory()
-        / "examples"
-        / "evidence_verification_decision.request.json"
-    )
+    path = contract_directory() / "examples" / "evidence_verification_decision.request.json"
     with path.open(encoding="utf-8") as handle:
         loaded: dict[str, Any] = json.load(handle)
     return loaded
@@ -40,9 +37,7 @@ def _proposal(
         "source_ref": source_ref,
         "claimed_available_at_s": claimed_available_at_s,
         "claimed_evidence_ids": (
-            ["evidence-1"]
-            if claimed_evidence_ids is None
-            else claimed_evidence_ids
+            ["evidence-1"] if claimed_evidence_ids is None else claimed_evidence_ids
         ),
     }
 
@@ -309,10 +304,7 @@ def test_shared_roots_are_not_independent_support() -> None:
     check_response(request, response)
 
     conflicts = response["result"]["conflicts"]
-    assert any(
-        row["check_id"].startswith("shared-roots:")
-        for row in conflicts
-    )
+    assert any(row["check_id"].startswith("shared-roots:") for row in conflicts)
 
 
 def test_repeated_run_is_deterministic() -> None:
@@ -326,3 +318,32 @@ def test_repeated_run_is_deterministic() -> None:
 
     assert first == second
     assert request == original
+
+
+@pytest.mark.parametrize(
+    ("checks", "conflicts", "diagnosis", "missing_reports", "expected"),
+    [
+        ([], [{"evidence_ids": []}], None, [], "more_evidence_required"),
+        ([{"usable": True}], [{"evidence_ids": []}], None, [], "review_required"),
+        (
+            [{"usable": True}],
+            [],
+            {
+                "result": {
+                    "assessment": "candidates_available",
+                    "hypotheses": [{"hypothesis_id": "h1"}],
+                }
+            },
+            [],
+            "assessment_available",
+        ),
+    ],
+)
+def test_decision_precedence_adjacent_pairs(
+    checks, conflicts, diagnosis, missing_reports, expected
+):
+    """Independent: each adjacent decision priority outranks the next state."""
+    from verum.agents.evidence_verification_decision.agent import _decision
+
+    state, _, _ = _decision(diagnosis, checks, conflicts, missing_reports)
+    assert state == expected
