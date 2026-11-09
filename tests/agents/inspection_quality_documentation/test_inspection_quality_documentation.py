@@ -339,7 +339,7 @@ def test_coverage_uses_inspection_request_target_asset() -> None:
 def test_missing_request_is_unknown_without_retest() -> None:
     """Missing request context must not imply a failed inspection.
 
-    Independent: yes, because the missing-request outcome is checked using a request constructed within this test.
+    Independent: yes, because this test constructs its own missing-request case.
     """
     request = inspection_request_with_result()
     request["input"]["inspection_requests"] = []
@@ -358,7 +358,7 @@ def test_missing_request_is_unknown_without_retest() -> None:
 def test_calibration_validity_outcomes() -> None:
     """Calibration validity depends on both expiry and assessment date.
 
-    Independent: yes, because calibration expiry is checked against independently supplied assessment dates.
+    Independent: yes, because this test supplies its own calibration dates.
     """
     for expiry, as_of, expected, usable in [
         ("2026-12-31", "2026-11-08T12:00:00Z", "pass", True),
@@ -382,7 +382,7 @@ def test_calibration_validity_outcomes() -> None:
 def test_request_evidence_is_cited_and_consumed() -> None:
     """Request-dependent checks cite the originating request evidence.
 
-    Independent: yes, because request evidence citation and consumption are asserted within this test.
+    Independent: yes, because this test checks evidence citations directly.
     """
     response, record = run_inspection(inspection_request_with_result())
     for name in ("request_link", "chronology", "human_approval"):
@@ -391,7 +391,7 @@ def test_request_evidence_is_cited_and_consumed() -> None:
     assert "inspection-request-evidence" in response["consumed_evidence_ids"]
 
 
-def test_coverage_outside_time_is_unknown():
+def test_coverage_outside_time_is_unknown() -> None:
     """Independent: yes, because coverage outside the inspection time window is tested directly."""
     request = inspection_request_with_result()
     request["input"]["process_coverage"][0]["end_s"] = 110.0
@@ -401,7 +401,7 @@ def test_coverage_outside_time_is_unknown():
     assert record["measurement_usable"] is None
 
 
-def test_coverage_without_evidence_is_unknown():
+def test_coverage_without_evidence_is_unknown() -> None:
     """Independent: yes, because coverage without supporting evidence is tested directly."""
     request = inspection_request_with_result()
     request["input"]["process_coverage"][0]["evidence_ids"] = []
@@ -410,10 +410,10 @@ def test_coverage_without_evidence_is_unknown():
     assert record["scope_supported"] is None
 
 
-def test_invalid_numeric_measurements_are_rejected():
+def test_invalid_numeric_measurements_are_rejected() -> None:
     """Reject invalid measurement values at the public contract boundary.
 
-    Independent: yes, because invalid numeric values are passed to the public contract boundary and rejected.
+    Independent: yes, because this test checks invalid values independently.
     """
     for field, value in [("value", True), ("uncertainty_k2", -1.0)]:
         request = inspection_request_with_result()
@@ -424,7 +424,7 @@ def test_invalid_numeric_measurements_are_rejected():
 
 
 def test_coverage_wrong_asset_is_unknown() -> None:
-    """Independent: yes, because coverage for a different asset is checked against the request target."""
+    """Independent: yes, because this test checks coverage for another asset."""
     request = inspection_request_with_result()
     request["input"]["process_coverage"][0]["target_asset"] = "TANK-002"
     _, record = run_inspection(request)
@@ -433,7 +433,7 @@ def test_coverage_wrong_asset_is_unknown() -> None:
 
 
 def test_valid_coverage_supports_scope() -> None:
-    """Independent: yes, because valid process coverage is checked directly against the inspection request."""
+    """Independent: yes, because this test checks valid coverage directly."""
     _, record = run_inspection(inspection_request_with_result())
     assert inspection_check(record, "process_coverage") == "pass"
     assert record["scope_supported"] is True
