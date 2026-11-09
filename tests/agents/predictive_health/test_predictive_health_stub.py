@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from jsonschema.exceptions import ValidationError
 
+from verum.agents.common import envelope as shared_envelope
 from verum.agents.predictive_health import PredictiveHealthAgent
 from verum.agents.predictive_health import agent as predictive_agent
 from verum.contracts.agent_interfaces import content_hash, contract_directory, validate_response
@@ -327,7 +328,7 @@ def test_report_failure_returns_valid_error(monkeypatch: pytest.MonkeyPatch, hel
 
     if helper == "shared_builder":
         monkeypatch.setattr(predictive_agent, "build_response", fail)
-        monkeypatch.setattr(predictive_agent.envelope, "build_response", fail)
+        monkeypatch.setattr(shared_envelope, "build_response", fail)
     else:
         monkeypatch.setattr(predictive_agent, helper, fail)
     report = PredictiveHealthAgent().run(request)
