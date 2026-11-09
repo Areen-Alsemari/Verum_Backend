@@ -34,20 +34,15 @@ DATA_DIR = (
 OUTPUT_DIR = ROOT / "tools" / "agents" / "anomaly_detection_artifacts"
 
 NUMERIC_FIELDS = (
-    "bad_quality_samples",
-    "latest_received_age_s",
     "latest_value",
+    "previous_measured_value",
+    "minimum",
     "maximum",
     "mean",
-    "measured_count",
-    "minimum",
-    "missing_samples",
-    "previous_measured_age_s",
-    "previous_measured_value",
-    "rows_received",
     "slope_per_s",
     "standard_deviation",
 )
+SEED = 20261108
 
 
 def load_records(split: str) -> list[dict[str, Any]]:
@@ -70,59 +65,39 @@ def get_signals(record: dict[str, Any]) -> list[dict[str, Any]]:
     signals = observations.get("signals", [])
 
     if isinstance(signals, dict):
-        return [
-            value
-            for value in signals.values()
-            if isinstance(value, dict)
-        ]
+        return [value for value in signals.values() if isinstance(value, dict)]
 
     if isinstance(signals, list):
-        return [
-            value
-            for value in signals
-            if isinstance(value, dict)
-        ]
+        return [value for value in signals if isinstance(value, dict)]
 
     return []
 
 
 def extract_features(record: dict[str, Any]) -> dict[str, float]:
-    """Create tag-independent numerical features from observation summaries."""
+    """Extract aggregate physical measurement features."""
     signals = get_signals(record)
-    features: dict[str, float] = {
-        "signal_count": float(len(signals)),
-    }
+    features: dict[str, float] = {}
 
     for field in NUMERIC_FIELDS:
-        values: list[float] = []
-
-        for signal in signals:
-            value = signal.get(field)
-
-            if isinstance(value, bool):
-                values.append(float(value))
-            elif isinstance(value, (int, float)):
-                numeric_value = float(value)
-                if np.isfinite(numeric_value):
-                    values.append(numeric_value)
-
-        prefix = field
-
-        features[f"{prefix}_present_fraction"] = (
-            len(values) / len(signals) if signals else 0.0
-        )
+        values = [
+            float(signal[field])
+            for signal in signals
+            if isinstance(signal.get(field), (int, float))
+            and not isinstance(signal.get(field), bool)
+            and np.isfinite(signal[field])
+        ]
 
         if values:
             array = np.asarray(values, dtype=float)
-            features[f"{prefix}_mean"] = float(np.mean(array))
-            features[f"{prefix}_std"] = float(np.std(array))
-            features[f"{prefix}_min"] = float(np.min(array))
-            features[f"{prefix}_max"] = float(np.max(array))
+            features[f"{field}_mean"] = float(np.mean(array))
+            features[f"{field}_std"] = float(np.std(array))
+            features[f"{field}_min"] = float(np.min(array))
+            features[f"{field}_max"] = float(np.max(array))
         else:
-            features[f"{prefix}_mean"] = 0.0
-            features[f"{prefix}_std"] = 0.0
-            features[f"{prefix}_min"] = 0.0
-            features[f"{prefix}_max"] = 0.0
+            features[f"{field}_mean"] = 0.0
+            features[f"{field}_std"] = 0.0
+            features[f"{field}_min"] = 0.0
+            features[f"{field}_max"] = 0.0
 
     return features
 
@@ -177,9 +152,7 @@ def prepare_split(
             }
         )
 
-        mechanisms.append(
-            ", ".join(mechanism_names) if mechanism_names else "none"
-        )
+        mechanisms.append(", ".join(mechanism_names) if mechanism_names else "none")
 
     return (
         features,
@@ -227,6 +200,8 @@ def classification_metrics(
         "false_alarms": int(fp),
         "misses": int(fn),
     }
+
+
 def mechanism_metrics(
     labels: np.ndarray,
     predictions: np.ndarray,
@@ -236,21 +211,12 @@ def mechanism_metrics(
     results: dict[str, Any] = {}
 
     individual_mechanisms = sorted(
-        {
-            mechanism
-            for value in mechanisms
-            if value != "none"
-            for mechanism in value.split(", ")
-        }
+        {mechanism for value in mechanisms if value != "none" for mechanism in value.split(", ")}
     )
 
     for mechanism in individual_mechanisms:
         indices = np.asarray(
-            [
-                index
-                for index, value in enumerate(mechanisms)
-                if mechanism in value.split(", ")
-            ],
+            [index for index, value in enumerate(mechanisms) if mechanism in value.split(", ")],
             dtype=int,
         )
 
@@ -271,30 +237,24 @@ def mechanism_metrics(
             "misses": int(fn),
             "true_positives": int(tp),
             "true_negatives": int(tn),
-            "recall": float(recall_score(
-                mechanism_labels,
-                mechanism_predictions,
-                zero_division=0,
-            )),
+            "recall": float(
+                recall_score(
+                    mechanism_labels,
+                    mechanism_predictions,
+                    zero_division=0,
+                )
+            ),
         }
 
     negative_indices = np.asarray(
-        [
-            index
-            for index, value in enumerate(mechanisms)
-            if value == "none"
-        ],
+        [index for index, value in enumerate(mechanisms) if value == "none"],
         dtype=int,
     )
 
     results["no_injected_mechanism"] = {
         "sample_count": int(len(negative_indices)),
-        "false_alarms": int(
-            np.sum(predictions[negative_indices] == 1)
-        ),
-        "true_negatives": int(
-            np.sum(predictions[negative_indices] == 0)
-        ),
+        "false_alarms": int(np.sum(predictions[negative_indices] == 1)),
+        "true_negatives": int(np.sum(predictions[negative_indices] == 0)),
     }
 
     return results
@@ -311,24 +271,21 @@ def select_threshold(
         return 0.5
 
     f1_values = (
-        2 * precisions[:-1] * recalls[:-1]
-        / np.maximum(precisions[:-1] + recalls[:-1], 1e-12)
+        2 * precisions[:-1] * recalls[:-1] / np.maximum(precisions[:-1] + recalls[:-1], 1e-12)
     )
 
     return float(thresholds[int(np.argmax(f1_values))])
 
 
 def main() -> None:
-    """Train candidate models, select using validation, and evaluate test once."""
+    """Train candidate models and select using validation data."""
     print("Loading official dataset splits...")
 
     train_records = load_records("train")
     validation_records = load_records("validation")
-    test_records = load_records("test")
 
     train_rows, y_train, _, _ = prepare_split(train_records)
     validation_rows, y_validation, _, _ = prepare_split(validation_records)
-    test_rows, y_test, test_sample_ids, test_mechanisms = prepare_split(test_records)
 
     if len(np.unique(y_train)) < 2:
         raise ValueError("Training data must contain both physical classes.")
@@ -336,20 +293,13 @@ def main() -> None:
     if len(np.unique(y_validation)) < 2:
         raise ValueError("Validation data must contain both physical classes.")
 
-    feature_names = sorted(
-    {
-        feature_name
-        for row in train_rows
-        for feature_name in row
-    })
+    feature_names = sorted({feature_name for row in train_rows for feature_name in row})
 
     x_train = feature_matrix(train_rows, feature_names)
     x_validation = feature_matrix(validation_rows, feature_names)
-    x_test = feature_matrix(test_rows, feature_names)
 
     print(f"Eligible training records: {len(y_train)}")
     print(f"Eligible validation records: {len(y_validation)}")
-    print(f"Eligible test records: {len(y_test)}")
     print(f"Number of features: {len(feature_names)}")
 
     baseline_scores = np.zeros(len(y_validation), dtype=float)
@@ -373,7 +323,7 @@ def main() -> None:
                     LogisticRegression(
                         max_iter=2000,
                         class_weight="balanced",
-                        random_state=42,
+                        random_state=SEED,
                     ),
                 ),
             ]
@@ -387,7 +337,7 @@ def main() -> None:
                         n_estimators=300,
                         min_samples_leaf=3,
                         class_weight="balanced",
-                        random_state=42,
+                        random_state=SEED,
                         n_jobs=-1,
                     ),
                 ),
@@ -416,10 +366,7 @@ def main() -> None:
             scores,
         )
 
-        print(
-            f"{name}: validation average precision = "
-            f"{results[name]['average_precision']:.4f}"
-        )
+        print(f"{name}: validation average precision = {results[name]['average_precision']:.4f}")
 
     selected_name = max(
         fitted_models,
@@ -434,9 +381,7 @@ def main() -> None:
         selected_validation_scores,
     )
 
-    validation_predictions = (
-        selected_validation_scores >= threshold
-    ).astype(int)
+    validation_predictions = (selected_validation_scores >= threshold).astype(int)
 
     validation_metrics = classification_metrics(
         y_validation,
@@ -446,40 +391,6 @@ def main() -> None:
 
     print(f"\nSelected model: {selected_name}")
     print(f"Validation-selected threshold: {threshold:.6f}")
-
-    print("\nEvaluating the selected model on the test split once...")
-
-    test_scores = selected_model.predict_proba(x_test)[:, 1]
-    test_predictions = (test_scores >= threshold).astype(int)
-
-    test_metrics = classification_metrics(
-        y_test,
-        test_predictions,
-        test_scores,
-    )
-    test_metrics["sample_results"] = [
-        {
-            "sample_id": sample_id,
-            "mechanism": mechanism,
-            "actual": int(actual),
-            "predicted": int(predicted),
-            "false_alarm": bool(actual == 0 and predicted == 1),
-            "miss": bool(actual == 1 and predicted == 0),
-        }
-        for sample_id, mechanism, actual, predicted in zip(
-            test_sample_ids,
-            test_mechanisms,
-            y_test,
-            test_predictions,
-            strict=True,
-        )
-    ]
-
-    test_metrics["mechanism_breakdown"] = mechanism_metrics(
-        y_test,
-        test_predictions,
-        test_mechanisms,
-    )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -500,20 +411,20 @@ def main() -> None:
         "eligible_records": {
             "train": len(y_train),
             "validation": len(y_validation),
-            "test": len(y_test),
         },
         "feature_count": len(feature_names),
+        "feature_names": feature_names,
+        "seed": SEED,
         "validation_candidate_results": results,
         "selected_model": selected_name,
         "selected_threshold": threshold,
         "selected_validation_metrics": validation_metrics,
-        "test_metrics": test_metrics,
         "limitations": [
             "The physical label represents an injected change in the reduced reference simulator.",
-            "A model prediction is a reported signal departure," 
+            "A model prediction is a reported signal departure, "
             "not proof of a real equipment fault.",
             "Overlapping windows from the same episode are not independent fault events.",
-            "The test split was evaluated only after model and threshold selection.",
+            "No test-split evaluation is performed during model development.",
         ],
     }
 
@@ -523,8 +434,8 @@ def main() -> None:
     ) as file:
         json.dump(report, file, indent=2)
 
-    print("\nTest results:")
-    print(json.dumps(test_metrics, indent=2))
+    print("\nValidation results:")
+    print(json.dumps(validation_metrics, indent=2))
     print(f"\nSaved model and report to: {OUTPUT_DIR}")
 
 

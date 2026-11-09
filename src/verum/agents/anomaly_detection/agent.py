@@ -26,17 +26,11 @@ QUALITY_METHOD_ID = "quality_summary_rules_v1"
 MODEL_METHOD_ID = "logistic_regression_v1"
 
 NUMERIC_FIELDS = (
-    "bad_quality_samples",
-    "latest_received_age_s",
     "latest_value",
+    "previous_measured_value",
+    "minimum",
     "maximum",
     "mean",
-    "measured_count",
-    "minimum",
-    "missing_samples",
-    "previous_measured_age_s",
-    "previous_measured_value",
-    "rows_received",
     "slope_per_s",
     "standard_deviation",
 )
@@ -49,9 +43,7 @@ ARTIFACT_PATH = (
     / "anomaly_detection_model.joblib"
 )
 
-EXPECTED_ARTIFACT_SHA256 = (
-    "766d3a4f20c2388a4d5319936ce715af3f74a69b933e8a20e2829256f92be547"
-)
+EXPECTED_ARTIFACT_SHA256 = "56a63c52c4781908e0e87a801449f12756508e8c20f385ff654362fc825465ea"
 
 
 @cache
@@ -71,23 +63,17 @@ def load_artifact() -> dict[str, Any]:
 
 
 def extract_features(signals: list[dict[str, Any]]) -> dict[str, float]:
-    """Extract the same 66 aggregate features used during training."""
-    features = {"signal_count": float(len(signals))}
+    """Extract the physical measurement features used during training."""
+    features: dict[str, float] = {}
 
     for field in NUMERIC_FIELDS:
-        values: list[float] = []
-
-        for signal in signals:
-            value = signal.get(field)
-
-            if isinstance(value, bool):
-                values.append(float(value))
-            elif isinstance(value, (int, float)) and np.isfinite(value):
-                values.append(float(value))
-
-        features[f"{field}_present_fraction"] = (
-            len(values) / len(signals) if signals else 0.0
-        )
+        values = [
+            float(signal[field])
+            for signal in signals
+            if isinstance(signal.get(field), (int, float))
+            and not isinstance(signal.get(field), bool)
+            and np.isfinite(signal[field])
+        ]
 
         if values:
             array = np.asarray(values, dtype=float)
@@ -141,35 +127,32 @@ class AnomalyDetectionAgent:
         summary = observations["summary"]
         signals = summary["signals"]
 
-        known_evidence = {
-            row["evidence_id"] for row in request["evidence"]
-        }
+        known_evidence = {row["evidence_id"] for row in request["evidence"]}
         evidence_ids = list(
-        dict.fromkeys(
-            [
-                *[
-                    evidence_id
-                    for evidence_id in observations["evidence_ids"]
-                    if evidence_id in known_evidence
-                ],
-                *attached_report_ids(request),
-            ]
-        ))
+            dict.fromkeys(
+                [
+                    *[
+                        evidence_id
+                        for evidence_id in observations["evidence_ids"]
+                        if evidence_id in known_evidence
+                    ],
+                    *attached_report_ids(request),
+                ]
+            )
+        )
 
         events: list[dict[str, Any]] = []
 
         missing_tags = [
             signal["tag_id"]
             for signal in signals
-            if signal["missing_samples"] > 0
-            or signal["latest_availability"] == "missing_sample"
+            if signal["missing_samples"] > 0 or signal["latest_availability"] == "missing_sample"
         ]
 
         quality_tags = [
             signal["tag_id"]
             for signal in signals
-            if signal["bad_quality_samples"] > 0
-            or signal["latest_quality"] in ("suspect", "bad")
+            if signal["bad_quality_samples"] > 0 or signal["latest_quality"] in ("suspect", "bad")
         ]
 
         if missing_tags:
@@ -283,19 +266,17 @@ class AnomalyDetectionAgent:
                 feature_profile_id=FEATURE_PROFILE_ID,
             ),
             issues=issues,
-            limitations=["Forecast reports are not used as model features.",
-    *(
-        [
-            "The anomaly model could not be loaded or evaluated; "
-            "only quality rules were applied."
-        ]
-        if any(
-            issue["code"] == "MODEL_UNAVAILABLE"
-            for issue in issues
-        )
-        else []
-    ),
-    "No detected event does not establish healthy equipment.",
+            limitations=[
+                "Forecast reports are not used as model features.",
+                *(
+                    [
+                        "The anomaly model could not be loaded or evaluated; "
+                        "only quality rules were applied."
+                    ]
+                    if any(issue["code"] == "MODEL_UNAVAILABLE" for issue in issues)
+                    else []
+                ),
+                "No detected event does not establish healthy equipment.",
             ],
         )
 
