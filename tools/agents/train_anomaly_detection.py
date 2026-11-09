@@ -279,43 +279,8 @@ def select_threshold(
     return float(thresholds[int(np.argmax(f1_values))])
 
 
-def main() -> None:
-    """Train candidate models and select using validation data."""
-    print("Loading official dataset splits...")
-
-    train_records = load_records("train")
-    validation_records = load_records("validation")
-
-    train_rows, y_train, _, _ = prepare_split(train_records)
-    validation_rows, y_validation, _, _ = prepare_split(validation_records)
-
-    if len(np.unique(y_train)) < 2:
-        raise ValueError("Training data must contain both physical classes.")
-
-    if len(np.unique(y_validation)) < 2:
-        raise ValueError("Validation data must contain both physical classes.")
-
-    feature_names = sorted({feature_name for row in train_rows for feature_name in row})
-
-    x_train = feature_matrix(train_rows, feature_names)
-    x_validation = feature_matrix(validation_rows, feature_names)
-
-    print(f"Eligible training records: {len(y_train)}")
-    print(f"Eligible validation records: {len(y_validation)}")
-    print(f"Number of features: {len(feature_names)}")
-
-    baseline_scores = np.zeros(len(y_validation), dtype=float)
-    baseline_predictions = np.zeros(len(y_validation), dtype=int)
-
-    results: dict[str, Any] = {
-        "always_negative": classification_metrics(
-            y_validation,
-            baseline_predictions,
-            baseline_scores,
-        )
-    }
-
-    models: dict[str, Pipeline] = {
+def build_candidate_models() -> dict[str, Pipeline]:
+    return {
         "logistic_regression": Pipeline(
             [
                 ("imputer", SimpleImputer(strategy="median")),
@@ -347,21 +312,35 @@ def main() -> None:
         ),
     }
 
+
+def train_candidate_models(
+    models: dict[str, Pipeline],
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    x_validation: np.ndarray,
+    y_validation: np.ndarray,
+) -> tuple[dict[str, Pipeline], dict[str, np.ndarray], dict[str, Any]]:
     fitted_models: dict[str, Pipeline] = {}
     validation_scores: dict[str, np.ndarray] = {}
+
+    results: dict[str, Any] = {
+        "always_negative": classification_metrics(
+            y_validation,
+            np.zeros(len(y_validation), dtype=int),
+            np.zeros(len(y_validation), dtype=float),
+        )
+    }
 
     print("\nTraining candidate models...")
 
     for name, model in models.items():
         model.fit(x_train, y_train)
-
         scores = model.predict_proba(x_validation)[:, 1]
 
         fitted_models[name] = model
         validation_scores[name] = scores
 
         predictions = (scores >= 0.5).astype(int)
-
         results[name] = classification_metrics(
             y_validation,
             predictions,
@@ -370,30 +349,45 @@ def main() -> None:
 
         print(f"{name}: validation average precision = {results[name]['average_precision']:.4f}")
 
+    return fitted_models, validation_scores, results
+
+
+def select_best_model(
+    fitted_models: dict[str, Pipeline],
+    validation_scores: dict[str, np.ndarray],
+    results: dict[str, Any],
+    y_validation: np.ndarray,
+) -> tuple[str, Pipeline, float, dict[str, Any]]:
     selected_name = max(
         fitted_models,
         key=lambda name: results[name]["average_precision"],
     )
 
     selected_model = fitted_models[selected_name]
-    selected_validation_scores = validation_scores[selected_name]
+    selected_scores = validation_scores[selected_name]
 
-    threshold = select_threshold(
-        y_validation,
-        selected_validation_scores,
-    )
-
-    validation_predictions = (selected_validation_scores >= threshold).astype(int)
+    threshold = select_threshold(y_validation, selected_scores)
+    predictions = (selected_scores >= threshold).astype(int)
 
     validation_metrics = classification_metrics(
         y_validation,
-        validation_predictions,
-        selected_validation_scores,
+        predictions,
+        selected_scores,
     )
 
-    print(f"\nSelected model: {selected_name}")
-    print(f"Validation-selected threshold: {threshold:.6f}")
+    return selected_name, selected_model, threshold, validation_metrics
 
+
+def save_training_outputs(
+    selected_model: Pipeline,
+    selected_name: str,
+    threshold: float,
+    feature_names: list[str],
+    y_train: np.ndarray,
+    y_validation: np.ndarray,
+    results: dict[str, Any],
+    validation_metrics: dict[str, Any],
+) -> None:
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -407,8 +401,6 @@ def main() -> None:
             "not a verified real-world equipment fault."
         ),
     }
-
-    joblib.dump(artifact, MODEL_DIR / "anomaly_detection_model.joblib")
 
     report = {
         "eligible_records": {
@@ -431,11 +423,78 @@ def main() -> None:
         ],
     }
 
+    joblib.dump(
+        artifact,
+        MODEL_DIR / "anomaly_detection_model.joblib",
+    )
+
     with (REPORT_DIR / "evaluation_report.json").open(
         "w",
         encoding="utf-8",
     ) as file:
         json.dump(report, file, indent=2)
+
+
+def main() -> None:
+    """Train candidate models and select using validation data."""
+    print("Loading official dataset splits...")
+
+    train_records = load_records("train")
+    validation_records = load_records("validation")
+
+    train_rows, y_train, _, _ = prepare_split(train_records)
+    validation_rows, y_validation, _, _ = prepare_split(validation_records)
+
+    if len(np.unique(y_train)) < 2:
+        raise ValueError("Training data must contain both physical classes.")
+
+    if len(np.unique(y_validation)) < 2:
+        raise ValueError("Validation data must contain both physical classes.")
+
+    feature_names = sorted({feature_name for row in train_rows for feature_name in row})
+
+    x_train = feature_matrix(train_rows, feature_names)
+    x_validation = feature_matrix(validation_rows, feature_names)
+
+    print(f"Eligible training records: {len(y_train)}")
+    print(f"Eligible validation records: {len(y_validation)}")
+    print(f"Number of features: {len(feature_names)}")
+
+    models = build_candidate_models()
+
+    fitted_models, validation_scores, results = train_candidate_models(
+        models,
+        x_train,
+        y_train,
+        x_validation,
+        y_validation,
+    )
+
+    selected_name = max(
+        fitted_models,
+        key=lambda name: results[name]["average_precision"],
+    )
+
+    selected_name, selected_model, threshold, validation_metrics = select_best_model(
+        fitted_models,
+        validation_scores,
+        results,
+        y_validation,
+    )
+
+    print(f"\nSelected model: {selected_name}")
+    print(f"Validation-selected threshold: {threshold:.6f}")
+
+    save_training_outputs(
+        selected_model,
+        selected_name,
+        threshold,
+        feature_names,
+        y_train,
+        y_validation,
+        results,
+        validation_metrics,
+    )
 
     print("\nValidation results:")
     print(json.dumps(validation_metrics, indent=2))
