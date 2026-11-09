@@ -1,3 +1,4 @@
+
 """Deterministic admission checks for Agent 8 evidence proposals.
 
 A proposal is usable only when time, provenance, quality, and scope
@@ -9,7 +10,13 @@ from __future__ import annotations
 from typing import Any
 
 
-def _check_provenance(claimed_ids, missing_ids, future_ids, admissible, source_ref):
+def _check_provenance(
+    claimed_ids: list[str],
+    missing_ids: list[str],
+    future_ids: list[str],
+    admissible: list[dict[str, Any]],
+    source_ref: str,
+) -> tuple[bool | None, list[str]]:
     """Verify provenance against all claimed evidence."""
     reasons = []
     # Check 2: source and provenance.
@@ -33,7 +40,11 @@ def _check_provenance(claimed_ids, missing_ids, future_ids, admissible, source_r
     return provenance_verified, reasons
 
 
-def _registry_rows(claimed_ids, evidence, as_of_s):
+def _registry_rows(
+    claimed_ids: list[str],
+    evidence: dict[str, dict[str, Any]],
+    as_of_s: float,
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     """Partition registered evidence by availability."""
     # Inspect registry metadata only; never inspect measurement values.
     registered = [evidence[ident] for ident in claimed_ids if ident in evidence]
@@ -45,7 +56,13 @@ def _registry_rows(claimed_ids, evidence, as_of_s):
     return admissible, missing_ids, future_ids
 
 
-def _check_time_and_provenance(claimed_ids, claimed_time, source_ref, evidence, as_of_s):
+def _check_time_and_provenance(
+    claimed_ids: list[str],
+    claimed_time: float | None,
+    source_ref: str,
+    evidence: dict[str, dict[str, Any]],
+    as_of_s: float,
+) -> tuple[bool | None, bool | None, list[dict[str, Any]], list[str]]:
     """Check registered evidence timing and provenance."""
     reasons = []
     admissible, missing_ids, future_ids = _registry_rows(claimed_ids, evidence, as_of_s)
@@ -68,7 +85,10 @@ def _check_time_and_provenance(claimed_ids, claimed_time, source_ref, evidence, 
     return time_admissible, provenance_verified, admissible, reasons
 
 
-def _quality_scope_reasons(quality_acceptable, scope_supported):
+def _quality_scope_reasons(
+    quality_acceptable: bool | None,
+    scope_supported: bool | None,
+) -> list[str]:
     """Explain quality and scope failures or unknowns."""
     reasons = []
     # Check 3: quality.
@@ -88,7 +108,12 @@ def _quality_scope_reasons(quality_acceptable, scope_supported):
     return reasons
 
 
-def _proposal_usability(time_admissible, provenance_verified, quality_acceptable, scope_supported):
+def _proposal_usability(
+    time_admissible: bool | None,
+    provenance_verified: bool | None,
+    quality_acceptable: bool | None,
+    scope_supported: bool | None,
+) -> bool | None:
     """Combine four admission checks without treating unknown as pass."""
     checks = (
         time_admissible,
@@ -108,15 +133,15 @@ def _proposal_usability(time_admissible, provenance_verified, quality_acceptable
 
 
 def _proposal_result(
-    proposal_id,
-    time_admissible,
-    provenance_verified,
-    quality_acceptable,
-    scope_supported,
-    usable,
-    reasons,
-    admissible,
-):
+    proposal_id: str,
+    time_admissible: bool | None,
+    provenance_verified: bool | None,
+    quality_acceptable: bool | None,
+    scope_supported: bool | None,
+    usable: bool | None,
+    reasons: list[str],
+    admissible: list[dict[str, Any]],
+) -> dict[str, Any]:
     """Build the evidence verification result."""
     return {
         "proposal_id": proposal_id,
@@ -130,7 +155,7 @@ def _proposal_result(
     }
 
 
-def _future_claim_result(proposal_id):
+def _future_claim_result(proposal_id: str) -> dict[str, Any]:
     """Reject evidence claimed after the analysis cutoff."""
     return {
         "proposal_id": proposal_id,
@@ -163,8 +188,11 @@ def check_proposal(
     # Reject a future claim before accessing any referenced evidence.
     if claimed_time is not None and claimed_time > as_of_s:
         return _future_claim_result(proposal_id)
+
     time_admissible, provenance_verified, admissible, admission_reasons = (
-        _check_time_and_provenance(claimed_ids, claimed_time, source_ref, evidence, as_of_s)
+        _check_time_and_provenance(
+            claimed_ids, claimed_time, source_ref, evidence, as_of_s
+        )
     )
     reasons.extend(admission_reasons)
 

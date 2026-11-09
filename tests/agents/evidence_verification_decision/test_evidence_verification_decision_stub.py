@@ -340,8 +340,9 @@ def test_repeated_run_is_deterministic() -> None:
     ],
 )
 def test_decision_precedence_adjacent_pairs(
-    checks, conflicts, diagnosis, missing_reports, expected
-):
+    checks: list[dict[str, Any]], conflicts: list[dict[str, Any]],
+    diagnosis: dict[str, Any] | None, missing_reports: list[str], expected: str
+) -> None:
     """Independent: each adjacent decision priority outranks the next state."""
     from verum.agents.evidence_verification_decision.agent import _decision
 
@@ -349,7 +350,7 @@ def test_decision_precedence_adjacent_pairs(
     assert state == expected
 
 
-def test_cutoff_and_noncandidate_regression():
+def test_cutoff_and_noncandidate_regression() -> None:
     """Independent: cutoff is inclusive and noncandidate hypotheses are insufficient."""
     from verum.agents.evidence_verification_decision.agent import _decision
 
@@ -361,7 +362,7 @@ def test_cutoff_and_noncandidate_regression():
     assert _decision(diagnosis, [{"usable": True}], [], [])[0] == "inconclusive"
 
 
-def test_sorted_checks_and_summary_ids():
+def test_sorted_checks_and_summary_ids() -> None:
     """Independent: checks are ordered and summary lists distinct evidence IDs."""
     from verum.agents.evidence_verification_decision.agent import (
         _build_decision_result,
