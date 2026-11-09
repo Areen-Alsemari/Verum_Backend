@@ -1,3 +1,4 @@
+
 """Independent tests for the inspection quality documentation agent."""
 
 from __future__ import annotations
@@ -336,7 +337,10 @@ def test_coverage_uses_inspection_request_target_asset() -> None:
 
 
 def test_missing_request_is_unknown_without_retest() -> None:
-    """Missing request context must not imply a failed inspection."""
+    """Missing request context must not imply a failed inspection.
+
+    Independent: yes, because the missing-request outcome is checked using a request constructed within this test.
+    """
     request = inspection_request_with_result()
     request["input"]["inspection_requests"] = []
 
@@ -352,7 +356,10 @@ def test_missing_request_is_unknown_without_retest() -> None:
 
 
 def test_calibration_validity_outcomes() -> None:
-    """Calibration validity depends on both expiry and assessment date."""
+    """Calibration validity depends on both expiry and assessment date.
+
+    Independent: yes, because calibration expiry is checked against independently supplied assessment dates.
+    """
     for expiry, as_of, expected, usable in [
         ("2026-12-31", "2026-11-08T12:00:00Z", "pass", True),
         ("2026-01-01", "2026-11-08T12:00:00Z", "fail", False),
@@ -373,7 +380,10 @@ def test_calibration_validity_outcomes() -> None:
 
 
 def test_request_evidence_is_cited_and_consumed() -> None:
-    """Request-dependent checks cite the originating request evidence."""
+    """Request-dependent checks cite the originating request evidence.
+
+    Independent: yes, because request evidence citation and consumption are asserted within this test.
+    """
     response, record = run_inspection(inspection_request_with_result())
     for name in ("request_link", "chronology", "human_approval"):
         check = next(c for c in record["checks"] if c["check_id"] == name)
@@ -382,6 +392,7 @@ def test_request_evidence_is_cited_and_consumed() -> None:
 
 
 def test_coverage_outside_time_is_unknown():
+    """Independent: yes, because coverage outside the inspection time window is tested directly."""
     request = inspection_request_with_result()
     request["input"]["process_coverage"][0]["end_s"] = 110.0
     _, record = run_inspection(request)
@@ -391,6 +402,7 @@ def test_coverage_outside_time_is_unknown():
 
 
 def test_coverage_without_evidence_is_unknown():
+    """Independent: yes, because coverage without supporting evidence is tested directly."""
     request = inspection_request_with_result()
     request["input"]["process_coverage"][0]["evidence_ids"] = []
     _, record = run_inspection(request)
@@ -399,7 +411,10 @@ def test_coverage_without_evidence_is_unknown():
 
 
 def test_invalid_numeric_measurements_are_rejected():
-    """Reject invalid measurement values at the public contract boundary."""
+    """Reject invalid measurement values at the public contract boundary.
+
+    Independent: yes, because invalid numeric values are passed to the public contract boundary and rejected.
+    """
     for field, value in [("value", True), ("uncertainty_k2", -1.0)]:
         request = inspection_request_with_result()
         metric = request["input"]["inspection_results"][0]["findings"]["primary_metric"]
@@ -409,6 +424,7 @@ def test_invalid_numeric_measurements_are_rejected():
 
 
 def test_coverage_wrong_asset_is_unknown() -> None:
+    """Independent: yes, because coverage for a different asset is checked against the request target."""
     request = inspection_request_with_result()
     request["input"]["process_coverage"][0]["target_asset"] = "TANK-002"
     _, record = run_inspection(request)
@@ -417,13 +433,17 @@ def test_coverage_wrong_asset_is_unknown() -> None:
 
 
 def test_valid_coverage_supports_scope() -> None:
+    """Independent: yes, because valid process coverage is checked directly against the inspection request."""
     _, record = run_inspection(inspection_request_with_result())
     assert inspection_check(record, "process_coverage") == "pass"
     assert record["scope_supported"] is True
 
 
 def test_mismatched_measurement_unit_rejects_scope() -> None:
-    """A catalog unit mismatch must not support inspection scope."""
+    """A catalog unit mismatch must not support inspection scope.
+
+    Independent: yes, because a catalog unit mismatch is tested directly against scope support.
+    """
     request = inspection_request_with_result()
     request["input"]["inspection_results"][0]["findings"]["primary_metric"]["unit"] = "cm"
     _, record = run_inspection(request)
