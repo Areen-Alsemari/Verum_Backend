@@ -647,6 +647,7 @@ def fail_first_call(real: Callable[..., Any]) -> Callable[..., Any]:
         "make_event",
         "build_response",
         "check_response",
+        "check_request",
         "attached_report_ids",
         "find_invalid_unit_signals",
     ],
