@@ -354,6 +354,42 @@ def test_usable_proposal_with_missing_upstream_report() -> None:
     assert result["decision_state"] != "assessment_available"
 
 
+def _fail_upstream_report(request: dict[str, Any], field: str, status: str) -> None:
+    """Keep an upstream report in the request but make it a resultless failure."""
+    report = request["input"][field]
+    report["status"] = status
+    report["result"] = None
+    report["issues"] = [
+        {"code": "UPSTREAM_FAILED", "message": "Forced upstream failure.", "evidence_ids": []}
+    ]
+    _reregister_reports(request)
+    check_request(request)
+
+
+@pytest.mark.parametrize("field", ["inspection_plan_report", "diagnosis_report"])
+@pytest.mark.parametrize("status", ["error", "insufficient_evidence"])
+def test_usable_proposal_with_failed_upstream_report(field: str, status: str) -> None:
+    """Independent: a present but failed upstream report still blocks an assessment."""
+    request = _registered_request_with_changes(diagnosis_candidates=True, quality_usable=True)
+    request["input"]["evidence_proposals"] = [_verified_proposal("proposal-failed-report")]
+
+    control = _run(copy.deepcopy(request))
+    assert control["result"]["decision_state"] == "assessment_available"
+
+    _fail_upstream_report(request, field, status)
+    response = _run(request)
+    result = response["result"]
+
+    assert result["evidence_checks"]
+    assert all(check["usable"] is True for check in result["evidence_checks"])
+    assert response["status"] == "degraded"
+    assert result["decision_state"] == "more_evidence_required"
+    assert result["human_decision_required"] is True
+    assert result["automatic_action_authorized"] is False
+    assert result["equipment_condition_confirmed"] is False
+    assert request["input"][field]["report_id"] in response["consumed_evidence_ids"]
+
+
 def test_review_required_when_verified_proposals_share_roots() -> None:
     """Independent: Overlapping evidence roots must trigger human review."""
     request = _registered_request_with_changes(
