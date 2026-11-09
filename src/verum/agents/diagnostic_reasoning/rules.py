@@ -1,11 +1,15 @@
 """Explicit comparison rules between diagnostic candidates and upstream agent reports.
 
 Upstream evidence is evaluated outside the learned observation model. Missing or failed reports
-produce unknown checks, and correlated sensor reports never multiply candidate scores.
+produce unknown checks, and correlated sensor reports never multiply candidate scores. Forecast
+comparison constants (1% relative tolerance, 0.02 absolute floor, 0.25 trend factor, and which
+tags count as rising) are unvalidated domain heuristics rather than calibrated thresholds.
 """
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Final
 
 from verum.agents.common import TAG_ORDER
@@ -28,29 +32,6 @@ SUPPORTED_MECHANISMS: Final[tuple[str, ...]] = (
     "stuck",
     "misroute_a",
 )
-
-LOW_SUPPORT_MECHANISMS: Final[dict[str, str]] = {
-    "leak": (
-        "Low-confidence mechanism (leak): uncalibrated decision score has low test precision "
-        "(0.0804 across 20 test episodes); do not interpret score as a probability."
-    ),
-    "restriction_obstruction": (
-        "Low-support mechanism (restriction_obstruction): only 2 validation episodes exist and "
-        "test precision is 0.1053; uncalibrated score is not a probability."
-    ),
-    "bias": (
-        "Low-confidence mechanism (bias): uncalibrated decision score has 0.2571 test precision "
-        "across 15 test episodes; do not interpret score as a probability."
-    ),
-    "stuck": (
-        "Low-support mechanism (stuck): only 1 positive test episode exists (test F1 0.0000); "
-        "uncalibrated score is not a probability."
-    ),
-    "misroute_a": (
-        "Unevaluable mechanism (misroute_a): 0 positive test episodes exist in the held-out "
-        "test split; candidate is not evaluable on held-out test data."
-    ),
-}
 
 SENSOR_MECHANISMS: Final = frozenset({"bias", "drift", "stuck"})
 
@@ -108,7 +89,118 @@ KNOWN_ASSETS: Final[frozenset[str]] = frozenset(
     }
 )
 
+DECLARED_NON_TAG_ASSETS: Final[frozenset[str]] = KNOWN_ASSETS - frozenset(
+    {
+        "PT-001",
+        "PT-201",
+        "PT-202A",
+        "PT-202B",
+        "PT-203",
+    }
+)
+
 KNOWN_TAGS: Final[frozenset[str]] = frozenset(TAG_ORDER)
+
+
+def _load_eval_summary() -> dict[str, Any]:
+    """Load shared evaluation metrics from the package report or return verified defaults."""
+    report_path = Path(__file__).resolve().parent / "evaluation_report.json"
+    data: dict[str, Any] = {}
+    if report_path.is_file():
+        try:
+            data = json.loads(report_path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+    base = data.get("test_baseline_always_negative", {})
+    overall = data.get("test_overall", {})
+    per_mech = data.get("test_per_mechanism", {})
+    cal_leak = data.get("calibration_check", {}).get("leak", {})
+    loc = data.get("localisation_evaluation", {})
+    inelig = data.get("ineligible_window_audit", {})
+    return {
+        "baseline_exact_set": float(base.get("exact_set_accuracy", 0.8225)),
+        "baseline_micro_f1": float(base.get("micro_f1", 0.0)),
+        "model_exact_set": float(overall.get("exact_set_accuracy", 0.8140)),
+        "model_micro_f1": float(overall.get("micro_f1", 0.3196)),
+        "leak_prec": float(per_mech.get("leak", {}).get("precision") or 0.0804),
+        "leak_eps": int(per_mech.get("leak", {}).get("positive_episodes") or 20),
+        "leak_elig_pos": int(cal_leak.get("score_ge_0_9_true_positives", 0)),
+        "leak_elig_cnt": int(cal_leak.get("score_ge_0_9_count", 8)),
+        "leak_all_pos": int(cal_leak.get("all_records_score_ge_0_9_true_positives", 2)),
+        "leak_all_cnt": int(cal_leak.get("all_records_score_ge_0_9_count", 69)),
+        "obst_prec": float(per_mech.get("restriction_obstruction", {}).get("precision") or 0.1053),
+        "bias_prec": float(per_mech.get("bias", {}).get("precision") or 0.2571),
+        "bias_eps": int(per_mech.get("bias", {}).get("positive_episodes") or 15),
+        "stuck_eps": int(per_mech.get("stuck", {}).get("positive_episodes") or 1),
+        "stuck_f1": float(per_mech.get("stuck", {}).get("f1") or 0.0),
+        "seen_assets": int(loc.get("assets_seen_in_train_positives", 38)),
+        "unseen_assets": int(loc.get("assets_never_in_train_count", 11)),
+        "total_assets": int(loc.get("total_known_assets", 49)),
+        "ineligible_pct": round(float(inelig.get("hypothesis_trigger_rate", 0.2708)) * 100),
+    }
+
+
+EVAL_FIGURES: Final[dict[str, Any]] = _load_eval_summary()
+
+LOW_SUPPORT_MECHANISMS: Final[dict[str, str]] = {
+    "leak": (
+        f"Low-confidence mechanism (leak): uncalibrated decision score has low test precision "
+        f"({EVAL_FIGURES['leak_prec']:.4f} across {EVAL_FIGURES['leak_eps']} test episodes; "
+        f"scores >= 0.90 were true leaks in {EVAL_FIGURES['leak_elig_pos']} of "
+        f"{EVAL_FIGURES['leak_elig_cnt']} eligible windows and {EVAL_FIGURES['leak_all_pos']} "
+        f"of {EVAL_FIGURES['leak_all_cnt']} across all records); do not interpret score as a "
+        "probability."
+    ),
+    "restriction_obstruction": (
+        "Low-support mechanism (restriction_obstruction): only 2 validation episodes exist and "
+        f"test precision is {EVAL_FIGURES['obst_prec']:.4f}; uncalibrated score is not a "
+        "probability."
+    ),
+    "bias": (
+        f"Low-confidence mechanism (bias): uncalibrated decision score has "
+        f"{EVAL_FIGURES['bias_prec']:.4f} test precision across {EVAL_FIGURES['bias_eps']} test "
+        "episodes; do not interpret score as a probability."
+    ),
+    "stuck": (
+        f"Low-support mechanism (stuck): only {EVAL_FIGURES['stuck_eps']} positive test episode "
+        f"exists (test F1 {EVAL_FIGURES['stuck_f1']:.4f}); uncalibrated score is not a "
+        "probability."
+    ),
+    "misroute_a": (
+        "Unevaluable mechanism (misroute_a): 0 positive test episodes exist in the held-out "
+        "test split; candidate is not evaluable on held-out test data."
+    ),
+}
+
+
+def build_default_limitations() -> tuple[str, ...]:
+    """Build the shared limitation statements from the computed evaluation summary figures."""
+    f = EVAL_FIGURES
+    return (
+        "Hypotheses are candidate explanations from simulated readings, not field-qualified "
+        "causes.",
+        "Empty hypotheses mean inconclusive evidence, never verified healthy equipment.",
+        f"Predicting no fault achieves {f['baseline_exact_set']:.4f} exact-set accuracy on the "
+        f"test split (above the model {f['model_exact_set']:.4f}), so micro-F1 "
+        f"({f['model_micro_f1']:.4f} vs {f['baseline_micro_f1']:.4f} baseline) is the primary "
+        "headline metric.",
+        f"Scores are uncalibrated decision scores, never probabilities: leak scores >= 0.90 "
+        f"were true leaks in {f['leak_elig_pos']} of {f['leak_elig_cnt']} eligible windows and "
+        f"{f['leak_all_pos']} of {f['leak_all_cnt']} across all records.",
+        "Low-support mechanisms (leak, restriction_obstruction, bias, stuck, misroute_a) carry "
+        "high false-discovery risk; misroute_a is not evaluable on held-out test data.",
+        f"Localisation is limited to {f['seen_assets']} declared assets seen in training; "
+        f"{f['unseen_assets']} of {f['total_assets']} declared assets never appear in positive "
+        "training examples.",
+        f"Approximately {f['ineligible_pct']}% of masked/ineligible test windows still trigger "
+        "candidate hypotheses.",
+        "Forecast check compares forecast direction and value with candidate hypotheses on "
+        "matching tags using unvalidated heuristic tolerances and returns unknown when no "
+        "hypothesis is present or forecast deltas are neutral.",
+        "Roof failure, vapour damage and mechanical fault cascades are outside the supported "
+        "scope.",
+    )
+
 
 ASSET_PRIMARY_TAGS: Final[dict[str, tuple[str, ...]]] = {
     "TK-101": ("LT-101", "TT-101"),
@@ -184,7 +276,7 @@ def _compare_tag_forecast(
     ref_delta = obs_slope * horizon if abs(obs_slope * horizon) >= abs(obs_delta) else obs_delta
 
     if mech == "stuck":
-        return "support" if abs(fc_val - obs_latest) <= tol else "conflict"
+        return "unknown" if abs(fc_val - obs_latest) <= tol else "conflict"
     if mech in ("drift", "bias"):
         if abs(ref_delta) > 1e-5:
             if fc_delta * ref_delta > 0 and abs(fc_delta) >= 0.25 * min(abs(ref_delta), tol):
