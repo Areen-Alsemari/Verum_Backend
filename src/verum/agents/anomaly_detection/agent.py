@@ -150,6 +150,16 @@ MODEL_UNAVAILABLE_TEXT = (
 )
 
 
+def make_single_threaded(model: Any) -> None:
+    """Make scoring repeatable: a forest that sums its trees over threads shifts the last digit."""
+    get_params = getattr(model, "get_params", None)
+    if not callable(get_params):
+        return
+    names = [name for name in get_params() if name == "n_jobs" or name.endswith("__n_jobs")]
+    if names:
+        model.set_params(**dict.fromkeys(names, 1))
+
+
 @cache
 def load_artifact() -> dict[str, Any]:
     """Load the anomaly detection artifact, verifying its hash before deserializing it."""
@@ -163,6 +173,7 @@ def load_artifact() -> dict[str, Any]:
     if not isinstance(artifact, dict):
         raise ValueError("invalid anomaly detection artifact")
 
+    make_single_threaded(artifact.get("model"))
     return artifact
 
 
