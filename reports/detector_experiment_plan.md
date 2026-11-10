@@ -98,3 +98,13 @@ If no candidate among C1, C2a, C2b, C3, C4 has both (a) validation average preci
 ## 9. Reproduction
 
 All code is under the experiment tool folder (a plain folder, not a package). The results report lists the exact commands, the seed 20261108 and the commit of the code.
+
+## 10. Amendment 1
+
+Written after the scoring stage had been run once and before any label-based metric was computed. The scoring stage uses labels only to choose the fault-free train windows.
+
+What was found, with a label-free check of the fitted baselines against the validation windows: the temperature tags (TT-001, TT-101, TT-102, TT-103) hold one of a few discrete set points per episode. Train fault-free windows sit at 25, 35 and 45 degrees C (25 is the median), validation windows at 35, 40 and 45, so 40 degrees C was held out of training. The median absolute z-score of the temperature level is about 0.1 on train and about 62 on validation, so the registered C1, C2 and C4 scores are dominated by a temperature shift that has nothing to do with faults. Section 2 did not anticipate this.
+
+What stays: the registered candidates C1, C2a, C2b, C3 and C4 are run exactly as registered. They are the only candidates the stop rule of section 8 applies to, and their table comes first in the results.
+
+What is added, as an exploratory sensitivity that cannot change the outcome of the stop rule: one variant of each of C1, C2a, C2b and C4, named C1s, C2as, C2bs and C4s. They are identical to the registered ones except that the level components of the four temperature tags (the `mean` column and the CUSUM component) are set to zero before scoring; slope and spread of those tags are kept. C3 does not use temperature and is not repeated. C4s fuses C1s, C2as, C2bs and C3 with the same rule. They are reported in a separate table labelled as sensitivity. No other variant will be added.
