@@ -1,4 +1,3 @@
-
 """Evidence-backed evaluation of inspection action preconditions."""
 
 from __future__ import annotations
@@ -58,10 +57,7 @@ def _approved_workflow_exists(
     target_asset: str,
 ) -> bool:
     """Require a matching, explicitly approved workflow request."""
-    workflow_by_source = {
-        "inspection_request:" + row["request_id"]: row
-        for row in workflows
-    }
+    workflow_by_source = {"inspection_request:" + row["request_id"]: row for row in workflows}
 
     matched = []
 
@@ -80,7 +76,7 @@ def _approved_workflow_exists(
             workflow["action_id"] != action_id
             or workflow["target_asset"] != target_asset
             or approval["status"] != "APPROVED"
-            or not approval.get("work_permit_number", "").strip()
+            or not (approval.get("work_permit_number") or "").strip()
         ):
             return False
 
@@ -96,29 +92,16 @@ def evaluate_preconditions(
 ) -> tuple[list[dict[str, Any]], str]:
     """Evaluate catalog preconditions using scoped, registered evidence."""
     inputs = request["input"]
-    evidence = {
-        row["evidence_id"]: row
-        for row in request["evidence"]
-    }
+    evidence = {row["evidence_id"]: row for row in request["evidence"]}
     workflows = inputs.get("workflow_requests", [])
-    target_is_unambiguous = (
-        inputs["target_asset_ids"] == [target_asset]
-    )
+    target_is_unambiguous = inputs["target_asset_ids"] == [target_asset]
 
     checks: list[dict[str, Any]] = []
 
     for index, description in enumerate(action["preconditions"], start=1):
-        matching = [
-            row
-            for row in inputs["constraint_checks"]
-            if row["description"] == description
-        ]
+        matching = [row for row in inputs["constraint_checks"] if row["description"] == description]
 
-        evidence_ids = {
-            evidence_id
-            for row in matching
-            for evidence_id in row["evidence_ids"]
-        }
+        evidence_ids = {evidence_id for row in matching for evidence_id in row["evidence_ids"]}
         outcomes = {row["outcome"] for row in matching}
         permit_required = _is_permit_precondition(description)
 

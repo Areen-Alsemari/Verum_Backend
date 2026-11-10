@@ -1,4 +1,3 @@
-
 """Tests for evidence-backed inspection precondition evaluation."""
 
 from __future__ import annotations
@@ -7,7 +6,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from verum.agents.inspection_planning.agent import InspectionPlanningAgent
+import pytest
+
+from verum.agents.common import attached_report_ids, check_response
+from verum.agents.inspection_planning import agent as planning_agent
+from verum.agents.inspection_planning.agent import InspectionPlanningAgent, _within_budget
 from verum.agents.inspection_planning.preconditions import (
     evaluate_preconditions,
 )
@@ -17,6 +20,10 @@ def make_request(
     constraint_checks: list[dict[str, Any]],
     target_asset_ids: list[str] | None = None,
     approval_status: str = "APPROVED",
+    *,
+    permit_number: str | None = "PERMIT-001",
+    workflow_action: str = "ACT-INSP-01",
+    workflow_target: str = "TK-101",
 ) -> dict[str, Any]:
     """Build a minimal request for precondition tests."""
     return {
@@ -46,15 +53,11 @@ def make_request(
             "workflow_requests": [
                 {
                     "request_id": "REQ-INSP-00001",
-                    "action_id": "ACT-INSP-01",
-                    "target_asset": "TK-101",
+                    "action_id": workflow_action,
+                    "target_asset": workflow_target,
                     "human_approval": {
                         "status": approval_status,
-                        "work_permit_number": (
-                            "PERMIT-001"
-                            if approval_status == "APPROVED"
-                            else None
-                        ),
+                        "work_permit_number": permit_number,
                     },
                 }
             ],
@@ -71,6 +74,27 @@ def make_action() -> dict[str, Any]:
             "Authorised permit issued by the approval",
         ],
     }
+
+
+def passing_checks(
+    level_evidence: list[str] | None = None,
+    permit_evidence: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Two passing checks, one per precondition of the test action."""
+    return [
+        {
+            "check_id": "CHK-01",
+            "description": "Tank level above 1.8 m",
+            "outcome": "pass",
+            "evidence_ids": ["EV-001"] if level_evidence is None else level_evidence,
+        },
+        {
+            "check_id": "CHK-02",
+            "description": "Authorised permit issued by the approval",
+            "outcome": "pass",
+            "evidence_ids": ["EV-002"] if permit_evidence is None else permit_evidence,
+        },
+    ]
 
 
 def test_all_sourced_preconditions_pass() -> None:
@@ -95,9 +119,7 @@ def test_all_sourced_preconditions_pass() -> None:
         ]
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "eligible_for_human_review"
     assert [check["outcome"] for check in checks] == ["pass", "pass"]
@@ -108,9 +130,7 @@ def test_missing_preconditions_remain_unknown() -> None:
 
     Independent: yes, because the request contains no constraint evidence.
     """
-    checks, feasibility = evaluate_preconditions(
-        make_action(), make_request([]), "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), make_request([]), "TK-101")
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["unknown", "unknown"]
@@ -132,9 +152,7 @@ def test_failed_precondition_blocks_the_action() -> None:
         ]
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "blocked"
     assert checks[0]["outcome"] == "fail"
@@ -163,9 +181,7 @@ def test_unregistered_evidence_cannot_support_a_check() -> None:
         ]
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["unknown", "pass"]
@@ -194,9 +210,7 @@ def test_pending_approval_does_not_satisfy_permit() -> None:
         approval_status="PENDING",
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["pass", "unknown"]
@@ -225,9 +239,7 @@ def test_rejected_approval_does_not_satisfy_permit() -> None:
         approval_status="REJECTED",
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["pass", "unknown"]
@@ -255,9 +267,7 @@ def test_conflicting_checks_remain_unknown() -> None:
         ]
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "unknown"
     assert checks[0]["outcome"] == "unknown"
@@ -287,9 +297,7 @@ def test_multiple_target_assets_prevent_ambiguous_scoping() -> None:
         ["TK-101", "TK-102"],
     )
 
-    checks, feasibility = evaluate_preconditions(
-        make_action(), request, "TK-101"
-    )
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
 
     assert feasibility == "unknown"
     assert [check["outcome"] for check in checks] == ["unknown", "unknown"]
@@ -305,7 +313,8 @@ def make_runtime_request() -> dict[str, Any]:
         / "chained"
         / "inspection_planning.request.json"
     )
-    return json.loads(fixture.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(fixture.read_text(encoding="utf-8"))
+    return data
 
 
 def test_runtime_generates_contract_valid_options() -> None:
@@ -330,14 +339,8 @@ def test_runtime_only_matches_compatible_asset_kinds() -> None:
     request = make_runtime_request()
     response = InspectionPlanningAgent().run(request)
 
-    assets = {
-        asset["asset_id"]: asset["kind"]
-        for asset in request["input"]["assets"]
-    }
-    actions = {
-        action["action_id"]: action
-        for action in request["input"]["catalog"]
-    }
+    assets = {asset["asset_id"]: asset["kind"] for asset in request["input"]["assets"]}
+    actions = {action["action_id"]: action for action in request["input"]["catalog"]}
 
     for option in response["result"]["options"]:
         action = actions[option["action_id"]]
@@ -353,10 +356,7 @@ def test_runtime_keeps_missing_preconditions_unknown() -> None:
     response = InspectionPlanningAgent().run(request)
 
     assert request["input"]["constraint_checks"] == []
-    assert all(
-        option["feasibility"] == "unknown"
-        for option in response["result"]["options"]
-    )
+    assert all(option["feasibility"] == "unknown" for option in response["result"]["options"])
 
 
 def test_runtime_respects_inspection_budget() -> None:
@@ -370,16 +370,11 @@ def test_runtime_respects_inspection_budget() -> None:
     response = InspectionPlanningAgent().run(request)
 
     expensive_options = [
-        option
-        for option in response["result"]["options"]
-        if option["cost_usd"] > 100.0
+        option for option in response["result"]["options"] if option["cost_usd"] > 100.0
     ]
 
     assert expensive_options
-    assert all(
-        option["feasibility"] == "blocked"
-        for option in expensive_options
-    )
+    assert all(option["feasibility"] == "blocked" for option in expensive_options)
 
 
 def test_runtime_does_not_invent_diagnostic_hypotheses() -> None:
@@ -391,7 +386,128 @@ def test_runtime_does_not_invent_diagnostic_hypotheses() -> None:
     response = InspectionPlanningAgent().run(request)
 
     assert request["input"]["diagnosis_report"]["result"]["hypotheses"] == []
-    assert all(
-        option["addresses_hypothesis_ids"] == []
-        for option in response["result"]["options"]
+    assert all(option["addresses_hypothesis_ids"] == [] for option in response["result"]["options"])
+
+
+@pytest.mark.parametrize(
+    ("cost", "duration", "fits"),
+    [
+        (100.0, 60.0, True),
+        (101.0, 60.0, False),
+        (100.0, 61.0, False),
+    ],
+)
+def test_budget_limits_are_inclusive(cost: float, duration: float, fits: bool) -> None:
+    """An action exactly at the cost and duration limits fits; one unit over does not.
+
+    Independent: yes, because the limits are fixed numbers in the test.
+    """
+    action = {"cost_usd": cost, "duration_min": duration}
+    budget = {"max_cost_usd": 100.0, "max_duration_min": 60.0}
+    assert _within_budget(action, budget) is fits
+
+
+def test_check_without_evidence_is_not_met() -> None:
+    """A passing check that cites no evidence leaves the precondition unknown.
+
+    Independent: yes, because the evidence list is empty by construction.
+    """
+    request = make_request(passing_checks(level_evidence=[]))
+    checks, feasibility = evaluate_preconditions(make_action(), request, "TK-101")
+    assert checks[0]["outcome"] == "unknown"
+    assert feasibility == "unknown"
+
+
+@pytest.mark.parametrize("number", [None, "", "   "])
+def test_approved_permit_without_number_is_not_met(number: str | None) -> None:
+    """An approved workflow with no permit number does not satisfy the permit.
+
+    Independent: yes, because only the permit number differs from a passing request.
+    """
+    request = make_request(passing_checks(), permit_number=number)
+    checks, _ = evaluate_preconditions(make_action(), request, "TK-101")
+    assert checks[1]["outcome"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("workflow_action", "workflow_target"),
+    [("ACT-OTHER", "TK-101"), ("ACT-INSP-01", "TK-102")],
+)
+def test_permit_for_another_action_or_target_is_not_met(
+    workflow_action: str, workflow_target: str
+) -> None:
+    """A permit approved for a different action or asset does not satisfy this one.
+
+    Independent: yes, because only the workflow scope differs from a passing request.
+    """
+    request = make_request(
+        passing_checks(),
+        workflow_action=workflow_action,
+        workflow_target=workflow_target,
     )
+    checks, _ = evaluate_preconditions(make_action(), request, "TK-101")
+    assert checks[1]["outcome"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("index", "field", "value"),
+    [
+        (0, "provenance", "simulated_workflow"),
+        (0, "source_ref", "features:window-001"),
+        (1, "provenance", "simulated_observation"),
+        (1, "source_ref", "observations:REQ-INSP-00001"),
+    ],
+)
+def test_wrong_provenance_or_source_prefix_is_not_met(index: int, field: str, value: str) -> None:
+    """Evidence with the wrong provenance or source prefix cannot support a check.
+
+    Independent: yes, because one registered evidence field is changed per case.
+    """
+    request = make_request(passing_checks())
+    request["evidence"][index][field] = value
+    checks, _ = evaluate_preconditions(make_action(), request, "TK-101")
+    assert checks[index]["outcome"] == "unknown"
+
+
+def test_checks_keep_their_evidence() -> None:
+    """Each check lists the evidence that supports it.
+
+    Independent: yes, because the expected ids are the ones placed in the request.
+    """
+    checks, _ = evaluate_preconditions(make_action(), make_request(passing_checks()), "TK-101")
+    assert [check["evidence_ids"] for check in checks] == [["EV-001"], ["EV-002"]]
+
+
+def assert_validated_error(request: dict[str, Any], response: dict[str, Any], code: str) -> None:
+    """Shared checks for every error response."""
+    assert response["status"] == "error"
+    assert response["result"] is None
+    assert any(issue["code"] == code for issue in response["issues"])
+    assert set(attached_report_ids(request)) <= set(response["consumed_evidence_ids"])
+    check_response(request, response)
+
+
+def test_duplicate_action_id_returns_a_validated_error() -> None:
+    """A catalogue that repeats an action id is answered with an error, not raised.
+
+    Independent: yes, because the duplicate is added to the fixture in the test.
+    """
+    request = make_runtime_request()
+    request["input"]["catalog"].append(dict(request["input"]["catalog"][0]))
+    response = InspectionPlanningAgent().run(request)
+    assert_validated_error(request, response, "DUPLICATE_ACTION_ID")
+
+
+def test_internal_failure_returns_a_validated_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An exception inside planning returns a validated error that keeps the report ids.
+
+    Independent: yes, because the failure is injected and checked by the real validator.
+    """
+
+    def fail(*_args: Any, **_kwargs: Any) -> Any:
+        raise RuntimeError("injected")
+
+    monkeypatch.setattr(planning_agent, "evaluate_action", fail)
+    request = make_runtime_request()
+    response = InspectionPlanningAgent().run(request)
+    assert_validated_error(request, response, "INTERNAL_ERROR")
