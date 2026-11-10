@@ -97,8 +97,20 @@ ARTIFACT_PATH = Path(__file__).resolve().parent / "artifacts" / "anomaly_detecti
 EXPECTED_ARTIFACT_SHA256 = "7edefb2121fb23f04339c8a7791de3552f14ec5d953d7e23548075ac7ef4f531"
 
 
+VALIDATION_F1 = 0.241
+ALWAYS_FLAG_VALIDATION_F1 = 0.222
 TEST_F1 = 0.352
 ALWAYS_FLAG_TEST_F1 = 0.302
+TEST_FLAGGED_FRACTION = 0.81
+STAGE_MATCHED_TEST_AUROC = 0.51
+
+SKILL_SUMMARY = (
+    f"Validation F1 {VALIDATION_F1:.3f} and test F1 {TEST_F1:.3f}, against "
+    f"{ALWAYS_FLAG_VALIDATION_F1:.3f} and {ALWAYS_FLAG_TEST_F1:.3f} for flagging every "
+    f"window; it flags about {TEST_FLAGGED_FRACTION:.0%} of test windows, its AUROC "
+    f"among windows at the same episode stage is about {STAGE_MATCHED_TEST_AUROC:.2f} "
+    "(chance), and it scores perfectly on its training windows (overfit)."
+)
 
 PROFILE_DESCRIPTIONS = {
     AGGREGATE_PROFILE_ID: (
@@ -114,21 +126,13 @@ PROFILE_DESCRIPTIONS = {
         "than a physical change."
     ),
 }
-# Below this F1 margin over flagging every window, the skill is described as weak.
-WEAK_SKILL_MARGIN = 0.10
 
 
 def detector_limitations(profile_id: str = FEATURE_PROFILE_ID) -> tuple[str, ...]:
     """Limitations stated on every response and event in which the detector ran."""
-    skill = (
-        f"On the held-out simulated test split it reached F1 {TEST_F1:.2f}, against "
-        f"{ALWAYS_FLAG_TEST_F1:.2f} for flagging every window"
-    )
-    if TEST_F1 - ALWAYS_FLAG_TEST_F1 < WEAK_SKILL_MARGIN:
-        skill += ", so its physical skill is weak"
     return (
         PROFILE_DESCRIPTIONS[profile_id],
-        skill + ".",
+        SKILL_SUMMARY,
         "An earlier version scored higher only because a reading-arrival timing field "
         "marked injected changes in the simulator; that field is not a physical "
         "measurement and is no longer used.",

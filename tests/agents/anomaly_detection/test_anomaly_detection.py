@@ -8,6 +8,7 @@ import math
 import pickle
 import struct
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any
 
 import joblib  # type: ignore[import-untyped]
@@ -776,3 +777,28 @@ def test_unknown_feature_profile_is_model_unavailable(monkeypatch: pytest.Monkey
 
     assert any(issue["code"] == "MODEL_UNAVAILABLE" for issue in response["issues"])
     assert not departures(response)
+
+
+def test_skill_constants_match_the_reports() -> None:
+    """The stated F1 values and flagged share equal the shipped evaluation and test reports.
+
+    Independent: yes, because the reports are written by the training run and read from disk.
+    """
+    folder = Path(__file__).parents[3] / "tools" / "agents" / "anomaly_detection_artifacts"
+    evaluation = json.loads((folder / "evaluation_report.json").read_text(encoding="utf-8"))
+    test = json.loads((folder / "test_report.json").read_text(encoding="utf-8"))
+
+    chosen = evaluation["profiles"][evaluation["chosen_profile"]]
+    validation = chosen["candidates"][evaluation["selected_model"]]["validation"]
+    assert anomaly_agent.VALIDATION_F1 == pytest.approx(validation["f1"], abs=5e-4)
+    assert anomaly_agent.ALWAYS_FLAG_VALIDATION_F1 == pytest.approx(
+        evaluation["validation_baselines"]["always_flag"]["f1"], abs=5e-4
+    )
+
+    assert anomaly_agent.TEST_F1 == pytest.approx(test["selected"]["f1"], abs=5e-4)
+    assert anomaly_agent.ALWAYS_FLAG_TEST_F1 == pytest.approx(
+        test["baselines"]["always_flag"]["f1"], abs=5e-4
+    )
+    matrix = test["selected"]["confusion_matrix"]
+    flagged = (matrix["true_positive"] + matrix["false_positive"]) / sum(matrix.values())
+    assert anomaly_agent.TEST_FLAGGED_FRACTION == pytest.approx(flagged, abs=5e-3)
