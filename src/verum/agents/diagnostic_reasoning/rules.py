@@ -258,6 +258,34 @@ def _is_stub_or_failed(report: dict[str, Any] | None) -> bool:
     return any(i.get("code") in ("STUB_NOT_IMPLEMENTED", "CONTRACT_EXAMPLE") for i in issues)
 
 
+NO_TARGET_QUESTION: Final = (
+    "The anomaly report names no tag or asset, so it can neither support nor contradict "
+    "this hypothesis."
+)
+NO_TARGET_DESCRIPTION: Final = (
+    "The anomaly report names no tag or asset, so it can neither support nor contradict "
+    "any hypothesis."
+)
+
+
+def _event_names_target(event: dict[str, Any]) -> bool:
+    """Whether an anomaly event names at least one tag or asset."""
+    return bool(event.get("tag_ids") or event.get("asset_ids"))
+
+
+def anomaly_names_no_target(result: dict[str, Any]) -> bool:
+    """Whether the report holds events and none of them names a tag or an asset."""
+    events = result.get("events", [])
+    return bool(events) and not any(_event_names_target(event) for event in events)
+
+
+def _check_description(field: str, result: dict[str, Any]) -> str:
+    """Description of one upstream check; it says so when the anomaly report names no target."""
+    if field == "anomaly_report" and anomaly_names_no_target(result):
+        return NO_TARGET_DESCRIPTION
+    return f"Compare available {field}"
+
+
 def _compare_tag_forecast(
     mech: str, tag_id: str, fc_row: dict[str, Any], sig: dict[str, Any] | None
 ) -> str:
@@ -355,6 +383,8 @@ def _check_single_upstream(
             return "pass"
         return "unknown"
     if field == "anomaly_report":
+        if anomaly_names_no_target(res):
+            return "unknown"
         if res.get("coverage") in ("assessed", "partial"):
             return "pass"
     elif field == "topology_report":
@@ -396,7 +426,7 @@ def evaluate_upstream_checks(
         checks.append(
             {
                 "check_id": field,
-                "description": f"Compare available {field}",
+                "description": _check_description(field, report["result"]),
                 "outcome": outcome,
                 "evidence_ids": [report["report_id"]],
             }
@@ -417,14 +447,17 @@ def _check_anomaly_and_forecast(
     anom = inputs.get("anomaly_report")
     if not _is_stub_or_failed(anom) and anom is not None:
         events = anom["result"].get("events", [])
-        anom_assets = {a for ev in events for a in ev.get("asset_ids", [])}
-        anom_tags = {t for ev in events for t in ev.get("tag_ids", [])}
+        named = [ev for ev in events if _event_names_target(ev)]
+        anom_assets = {a for ev in named for a in ev.get("asset_ids", [])}
+        anom_tags = {t for ev in named for t in ev.get("tag_ids", [])}
         if (comp_assets & anom_assets) or (comp_tags & anom_tags):
             if anom["report_id"] not in support:
                 support.append(anom["report_id"])
-        elif events and anom["result"].get("coverage") == "assessed":
+        elif named and anom["result"].get("coverage") == "assessed":
             if anom["report_id"] not in conflicts:
                 conflicts.append(anom["report_id"])
+        elif events and not named:
+            questions.append(NO_TARGET_QUESTION)
     else:
         questions.append("Anomaly detection report is unavailable or inconclusive.")
 

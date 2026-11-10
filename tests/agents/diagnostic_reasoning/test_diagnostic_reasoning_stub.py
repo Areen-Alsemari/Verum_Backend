@@ -38,6 +38,7 @@ from verum.agents.diagnostic_reasoning.model import (
     format_hypotheses,
 )
 from verum.agents.diagnostic_reasoning.rules import (
+    ASSET_PRIMARY_TAGS,
     LOW_SUPPORT_MECHANISMS,
     SUPPORTED_MECHANISMS,
     UPSTREAM_FIELDS,
@@ -604,3 +605,142 @@ def test_invalid_component_mechanism_is_rejected() -> None:
     preds = [CandidatePrediction("leak", "E001", None, 0.8, "m1")]
     hyps = format_hypotheses(preds)
     assert hyps[0]["components"][0]["mechanism"] in SUPPORTED_MECHANISMS
+
+
+NO_TARGET_TEXT = "names no tag or asset"
+
+
+def _anomaly_event(tag_ids: list[str], asset_ids: list[str], category: str) -> dict[str, Any]:
+    """One anomaly event with the given tag and asset lists."""
+    return {
+        "event_id": "EV-" + category,
+        "tag_ids": tag_ids,
+        "asset_ids": asset_ids,
+        "category": category,
+        "score": None,
+        "method_id": "rule_v1",
+        "evidence_ids": ["source-observations"],
+        "limitations": ["Rule check."],
+    }
+
+
+def _model_event() -> dict[str, Any]:
+    """The detector's window-level event, which names no tag and no asset."""
+    return _anomaly_event([], [], "reported_signal_departure")
+
+
+def _run_with_events(tmp_path: Path, events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Run the agent on the chained request with a usable anomaly report holding these events."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    path, sha = _write_mock_artifact(tmp_path)
+    request = _chained_request()
+    anom = copy.deepcopy(request["input"]["anomaly_report"])
+    anom.update(issues=[], status="complete")
+    anom["result"].update(coverage="assessed", events=events)
+    request["input"]["anomaly_report"] = anom
+    for row in request["evidence"]:
+        if row["evidence_id"] == anom["report_id"]:
+            row["content_sha256"] = stable_hash(anom)
+    response: dict[str, Any] = DiagnosticReasoningAgent(path, expected_sha256=sha).run(request)
+    check_response(request, response)
+    response["_anomaly_id"] = anom["report_id"]
+    return response
+
+
+def _pump(response: dict[str, Any]) -> dict[str, Any]:
+    hyp: dict[str, Any] = next(
+        h for h in response["result"]["hypotheses"] if h["components"][0]["asset_id"] == "P-101A"
+    )
+    return hyp
+
+
+def test_event_naming_no_tag_or_asset_is_neither_support_nor_conflict(tmp_path: Path) -> None:
+    """A tag-less, asset-less event adds no support or conflict, an unknown check and a message.
+
+    Independent: yes, because the event and its empty lists are built by the test.
+    """
+    response = _run_with_events(tmp_path, [_model_event()])
+    anomaly_id = response["_anomaly_id"]
+    assert len(response["result"]["hypotheses"]) >= 2
+    for hyp in response["result"]["hypotheses"]:
+        assert anomaly_id not in hyp["support_evidence_ids"]
+        assert anomaly_id not in hyp["conflict_evidence_ids"]
+        assert any(NO_TARGET_TEXT in q for q in hyp["unresolved_questions"])
+    check = next(
+        c for c in response["result"]["upstream_checks"] if c["check_id"] == "anomaly_report"
+    )
+    assert check["outcome"] == "unknown"
+    assert NO_TARGET_TEXT in check["description"]
+    assert check["evidence_ids"] == [anomaly_id]
+
+
+def test_event_naming_the_candidate_asset_still_supports(tmp_path: Path) -> None:
+    """An event that names the candidate's asset is support, as before, and the check passes.
+
+    Independent: yes, because the event names the asset of the mock pump candidate.
+    """
+    response = _run_with_events(
+        tmp_path, [_model_event(), _anomaly_event([], ["P-101A"], "non_good_quality")]
+    )
+    pump = _pump(response)
+    assert response["_anomaly_id"] in pump["support_evidence_ids"]
+    assert response["_anomaly_id"] not in pump["conflict_evidence_ids"]
+    assert not any(NO_TARGET_TEXT in q for q in pump["unresolved_questions"])
+    check = next(
+        c for c in response["result"]["upstream_checks"] if c["check_id"] == "anomaly_report"
+    )
+    assert check["outcome"] == "pass"
+
+
+def test_event_naming_another_asset_is_still_a_conflict(tmp_path: Path) -> None:
+    """An event that names only other tags and assets stays a conflict, as before.
+
+    Independent: yes, because the event names a tank tag and valve that the pump does not use.
+    """
+    response = _run_with_events(
+        tmp_path, [_anomaly_event(["TT-103"], ["XV-S103"], "non_good_quality")]
+    )
+    pump = _pump(response)
+    assert response["_anomaly_id"] in pump["conflict_evidence_ids"]
+    assert response["_anomaly_id"] not in pump["support_evidence_ids"]
+    assert not any(NO_TARGET_TEXT in q for q in pump["unresolved_questions"])
+
+
+def test_tagged_quality_event_keeps_its_behaviour_next_to_a_tag_less_event(
+    tmp_path: Path,
+) -> None:
+    """A data-quality event with tags decides support or conflict; the tag-less event is ignored.
+
+    Independent: yes, because the tags are taken from the pump's declared primary tags.
+    """
+    on_pump = ASSET_PRIMARY_TAGS["P-101A"][1]
+    overlapping = _anomaly_event([on_pump], [], "missing_reading")
+    elsewhere = _anomaly_event(["TT-103"], [], "missing_reading")
+    supported = _run_with_events(tmp_path, [_model_event(), overlapping])
+    assert supported["_anomaly_id"] in _pump(supported)["support_evidence_ids"]
+    assert supported["_anomaly_id"] not in _pump(supported)["conflict_evidence_ids"]
+    contradicted = _run_with_events(tmp_path / "other", [_model_event(), elsewhere])
+    assert contradicted["_anomaly_id"] in _pump(contradicted)["conflict_evidence_ids"]
+
+
+def test_anomaly_event_shape_does_not_change_the_hypotheses(tmp_path: Path) -> None:
+    """Hypothesis ids, components and scores are the same whatever the anomaly events say.
+
+    Independent: yes, because only the events change and the mock model scores are fixed.
+    """
+    shapes = [
+        [],
+        [_model_event()],
+        [_anomaly_event([], ["P-101A"], "non_good_quality")],
+        [_anomaly_event(["TT-103"], ["XV-S103"], "non_good_quality")],
+    ]
+    seen = []
+    for index, events in enumerate(shapes):
+        response = _run_with_events(tmp_path / str(index), events)
+        seen.append(
+            [
+                (h["hypothesis_id"], h["components"], h["score"])
+                for h in response["result"]["hypotheses"]
+            ]
+        )
+    assert seen[0] and all(item == seen[0] for item in seen)
