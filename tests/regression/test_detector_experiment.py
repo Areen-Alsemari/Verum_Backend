@@ -311,3 +311,20 @@ def test_shift_guard_removes_only_the_temperature_level_components() -> None:
     assert guarded.parts[0, column] < 3.0
     others = [j for j in range(14) if j not in candidates.SHIFT_IDX]
     assert np.allclose(plain.parts[0, others], guarded.parts[0, others])
+
+
+def test_placebo_separates_only_when_early_windows_differ_by_episode_type() -> None:
+    """The placebo AUROC is high for a score that reads the episode type, near 0.5 otherwise.
+
+    Independent: yes, because one score is built from the episode label and the other is noise.
+    """
+    diagnostics, metrics = load("diagnostics"), load("metrics")
+    rng = np.random.default_rng(8)
+    episodes = [f"e{k}" for k in range(60) for _ in range(3)]
+    later = np.repeat((np.arange(60) % 2).astype(np.intp), 3)
+    stage = np.tile(np.arange(1, 4, dtype=np.intp), 60)
+    groups = metrics.episode_groups(episodes)
+    informed = diagnostics.placebo(later + 0.1 * rng.random(180), later, stage, groups)
+    noise = diagnostics.placebo(rng.random(180), later, stage, groups)
+    assert informed[0] > 0.95
+    assert abs(noise[0] - 0.5) < 0.1
