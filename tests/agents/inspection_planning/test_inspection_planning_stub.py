@@ -83,13 +83,13 @@ def passing_checks(
     """Two passing checks, one per precondition of the test action."""
     return [
         {
-            "check_id": "CHK-01",
+            "check_id": "ACT-INSP-01-TK-101-PRE-01",
             "description": "Tank level above 1.8 m",
             "outcome": "pass",
             "evidence_ids": ["EV-001"] if level_evidence is None else level_evidence,
         },
         {
-            "check_id": "CHK-02",
+            "check_id": "ACT-INSP-01-TK-101-PRE-02",
             "description": "Authorised permit issued by the approval",
             "outcome": "pass",
             "evidence_ids": ["EV-002"] if permit_evidence is None else permit_evidence,
@@ -105,13 +105,13 @@ def test_all_sourced_preconditions_pass() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "pass",
                 "evidence_ids": ["EV-001"],
             },
             {
-                "check_id": "CHK-02",
+                "check_id": "ACT-INSP-01-TK-101-PRE-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
                 "evidence_ids": ["EV-002"],
@@ -144,7 +144,7 @@ def test_failed_precondition_blocks_the_action() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "fail",
                 "evidence_ids": ["EV-001"],
@@ -167,13 +167,13 @@ def test_unregistered_evidence_cannot_support_a_check() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "pass",
                 "evidence_ids": ["EV-MISSING"],
             },
             {
-                "check_id": "CHK-02",
+                "check_id": "ACT-INSP-01-TK-101-PRE-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
                 "evidence_ids": ["EV-002"],
@@ -195,13 +195,13 @@ def test_pending_approval_does_not_satisfy_permit() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "pass",
                 "evidence_ids": ["EV-001"],
             },
             {
-                "check_id": "CHK-02",
+                "check_id": "ACT-INSP-01-TK-101-PRE-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
                 "evidence_ids": ["EV-002"],
@@ -224,13 +224,13 @@ def test_rejected_approval_does_not_satisfy_permit() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "pass",
                 "evidence_ids": ["EV-001"],
             },
             {
-                "check_id": "CHK-02",
+                "check_id": "ACT-INSP-01-TK-101-PRE-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
                 "evidence_ids": ["EV-002"],
@@ -253,13 +253,13 @@ def test_conflicting_checks_remain_unknown() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "pass",
                 "evidence_ids": ["EV-001"],
             },
             {
-                "check_id": "CHK-02",
+                "check_id": "ACT-INSP-01-TK-101-PRE-02",
                 "description": "Tank level above 1.8 m",
                 "outcome": "fail",
                 "evidence_ids": ["EV-001"],
@@ -282,13 +282,13 @@ def test_multiple_target_assets_prevent_ambiguous_scoping() -> None:
     request = make_request(
         [
             {
-                "check_id": "CHK-01",
+                "check_id": "ACT-INSP-01-TK-101-PRE-01",
                 "description": "Tank level above 1.8 m",
                 "outcome": "pass",
                 "evidence_ids": ["EV-001"],
             },
             {
-                "check_id": "CHK-02",
+                "check_id": "ACT-INSP-01-TK-101-PRE-02",
                 "description": "Authorised permit issued by the approval",
                 "outcome": "pass",
                 "evidence_ids": ["EV-002"],
@@ -511,3 +511,63 @@ def test_internal_failure_returns_a_validated_error(monkeypatch: pytest.MonkeyPa
     request = make_runtime_request()
     response = InspectionPlanningAgent().run(request)
     assert_validated_error(request, response, "INTERNAL_ERROR")
+
+
+@pytest.mark.parametrize(
+    "check_id",
+    ["ACT-OTHER-TK-101-PRE-01", "ACT-INSP-01-TK-102-PRE-01", "CHK-01"],
+)
+def test_check_for_another_action_or_asset_is_not_used(check_id: str) -> None:
+    """A check scoped to a different action or asset, or not scoped, does not satisfy this one.
+
+    Independent: yes, because only the check id differs from a passing request.
+    """
+    checks_in = passing_checks()
+    checks_in[0]["check_id"] = check_id
+    checks, _ = evaluate_preconditions(make_action(), make_request(checks_in), "TK-101")
+    assert checks[0]["outcome"] == "unknown"
+
+
+def test_runtime_keeps_check_evidence_and_report_ids() -> None:
+    """Evidence cited by a check reaches the check, the option and the consumed list.
+
+    Independent: yes, because the check is added to the fixture in the test.
+    """
+    request = make_runtime_request()
+    observation = next(
+        row["evidence_id"] for row in request["evidence"] if row["kind"] == "observation_window"
+    )
+    request["input"]["constraint_checks"] = [
+        {
+            "check_id": "ACT-INSP-01-TK-101-PRE-01",
+            "description": "Tank level above 1.8 m",
+            "outcome": "pass",
+            "evidence_ids": [observation],
+        }
+    ]
+    response = InspectionPlanningAgent().run(request)
+
+    assert response["status"] != "error"
+    option = next(
+        o for o in response["result"]["options"] if o["option_id"] == "ACT-INSP-01-TK-101"
+    )
+    assert observation in option["precondition_checks"][0]["evidence_ids"]
+    assert observation in option["evidence_ids"]
+    consumed = set(response["consumed_evidence_ids"])
+    assert observation in consumed
+    assert set(attached_report_ids(request)) <= consumed
+
+
+def test_invalid_request_returns_an_error_response() -> None:
+    """A request that fails the contract is answered with an error instead of raising.
+
+    Independent: yes, because the request is made invalid in the test.
+    """
+    request = make_runtime_request()
+    request["input"]["constraint_checks"] = [
+        {"check_id": "X", "description": "d", "outcome": "maybe", "evidence_ids": []}
+    ]
+    response = InspectionPlanningAgent().run(request)
+    assert response["status"] == "error"
+    assert any(issue["code"] == "INVALID_REQUEST" for issue in response["issues"])
+    assert set(attached_report_ids(request)) <= set(response["consumed_evidence_ids"])

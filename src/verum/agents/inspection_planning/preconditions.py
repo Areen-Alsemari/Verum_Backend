@@ -90,7 +90,10 @@ def evaluate_preconditions(
     request: dict[str, Any],
     target_asset: str,
 ) -> tuple[list[dict[str, Any]], str]:
-    """Evaluate catalog preconditions using scoped, registered evidence."""
+    """Evaluate catalog preconditions using scoped, registered evidence.
+    A constraint check applies when its description matches and its id starts with the
+    action id and the target asset, joined by hyphens.
+    """
     inputs = request["input"]
     evidence = {row["evidence_id"]: row for row in request["evidence"]}
     workflows = inputs.get("workflow_requests", [])
@@ -98,9 +101,13 @@ def evaluate_preconditions(
 
     checks: list[dict[str, Any]] = []
 
+    scope = f"{action['action_id']}-{target_asset}-"
     for index, description in enumerate(action["preconditions"], start=1):
-        matching = [row for row in inputs["constraint_checks"] if row["description"] == description]
-
+        matching = [
+            row
+            for row in inputs["constraint_checks"]
+            if row["description"] == description and row["check_id"].startswith(scope)
+        ]
         evidence_ids = {evidence_id for row in matching for evidence_id in row["evidence_ids"]}
         outcomes = {row["outcome"] for row in matching}
         permit_required = _is_permit_precondition(description)

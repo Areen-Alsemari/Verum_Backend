@@ -73,7 +73,9 @@ class InspectionPlanningAgent:
         try:
             check_request(request)
         except Exception:  # noqa: BLE001
-            return self._error(request, "INVALID_REQUEST", "The request failed validation.")
+            return self._error(
+                request, "INVALID_REQUEST", "The request failed validation.", validate=False
+            )
         try:
             if request["agent"] != ROLE:
                 return self._error(request, "WRONG_ROLE", "The request is for another role.")
@@ -193,8 +195,10 @@ class InspectionPlanningAgent:
         check_response(request, response)
         return response
 
-    def _error(self, request: dict[str, Any], code: str, message: str) -> dict[str, Any]:
-        """Return a validated error response that still lists the attached report ids."""
+    def _error(
+        self, request: dict[str, Any], code: str, message: str, *, validate: bool = True
+    ) -> dict[str, Any]:
+        """Return an error response that still lists the attached report ids."""
         response = build_response(
             request,
             status="error",
@@ -204,7 +208,8 @@ class InspectionPlanningAgent:
             issues=[make_issue(code, message)],
             limitations=[NO_DISPATCH],
         )
-        check_response(request, response)
+        if validate:
+            check_response(request, response)
         return response
 
 
