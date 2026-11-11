@@ -1,4 +1,4 @@
-"""Agent 2, Anomaly Detection: quality rules plus a physical-feature signal-departure detector."""
+"""Agent 2, Anomaly Detection: quality rules plus the topology residual detector."""
 
 from verum.agents.anomaly_detection.agent import AnomalyDetectionAgent
 
