@@ -103,7 +103,7 @@ The task is forecasting reported signals, not actual hidden plant state. Null pr
 | --- | --- |
 | Role key | `anomaly_detection` |
 | Input | `observations` and nullable `forecast_report` using Agent 1's complete response contract. |
-| Output | `events`, `coverage` as assessed/partial/unknown, and `no_event_means_healthy: false`. |
+| Output | `events`, `coverage` as assessed/partial/unknown, `no_event_means_healthy: false`, and an optional `window_assessment`. |
 | Event item | `event_id`, `tag_ids`, `asset_ids`, category, nullable method-bearing score, `method_id`, `evidence_ids`, `limitations`. |
 | Categories | Missing reading, non-good quality, reported-signal departure, supported physical reference event. An event is not itself a fault diagnosis. |
 | Training source | `target.data_quality` and, separately, eligible `target.reference_supervision`. |
@@ -111,6 +111,12 @@ The task is forecasting reported signals, not actual hidden plant state. Null pr
 | Consumers | Agent 5; Agent 8 sees their provenance through the diagnostic evidence chain. |
 
 Version 1's learned detector uses observations. The optional forecast report supports an explicit comparison outside that learned feature vector; the detector does not silently gain new upstream prediction inputs. Forecast absence does not prevent the standalone observation task. Departure thresholds require a documented fitted method and validation-based selection. No arbitrary physical tolerance is inserted to make an event appear.
+
+### Window assessment and persistence
+
+The optional `result.window_assessment` states how one scored window stands. It is not an event and has no `evidence_ids`. It holds `score` (the largest computed residual in fault-free scale units), `window_threshold`, `exceeded` (score strictly above the threshold), `complete` (every residual that applies to the window was computed), `persistence_rule` (`k`, `n`, `threshold`) and `residuals`, exactly four entries in the order R1_mass_balance, R2_pump_head, R3_discharge_loss, R4_receipt_line. Each entry has a `state`: `exceeded` exactly when the residual has an event, `within_normal` when it was computed and is not above its own threshold, or `unknown` with a `reason` when it was not computed or does not apply. An unknown residual is never within normal. The assessment is absent when `result` is null, which is the case for `insufficient_evidence` and `error`.
+
+Agents 5 and 8 may receive `recent_anomaly_assessments`, the last windows of the same run, oldest first, each as `{as_of_s, window_assessment}` with a null assessment where a window had none, and `persistence`, the answer of the published rule over them: `rule`, `windows_held`, `windows_exceeding`, `windows_unknown` and `alarming`. `alarming` is null (unknown) until `n` windows are held and whenever a window of the last `n` has no assessment, or an assessment that is incomplete or made under another rule, unless `k` windows already exceed. It is false only when `n` windows are known and fewer than `k` exceed; the schema refuses false with an unknown window or without a rule. Both fields are optional. A recent assessment may not be later than the request cutoff. The runner computes them and attaches them to these two roles only; the two agents do not read them yet.
 
 ## Agent 3 Topology and Dependency
 
@@ -145,7 +151,7 @@ Retrieval returns source facts rather than filling missing specifications with c
 | Item | Contract |
 | --- | --- |
 | Role key | `diagnostic_reasoning` |
-| Input | `observations`, and nullable `forecast_report`, `anomaly_report`, `topology_report`, `asset_report`, `inspection_quality_report`. |
+| Input | `observations`, and nullable `forecast_report`, `anomaly_report`, `topology_report`, `asset_report`, `inspection_quality_report`; optional `recent_anomaly_assessments` and `persistence`. |
 | Learned component | Observation input only in version 1; trained against eligible supported injected-component targets. |
 | Output | `hypotheses`, `assessment`, `upstream_checks`, `field_diagnosis_qualified: false`, nullable `ranking_basis`. |
 | Hypothesis | `hypothesis_id`, one or more supported `components`, nullable method-bearing `score`, support/conflict evidence IDs, unresolved questions. |
@@ -199,7 +205,7 @@ The current role dataset mixes ordinary record-quality exercises and a small cov
 | Item | Contract |
 | --- | --- |
 | Role key | `evidence_verification_decision` |
-| Input | Nullable `diagnosis_report`, `inspection_plan_report`, `inspection_quality_report`, and `evidence_proposals`. Underlying sources resolve through the common registry. |
+| Input | Nullable `diagnosis_report`, `inspection_plan_report`, `inspection_quality_report`, and `evidence_proposals`; optional `recent_anomaly_assessments` and `persistence`. Underlying sources resolve through the common registry. |
 | Proposal | Identifier, source reference, nullable claimed available time and claimed evidence IDs only. No future measurement value. |
 | Output | Decision state, source-bearing summary, hypothesis report IDs, per-proposal evidence checks, conflicts, next steps and fixed human/advisory flags. |
 | Admission checks | Nullable time admissibility, provenance verification, quality acceptance, supported scope and usability, with reasons and source references. |

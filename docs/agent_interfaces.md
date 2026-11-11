@@ -90,7 +90,7 @@ Role key: anomaly_detection. Owner: Member 2. This agent distinguishes problems 
 | Fields read | Twelve summary fields: the mean of FT-001, FT-201, PT-001, PT-201, PT-202A, PT-202B and PT-203; the slope per second of LT-101, LT-102 and LT-103; the latest value of P-101A and P-101B. |
 | Method | Four physical residuals, a window score and per-residual thresholds. No learned model and no state between windows. |
 | Parameters | One pinned file whose sha256 is checked before it is parsed; a mismatch is refused. It holds 41 fitted numbers, the thresholds and the sha256 of the training file. |
-| Output | `result.events`, `coverage` and `no_event_means_healthy` false. Events carry event_id, tag_ids, asset_ids, category, score, method_id, evidence_ids and limitations. |
+| Output | `result.events`, `coverage`, `no_event_means_healthy` false and an optional `window_assessment`. Events carry event_id, tag_ids, asset_ids, category, score, method_id, evidence_ids and limitations. |
 
 ### Residuals
 
@@ -107,15 +107,16 @@ Each residual becomes a score in fault-free scale units, with a dead zone of one
 
 1. Quality events for missing readings and non-good quality flags are deterministic rules, unchanged from the earlier agent. Recovering the visible counts is not evidence of physical detection.
 2. One `reported_signal_departure` event is produced for each residual whose score exceeds its own threshold. Its `tag_ids` list only the tags that residual reads, `asset_ids` is empty, and the text states the physics and the candidate explanations; it names no asset, location or fault type. The score is a decision score, not a probability, and `calibration_id` is null.
-3. The window score, whether it exceeds the window threshold, and which residuals were computed, unknown or not applicable, are stated in the response limitations. The contract has no field for them.
+3. The `window_assessment` of the result states the window score, the window threshold, whether the score is strictly above it, whether every residual that applies was computed (`complete`), the persistence rule and one entry per residual (R1_mass_balance, R2_pump_head, R3_discharge_loss, R4_receipt_line). A residual is `exceeded` exactly when it has an event, `within_normal` when it was computed and is not above its threshold, and `unknown` with a reason when it was not computed or does not apply; unknown is never within normal. The assessment is not an event and is absent when the status is `insufficient_evidence`. The limitations repeat the same facts in words.
+3a. The persistence rule is 2 of the last 3 windows with a score above a threshold that is stored in the parameter file: the smallest value at which at most 5% of the fault-free train episodes alarm, from the pooled out-of-fold scores. It is a rule about several windows and Agent 2 never applies it: the runner does, from the assessments of earlier windows (see the runner paragraph below). On held-out validation episodes the share of fault-free episodes that alarm was 0.076 against the 5% target, and the limitations say so.
 4. A missing, wrong-unit or non-finite input makes the residuals that read it unknown, never zero. When every residual that applies was computed and no signal has an invalid unit the status is `complete` with coverage `assessed`; when some are unknown it is `degraded` with coverage `partial` and the unknown residuals are listed. When none can be computed the status is `insufficient_evidence`, the result is null and an issue is returned. A parameter file that cannot be loaded or verified gives a `MODEL_UNAVAILABLE` issue and quality events only.
 5. Suspect or bad quality flags do not make a tag unusable for the residuals, as in the evaluation; the quality events still report them.
 
-The limitations stated in every response, and the figures they quote, come from `reports/detector_v3_c3_characterisation.md` and `reports/detector_v4_pooled_stress.md`; a test compares each quoted figure with those reports. In short, on simulated data from one synthetic terminal: validation average precision 0.730 against a no-skill value near 0.13; recall is high for pump, drift and stuck faults and weak for restriction, leak, bias and misrouting; the false-alarm rate is 0.05 by construction out of fold and 0.080 on validation; skill falls with missing tags and with noise. The mass imbalance cannot separate a leak from a flow-meter or level-sensor fault. No episode-level claim is made, the tag-to-location mapping is unverified, and the test split was not used.
+The limitations stated in every response that has an assessment, and the figures they quote, come from `reports/detector_v3_c3_characterisation.md` and `reports/detector_v4_pooled_stress.md`; a test compares each quoted figure with those reports. In short, on simulated data from one synthetic terminal: validation average precision 0.730 against a no-skill value near 0.13; recall is high for pump, drift and stuck faults and weak for restriction, leak, bias and misrouting; the false-alarm rate is 0.05 by construction out of fold and 0.080 on validation; skill falls with missing tags and with noise. The mass imbalance cannot separate a leak from a flow-meter or level-sensor fault. No episode-level claim is made, the tag-to-location mapping is unverified, and the test split was not used.
 
 ### Build and verify
 
-Refit with `python tools/agents/fit_topology_residual.py --out <file>`; it uses fault-free train windows only and is byte-identical on a second run. A new file needs its sha256 recorded in `parameters.py`. The tests use small synthetic windows with hand-worked values and do not need the data folder. `tools/agents/compare_agent2_runs.py` compares two full-runner runs on the same sample (`reports/agent2_before_after.md`). The event categories are missing_reading, non_good_quality, reported_signal_departure and supported_physical_reference; the last is not produced.
+Refit with `python tools/agents/fit_topology_residual.py --out <file>`; it uses fault-free train windows only, also sets the persistence threshold, and is byte-identical on a second run. A new file needs its sha256 recorded in `parameters.py`. The tests use small synthetic windows with hand-worked values and do not need the data folder. `tools/agents/compare_agent2_runs.py` compares two full-runner runs on the same sample (`reports/agent2_before_after.md`). The event categories are missing_reading, non_good_quality, reported_signal_departure and supported_physical_reference; the last is not produced.
 
 ## Agent 3 Topology and Dependency
 
@@ -181,7 +182,7 @@ Role key: diagnostic_reasoning. Owner: Member 4. This agent proposes supported e
 
 | Part | Exact build requirement |
 | --- | --- |
-| Input | observations and optional forecast_report, anomaly_report, topology_report, asset_report and inspection_quality_report. |
+| Input | observations and optional forecast_report, anomaly_report, topology_report, asset_report and inspection_quality_report. The runner may also supply `recent_anomaly_assessments` and `persistence`; the agent does not read them yet. |
 | Training data | role_views/diagnostic_reasoning/. Use target.injected_change_present and injected_components only where target.supervised_loss_mask is true. |
 | Learned model | Observation-based classification of supported injected changes. Multi-label classification allows more than one component instead of forcing one mutually exclusive fault. |
 | Output | hypotheses with components, score, support_evidence_ids, conflict_evidence_ids and unresolved_questions; also assessment, upstream_checks, ranking_basis and field_diagnosis_qualified false. |
@@ -267,7 +268,7 @@ Role key: evidence_verification_decision. Owner: Member 4. This agent checks whe
 
 | Part | Exact build requirement |
 | --- | --- |
-| Input | diagnosis_report, inspection_plan_report, inspection_quality_report and evidence_proposals. Each proposal includes its source reference, claimed availability and evidence identifiers. |
+| Input | diagnosis_report, inspection_plan_report, inspection_quality_report and evidence_proposals; the runner may also supply `recent_anomaly_assessments` and `persistence`, which the agent does not read yet. Each proposal includes its source reference, claimed availability and evidence identifiers. |
 | Evaluation data | role_views/evidence_verification_decision/ and connected report fixtures. Check use because record subtypes differ. |
 | Learned model | None required. Implement explicit evidence-admission and assessment rules. No LLM makes the final decision. |
 | Output | decision_state, summary, hypothesis_report_ids, evidence_checks, conflicts, next_steps, human_decision_required true, automatic_action_authorized false and equipment_condition_confirmed false. |
@@ -359,6 +360,8 @@ Use complete when processing finished, degraded for useful partial output, insuf
 ### Shared runner and evidence
 
 Member 3 builds the observation adapter once, using the exact summary_v1 or sequence_v1 wrapper, and supplies shared context and source evidence. All owners use the same adapter rather than implementing different timing and unit rules. Preserve original source roots and hashes. Software metadata is outside the learned feature matrix.
+
+The runner keeps the last window assessments of a run in an `AssessmentLog` that the caller passes back in (`run_analysis(..., recent=bundle.assessments)`), applies the rule that Agent 2 published (k of the last n windows above a threshold) and attaches `recent_anomaly_assessments` and `persistence` to the Agent 5 and Agent 8 requests only. The answer is null until n windows are held, and null whenever a window has no usable assessment, so an Agent 2 failure never turns into a quiet window. The runner holds no knowledge of the method behind the score. Pass every window of the run, in order, with one case identifier.
 
 Connect the real agents in the report workflow order. If Agent 1 fails, Agent 2 and Agent 5 must still handle missing forecasts. If no inspection exists, Agent 7 reports that limit and Agent 8 can request more evidence. Validate at every boundary before passing reports onward. Keep automatic action flags false.
 

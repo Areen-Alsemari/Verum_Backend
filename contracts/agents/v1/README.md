@@ -4,4 +4,6 @@ The eight schemas define closed request and response messages. Common evidence, 
 
 Start with `docs/agent_interfaces.md` for the plain-language work plan. Use `docs/agent_interface_reference.md` for exact fields and detailed connection rules. Run `uv run python tools/check_agent_interfaces.py` from the repository root to validate the definitions and example pairs. The schemas and checks implement no agent, model or service.
 
+The Agent 2 result may carry an optional `window_assessment`, and the Agent 5 and Agent 8 inputs may carry optional `recent_anomaly_assessments` and `persistence`. Messages without these fields stay valid; the closed schemas reject them only where they are not declared.
+
 Agent 7's additional post-assessment report format is defined separately in `contracts/reports/`. It does not alter the run-message schemas. The development guide specifies a template baseline and optional Cohere narrative; the report assembler and agents remain to be implemented.
