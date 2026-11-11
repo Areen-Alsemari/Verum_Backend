@@ -172,3 +172,44 @@ Each is applied once, in this order, to the previous kept system; each has a phy
 ### 12.5 Stop rule and time-box
 
 A candidate is kept only if its system improves the grouped-CV AP and the grouped-CV matched-stage AUROC over the previous kept system, with the 95% bootstrap interval of each paired difference above zero. Otherwise it is reported and dropped, and the next candidate is applied to the previous kept system. No candidate beyond E1 to E4 is run and no constant is revisited. Each candidate gets one scoring run; a run that fails because of a code error is repaired and repeated once. The validation benchmark is reported for every system and is not used to decide.
+
+## 13. Stage three: C3 alone (registered before any run of this stage)
+
+Written on branch detector-v2 after the grouped cross-validation results (section 12) and before any quantity of this section was computed. The candidate is C3 alone, the topology residuals of section 5 with the operator-set condition key of section 11.2. C1, C2, C4 and every fusion are dropped. C3 is the same in every system of section 12, so the saved scores of the baseline system are used: out-of-fold (OOF) scores of the 9,832 eligible train windows from the 5 grouped folds, and the validation scores of the model fitted on all fault-free train windows. Nothing is refitted and no constant is changed.
+
+### 13.1 What was looked at before this section was written
+
+Only the structure of the saved arrays, no score. Train: 1,603 episodes, 290 with at least one faulty-labelled eligible window, 349 with no fault in the label file, 964 whose fault lies after their last eligible window. Validation: 673 episodes, 120 with faulty windows, 136 with no fault, 417 with a late fault. Episodes have 2 to 12 eligible windows (median 5), every faulty episode has gaps in its window positions (windows with an invalid label are not eligible), and no position is duplicated.
+
+### 13.2 Definitions
+
+- Fault-free episode: an episode without any faulty-labelled eligible window (train 1,313, validation 553). Its eligible windows are all labelled fault-free.
+- Faulty episode: an episode with at least one faulty-labelled eligible window. Its fault type is the type of its first faulty window. Its onset is the earliest onset in its label file.
+- Fault-free window: a window labelled fault-free, including the windows before onset in faulty episodes.
+- Window threshold (reference): the 95th percentile of fault-free window scores of the other parity fold, as in section 6, giving a window false-alarm rate (FAR) of 5%.
+
+### 13.3 Operating characterisation (part 1)
+
+Window level at the reference threshold: FAR, false alarms per day = FAR times 288, recall by fault type, with the 95% bootstrap over episodes of section 6, out of fold and on validation.
+
+Alarm policies, fixed here. A policy is k of the last n, with (k, n) in {(1, 1), (2, 3), (3, 5)}. At a window at position t the policy is alarming when at least k of the windows at positions t-n+1 to t that exist in the episode have a score above the threshold; a missing position does not count as above. The policy is evaluated at eligible windows only. All three policies are reported, including bad ones.
+
+Threshold of a policy: the target is that no more than 5% of fault-free episodes contain an alarming window. The threshold is the smallest value among the fault-free-episode window scores of the calibration set such that the policy, applied to the calibration episodes, alarms in at most 5% of them (strictly above the threshold counts as exceeding). Calibration sets: out of fold, the OOF scores of the fault-free episodes of the other folds; on validation, the OOF scores of all fault-free train episodes (scores of windows that the model did not see). The threshold is not re-estimated inside the bootstrap.
+
+Reported per policy, out of fold and on validation: fault-free episodes with any alarm (count, share); window-level alarm rate on fault-free windows and false alarms per day = that rate times 288; episode-level detection rate = share of faulty episodes with the policy alarming at one or more faulty-labelled windows, overall and by fault type; delay = cutoff of the first alarming faulty window minus the earliest onset, quartiles over detected episodes, with the number never detected; window recall by fault type = share of faulty windows at which the policy is alarming.
+
+### 13.4 Controls
+
+- Shuffle, window level: 200 permutations of window labels (within position for the matched-stage statistic), seed 20261108, for AP, AUROC and matched-stage AUROC of the C3 score. Shuffle, episode level: 200 permutations that give the onsets of the faulty episodes to randomly chosen episodes (same number, onsets in random order) and recompute the detection rate of each policy; expected value is the alarm rate of the policy over arbitrary windows after a random time.
+- Placebo: matched-stage AUROC of the C3 score on positions 1 to 5 with label = the episode contains a fault later (as in section 12.4), and for each policy the difference in alarming rate on fault-free windows at positions 1 to 5 between episodes that later contain a faulty window and episodes that never do, with a bootstrap interval.
+- Constant-column check: the columns C3 reads are listed and checked as before.
+
+### 13.5 Residual signature matrix (part 2)
+
+For each fault type (and fault-free windows as a reference row), out of fold and on validation: the mean share of each residual R1 to R4 in the C3 score (residual divided by the sum of the four), the fraction of windows in which it is the top contributor (largest value; all four zero counts as no top contributor, reported as its own column), and the fraction in which it exceeds its own threshold. A residual's own threshold is the 95th percentile of that residual among fault-free windows of the other folds out of fold, and among OOF fault-free train windows on validation; strictly above counts. Descriptive only, nothing is tuned on it.
+
+Classification, fixed here: a fault type has a distinct signature when the largest exceed fraction among R1 to R4 is at least 0.30 and at least twice the second largest; no usable signature when the largest is below 0.15; shared otherwise. A type is called distinct only if the classification agrees out of fold and on validation; otherwise the disagreement is reported.
+
+### 13.6 Runtime feasibility and commanded lineup (parts 3 and 4)
+
+Read-only. No model is run and nothing is evaluated for part 4. Part 3 lists every input C3 uses and states for each whether the Agent 2 request carries it at runtime, what the request lacks, whether the topology and the tag-to-location mapping fit a small pinned parameter file, and how the mapping is derived and what is unverified. Part 4 states whether the commanded valve or lineup state is in the request, whether it is independent of the injected fault, how a commanded-against-observed valve check would be defined and what could make it leak the label.
