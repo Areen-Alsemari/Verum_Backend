@@ -1,4 +1,4 @@
-"""Command line: score, evaluate, diagnose, report; cv, cveval, cvcompare, cvreport (grouped CV).
+"""Command line: score, evaluate, diagnose, report; grouped CV stages; C3 stages.
 
 Options: --release (release folder), --work (work folder), --out (results file), --key (regime
 key of the score stage), --spec (comma-separated enhancements E1 to E4 of the cv stage).
@@ -65,10 +65,44 @@ def _cvreport(a: Namespace) -> None:
     a.out.write_text(cv_text.render(a.work))
 
 
+def _lineup(a: Namespace) -> None:
+    import lineup_facts
+
+    lineup_facts.run(a.release, a.out)
+
+
+def _c3report(a: Namespace) -> None:
+    import c3_text
+
+    a.out.write_text(c3_text.render(a.work))
+
+
+def _c3params(a: Namespace) -> None:
+    import c3_params
+
+    c3_params.run(a.release, a.out)
+
+
+def _c3char(a: Namespace) -> None:
+    import c3_char
+
+    c3_char.run(a.work, a.out)
+
+
 STAGES = {
-    "score": _score, "evaluate": _evaluate, "diagnose": _diagnose, "report": _report,
-    "cv": _cv, "cveval": _cveval, "cvcompare": _cvcompare, "cvreport": _cvreport,
-}  # fmt: skip
+    "score": _score,
+    "evaluate": _evaluate,
+    "diagnose": _diagnose,
+    "report": _report,
+    "cv": _cv,
+    "cveval": _cveval,
+    "cvcompare": _cvcompare,
+    "cvreport": _cvreport,
+    "c3char": _c3char,
+    "lineupfacts": _lineup,
+    "c3report": _c3report,
+    "c3params": _c3params,
+}
 
 
 def main() -> None:
