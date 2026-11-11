@@ -1480,6 +1480,49 @@
         "windows_exceeding",
         "windows_unknown",
         "alarming"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "alarming": {
+                "const": false
+              }
+            },
+            "required": [
+              "alarming"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "type": "object"
+              },
+              "windows_unknown": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "alarming": {
+                "const": true
+              }
+            },
+            "required": [
+              "alarming"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "type": "object"
+              }
+            }
+          }
+        }
       ]
     }
   }
