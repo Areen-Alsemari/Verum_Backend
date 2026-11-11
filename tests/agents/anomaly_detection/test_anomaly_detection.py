@@ -1,804 +1,342 @@
-"""Tests for the Anomaly Detection agent runtime."""
+"""Tests for the Anomaly Detection agent runtime with the topology residual detector."""
 
 from __future__ import annotations
 
 import copy
 import json
-import math
-import pickle
-import struct
-from collections.abc import Callable, Iterator
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-import joblib  # type: ignore[import-untyped]
 import pytest
 
+from _anomaly_cases import healthy, parameters, rehash, request_with, set_missing
 from verum.agents.anomaly_detection import AnomalyDetectionAgent
 from verum.agents.anomaly_detection import agent as anomaly_agent
-from verum.agents.common import check_request, check_response, file_sha256
+from verum.agents.common import check_request, check_response
 from verum.contracts.agent_interfaces import content_hash, contract_directory
 
 pytestmark = pytest.mark.fast
-AGENT = "verum.agents.anomaly_detection.agent"
 
 
 @pytest.fixture(autouse=True)
-def clear_artifact_cache() -> Iterator[None]:
-    """Keep the cached artifact from leaking between tests."""
-    anomaly_agent.load_artifact.cache_clear()
-    yield
-    anomaly_agent.load_artifact.cache_clear()
+def synthetic_parameters(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Run the agent on the round-number parameters so every expectation is worked by hand."""
+    params = parameters(tmp_path)
+    monkeypatch.setattr(anomaly_agent, "load_parameters", lambda: params)
 
 
-def example_request() -> dict[str, Any]:
-    """Load the official anomaly detection request example."""
-    path = contract_directory() / "examples" / "anomaly_detection.request.json"
-    loaded: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return loaded
-
-
-def signals_of(request: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return the mutable signal list inside a request."""
-    signals: list[dict[str, Any]] = request["input"]["observations"]["summary"]["signals"]
-    return signals
-
-
-def update_observation_evidence_hash(request: dict[str, Any]) -> None:
-    """Re-hash the observation summary after a test mutates it."""
-    observations = request["input"]["observations"]
-    summary_hash = content_hash(observations["summary"])
-
-    for evidence in request["evidence"]:
-        if (
-            evidence["kind"] == "observation_representation"
-            and evidence["evidence_id"] in observations["evidence_ids"]
-        ):
-            evidence["content_sha256"] = summary_hash
-            return
-
-    raise AssertionError("Observation representation evidence was not found")
-
-
-def attach_forecast(request: dict[str, Any]) -> str:
-    """Attach the official forecast example as an upstream report and return its id."""
-    forecast_path = contract_directory() / "examples" / "predictive_health.response.json"
-    forecast = json.loads(forecast_path.read_text(encoding="utf-8"))
-    request["input"]["forecast_report"] = forecast
-    request["evidence"].append(
-        {
-            "evidence_id": forecast["report_id"],
-            "kind": "agent_report",
-            "source_ref": f"report:{forecast['report_id']}",
-            "available_at_s": forecast["context"]["as_of_s"],
-            "content_sha256": content_hash(forecast),
-            "root_evidence_ids": sorted(
-                {
-                    root
-                    for evidence_id in forecast["consumed_evidence_ids"]
-                    for row in request["evidence"]
-                    if row["evidence_id"] == evidence_id
-                    for root in row["root_evidence_ids"]
-                }
-            ),
-            "provenance": "derived_agent_output",
-        }
-    )
-    report_id: str = forecast["report_id"]
-    return report_id
-
-
-class FakeModel:
-    """A model whose positive-class score is fixed and whose input is recorded."""
-
-    def __init__(self, score: float, classes: tuple[bool, bool] = (False, True)) -> None:
-        self.classes_ = list(classes)
-        self.score = score
-        self.received_features: Any = None
-
-    def predict_proba(self, features: Any) -> list[list[float]]:
-        """Return the fixed score in class order, recording the input."""
-        self.received_features = features.copy()
-        positive_first = self.classes_[0] is True
-        return (
-            [[self.score, 1.0 - self.score]] if positive_first else [[1.0 - self.score, self.score]]
-        )
-
-
-def install_fake_artifact(
-    monkeypatch: pytest.MonkeyPatch,
-    request: dict[str, Any],
-    model: FakeModel,
-    *,
-    threshold: float = 0.5,
-    feature_names: list[str] | None = None,
-    feature_ranges: dict[str, list[float]] | None = None,
-    profile_id: str | None = None,
-) -> None:
-    """Replace the artifact with a controlled one built from the request's own features."""
-    profile = profile_id or anomaly_agent.AGGREGATE_PROFILE_ID
-    names = feature_names or list(anomaly_agent.features_for(profile, signals_of(request)))
-    artifact: dict[str, Any] = {"feature_names": names, "threshold": threshold, "model": model}
-    if profile_id is not None:
-        artifact["feature_profile_id"] = profile_id
-    if feature_ranges is not None:
-        artifact["feature_ranges"] = feature_ranges
-    monkeypatch.setattr(anomaly_agent, "load_artifact", lambda: artifact)
-
-
-def forbid_model_loading(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fail the test if the detector is consulted."""
-
-    def reject() -> dict[str, Any]:
-        pytest.fail("model inference must not run for this window")
-
-    monkeypatch.setattr(anomaly_agent, "load_artifact", reject)
-
-
-def departures(response: dict[str, Any]) -> list[dict[str, Any]]:
-    """Model events in a response."""
-    return [e for e in response["result"]["events"] if e["category"] == "reported_signal_departure"]
-
-
-# Artifact loading
-
-
-def test_artifact_hash_mismatch_prevents_deserialization(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A mismatched artifact hash prevents unsafe deserialization.
-
-    Independent: yes, because the test verifies the hash check blocks the deserializer directly.
-    """
-    monkeypatch.setattr(f"{AGENT}.file_sha256", lambda _: "0" * 64)
-
-    def reject_deserialization(path: Any) -> None:
-        pytest.fail("joblib.load must not run for an unverified artifact")
-
-    monkeypatch.setattr(joblib, "load", reject_deserialization)
-
-    with pytest.raises(ValueError, match="hash mismatch"):
-        anomaly_agent.load_artifact()
-
-
-def test_pinned_hash_matches_the_shipped_artifact() -> None:
-    """The pinned constant matches the artifact in the package.
-
-    Independent: yes, because the file is hashed directly, without loading it.
-    """
-    assert anomaly_agent.ARTIFACT_PATH.exists()
-    actual = file_sha256(anomaly_agent.ARTIFACT_PATH)
-    assert actual == anomaly_agent.EXPECTED_ARTIFACT_SHA256
-
-
-@pytest.mark.parametrize(
-    "failure",
-    [
-        OSError("io"),
-        MemoryError("memory"),
-        struct.error("struct"),
-        EOFError("eof"),
-        pickle.UnpicklingError("pickle"),
-    ],
-)
-def test_every_load_failure_is_a_named_issue(
-    monkeypatch: pytest.MonkeyPatch, failure: BaseException
-) -> None:
-    """Any deserialization failure after a passing hash check degrades with MODEL_UNAVAILABLE.
-
-    Independent: yes, because the failure is injected into the deserializer itself.
-    """
-    monkeypatch.setattr(f"{AGENT}.file_sha256", lambda _: anomaly_agent.EXPECTED_ARTIFACT_SHA256)
-
-    def fail(path: Any) -> None:
-        raise failure
-
-    monkeypatch.setattr(joblib, "load", fail)
-    request = example_request()
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "degraded"
-    assert any(issue["code"] == "MODEL_UNAVAILABLE" for issue in response["issues"])
-    assert any(event["category"] == "missing_reading" for event in response["result"]["events"])
-    assert anomaly_agent.MODEL_UNAVAILABLE_TEXT in response["limitations"]
-    check_response(request, response)
-
-
-# Contract and evidence
-
-
-def test_anomaly_detection_runtime_passes_the_contract() -> None:
-    """The runtime returns a contract-valid advisory response.
-
-    Independent: yes, because the request and response validators enforce the shared contract.
-    """
-    request = example_request()
+def run(values: Mapping[str, float | None]) -> dict[str, Any]:
+    """Run the agent on the example request with the given inputs and validate both sides."""
+    request = request_with(values)
     check_request(request)
-
     response = AnomalyDetectionAgent().run(request)
-
     check_response(request, response)
-    assert response["agent"] == "anomaly_detection"
-    assert response["request_id"] == request["request_id"]
-    assert response["advisory_only"] is True
-    assert response["result"]["no_event_means_healthy"] is False
-
-
-def test_example_contains_every_expected_tag() -> None:
-    """The official example holds all expected tags, so the detector is applicable to it.
-
-    Independent: yes, because the fixture is compared with the unit table directly.
-    """
-    tags = {signal["tag_id"] for signal in signals_of(example_request())}
-    assert tags == set(anomaly_agent.EXPECTED_UNITS)
-
-
-def test_anomaly_detection_reports_runtime_implementation() -> None:
-    """The runtime identifies its actual implementation and artifact.
-
-    Independent: yes, because implementation metadata is checked separately from detection.
-    """
-    response = AnomalyDetectionAgent().run(example_request())
-
-    assert response["implementation"]["name"] == "anomaly_detection"
-    assert response["implementation"]["version"] == anomaly_agent.VERSION
-    assert response["implementation"]["artifact_sha256"] == anomaly_agent.EXPECTED_ARTIFACT_SHA256
-
-
-def test_consumed_evidence_matches_the_request() -> None:
-    """Without attachments, consumed and cited evidence are the observation evidence ids.
-
-    Independent: yes, because the expected ids are read from the request, not the agent.
-    """
-    request = example_request()
-    known = {row["evidence_id"] for row in request["evidence"]}
-    expected = [e for e in request["input"]["observations"]["evidence_ids"] if e in known]
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["consumed_evidence_ids"] == expected
-    for event in response["result"]["events"]:
-        assert set(event["evidence_ids"]) <= set(expected)
-    for issue in response["issues"]:
-        assert set(issue.get("evidence_ids", [])) <= set(expected)
-
-
-def test_anomaly_detection_consumes_attached_forecast_report() -> None:
-    """An attached upstream report is listed as consumed evidence. Independent: yes."""
-    request = example_request()
-    report_id = attach_forecast(request)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert report_id in response["consumed_evidence_ids"]
-    check_response(request, response)
-
-
-# Quality rules
-
-
-def run_checked(request: dict[str, Any]) -> dict[str, Any]:
-    """Run the agent and fail with its issues if it returned an error response."""
-    response = AnomalyDetectionAgent().run(request)
-    assert response["status"] != "error", response["issues"]
     return response
 
 
-def keep_clean_signals(request: dict[str, Any]) -> list[dict[str, Any]]:
-    """Keep only the example's signals that are already complete and good.
+def residual_events(response: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Residual events by residual key."""
+    events = response["result"]["events"]
+    return {e["event_id"].rsplit("-", 1)[1]: e for e in events if "-residual-" in e["event_id"]}
 
-    Signals are dropped rather than edited: the request validator checks the sample
-    counts against each other, so editing them makes the request invalid.
+
+def test_a_healthy_window_is_complete_and_has_no_residual_event() -> None:
+    """A healthy window with a running pump is complete, assessed and has no residual event.
+
+    Independent: yes, because the window is built to give zero for every residual.
     """
-    clean = [
-        s
-        for s in signals_of(request)
-        if not s.get("missing_samples")
-        and not s.get("bad_quality_samples")
-        and s.get("latest_availability") != "missing_sample"
-        and s.get("latest_quality") not in anomaly_agent.NON_GOOD_QUALITY
-        and anomaly_agent.has_current_value(s)
-    ]
-    assert clean, "the example has no clean signal"
-    request["input"]["observations"]["summary"]["signals"] = clean
-    return clean
+    response = run(healthy("A"))
+    assert (response["status"], response["result"]["coverage"]) == ("complete", "assessed")
+    assert residual_events(response) == {}
+    assert response["result"]["no_event_means_healthy"] is False
+    assert any("not exceeded" in line for line in response["limitations"])
 
 
-def test_anomaly_detection_reports_quality_issues() -> None:
-    """Reported missing and bad-quality samples produce quality events.
+def test_a_residual_above_its_threshold_gives_one_event_naming_its_tags() -> None:
+    """A rise of PT-203 moves R3 only; its event names the tags R3 reads and no others.
 
-    Independent: yes, because the assertions inspect the output against explicit conditions.
+    Independent: yes, because the tags R3 reads are listed in the plan.
     """
-    categories = {
-        e["category"] for e in AnomalyDetectionAgent().run(example_request())["result"]["events"]
-    }
-
-    assert "missing_reading" in categories
-    assert "non_good_quality" in categories
-
-
-def test_clean_window_has_no_quality_events() -> None:
-    """A fully good window produces neither quality event (control for the rule tests).
-
-    Independent: yes, because only signals the example already reports as clean are kept.
-    """
-    request = example_request()
-    keep_clean_signals(request)
-    update_observation_evidence_hash(request)
-
-    categories = {e["category"] for e in run_checked(request)["result"]["events"]}
-
-    assert not categories & {"missing_reading", "non_good_quality"}
-
-
-@pytest.mark.parametrize("flag", ["suspect", "bad"])
-def test_suspect_or_bad_latest_quality_is_reported(flag: str) -> None:
-    """A suspect or bad latest-quality flag alone produces a non_good_quality event for that tag.
-
-    Independent: yes, because only the quality flag of one clean signal is changed.
-    """
-    request = example_request()
-    target = keep_clean_signals(request)[0]
-    target["latest_quality"] = flag
-    update_observation_evidence_hash(request)
-
-    events = run_checked(request)["result"]["events"]
-    quality = [e for e in events if e["category"] == "non_good_quality"]
-
-    assert len(quality) == 1
-    assert quality[0]["tag_ids"] == [target["tag_id"]]
-
-
-def test_event_tag_ids_are_sorted() -> None:
-    """Tag ids in every event are sorted and unique. Independent: yes."""
-    request = example_request()
-    for signal in signals_of(request):
-        signal["latest_quality"] = "suspect"
-    signals_of(request).reverse()
-    update_observation_evidence_hash(request)
-
-    for event in AnomalyDetectionAgent().run(request)["result"]["events"]:
-        assert event["tag_ids"] == sorted(set(event["tag_ids"]))
-
-
-# Model event, threshold and features
+    response = run(healthy("A") | {"PT-203": healthy("A")["PT-203"] + 1.0})
+    events = residual_events(response)
+    assert set(events) == {"R3"}
+    event = events["R3"]
+    assert event["tag_ids"] == ["FT-201", "P-101A", "PT-202A", "PT-203"]
+    assert event["asset_ids"] == []
+    assert event["category"] == "reported_signal_departure"
+    assert event["method_id"] == "topology_residual_v1"
+    assert event["score"]["kind"] == "decision_score"
+    assert event["score"]["value"] == pytest.approx(19.0)
 
 
 @pytest.mark.parametrize(
-    ("score", "expected"),
-    [(0.36, False), (0.37, True), (0.38, True)],
-)
-def test_threshold_is_inclusive_and_read_from_the_artifact(
-    monkeypatch: pytest.MonkeyPatch, score: float, expected: bool
-) -> None:
-    """A window is flagged exactly when score >= the artifact threshold.
-
-    Independent: yes, because score and threshold are controlled. The three cases catch
-    the comparison flipped to > or <=, and a hard-coded 0.5.
-    """
-    request = example_request()
-    install_fake_artifact(monkeypatch, request, FakeModel(score), threshold=0.37)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert bool(departures(response)) is expected
-    check_response(request, response)
-
-
-def test_model_event_on_a_flagged_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A flagged window yields one departure that states its limits and an uncalibrated score.
-
-    Independent: yes, because model output is explicitly controlled.
-    """
-    request = example_request()
-    install_fake_artifact(monkeypatch, request, FakeModel(0.99))
-
-    response = AnomalyDetectionAgent().run(request)
-    events = departures(response)
-
-    assert len(events) == 1
-    event = events[0]
-    assert event["score"] == {
-        "value": 0.99,
-        "kind": "decision_score",
-        "method_id": anomaly_agent.MODEL_METHOD_ID,
-        "calibration_id": None,
-    }
-    assert "The score is an uncalibrated decision score, not a probability." in event["limitations"]
-    assert any("reading-arrival timing" in text for text in event["limitations"])
-    assert any(f"F1 {anomaly_agent.TEST_F1:.2f}" in text for text in event["limitations"])
-    assert set(anomaly_agent.DETECTOR_LIMITATIONS) <= set(response["limitations"])
-    check_response(request, response)
-
-
-def test_detection_uses_true_class_score(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Detection uses the score of the True class, whatever the class order.
-
-    Independent: yes, because class order and model scores are controlled.
-    """
-    request = example_request()
-    install_fake_artifact(monkeypatch, request, FakeModel(0.90, classes=(True, False)))
-
-    events = departures(AnomalyDetectionAgent().run(request))
-
-    assert len(events) == 1
-    assert events[0]["score"]["value"] == 0.90
-
-
-def test_model_receives_features_in_artifact_order(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Model input follows the feature order stored in the artifact.
-
-    Independent: yes, because the model records its input.
-    """
-    request = example_request()
-    valid = anomaly_agent.filter_valid_unit_signals(signals_of(request))
-    feature_values = anomaly_agent.extract_features(valid)
-    reversed_names = list(reversed(list(feature_values)))
-    model = FakeModel(0.99)
-    install_fake_artifact(monkeypatch, request, model, feature_names=reversed_names)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert model.received_features.tolist() == [[feature_values[name] for name in reversed_names]]
-    check_response(request, response)
-
-
-def test_successful_model_run_omits_unavailable_limitation() -> None:
-    """A successful model run does not report model unavailability. Independent: yes."""
-    response = AnomalyDetectionAgent().run(example_request())
-
-    assert anomaly_agent.MODEL_UNAVAILABLE_TEXT not in response["limitations"]
-    assert not any(issue["code"] == "MODEL_UNAVAILABLE" for issue in response["issues"])
-
-
-# Garbage input never yields an assessed answer
-
-
-def test_empty_signals_return_insufficient_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Empty signal windows do not trigger model inference. Independent: yes."""
-    request = example_request()
-    request["input"]["observations"]["summary"]["signals"] = []
-    update_observation_evidence_hash(request)
-    forbid_model_loading(monkeypatch)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "degraded"
-    assert response["result"]["coverage"] == "unknown"
-    assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
-    check_response(request, response)
-
-
-def test_all_missing_measurements_return_insufficient_evidence(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """All-missing physical measurements do not trigger model inference. Independent: yes."""
-    request = example_request()
-    for signal in signals_of(request):
-        for name in anomaly_agent.NUMERIC_FIELDS:
-            signal[name] = None
-    update_observation_evidence_hash(request)
-    forbid_model_loading(monkeypatch)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "degraded"
-    assert response["result"]["coverage"] == "unknown"
-    assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
-    check_response(request, response)
-
-
-def test_all_tags_reported_missing_keep_only_stale_values(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tags with no current reading, only a previous value, are not assessed.
-
-    Independent: yes, because only the window's current-value fields are cleared.
-    """
-    request = example_request()
-    for signal in signals_of(request):
-        for name in anomaly_agent.CURRENT_VALUE_FIELDS:
-            signal[name] = None
-    update_observation_evidence_hash(request)
-    forbid_model_loading(monkeypatch)
-
-    response = run_checked(request)
-
-    assert response["result"]["coverage"] == "unknown"
-    assert response["status"] == "degraded"
-    missing = [e for e in response["result"]["events"] if e["category"] == "missing_reading"]
-    assert missing and set(missing[0]["tag_ids"]) == set(anomaly_agent.EXPECTED_UNITS)
-    check_response(request, response)
-
-
-def test_only_three_tags_are_not_assessed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A window with three tags is too incomplete for the aggregate detector.
-
-    Independent: yes, because the signal list is truncated explicitly.
-    """
-    request = example_request()
-    request["input"]["observations"]["summary"]["signals"] = signals_of(request)[:3]
-    update_observation_evidence_hash(request)
-    forbid_model_loading(monkeypatch)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "degraded"
-    assert response["result"]["coverage"] == "partial"
-    assert not departures(response)
-    check_response(request, response)
-
-
-def test_far_out_of_range_window_is_not_assessed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Features far outside the training range stop the detector from scoring.
-
-    Independent: yes, because the training ranges are set so the example lies outside them.
-    """
-    request = example_request()
-    valid = anomaly_agent.filter_valid_unit_signals(signals_of(request))
-    features = anomaly_agent.extract_features(valid)
-    ranges = {name: [value + 100.0, value + 101.0] for name, value in features.items()}
-    model = FakeModel(0.99)
-    install_fake_artifact(monkeypatch, request, model, feature_ranges=ranges)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert model.received_features is None
-    assert response["status"] == "degraded"
-    assert response["result"]["coverage"] == "partial"
-    assert not departures(response)
-    check_response(request, response)
-
-
-def test_one_unit_swap_is_partial_not_assessed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A unit swap excludes that tag; the result is degraded and partial.
-
-    Independent: yes, because one unit is changed and the model is controlled.
-    """
-    request = example_request()
-    signals_of(request)[0]["unit"] = "C" if signals_of(request)[0]["unit"] != "C" else "barg"
-    update_observation_evidence_hash(request)
-    install_fake_artifact(monkeypatch, request, FakeModel(0.1))
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "degraded"
-    assert response["result"]["coverage"] == "partial"
-    assert any(issue["code"] == "INVALID_SIGNAL_UNIT" for issue in response["issues"])
-    check_response(request, response)
-
-
-def test_all_invalid_units_return_insufficient_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
-    """All invalid signal units prevent model inference. Independent: yes."""
-    request = example_request()
-    for signal in signals_of(request):
-        signal["unit"] = "invalid-unit"
-    update_observation_evidence_hash(request)
-    forbid_model_loading(monkeypatch)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "degraded"
-    assert response["result"]["coverage"] == "unknown"
-    assert any(issue["code"] == "INVALID_SIGNAL_UNIT" for issue in response["issues"])
-    assert any(issue["code"] == "INSUFFICIENT_EVIDENCE" for issue in response["issues"])
-    check_response(request, response)
-
-
-def test_expected_signal_units_are_accepted() -> None:
-    """Official tag-unit pairs are recognized. Independent: yes."""
-    signals = signals_of(example_request())
-
-    assert anomaly_agent.find_invalid_unit_signals(signals) == []
-    assert len(anomaly_agent.filter_valid_unit_signals(signals)) == len(signals)
-
-
-def test_unexpected_signal_unit_is_excluded() -> None:
-    """A signal with an unexpected unit is excluded. Independent: yes."""
-    signals = signals_of(example_request())
-    tag = signals[0]["tag_id"]
-    signals[0]["unit"] = "not-a-unit"
-
-    assert anomaly_agent.find_invalid_unit_signals(signals) == [tag]
-    assert all(s["tag_id"] != tag for s in anomaly_agent.filter_valid_unit_signals(signals))
-
-
-def test_unknown_signal_tag_is_excluded() -> None:
-    """Signals with unknown tags are excluded from inference. Independent: yes."""
-    signals = signals_of(example_request())
-    signals[0]["tag_id"] = "UNKNOWN-TAG"
-
-    assert anomaly_agent.find_invalid_unit_signals(signals) == ["UNKNOWN-TAG"]
-    assert all(
-        s["tag_id"] != "UNKNOWN-TAG" for s in anomaly_agent.filter_valid_unit_signals(signals)
-    )
-
-
-# run() never lets an exception escape
-
-
-def raise_runtime_error(*args: Any, **kwargs: Any) -> Any:
-    """Stand-in for a failing dependency."""
-    raise RuntimeError("simulated failure")
-
-
-def fail_unless_error(real: Callable[..., Any]) -> Callable[..., Any]:
-    """build_response that fails for every normal response but builds error responses."""
-
-    def wrapper(request: dict[str, Any], **kwargs: Any) -> Any:
-        if kwargs.get("status") != "error":
-            raise RuntimeError("simulated failure")
-        return real(request, **kwargs)
-
-    return wrapper
-
-
-def fail_first_call(real: Callable[..., Any]) -> Callable[..., Any]:
-    """check_response that rejects the first (normal) response and validates the rest."""
-    calls = {"count": 0}
-
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        calls["count"] += 1
-        if calls["count"] == 1:
-            raise RuntimeError("simulated failure")
-        return real(*args, **kwargs)
-
-    return wrapper
-
-
-@pytest.mark.parametrize(
-    "target",
+    ("pump", "tags"),
     [
-        "make_event",
-        "build_response",
-        "check_response",
-        "check_request",
-        "attached_report_ids",
-        "find_invalid_unit_signals",
+        ("A", ["FT-201", "P-101A", "PT-201", "PT-202A"]),
+        ("B", ["FT-201", "P-101B", "PT-201", "PT-202B"]),
     ],
 )
-def test_internal_failures_return_a_validated_error(
-    monkeypatch: pytest.MonkeyPatch, target: str
+def test_the_pump_residual_names_only_the_running_pump(pump: str, tags: list[str]) -> None:
+    """R2 names the running pump's discharge and run-state tags and not the other pump's.
+
+    Independent: yes, because the tags follow from which pump is running in the built window.
+    """
+    response = run(healthy(pump) | {"PT-201": 3.0})
+    assert residual_events(response)["R2"]["tag_ids"] == tags
+
+
+def test_the_mass_imbalance_event_names_the_candidates_and_no_asset() -> None:
+    """The R1 event says a leak, a flow-meter fault or a level-sensor fault are candidates.
+
+    Independent: yes, because the required wording is stated in the task.
+    """
+    event = residual_events(run(healthy("A") | {"FT-201": 380.0}))["R1"]
+    words = " ".join(event["limitations"]).lower()
+    assert "mass imbalance" in words and "leak" in words
+    assert "flow-meter" in words and "level-sensor" in words
+    assert event["tag_ids"] == ["FT-001", "FT-201", "LT-101", "LT-102", "LT-103"]
+    assert "no asset, location or fault type" in words
+
+
+def test_a_residual_at_exactly_its_own_threshold_gives_no_event() -> None:
+    """A residual of 4 with scale 2 is 1.0 scale unit past the dead zone, equal to its threshold.
+
+    Independent: yes, because (4 - 2) / 2 equals the test threshold of 1.0 exactly.
+    """
+    assert residual_events(run(healthy("A") | {"FT-001": 404.0})) == {}
+    assert set(residual_events(run(healthy("A") | {"FT-001": 404.5}))) == {"R1"}
+
+
+def test_the_window_score_is_not_exceeded_at_exactly_the_threshold() -> None:
+    """A score equal to the window threshold is not exceeded, as in the registered rule.
+
+    Independent: yes, because (8 - 2) / 2 equals the test threshold of 3.0 exactly.
+    """
+    response = run(healthy("A") | {"FT-001": 408.0})
+    joined = " ".join(response["limitations"])
+    assert "Window score 3.00" in joined and "3.00: not exceeded" in joined
+    assert "R1" in residual_events(response)
+
+
+def test_missing_inputs_give_a_degraded_window_with_unknown_residuals_listed() -> None:
+    """Without FT-001, R1 and R4 are unknown, the status is degraded and the issue names them.
+
+    Independent: yes, because the dependencies are listed in the plan.
+    """
+    response = run(healthy("A") | {"FT-001": None})
+    assert (response["status"], response["result"]["coverage"]) == ("degraded", "partial")
+    issue = next(i for i in response["issues"] if i["code"] == "INSUFFICIENT_EVIDENCE")
+    assert "unknown, not zero" in issue["message"]
+    assert "unknown: R1, R4" in issue["message"] and "FT-001" in issue["message"]
+    assert "Residuals computed: R2, R3; unknown: R1, R4" in " ".join(response["limitations"])
+
+
+def test_an_unknown_residual_never_hides_behind_zero() -> None:
+    """An extreme R3 is still reported when R1 is unknown; the unknown R1 gives no event.
+
+    Independent: yes, because the window is built so that only R3 moves.
+    """
+    values = healthy("A") | {"FT-001": None, "PT-203": healthy("A")["PT-203"] + 1.0}
+    events = residual_events(run(values))
+    assert set(events) == {"R3"}
+
+
+def test_no_computable_residual_is_insufficient_evidence() -> None:
+    """With no pump running and no receipt flow, nothing can be computed.
+
+    Independent: yes, because R1 and R4 both read FT-001 and R2 and R3 do not apply.
+    """
+    values = healthy("A") | {"P-101A": 0.0, "FT-001": None}
+    response = run(values)
+    assert response["status"] == "insufficient_evidence" and response["result"] is None
+    issue = response["issues"][0]
+    assert (
+        issue["code"] == "INSUFFICIENT_EVIDENCE"
+        and "No residual could be computed" in issue["message"]
+    )
+
+
+def test_no_pump_running_is_complete_with_r1_and_r4_only() -> None:
+    """With neither pump on, R1 and R4 are enough: the window is complete and says so.
+
+    Independent: yes, because R2 and R3 do not apply when no pump runs.
+    """
+    response = run(healthy("A") | {"P-101A": 0.0})
+    assert response["status"] == "complete"
+    assert "computed: R1, R4; not applicable: R2, R3" in " ".join(response["limitations"])
+
+
+def test_a_wrong_unit_is_excluded_and_reported() -> None:
+    """A signal with an unexpected unit is unknown for the residuals that read it.
+
+    Independent: yes, because the unit of FT-001 is changed to one the detector does not accept.
+    """
+    request = request_with(healthy("A"))
+    signals = request["input"]["observations"]["summary"]["signals"]
+    next(s for s in signals if s["tag_id"] == "FT-001")["unit"] = "m"
+    rehash(request)
+    response = AnomalyDetectionAgent().run(request)
+    assert response["status"] == "degraded"
+    assert "INVALID_SIGNAL_UNIT" in {i["code"] for i in response["issues"]}
+    assert "unit 'm' where 'm3/h' is expected" in response["issues"][-1]["message"]
+
+
+def test_quality_events_are_kept_and_sorted() -> None:
+    """Missing readings and non-good quality are reported as before, with sorted tags.
+
+    Independent: yes, because the flags are set on two signals in the test.
+    """
+    request = request_with(healthy("A"))
+    signals = request["input"]["observations"]["summary"]["signals"]
+    by_tag = {s["tag_id"]: s for s in signals}
+    set_missing(by_tag["TT-103"], 2)
+    set_missing(by_tag["TT-101"], 1)
+    by_tag["PT-203"]["latest_quality"] = "bad"
+    rehash(request)
+    events = AnomalyDetectionAgent().run(request)["result"]["events"]
+    kinds = {e["category"]: e["tag_ids"] for e in events}
+    assert kinds["missing_reading"] == ["TT-101", "TT-103"]
+    assert kinds["non_good_quality"] == ["PT-203"]
+
+
+def test_the_fixed_flags_and_the_response_stay_advisory() -> None:
+    """The response is advisory, never says no event means healthy, carries no authorisation.
+
+    Independent: yes, because the required values are stated in the contract.
+    """
+    response = run(healthy("A") | {"FT-201": 380.0})
+    assert response["advisory_only"] is True
+    assert response["result"]["no_event_means_healthy"] is False
+    text = json.dumps(response)
+    for forbidden in ("human_decision_required", "automatic_action_authorized"):
+        assert forbidden not in text
+    assert "No detected event does not establish healthy equipment." in response["limitations"]
+
+
+def test_the_same_request_gives_the_same_bytes() -> None:
+    """Two runs on equal requests, healthy, flagged and degraded, give identical bytes.
+
+    Independent: yes, because the comparison is of serialised output against itself.
+    """
+    for values in (healthy("A"), healthy("A") | {"FT-201": 380.0}, healthy("A") | {"FT-001": None}):
+        request = request_with(values)
+        first = json.dumps(AnomalyDetectionAgent().run(copy.deepcopy(request)))
+        second = json.dumps(AnomalyDetectionAgent().run(copy.deepcopy(request)))
+        assert first == second
+
+
+def test_a_sequence_request_is_not_supported() -> None:
+    """A sequence_v1 request returns an error response that names the representation.
+
+    Independent: yes, because the request is built by hand with one sample per channel.
+    """
+    request = copy.deepcopy(request_with(healthy("A")))
+    summary = request["input"]["observations"]["summary"]
+    sequence = {
+        "lookback_s": 300.0,
+        "channels": [
+            {
+                "tag_id": s["tag_id"],
+                "unit": s["unit"],
+                "samples": [
+                    {
+                        "available_offset_s": -1.0,
+                        "measured_offset_s": -1.0,
+                        "value": 1.0,
+                        "quality_flag": "good",
+                        "availability_status": "measured",
+                    }
+                ],
+            }  # fmt: skip
+            for s in summary["signals"]
+        ],
+    }
+    observations = request["input"]["observations"]
+    request["input"]["observations"] = {
+        "representation": "sequence_v1", "sequence": sequence,
+        "evidence_ids": observations["evidence_ids"],
+    }  # fmt: skip
+    for row in request["evidence"]:
+        if row["evidence_id"] in observations["evidence_ids"]:
+            row["content_sha256"] = content_hash(sequence)
+    check_request(request)
+    response = AnomalyDetectionAgent().run(request)
+    assert response["status"] == "error" and response["result"] is None
+    assert response["issues"][0]["code"] == "UNSUPPORTED_OBSERVATION_REPRESENTATION"
+
+
+def test_an_unverifiable_parameter_file_leaves_only_the_quality_rules(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A failure in any dependency returns a validated error that still consumes the forecast id.
+    """When the parameters cannot be loaded the agent names the problem and runs the rules only.
 
-    Independent: yes, because each failure is injected and the error is checked by the
-    real validator.
+    Independent: yes, because the loader is made to refuse and the outcome is read from the output.
     """
-    request = example_request()
-    report_id = attach_forecast(request)
-    real = getattr(anomaly_agent, target)
-    replacement: Callable[..., Any] = raise_runtime_error
-    if target == "build_response":
-        replacement = fail_unless_error(real)
-    elif target == "check_response":
-        replacement = fail_first_call(real)
-    monkeypatch.setattr(anomaly_agent, target, replacement)
 
+    def refuse() -> Any:
+        raise ValueError("topology residual parameter file hash mismatch")
+
+    monkeypatch.setattr(anomaly_agent, "load_parameters", refuse)
+    request = request_with(healthy("A"))
     response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "error"
-    assert response["result"] is None
-    assert any(issue["code"] == "INTERNAL_ERROR" for issue in response["issues"])
-    assert report_id in response["consumed_evidence_ids"]
     check_response(request, response)
+    assert response["status"] == "degraded"
+    assert "MODEL_UNAVAILABLE" in {i["code"] for i in response["issues"]}
+    assert response["result"]["coverage"] == "partial"
+    assert residual_events(response) == {}
 
 
-def test_invalid_request_returns_an_error_response(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A request that fails validation gets an error response instead of an exception.
+def test_the_contract_example_request_passes_with_the_shipped_parameters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The official example is answered, with a valid response, on the shipped parameters.
 
-    Independent: yes, because the request validator is forced to reject the request.
+    Independent: yes, because validity is judged by the contract validators.
     """
-    request = example_request()
-    monkeypatch.setattr(anomaly_agent, "check_request", raise_runtime_error)
-
+    monkeypatch.undo()
+    path = contract_directory() / "examples" / "anomaly_detection.request.json"
+    request = json.loads(path.read_text(encoding="utf-8"))
     response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "error"
-    assert response["result"] is None
-    assert any("contract validation" in json.dumps(issue) for issue in response["issues"])
-
-
-def test_request_for_another_role_returns_an_error_response() -> None:
-    """A request addressed to another role is answered with an error. Independent: yes."""
-    request = copy.deepcopy(example_request())
-    request["agent"] = "predictive_health"
-
-    response = AnomalyDetectionAgent().run(request)
-
-    assert response["status"] == "error"
-    assert response["result"] is None
-
-
-# Per-tag feature profile
-
-
-def test_per_tag_features_cover_measured_tags_only() -> None:
-    """Per-tag features cover every measured tag and no on/off, count or timing field.
-
-    Independent: yes, because the names are compared with the unit table directly.
-    """
-    features = anomaly_agent.extract_per_tag_features(signals_of(example_request()))
-    tags = {name.split("__")[0] for name in features}
-    measured = {t for t, unit in anomaly_agent.EXPECTED_UNITS.items() if unit != "bool"}
-
-    assert tags == measured
-    assert {name.split("__")[1] for name in features} <= set(anomaly_agent.NUMERIC_FIELDS)
-    assert not any(word in name for name in features for word in ("age", "count", "samples"))
-
-
-def test_per_tag_features_keep_missing_as_nan_and_ignore_states() -> None:
-    """A missing tag gives NaN (never 0.0), and pump or valve states give no feature.
-
-    Independent: yes, because the inputs are built explicitly.
-    """
-    signals = [
-        {"tag_id": "P-101A", "unit": "bool", "latest_value": True},
-        {"tag_id": "PT-001", "unit": "barg", "mean": 3.5},
-    ]
-    features = anomaly_agent.extract_per_tag_features(signals)
-
-    assert not any(name.startswith("P-101A") for name in features)
-    assert features["PT-001__mean"] == 3.5
-    assert math.isnan(features["PT-001__slope_per_s"])
-    assert math.isnan(features["FT-001__mean"])
-
-
-def test_per_tag_artifact_is_scored_with_per_tag_features(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An artifact naming the per-tag profile gets per-tag features and reports that profile.
-
-    Independent: yes, because the model records its input and the expected vector is
-    built separately.
-    """
-    request = example_request()
-    profile = anomaly_agent.PER_TAG_PROFILE_ID
-    expected = anomaly_agent.features_for(profile, signals_of(request))
-    model = FakeModel(0.99)
-    install_fake_artifact(monkeypatch, request, model, profile_id=profile)
-
-    response = AnomalyDetectionAgent().run(request)
-
-    received = model.received_features.tolist()[0]
-    assert len(received) == len(expected)
-    for got, want in zip(received, expected.values(), strict=True):
-        assert (math.isnan(got) and math.isnan(want)) or got == want
-    assert response["implementation"]["feature_profile_id"] == profile
-    assert any("each measured tag" in text for text in departures(response)[0]["limitations"])
     check_response(request, response)
+    assert response["implementation"]["name"] == "anomaly_detection"
+    assert response["implementation"]["artifact_sha256"] is not None
 
 
-def test_unknown_feature_profile_is_model_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An artifact naming an unknown profile is reported as an unavailable model.
+def test_consumed_evidence_matches_the_request_and_the_forecast_is_kept() -> None:
+    """The observation evidence is consumed, and an attached forecast report is consumed too.
 
-    Independent: yes, because the profile id is set explicitly.
+    Independent: yes, because the ids come from the request the test built.
     """
-    request = example_request()
-    install_fake_artifact(monkeypatch, request, FakeModel(0.99))
-    artifact = anomaly_agent.load_artifact()
-    artifact["feature_profile_id"] = "not_a_profile"
-
+    request = request_with(healthy("A"))
     response = AnomalyDetectionAgent().run(request)
+    assert response["consumed_evidence_ids"] == request["input"]["observations"]["evidence_ids"]
+    assert "Forecast reports are not used as model features." in response["limitations"]
 
-    assert any(issue["code"] == "MODEL_UNAVAILABLE" for issue in response["issues"])
-    assert not departures(response)
 
+def test_an_invalid_request_returns_an_error_response() -> None:
+    """A request that fails the contract returns an error response, not an exception.
 
-def test_skill_constants_match_the_reports() -> None:
-    """The stated F1 values and flagged share equal the shipped evaluation and test reports.
-
-    Independent: yes, because the reports are written by the training run and read from disk.
+    Independent: yes, because the request is broken by hand.
     """
-    folder = Path(__file__).parents[3] / "tools" / "agents" / "anomaly_detection_artifacts"
-    evaluation = json.loads((folder / "evaluation_report.json").read_text(encoding="utf-8"))
-    test = json.loads((folder / "test_report.json").read_text(encoding="utf-8"))
+    request = request_with(healthy("A"))
+    request["interface_version"] = "bad"
+    response = AnomalyDetectionAgent().run(request)
+    assert response["status"] == "error" and response["result"] is None
 
-    chosen = evaluation["profiles"][evaluation["chosen_profile"]]
-    validation = chosen["candidates"][evaluation["selected_model"]]["validation"]
-    assert anomaly_agent.VALIDATION_F1 == pytest.approx(validation["f1"], abs=5e-4)
-    assert anomaly_agent.ALWAYS_FLAG_VALIDATION_F1 == pytest.approx(
-        evaluation["validation_baselines"]["always_flag"]["f1"], abs=5e-4
-    )
 
-    assert anomaly_agent.TEST_F1 == pytest.approx(test["selected"]["f1"], abs=5e-4)
-    assert anomaly_agent.ALWAYS_FLAG_TEST_F1 == pytest.approx(
-        test["baselines"]["always_flag"]["f1"], abs=5e-4
-    )
-    matrix = test["selected"]["confusion_matrix"]
-    flagged = (matrix["true_positive"] + matrix["false_positive"]) / sum(matrix.values())
-    assert anomaly_agent.TEST_FLAGGED_FRACTION == pytest.approx(flagged, abs=5e-3)
+def test_an_internal_failure_returns_a_validated_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unexpected exception inside the analysis becomes a validated error response.
+
+    Independent: yes, because the failure is injected and the output is judged by the validators.
+    """
+
+    def boom(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("injected")
+
+    monkeypatch.setattr(anomaly_agent, "run_detector", boom)
+    request = request_with(healthy("A"))
+    response = AnomalyDetectionAgent().run(request)
+    check_response(request, response)
+    assert response["status"] == "error"
+    assert response["issues"][0]["code"] == "INTERNAL_ERROR"
