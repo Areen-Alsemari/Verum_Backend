@@ -114,3 +114,38 @@ def fit_quadratic(q: Floats, y: Floats) -> Floats:
 def predict_quadratic(coef: Floats, q: Floats) -> Floats:
     """Value of the quadratic fit."""
     return np.asarray(coef[0] + coef[1] * q + coef[2] * q**2, dtype=np.float64)
+
+
+def condition_features(regimes: list[Regime]) -> Floats:
+    """Design rows [1, t, t^2, q, q^2, t q, inland] from (atmosphere, temperature, set point)."""
+    rows = []
+    for atmosphere, temperature, setpoint in regimes:
+        t = (float(temperature) - 35.0) / 10.0  # type: ignore[arg-type]
+        q = (float(setpoint) - 450.0) / 150.0  # type: ignore[arg-type]
+        rows.append([1.0, t, t * t, q, q * q, t * q, 1.0 if atmosphere == "inland" else 0.0])
+    return np.asarray(rows, dtype=np.float64)
+
+
+@dataclass
+class RegressionBaseline(Baseline):
+    """E1: expected value of every column as a smooth function of the set conditions."""
+
+    coef: Floats
+    resid_scale: Floats
+
+    def params(self, regimes: list[Regime]) -> tuple[Floats, Floats]:
+        """Predicted value and the pooled residual scale, shape like the statistics array."""
+        pred = (condition_features(regimes) @ self.coef).reshape(len(regimes), *self.floor.shape)
+        return pred, np.broadcast_to(self.resid_scale, pred.shape).copy()
+
+
+def fit_regression_baseline(x: Floats, regimes: list[Regime]) -> RegressionBaseline:
+    """Least squares of each column on the set conditions, fault-free windows only."""
+    floor = pooled_range(x)
+    filled = np.where(np.isfinite(x), x, np.nanmedian(x, axis=0))
+    feats = condition_features(regimes)
+    flat = filled.reshape(len(x), -1)
+    coef = np.linalg.lstsq(feats, flat, rcond=None)[0]
+    resid = (flat - feats @ coef).reshape(x.shape)
+    _, scale = median_scale(resid, floor)
+    return RegressionBaseline(median_scale(x, floor), {}, floor, coef, scale)

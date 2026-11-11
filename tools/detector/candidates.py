@@ -7,6 +7,7 @@ a matrix of per-tag (or per-residual) contributions, used for the top-contributo
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
 import numpy as np
 from fitting import (
@@ -43,13 +44,14 @@ class Scored:
     scores: Floats
     parts: Floats
     names: list[str]
+    tags: Floats | None = None
 
 
 class PerTag:
     """C1: robust z-scores of level, slope and spread per tag, plus CUSUM, top-3 mean."""
 
-    def __init__(self, train: Windows) -> None:
-        self.base: Baseline = fit_baseline(train.x, train.regime)
+    def __init__(self, train: Windows, base: Baseline | None = None) -> None:
+        self.base: Baseline = base or fit_baseline(train.x, train.regime)
         self.cusum: tuple[Floats, Floats] | None = None
 
     def cusum_params(self, w: Windows) -> tuple[Floats, Floats]:
@@ -62,21 +64,24 @@ class PerTag:
         c = np.log1p(stats)
         self.cusum = median_scale(c, pooled_range(c))
 
-    def score(self, w: Windows, stats: Floats, guard: bool = False) -> Scored:
-        """Per-tag maximum of the four components; window score is the top-3 mean.
+    def score(self, w: Windows, stats: Floats | None, guard: bool = False) -> Scored:
+        """Per-tag maximum of the components; window score is the top-3 mean.
 
         With guard, the level and CUSUM components of the temperature tags are set to zero.
+        Without CUSUM statistics (stats is None) only the three window statistics are used.
         """
-        assert self.cusum is not None
         zfull = np.abs(self.base.standardise(w.x, w.regime))
-        zc = np.abs(np.nan_to_num((np.log1p(stats) - self.cusum[0]) / self.cusum[1], nan=0.0))
+        zc = np.zeros(zfull.shape[:2])
+        if stats is not None:
+            assert self.cusum is not None
+            zc = np.abs(np.nan_to_num((np.log1p(stats) - self.cusum[0]) / self.cusum[1], nan=0.0))
         if guard:
             zfull[:, SHIFT_IDX, 0] = 0.0
             zc[:, SHIFT_IDX] = 0.0
         z = zfull.max(axis=2)
         per_tag = np.maximum(z, zc)
         top = np.sort(per_tag, axis=1)[:, -TOP_K:].mean(axis=1)
-        return Scored(top, per_tag, list(NUMERIC_TAGS))
+        return Scored(top, per_tag, list(NUMERIC_TAGS), per_tag)
 
 
 def _columns(z: Floats, tags: list[str]) -> Floats:
@@ -170,8 +175,10 @@ class Residuals:
     """C3: plant mass balance, pump head, discharge loss and receipt-line pressure residuals."""
 
     NAMES = ["R1_mass_balance", "R2_pump_head", "R3_discharge_loss", "R4_receipt_line"]
+    PAIR_NAMES = ["R5_temperature_pair", "R6_pump_pair"]
 
-    def __init__(self, train: Windows) -> None:
+    def __init__(self, train: Windows, flow_terms: bool = False, pairs: bool = False) -> None:
+        self.flow_terms, self.pairs = flow_terms, pairs
         self.fits: dict[tuple[str, str, str], Fit] = {}
         y, design = self._mass(train)
         ok = np.isfinite(y) & np.isfinite(design).all(axis=1)
@@ -182,12 +189,18 @@ class Residuals:
             for pump in ("A", "B"):
                 self._fit_pump(train, states, kind, pump)
         self._fit_receipt(train)
+        if pairs:
+            self.pair = PairResiduals(train, states)
 
-    @staticmethod
-    def _mass(w: Windows) -> tuple[Floats, Floats]:
+    def _mass(self, w: Windows) -> tuple[Floats, Floats]:
+        """Plant balance target and design: inventory change, intercept, optional flow terms."""
         y = _mean(w, "FT-001") - _mean(w, "FT-201")
         slopes = [w.x[:, TAG[t], 1] * 3600.0 for t in ("LT-101", "LT-102", "LT-103")]
-        return y, np.column_stack([*slopes, np.ones(len(w.ids))])
+        cols = [*slopes, np.ones(len(w.ids))]
+        if self.flow_terms:
+            setpoint = np.asarray([cast(float, r[2]) for r in w.regime], dtype=np.float64)
+            cols += [_mean(w, "FT-201"), setpoint]
+        return y, np.column_stack(cols)
 
     @staticmethod
     def _pump_xy(w: Windows, kind: str, pump: str) -> tuple[Floats, Floats]:
@@ -243,7 +256,11 @@ class Residuals:
                 parts[rows, 1] = self._pump_z("R2", state, sub)
                 parts[rows, 2] = self._pump_z("R3", state, sub)
         parts[:, 3] = self._receipt_z(w)
-        return Scored(parts.max(axis=1), parts, list(self.NAMES))
+        if not self.pairs:
+            return Scored(parts.max(axis=1), parts, list(self.NAMES))
+        pair, tags = self.pair.score(w, states)
+        both = np.column_stack([parts, pair])
+        return Scored(both.max(axis=1), both, [*self.NAMES, *self.PAIR_NAMES], tags)
 
     def _receipt_z(self, w: Windows) -> Floats:
         out = np.zeros(len(w.ids))
@@ -254,6 +271,50 @@ class Residuals:
             resid = y[idx] - predict_quadratic(fit.coef, q[idx])
             out[idx] = [fit.z(float(v)) for v in resid]
         return out
+
+
+class PairResiduals:
+    """E3: agreement of related instruments (tank temperatures, the two pump discharges)."""
+
+    TEMPS = ("TT-101", "TT-102", "TT-103")
+    MIN_AB = 30
+
+    def __init__(self, train: Windows, states: list[str]) -> None:
+        r5 = self._temps(train)
+        self.centre5 = np.nanmedian(r5, axis=0)
+        self.sigma5 = _sigma((r5 - self.centre5).ravel())
+        both = np.asarray([s == "AB" for s in states])
+        d = self._discharge(train)[both]
+        d = d[np.isfinite(d)]
+        self.centre6 = float(np.median(d)) if len(d) >= self.MIN_AB else 0.0
+        self.sigma6 = _sigma(d - self.centre6) if len(d) >= self.MIN_AB else float("nan")
+
+    def _temps(self, w: Windows) -> Floats:
+        t = np.column_stack([_mean(w, tag) for tag in self.TEMPS])
+        return np.asarray(t - np.median(t, axis=1, keepdims=True), dtype=np.float64)
+
+    @staticmethod
+    def _discharge(w: Windows) -> Floats:
+        return np.asarray(_mean(w, "PT-202A") - _mean(w, "PT-202B"), dtype=np.float64)
+
+    @staticmethod
+    def _z(r: Floats, sigma: float) -> Floats:
+        z = np.maximum(0.0, np.abs(r) - sigma) / sigma
+        return np.asarray(np.nan_to_num(z, nan=0.0), dtype=np.float64)
+
+    def score(self, w: Windows, states: Any) -> tuple[Floats, Floats]:
+        """Pair residual values (R5, R6) per window and the per-tag evidence they give."""
+        z5 = self._z(self._temps(w) - self.centre5, self.sigma5)
+        z6 = np.zeros(len(w.ids))
+        if np.isfinite(self.sigma6):
+            z6 = self._z(self._discharge(w) - self.centre6, self.sigma6)
+            z6 = np.where(np.asarray(states) == "AB", z6, 0.0)
+        tags = np.zeros((len(w.ids), len(NUMERIC_TAGS)))
+        for k, tag in enumerate(self.TEMPS):
+            tags[:, TAG[tag]] = z5[:, k]
+        tags[:, TAG["PT-202A"]] = z6
+        tags[:, TAG["PT-202B"]] = z6
+        return np.column_stack([z5.max(axis=1), z6]), tags
 
 
 def _take(w: Windows, rows: NDArray[np.bool_]) -> Windows:
