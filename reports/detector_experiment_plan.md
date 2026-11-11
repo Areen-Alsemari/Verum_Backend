@@ -132,3 +132,43 @@ Counts under the new key (full table in the evidence document): 32 regimes occur
 ### 11.3 Re-run
 
 C3 and C4 are re-run on validation with the new key, with the same constants, thresholds and cross-fitting as before. Every metric of the first run is reported next to the new value, including recall at 5% false alarms for each fault type, restriction and misrouting in particular. C1 and C2 are not part of the re-run requested; their per-regime baselines also change with the key, and they are re-run only as inputs to C4. Nothing is tuned and the result does not reopen the stop rule of section 8.
+
+## 12. Phase B: enhancements under grouped cross-validation (registered before any Phase B run)
+
+Written on branch detector-v2 after the Amendment 2 re-run (section 11.3) and before any Phase B score was computed. The Amendment 2 re-run is reported as it came out. The constants below are fixed; none is tuned.
+
+### 12.1 Evaluation protocol
+
+- Unit: (family, atmosphere, temperature) of a train episode, as in the campaign split rule. Units are sorted lexicographically and unit i goes to fold i mod 5.
+- Grouped cross-validation (CV): for each fold, every component is fitted on the fault-free windows of the other units only (baselines, regressions, PCA, residual fits, calibration references), and all eligible windows of the held-out units, faulty and fault-free, are scored. Fault-free windows of a faulty episode (before onset) count as fault-free. The out-of-fold (OOF) scores of all eligible train windows are pooled for the metrics.
+- Validation benchmark: fit on all fault-free train windows, score validation. It is the held-out-combination benchmark and is reported separately. It does not enter the stop rule.
+- Regime key: operator-set conditions (section 11.2). A regime with 200 or more fault-free windows in the fit set of the fold has its own baseline; every other regime uses the pooled baseline.
+- Metrics, unchanged from section 6: average precision (AP) against prevalence, AUROC, matched-stage AUROC, false-alarm rate (FAR) and recall by fault type at a 5% FAR threshold cross-fitted by the parity of the episode identifier, 95% percentile bootstrap over whole episodes (1,000 resamples, seed 20261108).
+- Added: false alarms per day = FAR times 288 (windows are 300 s long, 288 per day). Detection delay: for each faulty episode, the cutoff of the first alarmed faulty window minus the earliest fault onset, in seconds; the median and quartiles over episodes with an alarm are reported together with the share of faulty episodes never alarmed (censored, not imputed). Windows are 300 s apart, so delays are multiples of 300 s up to the position of the onset inside a window.
+- Localisation: on single-component faulty windows of the sensor faults (bias, drift, stuck), whether the faulty tag is first (top-1) or among the first three (top-3) when the 14 tags are ranked by the per-tag evidence of the system. The declared reference gives no instrument-to-equipment mapping, so leak, restriction, misrouting and pump windows are not scored for localisation and the report says so.
+- Paired differences: for a system against the previous one, the difference of AP and of matched-stage AUROC is bootstrapped on the same episode resamples; the 95% percentile interval is reported.
+
+### 12.2 Baseline system B0
+
+The registered candidates rebuilt on the summary columns only, with the new key and run under grouped CV: C1n (C1 without the CUSUM component, because a raw-series pass per fold is outside the time-box; the CUSUM is kept in the Amendment 2 validation re-run), C2a, C2b, C3 and the fusion C4n (minimum calibrated p-value of C1n, C2a, C2b, C3, calibrated on the fit-set scores). All constants as in sections 4 and 5. C4n is the system S0. A system always means a fusion.
+
+### 12.3 Candidates
+
+Each is applied once, in this order, to the previous kept system; each has a physical reason.
+
+- E1, set-point-conditioned baselines. Reason: in a fault-free plant the flows, pressures and temperatures follow the set conditions, so the expected value of each column is a smooth function of them; a regression generalises to combinations with few fault-free windows, where a regime median does not exist. For each of the 42 columns, least squares on [1, t, t squared, q, q squared, t times q, inland], with t = (temperature - 35)/10 and q = (set point - 450)/150, fitted on the fit-set fault-free windows. The expected value replaces the regime median; the scale is the robust scale rule of section 4 on the residuals of the fit-set windows (pooled). C1n, C2a and C2b use these residuals; C3 is unchanged.
+- E2, mass balance compensated for tank inventory change. Reason: the inventory change of the three tanks is the level slope times the tank area, and flow-meter error grows with flow. The R1 of C3 already contains the storage term with fitted areas; E2 adds a flow-proportional meter term and a set-point term: FT-001 mean minus FT-201 mean regressed on [three level slopes times 3600, 1, FT-201 mean, set point]. The fitted tank areas are reported and must be positive; a negative area is reported as a failure of the physical reading. The stop rule applies to the difference from the previous system.
+- E3, related sensor pair residuals for bias and drift. Reason: instruments that measure the same quantity must agree in a healthy plant, so an offset or drift in one shows as a residual that does not depend on the process state. R5: each of TT-101, TT-102 and TT-103 mean minus the median of the three, standardised on the fit-set fault-free windows with the robust scale rule, dead zone of one sigma, value = the largest over the three tags. R6: PT-202A mean minus PT-202B mean when both pumps run, standardised in the same way. Both are added to the residuals of C3 (the window score of C3 is the maximum over all applicable residuals).
+- E4, out-of-sample calibration of the fusion. Reason: the p-values of C4 are computed from scores of the same windows the baselines were fitted on, which understates the scores of unseen fault-free windows. Inside the fit set of each outer fold, the units are split into 4 inner folds by the same rule (sorted, i mod 4). For each inner fold, all components are refitted on the other inner folds and the fault-free windows of the held-out inner fold are scored. The pooled scores of those windows are the reference of each component; p = (number of reference scores at least the score + 1)/(number of reference scores + 1). The components used for the outer scoring are fitted on the whole fit set, as before. The fusion rule is unchanged.
+
+### 12.4 Controls for every candidate and every system
+
+- Shuffle: 200 permutations of the labels within position (seed 20261108) on the OOF scores.
+- Placebo: matched-stage AUROC on positions 1 to 5, label = the episode contains a fault later, bootstrap over episodes. A system that separates these windows reads the kind of episode, not a fault.
+- Constant-column check: the columns each component reads are printed; any with fewer than 3 distinct values or zero variance across faulty windows flags the component. For E1 the regressors (the set conditions) are listed as inputs and checked in the same way over all windows.
+- Condition-only reference: a score equal to the fault prevalence of the window's regime among fit-set windows, fitted per fold. It shows how much a function of the set conditions alone achieves; a system near it is reading the conditions.
+- Top contributors, as before.
+
+### 12.5 Stop rule and time-box
+
+A candidate is kept only if its system improves the grouped-CV AP and the grouped-CV matched-stage AUROC over the previous kept system, with the 95% bootstrap interval of each paired difference above zero. Otherwise it is reported and dropped, and the next candidate is applied to the previous kept system. No candidate beyond E1 to E4 is run and no constant is revisited. Each candidate gets one scoring run; a run that fails because of a code error is repaired and repeated once. The validation benchmark is reported for every system and is not used to decide.
