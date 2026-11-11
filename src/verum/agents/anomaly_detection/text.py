@@ -111,14 +111,10 @@ def window_line(score: float, params: Parameters) -> str:
     )
 
 
-def method_limitations(params: Parameters) -> list[str]:
-    """Limitations stated on every response in which the detector ran."""
+def skill_limitations() -> list[str]:
+    """What the detector measured on simulated data, and where it is weak."""
     f = FIGURES
     return [
-        f"Method {METHOD_ID}: four residuals from the declared single-line layout (mass balance "
-        "with tank storage, pump head, discharge loss, receipt line), fitted on fault-free "
-        "windows of the train split of one simulated terminal. It scores one 300 s summary "
-        "window and keeps no state.",
         f"Out of fold on train (grouped cross-validation) the score has average precision "
         f"{f['oof_ap']} and matched-stage AUROC {f['oof_matched']}; on a separate validation "
         f"split {f['val_ap']} and {f['val_matched']}. A score with no skill has average "
@@ -139,6 +135,13 @@ def method_limitations(params: Parameters) -> list[str]:
         f"{f['missing_scorable']}. With noise on the ten numeric inputs at 1x, 2x and 3x the "
         f"fault-free residual scale, it falls to {f['noise_ap']} and the false-alarm rate at "
         f"the fixed threshold rises to {f['noise_far']}.",
+    ]
+
+
+def scope_limitations() -> list[str]:
+    """What the detector does not claim, and how it was fitted."""
+    f = FIGURES
+    return [
         "Simulated data from one synthetic terminal; no field data. The score is a decision "
         "score, not a probability, and the residuals use the window mean and slope as given, "
         "including samples flagged suspect or bad.",
@@ -152,4 +155,16 @@ def method_limitations(params: Parameters) -> list[str]:
         f"is unverified. Fitted tank areas match the declared geometry within {f['area_match']}.",
         "Fitted on the train split only; thresholds come from out-of-fold train scores; the "
         "validation split was used for reporting only and the test split was not used.",
+    ]
+
+
+def method_limitations(params: Parameters) -> list[str]:
+    """Limitations stated on every response in which the detector ran."""
+    return [
+        f"Method {METHOD_ID}: four residuals from the declared single-line layout (mass balance "
+        "with tank storage, pump head, discharge loss, receipt line), fitted on fault-free "
+        "windows of the train split of one simulated terminal. It scores one 300 s summary "
+        "window and keeps no state.",
+        *skill_limitations(),
+        *scope_limitations(),
     ]
