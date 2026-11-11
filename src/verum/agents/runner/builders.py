@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from verum.agents.common import to_plain
+from verum.agents.runner.persistence import ANOMALY_ROLE, attach_fields
 from verum.agents.runner.prepare import REFERENCE, Prepared, note
 
 Reports = dict[str, dict[str, Any] | None]
@@ -82,9 +83,16 @@ def historical_asset_intelligence(prep: Prepared, reports: Reports) -> dict[str,
     }
 
 
+def recent_assessments(prep: Prepared, reports: Reports) -> dict[str, Any]:
+    """The last window assessments of the run and the persistence statement, for roles 5 and 8."""
+    snapshot = prep.snapshot
+    return attach_fields(prep.log, snapshot.case_id, snapshot.as_of_s, reports[ANOMALY_ROLE])
+
+
 def diagnostic_reasoning(prep: Prepared, reports: Reports) -> dict[str, Any]:
-    """Observations and whichever upstream reports exist."""
+    """Observations, whichever upstream reports exist, and the recent window assessments."""
     return {
+        **recent_assessments(prep, reports),
         "observations": prep.observations,
         "forecast_report": reports["predictive_health"],
         "anomaly_report": reports["anomaly_detection"],
@@ -138,6 +146,7 @@ def evidence_verification_decision(prep: Prepared, reports: Reports) -> dict[str
         note(prep, "evidence_verification_decision", "NO_EVIDENCE_PROPOSALS",
              "No evidence proposal was supplied, so none is assessed.")
     return {
+        **recent_assessments(prep, reports),
         "diagnosis_report": reports["diagnostic_reasoning"],
         "inspection_plan_report": reports["inspection_planning"],
         "inspection_quality_report": reports["inspection_quality_documentation"],

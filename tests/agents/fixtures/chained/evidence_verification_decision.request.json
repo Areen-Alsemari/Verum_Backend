@@ -309,7 +309,20 @@
         "retest_result_ids": []
       },
       "status": "degraded"
-    }
+    },
+    "persistence": {
+      "alarming": null,
+      "rule": null,
+      "windows_exceeding": 0,
+      "windows_held": 1,
+      "windows_unknown": 1
+    },
+    "recent_anomaly_assessments": [
+      {
+        "as_of_s": 300.0,
+        "window_assessment": null
+      }
+    ]
   },
   "interface_version": "1.0.0",
   "message_type": "request",

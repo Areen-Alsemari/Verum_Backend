@@ -991,6 +991,19 @@
         ]
       }
     },
+    "persistence": {
+      "alarming": null,
+      "rule": null,
+      "windows_exceeding": 0,
+      "windows_held": 1,
+      "windows_unknown": 1
+    },
+    "recent_anomaly_assessments": [
+      {
+        "as_of_s": 300.0,
+        "window_assessment": null
+      }
+    ],
     "topology_report": {
       "advisory_only": true,
       "agent": "topology_dependency",

@@ -23,6 +23,7 @@ from verum.agents.common import (
     stable_hash,
 )
 from verum.agents.common.stub import STUB_CODE
+from verum.agents.runner.persistence import AssessmentLog
 from verum.agents.runner.wiring import UPSTREAM
 
 PLACEHOLDER_CODE = "PLACEHOLDER_AGENT"
@@ -46,6 +47,7 @@ class Bundle:
     reports: dict[str, dict[str, Any] | None] = field(default_factory=dict)
     issues: list[dict[str, str]] = field(default_factory=list)
     notes: list[dict[str, str]] = field(default_factory=list)
+    assessments: AssessmentLog = field(default_factory=AssessmentLog)
 
 
 @dataclass(frozen=True)

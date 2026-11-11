@@ -18,6 +18,7 @@ from verum.agents.common import (
     to_plain,
 )
 from verum.agents.runner.facts import reference_facts
+from verum.agents.runner.persistence import AssessmentLog
 from verum.agents.runner.snapshot import Snapshot
 
 SOURCE = "source-observations"
@@ -41,6 +42,7 @@ class Prepared:
     forecast_tags: list[str]
     result_ids: list[str]
     notes: list[dict[str, str]] = field(default_factory=list)
+    log: AssessmentLog = field(default_factory=AssessmentLog)
 
 
 def note(prep: Prepared, role: str, code: str, message: str) -> None:
@@ -61,7 +63,7 @@ def _add_rows(
     return ids
 
 
-def prepare(snapshot: Snapshot, mode: str) -> Prepared:
+def prepare(snapshot: Snapshot, mode: str, log: AssessmentLog | None = None) -> Prepared:
     """Build the context and registry for a snapshot and collect its public inputs."""
     cutoff = float(snapshot.as_of_s)
     context = make_context(
@@ -88,7 +90,7 @@ def prepare(snapshot: Snapshot, mode: str) -> Prepared:
         facts=reference_facts(reference, REFERENCE),
         query_assets=list(snapshot.query_asset_ids or [a["asset_id"] for a in assets]),
         forecast_tags=[t for t in TAG_ORDER if t in units and units[t] != "bool"],
-        result_ids=[],
+        result_ids=[], log=log or AssessmentLog(),
     )
     if snapshot.source_sha256 is None:
         note(prep, "all", "SOURCE_ROWS_NOT_SUPPLIED",

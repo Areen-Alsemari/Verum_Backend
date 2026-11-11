@@ -7,10 +7,12 @@ holds no role logic, and agents are replaced without any change here.
 
 from verum.agents.runner.bundle import Bundle, BundleError, VerifiedBundle, verify_bundle
 from verum.agents.runner.discovery import load_agent
+from verum.agents.runner.persistence import AssessmentLog
 from verum.agents.runner.run import run_analysis
 from verum.agents.runner.snapshot import Snapshot, next_revision
 
 __all__ = [
+    "AssessmentLog",
     "Bundle",
     "BundleError",
     "Snapshot",

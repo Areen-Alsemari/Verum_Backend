@@ -27,6 +27,7 @@ from verum.agents.runner.bundle import (
     verify_bundle,
 )
 from verum.agents.runner.discovery import load_agent
+from verum.agents.runner.persistence import ANOMALY_ROLE, AssessmentLog, assessment_of
 from verum.agents.runner.prepare import Prepared, prepare
 from verum.agents.runner.snapshot import Snapshot
 from verum.agents.runner.wiring import workflow_stages
@@ -110,18 +111,26 @@ def run_analysis(
     timeout_s: float | None = None,
     allow_placeholders: bool = True,
     previous: VerifiedBundle | None = None,
+    recent: AssessmentLog | None = None,
 ) -> Bundle:
     """Run all roles on a snapshot and return the bundle of requests, reports and issues.
 
     Agents are found by convention unless supplied. A previous verified bundle makes the run check
     that this one is a genuine new revision; earlier reports are never carried into this run. Each
     role served by a placeholder gets a note; with allow_placeholders false the run is rejected.
+    The log of the run's earlier window assessments, if any, is passed as recent; the bundle holds
+    the log extended by this window, to be passed to the next window's run.
     """
-    prep = prepare(snapshot, mode)
+    log = recent or AssessmentLog()
+    log.extended(snapshot.case_id, snapshot.as_of_s, None)  # refuse a log of another run or time
+    prep = prepare(snapshot, mode, log)
     bundle = Bundle(context=prep.context, registry=prep.registry, notes=prep.notes)
     for stage in workflow_stages():
         for role in stage:
             _run_role(role, prep, bundle, agents or {}, timeout_s)
+    bundle.assessments = log.extended(
+        snapshot.case_id, snapshot.as_of_s, assessment_of(bundle.reports.get(ANOMALY_ROLE))
+    )
     if not allow_placeholders:
         check_placeholders(bundle)
     if previous is not None:
