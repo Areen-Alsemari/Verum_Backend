@@ -9,7 +9,7 @@ The interfaces and example messages are supplied. The agents, training programs,
 | Agent | Main implementation | Owner |
 | --- | --- | --- |
 | 1 Predictive Health | Learned forecasting model | Member 1 |
-| 2 Anomaly Detection | Learned physical detector plus data-quality rules | Member 2 |
+| 2 Anomaly Detection | Topology residual detector plus data-quality rules | Member 2 |
 | 3 Topology and Dependency | Graph queries, no learned model required | Member 3 |
 | 4 Historical and Asset Intelligence | Source-backed retrieval, no learned model required | Member 3 |
 | 5 Diagnostic Reasoning | Learned fault classifier plus evidence comparisons | Member 4 |
@@ -82,32 +82,40 @@ The supported output is a five-minute interval mean. The supplied targets do not
 
 ## Agent 2 Anomaly Detection
 
-Role key: anomaly_detection. Owner: Member 2. This agent distinguishes problems in the readings from patterns associated with supported injected physical changes. An anomaly means something needs attention, not that a specific fault is proven.
+Role key: anomaly_detection. Owner: Member 2. This agent distinguishes problems in the readings from departures of the readings from the fault-free relations of the declared single-line layout. An anomaly means something needs attention, not that a specific fault is proven. The method is `topology_residual_v1`; the earlier random forest was evaluated, found at chance level on validation windows, and removed (`reports/agent2_forest_removed.md`).
 
-| Part | Exact build requirement |
+| Part | Build requirement |
 | --- | --- |
-| Input | input.observations and optional forecast_report from Agent 1. It must also work when forecast_report is null. |
-| Training data | role_views/anomaly_detection/. Quality counts are in target.data_quality. Physical labels and their eligibility mask are under target.reference_supervision. |
-| Learned model | Binary physical-reference classifier using observations. Quality checks are explicit rules, not a learned model copying visible counts. |
-| Output | result.events with event_id, tag_ids, asset_ids, category, score, method_id, evidence_ids and limitations; also coverage and no_event_means_healthy false. |
+| Input | `input.observations` with representation `summary_v1`. A `sequence_v1` request returns `error` with the code `UNSUPPORTED_OBSERVATION_REPRESENTATION`. `forecast_report` is not read, so the agent works the same when it is null. |
+| Fields read | Twelve summary fields: the mean of FT-001, FT-201, PT-001, PT-201, PT-202A, PT-202B and PT-203; the slope per second of LT-101, LT-102 and LT-103; the latest value of P-101A and P-101B. |
+| Method | Four physical residuals, a window score and per-residual thresholds. No learned model and no state between windows. |
+| Parameters | One pinned file whose sha256 is checked before it is parsed; a mismatch is refused. It holds 41 fitted numbers, the thresholds and the sha256 of the training file. |
+| Output | `result.events`, `coverage` and `no_event_means_healthy` false. Events carry event_id, tag_ids, asset_ids, category, score, method_id, evidence_ids and limitations. |
 
-### Build and compare
+### Residuals
 
-1. Implement deterministic quality events for missing readings and non-good quality flags. Preserve what the source flag actually means. These checks can be tested against data_quality, but recovering visible missing counts is not evidence of physical fault detection skill.
+| Residual | Reads | Meaning |
+| --- | --- | --- |
+| R1 | FT-001, FT-201, LT-101, LT-102, LT-103 | Receipt flow minus delivery flow minus the tank inventory change from the three level slopes. Candidate explanations: a leak, a flow-meter fault or a level-sensor fault. |
+| R2 | PT-201, PT-202A or PT-202B, FT-201, the run state of the same pump | Pressure rise across the running pump at the delivery flow, against its fault-free value. |
+| R3 | PT-203, PT-202A or PT-202B, FT-201, the run state of the same pump | Pressure drop from the pump discharge to the discharge header at the delivery flow, against its fault-free value. |
+| R4 | PT-001, FT-001 | Receipt line pressure at the receipt flow, against its fault-free value (one pooled fit). |
 
-2. For physical detection, make a binary label from the eligible reference_supervision record's injected_change_present. Apply its nested supervised_loss_mask. A masked or unknown label must not become a healthy negative.
+Each residual becomes a score in fault-free scale units, with a dead zone of one standard deviation. The window score is the largest score among the residuals that could be computed, and the window is flagged when it is strictly greater than the window threshold. The pump state comes from the two run states: with no pump running only R1 and R4 apply; with both running R2 and R3 are unknown because that state was never seen in fitting.
 
-3. Evaluate an always-negative reference baseline to expose class imbalance. Train LogisticRegression with training-fitted preprocessing, then compare RandomForestClassifier or HistGradientBoostingClassifier. The baseline is an evaluation reference, not permission to declare quiet equipment healthy.
+### Events, statuses and limits
 
-4. Select the operating threshold on validation. If exploring an unsupervised alternative, IsolationForest must be fitted on eligible healthy training records only and evaluated against the same physical labels. Try a sequence autoencoder only if this comparison establishes a useful reason; its reconstruction score is not automatically a calibrated probability.
+1. Quality events for missing readings and non-good quality flags are deterministic rules, unchanged from the earlier agent. Recovering the visible counts is not evidence of physical detection.
+2. One `reported_signal_departure` event is produced for each residual whose score exceeds its own threshold. Its `tag_ids` list only the tags that residual reads, `asset_ids` is empty, and the text states the physics and the candidate explanations; it names no asset, location or fault type. The score is a decision score, not a probability, and `calibration_id` is null.
+3. The window score, whether it exceeds the window threshold, and which residuals were computed, unknown or not applicable, are stated in the response limitations. The contract has no field for them.
+4. A missing, wrong-unit or non-finite input makes the residuals that read it unknown, never zero. When every residual that applies was computed and no signal has an invalid unit the status is `complete` with coverage `assessed`; when some are unknown it is `degraded` with coverage `partial` and the unknown residuals are listed. When none can be computed the status is `insufficient_evidence`, the result is null and an issue is returned. A parameter file that cannot be loaded or verified gives a `MODEL_UNAVAILABLE` issue and quality events only.
+5. Suspect or bad quality flags do not make a tag unusable for the residuals, as in the evaluation; the quality events still report them.
 
-### Test and deliver
+The limitations stated in every response, and the figures they quote, come from `reports/detector_v3_c3_characterisation.md` and `reports/detector_v4_pooled_stress.md`; a test compares each quoted figure with those reports. In short, on simulated data from one synthetic terminal: validation average precision 0.730 against a no-skill value near 0.13; recall is high for pump, drift and stuck faults and weak for restriction, leak, bias and misrouting; the false-alarm rate is 0.05 by construction out of fold and 0.080 on validation; skill falls with missing tags and with noise. The mass imbalance cannot separate a leak from a flow-meter or level-sensor fault. No episode-level claim is made, the tag-to-location mapping is unverified, and the test split was not used.
 
-Report precision, recall, PR-AUC and the confusion matrix for eligible physical labels, including positive/negative counts. Precision asks how many alarms are correct; recall asks how many supported changes are detected. Also report false alarms and missed detections by episode and mechanism. Separate reading-quality results from physical results.
+### Build and verify
 
-Start the physical model with observation inputs only. If a forecast is present at runtime, compare it through a separately labelled rule or method. Do not train on Agent 1's ideal future targets as though they were its predictions. A learned forecast-residual detector would require realistic held-out upstream predictions and its own evaluation; it is not supplied by this dataset.
-
-The event categories are missing_reading, non_good_quality, reported_signal_departure and supported_physical_reference. Use null for an unsupported score; expose a calibrated_probability only after calibration. Deliver model/preprocessing, threshold selection, metrics and missing-forecast tests.
+Refit with `python tools/agents/fit_topology_residual.py --out <file>`; it uses fault-free train windows only and is byte-identical on a second run. A new file needs its sha256 recorded in `parameters.py`. The tests use small synthetic windows with hand-worked values and do not need the data folder. `tools/agents/compare_agent2_runs.py` compares two full-runner runs on the same sample (`reports/agent2_before_after.md`). The event categories are missing_reading, non_good_quality, reported_signal_departure and supported_physical_reference; the last is not produced.
 
 ## Agent 3 Topology and Dependency
 
