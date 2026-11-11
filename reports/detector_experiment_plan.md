@@ -213,3 +213,36 @@ Classification, fixed here: a fault type has a distinct signature when the large
 ### 13.6 Runtime feasibility and commanded lineup (parts 3 and 4)
 
 Read-only. No model is run and nothing is evaluated for part 4. Part 3 lists every input C3 uses and states for each whether the Agent 2 request carries it at runtime, what the request lacks, whether the topology and the tag-to-location mapping fit a small pinned parameter file, and how the mapping is derived and what is unverified. Part 4 states whether the commanded valve or lineup state is in the request, whether it is independent of the injected fault, how a commanded-against-observed valve check would be defined and what could make it leak the label.
+
+## 14. Stage four: pooled R4 and a stress test of C3 (registered before any run of this stage)
+
+Written on branch detector-v2 after the C3 characterisation (section 13) and before any quantity of this section was computed. Nothing in the grouped-CV protocol of section 12 changes: the same 5 folds by unit, the same fit rule (fault-free windows of the other units), the same metrics.
+
+### 14.1 Pooled R4
+
+C3 with the R4 receipt-line fit made once on all fault-free windows of the fit set (a quadratic of PT-001 against FT-001 mean, one scale), used for every window, and no per-regime fit. R1, R2 and R3 are unchanged. The scoring does not read the atmosphere, the temperature or the flow set point. Compared with the per-regime C3 of section 13, out of fold and on validation:
+
+- AP, AUROC and matched-stage AUROC; window false-alarm rate and recall at the 5% window target (section 13.2); recall by fault type;
+- the episode-level policies 1/1, 2/3 and 3/5 with the threshold rule of section 13.3;
+- the paired difference pooled minus per-regime of AP and of matched-stage AUROC, 95% bootstrap over episodes on shared resamples;
+- the shuffle and placebo controls of section 13.4.
+
+No decision rule is attached: the result is reported either way. The per-regime C3 is the one saved in section 13.
+
+### 14.2 Minimal-input check
+
+The inputs of the pooled version are listed from the code and tested by perturbation: the scores must not change when (a) every window statistic outside the twelve listed below is replaced by an arbitrary constant, (b) the regime key and the order of the windows are scrambled, and (c) a window is scored alone instead of among the others. The twelve inputs are the window mean of FT-001, FT-201, PT-001, PT-201, PT-202A, PT-202B and PT-203, the window slope of LT-101, LT-102 and LT-103, and the latest value of P-101A and P-101B. The contract example request of Agent 2 is read, without change, to confirm that each of the twelve is a field of its summary signals with the expected unit, and one window is scored from it.
+
+### 14.3 Stress test (no tuning, nothing refitted)
+
+Models are those of the grouped-CV folds and of the validation fit, unchanged. Window inputs are perturbed, seeded by numpy `default_rng([20261108, code, fold])` with code 10 + m for m missing tags and 20 + k for noise at k times, and fold 0 to 4 out of fold and 5 on validation. One draw per setting.
+
+(a) Missing tags. For every window, m of the twelve inputs, chosen at random without replacement, are made unknown, for m in {1, 2, 3}. Unknown is neither zero nor healthy. A residual is unavailable when an input it reads is unknown: R1 reads FT-001, FT-201 and the three level slopes; R2 reads PT-202x, PT-201, FT-201 and the pump state; R3 reads PT-202x, PT-203, FT-201 and the pump state; R4 reads PT-001 and FT-001; the pump state needs both pump tags, and x is the running pump. A residual that does not apply (pump not running) is not available either. The window score is the maximum over the available residuals. A window with none is unscorable.
+
+(b) Noise. Gaussian noise is added to the window statistics of the ten numeric inputs, independently, with standard deviation k times s, k in {1, 2, 3}, where s is chosen so that the input alone would move the residual it enters by one fault-free residual scale of the fitted model: FT-001 and FT-201 by the scale of R1; each level slope by the scale of R1 divided by 3600 times the fitted tank area; PT-001 by the scale of the pooled R4; PT-202A and PT-202B by the scale of the R2 fit of that pump; PT-201 by the mean of the two R2 scales; PT-203 by the mean of the two R3 scales. The pump tags receive no noise.
+
+Both perturbations apply to all windows, faulty and fault-free. The alarm threshold is fixed: the threshold of the unperturbed windows of the same set (95th percentile of the fault-free window scores of the other parity fold, section 13.2), applied unchanged to the perturbed scores, so the false-alarm rate may rise. Unscorable windows are ranked below every scorable window for AP and AUROC and count as not alarmed. Reported for each setting, out of fold and on validation: AP, matched-stage AUROC (95% bootstrap over episodes), false-alarm rate and recall at the fixed threshold, and the share of windows (all, and faulty) that are scorable. It is a realism check; no setting is used to change the detector.
+
+### 14.4 What a deployed Agent 2 can claim
+
+A short section of the report states, from sections 13 and 14 only: window-level evidence, the policy that needs history, and the residual-level statements the signatures support (pump with R2; drift and leak with R1), with the ambiguity between a leak and a flow-meter error in R1 stated. A per-asset breakdown of the signature for sensor faults is added there as a descriptive check of that statement; it is not tuned on and it changes nothing.
