@@ -35,7 +35,8 @@ def log_of(*items: dict[str, Any] | None) -> AssessmentLog:
 
 def alarming(*items: dict[str, Any] | None) -> bool | None:
     """The persistence answer after the given windows."""
-    return persistence_of(log_of(*items).entries)["alarming"]
+    answer: bool | None = persistence_of(log_of(*items).entries)["alarming"]
+    return answer
 
 
 def test_the_first_window_gives_no_answer() -> None:
