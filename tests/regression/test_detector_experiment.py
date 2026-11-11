@@ -296,7 +296,8 @@ def test_shift_guard_removes_only_the_temperature_level_components() -> None:
     n = 400
     train = windows.Windows(
         [str(i) for i in range(n)], ["e"] * n, np.ones(n, dtype=np.intp), np.zeros(n),
-        np.zeros(n, dtype=np.intp), ["none"] * n, rng.normal(size=(n, 14, 3)), [(0,) * 16] * n,
+        np.zeros(n, dtype=np.intp), ["none"] * n, rng.normal(size=(n, 14, 3)),
+        [(0,) * 16] * n, [(0,) * 16] * n,
     )  # fmt: skip
     model = candidates.PerTag(train)
     model.calibrate(rng.random((n, 14)))

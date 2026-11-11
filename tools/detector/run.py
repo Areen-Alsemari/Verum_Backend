@@ -16,6 +16,7 @@ def main() -> None:
     parser.add_argument("stage", choices=["score", "evaluate", "diagnose", "report"])
     parser.add_argument("--release", type=Path)
     parser.add_argument("--work", type=Path, required=True)
+    parser.add_argument("--key", choices=["lineup", "conditions"], default="lineup")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--results", type=Path)
     parser.add_argument("--diagnostics", type=Path)
@@ -23,7 +24,7 @@ def main() -> None:
     if args.stage == "score":
         import pipeline
 
-        meta = pipeline.run(args.release, args.work)
+        meta = pipeline.run(args.release, args.work, args.key)
         skip = ("ids", "episodes", "kind", "part_names")
         print(json.dumps({k: v for k, v in meta.items() if k not in skip}, indent=1))
     elif args.stage == "evaluate":

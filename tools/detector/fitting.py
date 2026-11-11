@@ -14,7 +14,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 Floats = NDArray[np.float64]
-Regime = tuple[int, ...]
+Regime = tuple[object, ...]
 MIN_REGIME = 200
 MAD_FACTOR = 1.4826
 

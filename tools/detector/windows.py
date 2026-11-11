@@ -1,8 +1,9 @@
 """Load train and validation windows as arrays: allowed statistics, regime key and labels.
 
 Only the allowed columns are built: mean, slope and the square root of the standard deviation
-of the 14 numeric tags. The on/off tags give the regime key and nothing else. Labels are kept
-in separate arrays and are used for selecting fit windows and for scoring, never as inputs.
+of the 14 numeric tags. The on/off tags give the lineup key and the pump state and nothing
+else. Labels are kept in separate arrays and are used for selecting fit windows and for
+scoring, never as inputs.
 """
 
 from __future__ import annotations
@@ -50,8 +51,11 @@ class Windows:
     faulty: NDArray[np.intp]
     kind: list[str]
     x: NDArray[np.float64]
-    regime: list[tuple[int, ...]]
+    lineup: list[tuple[int, ...]]
+    regime: list[tuple[object, ...]]
     signals: list[Any] = field(default_factory=list)
+    unit: list[tuple[str, str, float]] = field(default_factory=list)
+    onset_s: NDArray[np.float64] = field(default_factory=lambda: np.empty(0))
 
 
 def fault_kind(components: list[dict[str, Any]]) -> str:
@@ -85,7 +89,7 @@ def load_split(rel: Path, split: str, keep_signals: bool = False) -> Windows:
 
     lineage = episode_lookup(rel, split)
     cols: dict[str, list[Any]] = {k: [] for k in ("ids", "ep", "stage", "cut", "y", "kind", "x")}
-    regimes: list[tuple[int, ...]] = []
+    lineups: list[tuple[int, ...]] = []
     kept: list[Any] = []
     for rec in iter_role_records(rel, "diagnostic_reasoning", split):
         if not rec.target["supervised_loss_mask"]:
@@ -100,13 +104,13 @@ def load_split(rel: Path, split: str, keep_signals: bool = False) -> Windows:
         cols["y"].append(1 if comps else 0)
         cols["kind"].append(fault_kind(comps))
         cols["x"].append([[_value(by_tag[t], s) for s in STATS] for t in NUMERIC_TAGS])
-        regimes.append(_regime(by_tag))
+        lineups.append(_regime(by_tag))
         if keep_signals:
             kept.append(rec.input["observations"]["signals"])
     return Windows(
         cols["ids"], cols["ep"], np.asarray(cols["stage"], dtype=np.intp),
         np.asarray(cols["cut"]), np.asarray(cols["y"], dtype=np.intp), cols["kind"],
-        np.asarray(cols["x"], dtype=np.float64), regimes, kept,
+        np.asarray(cols["x"], dtype=np.float64), lineups, list(lineups), kept,
     )  # fmt: skip
 
 
@@ -116,6 +120,8 @@ def subset(w: Windows, mask: NDArray[np.bool_]) -> Windows:
     pick = [int(i) for i in idx]
     return Windows(
         [w.ids[i] for i in pick], [w.episodes[i] for i in pick], w.stage[idx], w.cutoff[idx],
-        w.faulty[idx], [w.kind[i] for i in pick], w.x[idx], [w.regime[i] for i in pick],
-        [w.signals[i] for i in pick] if w.signals else [],
+        w.faulty[idx], [w.kind[i] for i in pick], w.x[idx], [w.lineup[i] for i in pick],
+        [w.regime[i] for i in pick], [w.signals[i] for i in pick] if w.signals else [],
+        [w.unit[i] for i in pick] if w.unit else [],
+        w.onset_s[idx] if len(w.onset_s) else w.onset_s,
     )  # fmt: skip

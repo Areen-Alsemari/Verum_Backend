@@ -9,9 +9,12 @@ a plant operator sets; they contain no fault effect.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
+
+import numpy as np
+from windows import Windows
 
 
 @dataclass(frozen=True)
@@ -59,3 +62,10 @@ def read_conditions(rel: Path, episodes: list[str]) -> dict[str, Condition]:
         path = rel / "evaluator" / "source_episodes" / name / "labels.json"
         out[name] = parse(json.loads(path.read_text(encoding="utf-8")))
     return out
+
+
+def apply(w: Windows, conds: dict[str, Condition]) -> Windows:
+    """The windows with the operator-set regime as key; the lineup key is kept for pump state."""
+    c = [conds[e] for e in w.episodes]
+    onset = np.asarray([x.onset_s if x.onset_s is not None else np.nan for x in c])
+    return replace(w, regime=[x.regime for x in c], unit=[x.unit for x in c], onset_s=onset)

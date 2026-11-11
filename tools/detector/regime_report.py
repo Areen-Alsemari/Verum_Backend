@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from windows import FAULT_TYPES
 
 
-def table(head: list[str], rows: list[list[object]]) -> list[str]:
+def table(head: list[str], rows: Sequence[Sequence[object]]) -> list[str]:
     """Markdown table lines."""
     out = ["| " + " | ".join(head) + " |", "|" + "|".join("---" for _ in head) + "|"]
     return [*out, *["| " + " | ".join(str(c) for c in r) + " |" for r in rows], ""]

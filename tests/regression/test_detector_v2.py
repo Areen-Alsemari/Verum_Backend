@@ -78,3 +78,62 @@ def test_nearest_key_names_the_tags_that_differ() -> None:
     best, diff = audit.nearest(probe, [base, near, far])
     assert best == near
     assert diff == [tags[5]]
+
+
+def tiny_windows(n: int = 4) -> Any:
+    import numpy as np
+
+    windows = load("windows")
+    lineup = [(i % 2,) + (0,) * 15 for i in range(n)]
+    return windows.Windows(
+        [f"w{i}" for i in range(n)], ["EP-A", "EP-A", "EP-B", "EP-B"][:n],
+        np.ones(n, dtype=np.intp),
+        np.arange(n, dtype=np.float64), np.zeros(n, dtype=np.intp), ["none"] * n,
+        np.zeros((n, 14, 3)), lineup, list(lineup),
+    )  # fmt: skip
+
+
+def test_rekeying_replaces_the_regime_and_keeps_the_lineup() -> None:
+    """The regime becomes the set conditions; the lineup key stays for the pump state.
+
+    Independent: yes, because the expected keys are written out.
+    """
+    cond = load("conditions")
+    w = tiny_windows()
+    conds = {"EP-A": cond.parse(doc(25.0)), "EP-B": cond.parse(doc(40.0, (600.0,)))}
+    out = cond.apply(w, conds)
+    assert out.regime[0] == ("coastal", 25.0, 400.0)
+    assert out.regime[3] == ("coastal", 40.0, 400.0)
+    assert out.lineup == w.lineup
+    assert out.unit[0] == ("PIPE_LEAK", "coastal", 25.0)
+    assert out.onset_s[3] == 600.0
+    assert out.onset_s[0] != out.onset_s[0]
+
+
+def test_subset_keeps_every_per_window_field_aligned() -> None:
+    """Selecting windows selects the same rows of lineup, regime, unit and onset.
+
+    Independent: yes, because the selection is written out.
+    """
+    import numpy as np
+
+    cond, windows = load("conditions"), load("windows")
+    w = tiny_windows()
+    conds = {"EP-A": cond.parse(doc(25.0)), "EP-B": cond.parse(doc(40.0, (600.0,)))}
+    picked = windows.subset(cond.apply(w, conds), np.asarray([False, True, False, True]))
+    assert picked.ids == ["w1", "w3"]
+    assert picked.lineup == [(1,) + (0,) * 15] * 2
+    assert [r[1] for r in picked.regime] == [25.0, 40.0]
+    assert picked.unit[1][2] == 40.0
+    assert picked.onset_s[1] == 600.0
+
+
+def test_comparison_helpers_format_and_difference() -> None:
+    """The change column is new minus old, three decimals, signed.
+
+    Independent: yes, because the numbers are written out.
+    """
+    rc = load("rekey_compare")
+    assert rc.delta([0.5, 0.4, 0.6], [0.75, 0.7, 0.8]) == "+0.250"
+    assert rc.delta([0.5, 0.4, 0.6], [0.25, 0.1, 0.3]) == "-0.250"
+    assert rc.fmt([0.5, 0.25, 0.75]) == "0.500 (0.250 to 0.750)"

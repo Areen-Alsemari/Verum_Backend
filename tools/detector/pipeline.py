@@ -13,6 +13,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, cast
 
+import conditions
 import cusum
 import guard
 import numpy as np
@@ -75,18 +76,28 @@ def fit_and_score(
     return out, {}, np.concatenate([s_val, raw_val], axis=1)
 
 
-def run(rel: Path, work: Path) -> dict[str, Any]:
-    """Load, fit, score and save. Returns the metadata written next to the scores."""
+def run(rel: Path, work: Path, key: str = "lineup") -> dict[str, Any]:
+    """Load, fit, score and save. Returns the metadata written next to the scores.
+
+    The key is 'lineup' (the on/off tags, first experiment) or 'conditions' (Amendment 2).
+    """
+    assert key in ("lineup", "conditions")
     t0 = time.time()
     guard.install()
     val = load_split(rel, "validation", keep_signals=True)
     train_all = load_split(rel, "train")
     guard.ALLOWED_EPISODES.update(val.episodes)
     guard.ALLOWED_EPISODES.update(train_all.episodes)
+    if key == "conditions":
+        conds = conditions.read_conditions(rel, [*train_all.episodes, *val.episodes])
+        train_all, val = conditions.apply(train_all, conds), conditions.apply(val, conds)
     train = subset(train_all, train_all.faulty == 0)
     out, _, extra = fit_and_score(rel, train, val)
     c0, threshold = score_current_model(val)
-    return save(work, val, train, out, c0, threshold, extra, time.time() - t0)
+    meta = save(work, val, train, out, c0, threshold, extra, time.time() - t0)
+    meta["regime_key"] = key
+    (work / "meta.json").write_text(json.dumps(meta))
+    return meta
 
 
 def save(

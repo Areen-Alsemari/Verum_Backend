@@ -34,11 +34,11 @@ def episode_change(w: Windows) -> dict[str, list[int]]:
     The reference is the most common key of the episode's fault-free windows.
     """
     by_ep: dict[str, Counter[Key]] = {}
-    for e, f, k in zip(w.episodes, w.faulty, w.regime, strict=True):
+    for e, f, k in zip(w.episodes, w.faulty, w.lineup, strict=True):
         if f == 0:
             by_ep.setdefault(e, Counter())[k] += 1
     out = {t: [0, 0] for t in FAULT_TYPES}
-    for e, f, k, t in zip(w.episodes, w.faulty, w.regime, w.kind, strict=True):
+    for e, f, k, t in zip(w.episodes, w.faulty, w.lineup, w.kind, strict=True):
         if f == 1 and e in by_ep:
             out[t][1] += 1
             out[t][0] += k != by_ep[e].most_common(1)[0][0]
@@ -51,16 +51,16 @@ def audit(rel: Path) -> dict[str, Any]:
     result: dict[str, Any] = {"fields": list(BOOL_TAGS), "min_windows": MIN_REGIME}
     train = load_split(rel, "train")
     guard.ALLOWED_EPISODES.update(train.episodes)
-    pool = sorted({k for k, f in zip(train.regime, train.faulty, strict=True) if f == 0})
+    pool = sorted({k for k, f in zip(train.lineup, train.faulty, strict=True) if f == 0})
     known = set(pool)
     for name, w in (("train", train), ("validation", load_split(rel, "validation"))):
         rows: dict[str, Any] = {}
         for t in FAULT_TYPES:
             idx = [i for i in range(len(w.ids)) if w.kind[i] == t]
-            unseen = [i for i in idx if w.regime[i] not in known]
+            unseen = [i for i in idx if w.lineup[i] not in known]
             flips: Counter[str] = Counter()
             for i in unseen:
-                flips.update(nearest(w.regime[i], pool)[1])
+                flips.update(nearest(w.lineup[i], pool)[1])
             rows[t] = {
                 "windows": len(idx),
                 "key_never_fault_free": len(unseen),

@@ -109,7 +109,9 @@ class PcaMonitor:
             z[:, SHIFT_IDX, 0] = 0.0
         return z
 
-    def _group(self, name: str, z: Floats, regimes: list[tuple[int, ...]]) -> tuple[Floats, Floats]:
+    def _group(
+        self, name: str, z: Floats, regimes: list[tuple[object, ...]]
+    ) -> tuple[Floats, Floats]:
         cols = _columns(z, self.groups[name])
         score = np.zeros(len(z))
         contrib = np.zeros((len(z), len(self.groups[name])))
@@ -175,7 +177,7 @@ class Residuals:
         ok = np.isfinite(y) & np.isfinite(design).all(axis=1)
         coef = np.linalg.lstsq(design[ok], y[ok], rcond=None)[0]
         self.mass = Fit(coef, _sigma(y - design @ coef))
-        states = [pump_state(r) for r in train.regime]
+        states = [pump_state(r) for r in train.lineup]
         for kind in ("R2", "R3"):
             for pump in ("A", "B"):
                 self._fit_pump(train, states, kind, pump)
@@ -231,7 +233,7 @@ class Residuals:
         """Window score: the largest residual z; contributions per residual group."""
         y, design = self._mass(w)
         r1 = np.asarray([self.mass.z(v) for v in y - design @ self.mass.coef])
-        states = np.asarray([pump_state(r) for r in w.regime])
+        states = np.asarray([pump_state(r) for r in w.lineup])
         parts = np.zeros((len(w.ids), 4))
         parts[:, 0] = r1
         for state in ("A", "B", "AB"):
