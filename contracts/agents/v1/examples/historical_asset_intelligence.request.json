@@ -1,0 +1,260 @@
+{
+  "interface_version": "1.0.0",
+  "message_type": "request",
+  "agent": "historical_asset_intelligence",
+  "request_id": "contract-request-historical_asset_intelligence",
+  "context": {
+    "case_id": "contract-example",
+    "analysis_id": "contract-example-snapshot",
+    "revision": 0,
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "data_release": "verum_reference_v2",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "scope_id": "verum_supported_reference_v2",
+    "execution_mode": "contract_fixture"
+  },
+  "evidence": [
+    {
+      "evidence_id": "source-observations",
+      "kind": "observation_window",
+      "source_ref": "observations:training-prefix-at-300",
+      "available_at_s": 300.0,
+      "content_sha256": "baa8b00d4c8fc5d36b4bede20eae29b7d775084cd53ca650eb7e8a2f8bd6fec7",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "provenance": "simulated_observation"
+    },
+    {
+      "evidence_id": "source-reference",
+      "kind": "declared_reference",
+      "source_ref": "reference:public_reference",
+      "available_at_s": 0.0,
+      "content_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+      "root_evidence_ids": [
+        "source-reference"
+      ],
+      "provenance": "declared_design"
+    },
+    {
+      "evidence_id": "features-summary",
+      "kind": "observation_representation",
+      "source_ref": "features:training-summary-at-300",
+      "available_at_s": 300.0,
+      "content_sha256": "57328308f3f2e04053e55b47e8da581311f55066d899e5b00e8ca514fc4a84fd",
+      "root_evidence_ids": [
+        "source-observations"
+      ],
+      "provenance": "derived_observation"
+    }
+  ],
+  "input": {
+    "query_asset_ids": [
+      "TK-101"
+    ],
+    "assets": [
+      {
+        "asset_id": "TK-101",
+        "kind": "tank"
+      },
+      {
+        "asset_id": "TK-102",
+        "kind": "tank"
+      },
+      {
+        "asset_id": "TK-103",
+        "kind": "tank"
+      },
+      {
+        "asset_id": "P-101A",
+        "kind": "pump"
+      },
+      {
+        "asset_id": "P-101B",
+        "kind": "pump"
+      },
+      {
+        "asset_id": "XV-PAI",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-PAO",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-PBI",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-PBO",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R000",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R101",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R102",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-R103",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-S101",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-S102",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "XV-S103",
+        "kind": "isolation_valve"
+      },
+      {
+        "asset_id": "E001",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E002",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E003",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R101a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R101b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S101a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S101b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R102a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R102b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S102a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S102b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R103a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-R103b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S103a",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-S103b",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-SH",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA0",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA1",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA2",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA3",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PA4",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB0",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB1",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB2",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB3",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-PB4",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-D1",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "E-D2",
+        "kind": "pipe"
+      },
+      {
+        "asset_id": "PT-001",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-201",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-202A",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-202B",
+        "kind": "pressure_transmitter"
+      },
+      {
+        "asset_id": "PT-203",
+        "kind": "pressure_transmitter"
+      }
+    ],
+    "declared_facts": [],
+    "history": [],
+    "reference_evidence_ids": [
+      "source-reference"
+    ]
+  }
+}

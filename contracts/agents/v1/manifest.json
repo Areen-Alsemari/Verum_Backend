@@ -1,0 +1,106 @@
+{
+  "interface_version": "1.0.0",
+  "status": "implementation_target",
+  "scope_id": "verum_supported_reference_v2",
+  "dataset_code_commit": "c62d3bd5f48c7d92ba4a15fbb7f1fa201ea2d26a",
+  "agents": [
+    {
+      "number": "1",
+      "key": "predictive_health",
+      "name": "Predictive Health",
+      "schema": "predictive_health.schema.json",
+      "request_fixture": "examples/predictive_health.request.json",
+      "response_fixture": "examples/predictive_health.response.json"
+    },
+    {
+      "number": "2",
+      "key": "anomaly_detection",
+      "name": "Anomaly Detection",
+      "schema": "anomaly_detection.schema.json",
+      "request_fixture": "examples/anomaly_detection.request.json",
+      "response_fixture": "examples/anomaly_detection.response.json"
+    },
+    {
+      "number": "3",
+      "key": "topology_dependency",
+      "name": "Topology & Dependency",
+      "schema": "topology_dependency.schema.json",
+      "request_fixture": "examples/topology_dependency.request.json",
+      "response_fixture": "examples/topology_dependency.response.json"
+    },
+    {
+      "number": "4",
+      "key": "historical_asset_intelligence",
+      "name": "Historical & Asset Intelligence",
+      "schema": "historical_asset_intelligence.schema.json",
+      "request_fixture": "examples/historical_asset_intelligence.request.json",
+      "response_fixture": "examples/historical_asset_intelligence.response.json"
+    },
+    {
+      "number": "5",
+      "key": "diagnostic_reasoning",
+      "name": "Diagnostic Reasoning",
+      "schema": "diagnostic_reasoning.schema.json",
+      "request_fixture": "examples/diagnostic_reasoning.request.json",
+      "response_fixture": "examples/diagnostic_reasoning.response.json"
+    },
+    {
+      "number": "6",
+      "key": "inspection_planning",
+      "name": "Inspection Planning",
+      "schema": "inspection_planning.schema.json",
+      "request_fixture": "examples/inspection_planning.request.json",
+      "response_fixture": "examples/inspection_planning.response.json"
+    },
+    {
+      "number": "7",
+      "key": "inspection_quality_documentation",
+      "name": "Inspection Quality & Documentation",
+      "schema": "inspection_quality_documentation.schema.json",
+      "request_fixture": "examples/inspection_quality_documentation.request.json",
+      "response_fixture": "examples/inspection_quality_documentation.response.json"
+    },
+    {
+      "number": "8",
+      "key": "evidence_verification_decision",
+      "name": "Evidence Verification & Decision",
+      "schema": "evidence_verification_decision.schema.json",
+      "request_fixture": "examples/evidence_verification_decision.request.json",
+      "response_fixture": "examples/evidence_verification_decision.response.json"
+    }
+  ],
+  "workflow": [
+    [
+      "predictive_health",
+      "topology_dependency",
+      "historical_asset_intelligence",
+      "inspection_quality_documentation"
+    ],
+    [
+      "anomaly_detection"
+    ],
+    [
+      "diagnostic_reasoning"
+    ],
+    [
+      "inspection_planning"
+    ],
+    [
+      "evidence_verification_decision"
+    ]
+  ],
+  "workflow_notes": {
+    "first_stage": "These roles consume no report from another role.",
+    "anomaly_detection": "Optionally consumes the predictive_health report and runs without it.",
+    "diagnostic_reasoning": "Follows the first two stages and consumes their reports when available.",
+    "inspection_planning": "Follows diagnostic_reasoning.",
+    "evidence_verification_decision": "Follows diagnostic_reasoning, inspection_planning and inspection_quality_documentation."
+  },
+  "final_operation": {
+    "agent": "inspection_quality_documentation",
+    "operation": "build_report",
+    "follows": "evidence_verification_decision"
+  },
+  "on_available_performed_inspection": "Create a new analysis revision, run inspection_quality_documentation, and reassess diagnosis, planning and evidence with causally current reports.",
+  "agents_implemented": false
+}

@@ -1,0 +1,63 @@
+{
+  "report_version": "1.0.0",
+  "report_id": "maintenance-contract-example",
+  "context": {
+    "case_id": "contract-example",
+    "analysis_id": "contract-example-snapshot",
+    "revision": 0,
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "data_release": "verum_reference_v2",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "scope_id": "verum_supported_reference_v2",
+    "execution_mode": "contract_fixture"
+  },
+  "report_type": "maintenance_assessment",
+  "title": "Maintenance assessment",
+  "review_status": "human_review_required",
+  "assessment_state": "more_evidence_required",
+  "source_reports": [
+    {
+      "report_id": "contract-report-evidence_verification_decision",
+      "agent": "evidence_verification_decision",
+      "content_sha256": "3974a069ad773313f9273030e3206fb42127391da552fb4818f9a254a6ddcc94"
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "assessment-example",
+      "kind": "assessment",
+      "statement": "Contract example contains no completed diagnostic assessment.",
+      "measurement": null,
+      "source_report_id": "contract-report-evidence_verification_decision",
+      "evidence_ids": []
+    }
+  ],
+  "inspection_options": [],
+  "next_steps": [
+    {
+      "description": "Obtain supported diagnostic evidence before a condition conclusion.",
+      "source_report_id": "contract-report-evidence_verification_decision",
+      "evidence_ids": []
+    }
+  ],
+  "missing_information": [
+    "No completed diagnostic assessment is supplied by this format example."
+  ],
+  "limitations": [
+    "No equipment condition is established by this contract example."
+  ],
+  "narrative": {
+    "provider": "template",
+    "model": null,
+    "prompt_id": null,
+    "text": "Contract example contains no completed diagnostic assessment.",
+    "source_report_ids": [
+      "contract-report-evidence_verification_decision"
+    ]
+  },
+  "advisory_only": true,
+  "human_decision_required": true,
+  "automatic_action_authorized": false,
+  "equipment_condition_confirmed": false
+}

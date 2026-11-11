@@ -1,0 +1,33 @@
+{
+  "context": {
+    "analysis_id": "AN-chained-example-r0",
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "case_id": "chained-example",
+    "data_release": "verum_reference_v2",
+    "execution_mode": "runtime",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "revision": 0,
+    "scope_id": "verum_supported_reference_v2"
+  },
+  "order": [
+    "predictive_health",
+    "topology_dependency",
+    "historical_asset_intelligence",
+    "inspection_quality_documentation",
+    "anomaly_detection",
+    "diagnostic_reasoning",
+    "inspection_planning",
+    "evidence_verification_decision"
+  ],
+  "report_ids": {
+    "anomaly_detection": "anomaly_detection-AN-chained-example-r0-8093a92d",
+    "diagnostic_reasoning": "diagnostic_reasoning-AN-chained-example-r0-ae493950",
+    "evidence_verification_decision": "evidence_verification_decision-AN-chained-example-r0-6f56855f",
+    "historical_asset_intelligence": "historical_asset_intelligence-AN-chained-example-r0-5582e3ef",
+    "inspection_planning": "inspection_planning-AN-chained-example-r0-28230172",
+    "inspection_quality_documentation": "inspection_quality_documentation-AN-chained-example-r0-ab045a71",
+    "predictive_health": "predictive_health-AN-chained-example-r0-ddf7ffff",
+    "topology_dependency": "topology_dependency-AN-chained-example-r0-a231e080"
+  }
+}
