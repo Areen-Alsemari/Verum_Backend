@@ -6,6 +6,7 @@ import copy
 import json
 import math
 import pickle
+import random
 import struct
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -802,3 +803,54 @@ def test_skill_constants_match_the_reports() -> None:
     matrix = test["selected"]["confusion_matrix"]
     flagged = (matrix["true_positive"] + matrix["false_positive"]) / sum(matrix.values())
     assert anomaly_agent.TEST_FLAGGED_FRACTION == pytest.approx(flagged, abs=5e-3)
+
+
+def test_loaded_model_runs_single_threaded() -> None:
+    """After loading, every n_jobs parameter of the shipped model is 1.
+
+    Independent: yes, because the shipped artifact is loaded and its estimator parameters are read.
+    """
+    model = anomaly_agent.load_artifact()["model"]
+    jobs = {k: v for k, v in model.get_params().items() if k == "n_jobs" or k.endswith("__n_jobs")}
+
+    assert jobs
+    assert set(jobs.values()) == {1}
+
+
+def test_repeated_scoring_gives_identical_floats() -> None:
+    """Scoring each of 40 varied feature vectors 25 times gives one value, to the last digit.
+
+    Independent: yes, because the vectors are the example window varied with a fixed seed.
+    """
+    artifact = anomaly_agent.load_artifact()
+    base = anomaly_agent.extract_features(signals_of(example_request()))
+    rng = random.Random(20261108)
+
+    for _ in range(40):
+        features = {
+            name: value * (1 + 0.3 * rng.gauss(0, 1)) + 0.01 * rng.gauss(0, 1)
+            for name, value in base.items()
+        }
+        scores = {
+            anomaly_agent.decision_score(artifact["model"], features, artifact["feature_names"])
+            for _ in range(25)
+        }
+        assert len(scores) == 1
+
+
+def test_repeated_runs_give_identical_responses() -> None:
+    """Twenty runs on one request give one response, including the score of the model event.
+
+    Independent: yes, because the threshold is lowered in the loaded artifact to force an event.
+    """
+    anomaly_agent.load_artifact()["threshold"] = 0.0
+    request = example_request()
+    runs = {json.dumps(AnomalyDetectionAgent().run(copy.deepcopy(request))) for _ in range(20)}
+    event = next(
+        e
+        for e in json.loads(next(iter(runs)))["result"]["events"]
+        if e["category"] == "reported_signal_departure"
+    )
+
+    assert len(runs) == 1
+    assert event["score"]["value"] >= 0.0
