@@ -1,8 +1,8 @@
 """Pinned parameters of the topology residual detector, read only after a hash check.
 
-The parameter file holds the fitted coefficients and scales, the thresholds, the units and the
-tag roles. Its sha256 is pinned in this module; a file that does not match is refused before
-any of it is parsed. The agent imports no fitting code, only this reader.
+The parameter file holds the fitted coefficients and scales, the thresholds, the persistence
+rule, the units and the tag roles. Its sha256 is pinned in this module; a file that does not
+match is refused before any of it is parsed. The agent imports no fitting code, only this reader.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 PARAMETERS_PATH = Path(__file__).resolve().parent / "artifacts" / "topology_residual_v1.json"
-EXPECTED_PARAMETERS_SHA256 = "10d26b7035621460ed2c11399f440088832719303bee9360ed0a146d5ed64312"
+EXPECTED_PARAMETERS_SHA256 = "b3517147ffd0cfb9bf8214372952eb6eff70185b093b2eb0c0c8078ae9f89747"
 METHOD_ID = "topology_residual_v1"
 RESIDUAL_KEYS = ("R1", "R2", "R3", "R4")
 
@@ -44,6 +44,9 @@ class Parameters:
     residual_thresholds: dict[str, float]
     dead_zone_sigmas: float
     residual_reads: dict[str, tuple[str, ...]]
+    persistence_k: int
+    persistence_n: int
+    persistence_threshold: float
 
 
 def _quadratic(entry: dict[str, Any]) -> QuadraticFit:
@@ -63,7 +66,10 @@ def parse(doc: dict[str, Any], sha256: str) -> Parameters:
     pumps = {
         (f["residual"], f["pump"], f["state"]): _quadratic(f) for f in doc["pump_fits"]
     }  # fmt: skip
-    thresholds = doc["thresholds"]
+    thresholds, persistence = doc["thresholds"], doc["persistence"]
+    k, n = int(persistence["k"]), int(persistence["n"])
+    if not 1 <= k <= n:
+        raise ValueError("the persistence rule needs 1 <= k <= n")
     return Parameters(
         sha256=sha256,
         units={t: str(v["unit"]) for t, v in doc["inputs"].items()},
@@ -76,7 +82,10 @@ def parse(doc: dict[str, Any], sha256: str) -> Parameters:
         window_threshold=float(thresholds["window_score"]),
         residual_thresholds={k: float(thresholds["residuals"][k]) for k in RESIDUAL_KEYS},
         dead_zone_sigmas=float(doc["dead_zone_sigmas"]),
-        residual_reads={k: tuple(v["reads"]) for k, v in doc["residuals"].items()},
+        residual_reads={key: tuple(v["reads"]) for key, v in doc["residuals"].items()},
+        persistence_k=k,
+        persistence_n=n,
+        persistence_threshold=float(persistence["threshold"]),
     )
 
 

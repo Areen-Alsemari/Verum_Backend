@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from verum.agents.anomaly_detection import text
+from verum.agents.anomaly_detection.assessment import window_assessment
 from verum.agents.anomaly_detection.parameters import (
     METHOD_ID,
     Parameters,
@@ -28,6 +29,7 @@ from verum.agents.anomaly_detection.residuals import (
     UNKNOWN,
     ResidualResult,
     compute_residuals,
+    exceeds,
     window_score,
 )
 from verum.agents.common import (
@@ -40,7 +42,7 @@ from verum.agents.common import (
 )
 
 ROLE = "anomaly_detection"
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 FEATURE_PROFILE_ID = "topology_residual_summary_v1_12_fields"
 MODEL_METHOD_ID = METHOD_ID
 SCORE_DECIMALS = 6
@@ -104,7 +106,7 @@ def residual_events(
     events = []
     for result in outcome.results:
         own = params.residual_thresholds[result.key]
-        if result.state != COMPUTED or result.z is None or result.z <= own:
+        if result.z is None or not exceeds(result, own):
             continue
         events.append(
             make_event(
@@ -137,7 +139,8 @@ def run_detector(
             limitations=[text.MODEL_UNAVAILABLE_TEXT],
         )
     outcome = DetectorOutcome(results=compute_residuals(signals, params), params=params)
-    outcome.score = window_score(outcome.results)
+    raw_score = window_score(outcome.results)
+    outcome.score = None if raw_score is None else round(raw_score, SCORE_DECIMALS)
     if not outcome.computed:
         outcome.issues.append(make_issue("INSUFFICIENT_EVIDENCE", _why_none(outcome), evidence_ids))
         return outcome
@@ -176,6 +179,22 @@ def status_and_coverage(
     if outcome.complete and not invalid_units:
         return "complete", "assessed"
     return "degraded", "partial"
+
+
+def result_body(
+    events: list[dict[str, Any]], coverage: str, outcome: DetectorOutcome
+) -> dict[str, Any]:
+    """The result object; the window assessment is present only when a residual was computed."""
+    body: dict[str, Any] = {
+        "events": events,
+        "coverage": coverage,
+        "no_event_means_healthy": False,
+    }
+    if outcome.params is not None and outcome.score is not None:
+        body["window_assessment"] = window_assessment(
+            outcome.results, outcome.score, outcome.complete, outcome.params
+        )
+    return body
 
 
 def response_limitations(outcome: DetectorOutcome) -> list[str]:
@@ -250,7 +269,7 @@ class AnomalyDetectionAgent:
         response = build_response(
             request,
             status=status,
-            result={"events": events, "coverage": coverage, "no_event_means_healthy": False},
+            result=result_body(events, coverage, outcome),
             consumed_evidence_ids=consumed,
             implementation=implementation_block(
                 ROLE,

@@ -113,3 +113,17 @@ def test_the_limitations_quote_every_figure() -> None:
     joined = " ".join(text.method_limitations(load_parameters()))
     for name, figure in text.FIGURES.items():
         assert figure in joined, name
+
+
+def test_episode_figures_match_the_alarm_policy_tables() -> None:
+    """The fault-free episode shares are read back from the two alarm policy tables.
+
+    Independent: yes, because the expected strings are parsed from the written report.
+    """
+    body = report("detector_v4_pooled_stress.md")
+    oof = table_rows(body, "**Alarm policies, grouped CV (out of fold, train):**")
+    val = table_rows(body, "**Alarm policies, validation (held-out combinations):**")
+    assert text.FIGURES["episode_far_oof"] == {r[1]: r[2] for r in oof if r[0] == "2/3"}["pooled"]
+    assert text.FIGURES["episode_far_val"] == {r[1]: r[2] for r in val if r[0] == "2/3"}["pooled"]
+    shares = sorted(r[2] for r in val)
+    assert text.FIGURES["episode_far_range"] == f"{shares[0]} to {shares[-1]}"

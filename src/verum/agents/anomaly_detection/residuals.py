@@ -184,3 +184,8 @@ def window_score(results: list[ResidualResult]) -> float | None:
     """The largest computed residual in scale units; None if none could be computed."""
     zs = [r.z for r in results if r.state == COMPUTED and r.z is not None]
     return max(zs) if zs else None
+
+
+def exceeds(result: ResidualResult, threshold: float) -> bool:
+    """Whether a computed residual is strictly above its own threshold; unknown never is."""
+    return result.state == COMPUTED and result.z is not None and result.z > threshold

@@ -47,6 +47,7 @@ def parameter_document() -> dict[str, Any]:
         "pump_fits": fits,
         "receipt_line": {"coefficients": [1.0, 0.002, 0.0], "sigma": 0.02},
         "dead_zone_sigmas": 1.0,
+        "persistence": {"k": 2, "n": 3, "threshold": 1.5},
         "thresholds": {
             "window_score": 3.0,
             "residuals": {"R1": 1.0, "R2": 1.0, "R3": 1.0, "R4": 1.0},

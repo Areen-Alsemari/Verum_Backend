@@ -6,7 +6,9 @@ fitted numbers, thresholds, units and the tag-to-role mapping, with the sha256 o
 used. No validation or test data is opened. The window threshold and the residual thresholds are
 the 95th percentile of fault-free window values that the fitted model did not see, from five
 folds that hold out whole units (family, atmosphere, temperature). The set conditions only form
-those folds; the fitted model does not read them.
+those folds; the fitted model does not read them. The persistence rule (k of the last n windows)
+takes the smallest score threshold at which at most 5% of the fault-free train episodes ever
+alarm, from the same pooled out-of-fold scores, by the calibration of the alarm-policy study.
 """
 
 from __future__ import annotations
@@ -25,14 +27,16 @@ sys.path.insert(0, str(DETECTOR))
 
 import conditions  # noqa: E402
 import guard  # noqa: E402
+import policies  # noqa: E402
 from candidates import Residuals  # noqa: E402
 from systems import fold_map  # noqa: E402
 from windows import Windows, load_split, subset  # noqa: E402
 
 METHOD_ID = "topology_residual_v1"
-FORMAT = 1
+FORMAT = 2
 FOLDS = 5
 PERCENTILE = 95
+PERSISTENCE_K, PERSISTENCE_N = 2, 3
 SLOPE_TO_PER_HOUR = 3600.0
 RELEASE_DEFAULT = Path("data/reference_release_v2/verum_reference_v2")
 TRAIN_VIEW = Path("role_views/diagnostic_reasoning/train.jsonl.gz")
@@ -64,7 +68,7 @@ def file_sha256(path: Path) -> str:
 
 
 def out_of_fold(train: Windows) -> tuple[np.ndarray[Any, Any], np.ndarray[Any, Any]]:
-    """Scores and residual values of fault-free train windows from models that did not see them."""
+    """Scores and residual values of every train window from models that did not see them."""
     units = fold_map(train.unit, FOLDS)
     which = np.asarray([units[u] for u in train.unit])
     scores, parts = np.full(len(which), np.nan), np.full((len(which), 4), np.nan)
@@ -73,8 +77,33 @@ def out_of_fold(train: Windows) -> tuple[np.ndarray[Any, Any], np.ndarray[Any, A
         fit = subset(train, ~held & (train.faulty == 0))
         scored = Residuals(fit, pooled_r4=True).score(subset(train, held))
         scores[held], parts[held] = scored.scores, scored.parts
-    free = train.faulty == 0
-    return scores[free], parts[free]
+    return scores, parts
+
+
+def persistence_threshold(train: Windows, scores: np.ndarray[Any, Any]) -> tuple[float, int]:
+    """Smallest threshold at which at most 5% of fault-free episodes alarm under k of n.
+
+    Uses the calibration code of the alarm-policy study on the pooled out-of-fold scores; an
+    episode is fault-free when none of its windows carries an injected change.
+    """
+    arrays = {"stage": train.stage, "faulty": train.faulty, "cutoff": train.cutoff,
+              "onset_s": train.onset_s}  # fmt: skip
+    episodes = policies.build(arrays, {"episodes": train.episodes, "kind": train.kind}, scores)
+    free = [i for i in range(len(episodes.order)) if not episodes.ep_faulty[i]]
+    threshold = policies.calibrate(
+        episodes, free, PERSISTENCE_K, PERSISTENCE_N, policies.EPISODE_TARGET
+    )
+    return float(threshold), len(free)
+
+
+def persistence_block(threshold: float, episodes: int) -> dict[str, Any]:
+    """The persistence rule as stored in the parameter file."""
+    return {
+        "rule": "smallest score threshold at which at most 5% of fault-free train episodes have "
+        "k of the last n windows above it at any window, from pooled out-of-fold scores",
+        "k": PERSISTENCE_K, "n": PERSISTENCE_N, "episode_target": policies.EPISODE_TARGET,
+        "threshold": threshold, "fault_free_episodes": episodes,
+    }  # fmt: skip
 
 
 def fit_numbers(model: Residuals) -> dict[str, Any]:
@@ -108,7 +137,9 @@ def build_document(train: Windows, source: Path, rel: Path) -> dict[str, Any]:
     """Fit on all fault-free train windows and assemble the parameter document."""
     free = subset(train, train.faulty == 0)
     model = Residuals(free, pooled_r4=True)
-    scores, parts = out_of_fold(train)
+    all_scores, all_parts = out_of_fold(train)
+    scores, parts = all_scores[train.faulty == 0], all_parts[train.faulty == 0]
+    persistence = persistence_threshold(train, all_scores)
     doc: dict[str, Any] = {
         "method_id": METHOD_ID, "format": FORMAT,
         "provenance": {
@@ -129,6 +160,7 @@ def build_document(train: Windows, source: Path, rel: Path) -> dict[str, Any]:
                 f"R{j + 1}": float(np.percentile(parts[:, j], PERCENTILE)) for j in range(4)
             },
         },
+        "persistence": persistence_block(*persistence),
     }  # fmt: skip
     doc["provenance"]["fitted_numbers"] = count_numbers(doc)
     return doc
@@ -149,7 +181,8 @@ def main() -> None:
     args.out.write_text(text, encoding="utf-8")
     print(hashlib.sha256(text.encode()).hexdigest(), args.out)
     print("fitted numbers:", doc["provenance"]["fitted_numbers"],
-          "window threshold:", round(doc["thresholds"]["window_score"], 4))  # fmt: skip
+          "window threshold:", round(doc["thresholds"]["window_score"], 4),
+          "persistence threshold:", round(doc["persistence"]["threshold"], 4))  # fmt: skip
     print("opened:", guard.summary())
 
 

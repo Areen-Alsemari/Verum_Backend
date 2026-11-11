@@ -1,6 +1,6 @@
 {
  "dead_zone_sigmas": 1.0,
- "format": 1,
+ "format": 2,
  "inputs": {
   "FT-001": {
    "field": "mean",
@@ -75,6 +75,14 @@
   "slope_to_per_hour": 3600.0
  },
  "method_id": "topology_residual_v1",
+ "persistence": {
+  "episode_target": 0.05,
+  "fault_free_episodes": 1313,
+  "k": 2,
+  "n": 3,
+  "rule": "smallest score threshold at which at most 5% of fault-free train episodes have k of the last n windows above it at any window, from pooled out-of-fold scores",
+  "threshold": 1.741168691251317
+ },
  "provenance": {
   "fit_script": "fit_topology_residual.py",
   "fit_windows": 8579,

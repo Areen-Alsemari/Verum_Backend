@@ -40,6 +40,9 @@ FIGURES = {
     "noise_far": "0.518, 0.723 and 0.830",
     "r1_instrument": "0.69 to 1.00",
     "area_match": "0.3%",
+    "episode_far_oof": "0.048",
+    "episode_far_val": "0.076",
+    "episode_far_range": "0.063 to 0.076",
 }
 
 EVENT_TEXT = {
@@ -148,13 +151,29 @@ def scope_limitations() -> list[str]:
         "No asset, location or fault type is identified; events name only the tags a residual "
         f"reads. The mass imbalance cannot separate a leak from a flow-meter or level-sensor "
         f"fault (it exceeds in {f['r1_instrument']} of such windows out of fold).",
-        "No episode-level claim is made: episode detection and delay need the scores of earlier "
-        "windows, which a request does not carry.",
+        "This response makes no episode-level claim: it carries the score of one window and the "
+        "persistence rule, and applying the rule needs the scores of earlier windows, which a "
+        "request does not carry.",
         "The tag-to-location mapping follows tag names; the declared reference gives no "
         "instrument locations and the pairing of pressure transmitters with pumps and headers "
         f"is unverified. Fitted tank areas match the declared geometry within {f['area_match']}.",
         "Fitted on the train split only; thresholds come from out-of-fold train scores; the "
         "validation split was used for reporting only and the test split was not used.",
+    ]
+
+
+def persistence_limitations(params: Parameters) -> list[str]:
+    """The persistence rule, how its threshold was set, and how it transferred to validation."""
+    f = FIGURES
+    k, n, threshold = params.persistence_k, params.persistence_n, params.persistence_threshold
+    return [
+        f"Persistence rule: {k} of the last {n} windows with a score above {threshold:.2f}, "
+        "applied by the caller to the assessments of earlier windows of the same run and unknown "
+        f"until {n} windows are held. The threshold is the smallest value at which at most 5% of "
+        "fault-free train episodes alarm, from pooled out-of-fold scores.",
+        f"The share of fault-free episodes that alarm is {f['episode_far_oof']} out of fold and "
+        f"{f['episode_far_val']} on validation; across the three rules and both model versions "
+        f"the validation share is {f['episode_far_range']}, against the 5% target.",
     ]
 
 
@@ -166,5 +185,6 @@ def method_limitations(params: Parameters) -> list[str]:
         "windows of the train split of one simulated terminal. It scores one 300 s summary "
         "window and keeps no state.",
         *skill_limitations(),
+        *persistence_limitations(params),
         *scope_limitations(),
     ]
