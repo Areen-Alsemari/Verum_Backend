@@ -219,25 +219,39 @@ def dump(path: Path, obj: Any) -> None:
 
 
 def run_window(
-    n: int, w: Window, summaries: dict[str, Any], reference: Any, sha: str, out: Path
-) -> dict[str, Any]:
-    """Run, verify and report one window; failures are recorded in the row, never raised."""
+    n: int,
+    w: Window,
+    summaries: dict[str, Any],
+    reference: Any,
+    sha: str,
+    out: Path,
+    case_id: str | None = None,
+    recent: Any = None,
+) -> tuple[dict[str, Any], Any]:
+    """Run, verify and report one window; failures are recorded in the row, never raised.
+
+    Returns the row and the assessment log to pass to the next window of the same run, which is
+    None unless a log was given.
+    """
     from verum.agents.inspection_quality_documentation import report as rep
     from verum.agents.runner import Snapshot, run_analysis, verify_bundle
 
     wid = w["window_id"]
     row: dict[str, Any] = {"n": n, "window_id": wid, "set": w["set"], "crash": None}
     t0 = time.time()
+    next_log = None
     try:
         snap = Snapshot(
-            case_id=f"V{n:04d}",
+            case_id=case_id or f"V{n:04d}",
             revision=0,
             as_of_s=float(w["cutoff_s"]),
             summary=summaries[wid],
             reference=reference,
             reference_snapshot_sha256=sha,
         )
-        b = run_analysis(snap, "runtime", allow_placeholders=False)
+        extra = {} if recent is None else {"recent": recent}
+        b = run_analysis(snap, "runtime", allow_placeholders=False, **extra)
+        next_log = b.assessments if recent is not None else None
         t1 = time.time()
         row.update(run_s=round(t1 - t0, 2), bundle_issues=b.issues)
         row["notes"] = [(x["role"], x["code"]) for x in b.notes]
@@ -258,7 +272,7 @@ def run_window(
     except Exception as ex:
         row["crash"] = f"{type(ex).__name__}: {str(ex)[:300]}"
         row["crash_tb"] = traceback.format_exc()[-2000:]
-    return row
+    return row, next_log
 
 
 def verify_and_report(
@@ -282,12 +296,57 @@ def verify_and_report(
     return result
 
 
+def pad_gap(log: Any, case_id: str, last: int | None, position: int) -> Any:
+    """Add a window without an assessment for every skipped position of the run."""
+    first_skipped = position if last is None else last + 1
+    for skipped in range(first_skipped, position):
+        log = log.extended(case_id, skipped * WINDOW_STEP_S, None)
+    return log
+
+
+def run_chained(
+    sample: list[Window], summaries: dict[str, Any], reference: Any, sha: str, out: Path
+) -> list[dict[str, Any]]:
+    """Run the windows of each episode in time order as one run with a shared assessment log."""
+    from verum.agents.runner import AssessmentLog
+
+    episodes: dict[str, list[Window]] = defaultdict(list)
+    for w in sample:
+        episodes[w["episode_id"]].append(w)
+    rows: list[dict[str, Any]] = []
+    for e, (_, windows) in enumerate(sorted(episodes.items())):
+        log, last = AssessmentLog(), None
+        for w in sorted(windows, key=lambda x: x["position"]):
+            case_id = f"E{e:04d}"
+            log = pad_gap(log, case_id, last, w["position"])
+            row, log = run_window(len(rows), w, summaries, reference, sha, out, case_id, log)
+            rows.append(row)
+            last = w["position"]
+    return rows
+
+
 def parse_args() -> argparse.Namespace:
     """Command line: the output folder and the release folder."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, required=True, help="folder for the run outputs")
     parser.add_argument("--release", type=Path, default=DEFAULT_RELEASE)
+    parser.add_argument(
+        "--chain", action="store_true", help="run the windows of one episode as one run"
+    )
     return parser.parse_args()
+
+
+def run_each(
+    windows: list[Window], summaries: dict[str, Any], reference: Any, sha: str, out: Path
+) -> list[dict[str, Any]]:
+    """Run every window as a case of its own."""
+    rows: list[dict[str, Any]] = []
+    started = time.time()
+    for n, w in enumerate(windows):
+        rows.append(run_window(n, w, summaries, reference, sha, out)[0])
+        if n % 10 == 0:
+            print(n, w["window_id"], f"elapsed {time.time() - started:.0f}s", flush=True)
+    return rows
 
 
 def main() -> int:
@@ -310,11 +369,10 @@ def main() -> int:
     dump(args.out / "sample.json", {"seed": SEED, "validation": sample, "train_sanity": train})
     print("sample:", len(sample), "validation,", len(train), "train", flush=True)
     started = time.time()
-    rows = []
-    for n, w in enumerate(sample + train):
-        rows.append(run_window(n, w, summaries, reference, sha, args.out))
-        if n % 10 == 0:
-            print(n, w["window_id"], f"elapsed {time.time() - started:.0f}s", flush=True)
+    if args.chain:
+        rows = run_chained(sample + train, summaries, reference, sha, args.out)
+    else:
+        rows = run_each(sample + train, summaries, reference, sha, args.out)
     total = time.time() - started
     dump(args.out / "run_rows.json", rows)
     meta = {
