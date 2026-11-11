@@ -45,6 +45,9 @@
         },
         "no_event_means_healthy": {
           "const": false
+        },
+        "window_assessment": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/window_assessment"
         }
       },
       "required": [

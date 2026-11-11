@@ -42,6 +42,15 @@
           "items": {
             "$ref": "urn:verum:agents:v1:common#/$defs/proposal"
           }
+        },
+        "recent_anomaly_assessments": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/anomaly_assessment_record"
+          }
+        },
+        "persistence": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/persistence"
         }
       },
       "required": [

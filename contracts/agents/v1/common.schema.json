@@ -1242,6 +1242,245 @@
           ]
         }
       ]
+    },
+    "residual_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "residual_id": {
+          "enum": [
+            "R1_mass_balance",
+            "R2_pump_head",
+            "R3_discharge_loss",
+            "R4_receipt_line"
+          ]
+        },
+        "state": {
+          "enum": [
+            "exceeded",
+            "within_normal",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "residual_id",
+        "state",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "persistence_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "threshold": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "k",
+        "n",
+        "threshold"
+      ]
+    },
+    "window_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0
+        },
+        "window_threshold": {
+          "type": "number"
+        },
+        "exceeded": {
+          "type": "boolean"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "persistence_rule": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/persistence_rule"
+        },
+        "residuals": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R1_mass_balance"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R2_pump_head"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R3_discharge_loss"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R4_receipt_line"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "score",
+        "window_threshold",
+        "exceeded",
+        "complete",
+        "persistence_rule",
+        "residuals"
+      ]
+    },
+    "anomaly_assessment_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "as_of_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "window_assessment": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/window_assessment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "as_of_s",
+        "window_assessment"
+      ]
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/persistence_rule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "windows_held": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "windows_exceeding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "windows_unknown": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alarming": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "rule",
+        "windows_held",
+        "windows_exceeding",
+        "windows_unknown",
+        "alarming"
+      ]
     }
   }
 }

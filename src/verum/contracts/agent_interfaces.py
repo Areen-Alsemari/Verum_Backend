@@ -207,6 +207,16 @@ def validate_request(
     for record in request["input"].get("history", []):
         if record["t_recorded_s"] > request["context"]["as_of_s"]:
             raise ValueError("history record was recorded after the cutoff")
+    _check_recent_assessments(request)
+
+
+def _check_recent_assessments(request: dict[str, Any]) -> None:
+    """Recent window assessments are past windows: none after the cutoff, oldest first."""
+    times = [row["as_of_s"] for row in request["input"].get("recent_anomaly_assessments", [])]
+    if any(time > request["context"]["as_of_s"] for time in times):
+        raise ValueError("a recent anomaly assessment is later than the request cutoff")
+    if times != sorted(times):
+        raise ValueError("recent anomaly assessments are not ordered by time")
 
 
 def _check_observations(observations: dict[str, Any]) -> None:
