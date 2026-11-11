@@ -1,0 +1,239 @@
+{
+ "dead_zone_sigmas": 1.0,
+ "format": 1,
+ "inputs": {
+  "FT-001": {
+   "field": "mean",
+   "role": "receipt flow meter",
+   "unit": "m3/h"
+  },
+  "FT-201": {
+   "field": "mean",
+   "role": "delivery flow meter",
+   "unit": "m3/h"
+  },
+  "LT-101": {
+   "field": "slope_per_s",
+   "role": "level of tank TK-101",
+   "unit": "m"
+  },
+  "LT-102": {
+   "field": "slope_per_s",
+   "role": "level of tank TK-102",
+   "unit": "m"
+  },
+  "LT-103": {
+   "field": "slope_per_s",
+   "role": "level of tank TK-103",
+   "unit": "m"
+  },
+  "P-101A": {
+   "field": "latest_value",
+   "role": "run state of pump P-101A",
+   "unit": "bool"
+  },
+  "P-101B": {
+   "field": "latest_value",
+   "role": "run state of pump P-101B",
+   "unit": "bool"
+  },
+  "PT-001": {
+   "field": "mean",
+   "role": "receipt line pressure",
+   "unit": "barg"
+  },
+  "PT-201": {
+   "field": "mean",
+   "role": "pump suction header pressure",
+   "unit": "barg"
+  },
+  "PT-202A": {
+   "field": "mean",
+   "role": "discharge pressure of pump P-101A",
+   "unit": "barg"
+  },
+  "PT-202B": {
+   "field": "mean",
+   "role": "discharge pressure of pump P-101B",
+   "unit": "barg"
+  },
+  "PT-203": {
+   "field": "mean",
+   "role": "discharge header pressure",
+   "unit": "barg"
+  }
+ },
+ "mapping_note": "The roles follow tag names. The declared reference gives no instrument location; this mapping is unverified.",
+ "mass_balance": {
+  "coefficients": [
+   705.050655860643,
+   705.5082745472154,
+   705.5817782991058,
+   -0.054299204135983103
+  ],
+  "sigma": 2.424612664965626,
+  "slope_to_per_hour": 3600.0
+ },
+ "method_id": "topology_residual_v1",
+ "provenance": {
+  "fit_script": "fit_topology_residual.py",
+  "fit_windows": 8579,
+  "fitted_numbers": 41,
+  "folds": 5,
+  "splits_used": [
+   "train"
+  ],
+  "threshold_windows": 8579,
+  "train_file": "role_views/diagnostic_reasoning/train.jsonl.gz",
+  "train_file_sha256": "d62054ba6b8482dbabbb9e916d5cbb76d7c5eb4aeeeebeb7cbf41409fd25c8f2"
+ },
+ "pump_fits": [
+  {
+   "coefficients": [
+    3.9865593323476136,
+    -0.0001332154184467188,
+    -1.0018625630879513e-05
+   ],
+   "pump": "A",
+   "residual": "R2",
+   "sigma": 0.0007719732416070339,
+   "state": "*"
+  },
+  {
+   "coefficients": [
+    3.9849790600165003,
+    -0.00012080629128386154,
+    -1.0041752326083835e-05
+   ],
+   "pump": "B",
+   "residual": "R2",
+   "sigma": 0.0007317628428175863,
+   "state": "*"
+  },
+  {
+   "coefficients": [
+    3.9865593323476136,
+    -0.0001332154184467188,
+    -1.0018625630879513e-05
+   ],
+   "pump": "A",
+   "residual": "R2",
+   "sigma": 0.0007719732416070339,
+   "state": "A"
+  },
+  {
+   "coefficients": [
+    3.9849790600165003,
+    -0.00012080629128386154,
+    -1.0041752326083835e-05
+   ],
+   "pump": "B",
+   "residual": "R2",
+   "sigma": 0.0007317628428175863,
+   "state": "B"
+  },
+  {
+   "coefficients": [
+    -0.01158929456864527,
+    0.00018716090231101634,
+    5.888069737520611e-06
+   ],
+   "pump": "A",
+   "residual": "R3",
+   "sigma": 0.0006187310271619545,
+   "state": "*"
+  },
+  {
+   "coefficients": [
+    -0.010165195390385866,
+    0.00017726311793155684,
+    5.903408693456287e-06
+   ],
+   "pump": "B",
+   "residual": "R3",
+   "sigma": 0.0006048476849882449,
+   "state": "*"
+  },
+  {
+   "coefficients": [
+    -0.01158929456864527,
+    0.00018716090231101634,
+    5.888069737520611e-06
+   ],
+   "pump": "A",
+   "residual": "R3",
+   "sigma": 0.0006187310271619545,
+   "state": "A"
+  },
+  {
+   "coefficients": [
+    -0.010165195390385866,
+    0.00017726311793155684,
+    5.903408693456287e-06
+   ],
+   "pump": "B",
+   "residual": "R3",
+   "sigma": 0.0006048476849882449,
+   "state": "B"
+  }
+ ],
+ "receipt_line": {
+  "coefficients": [
+   0.4506669219657907,
+   8.722919054681247e-05,
+   1.9786960022860908e-06
+  ],
+  "sigma": 0.24236985999589825
+ },
+ "residuals": {
+  "R1": {
+   "name": "mass_balance",
+   "reads": [
+    "FT-001",
+    "FT-201",
+    "LT-101",
+    "LT-102",
+    "LT-103"
+   ]
+  },
+  "R2": {
+   "name": "pump_head",
+   "reads": [
+    "PT-202A",
+    "PT-202B",
+    "PT-201",
+    "FT-201",
+    "P-101A",
+    "P-101B"
+   ]
+  },
+  "R3": {
+   "name": "discharge_loss",
+   "reads": [
+    "PT-202A",
+    "PT-202B",
+    "PT-203",
+    "FT-201",
+    "P-101A",
+    "P-101B"
+   ]
+  },
+  "R4": {
+   "name": "receipt_line",
+   "reads": [
+    "PT-001",
+    "FT-001"
+   ]
+  }
+ },
+ "thresholds": {
+  "residuals": {
+   "R1": 1.5132793398340036,
+   "R2": 1.4867995342698455,
+   "R3": 1.8557655856400144,
+   "R4": 0.7183655239758763
+  },
+  "rule": "95th percentile of out-of-fold fault-free train window values",
+  "window_score": 3.0319061653548096
+ }
+}
