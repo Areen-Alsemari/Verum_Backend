@@ -2,13 +2,11 @@
 
 Inputs: the diagnostic reasoning role view of the train split, which carries the window
 summaries and the labels used only to select fault-free windows. Output: a small JSON file of
-fitted numbers, thresholds, units and the tag-to-role mapping, with the sha256 of the train file
-used. No validation or test data is opened. The window threshold and the residual thresholds are
-the 95th percentile of fault-free window values that the fitted model did not see, from five
-folds that hold out whole units (family, atmosphere, temperature). The set conditions only form
-those folds; the fitted model does not read them. The persistence rule (k of the last n windows)
-takes the smallest score threshold at which at most 5% of the fault-free train episodes ever
-alarm, from the same pooled out-of-fold scores, by the calibration of the alarm-policy study.
+fitted numbers, thresholds, units, the tag-to-role mapping and the persistence rule, with the
+sha256 of the train file used. No validation or test data is opened. The window and residual
+thresholds are the 95th percentile of fault-free values that the fitted model did not see, from
+five folds that hold out whole units. The persistence threshold is the smallest score at which
+at most 5% of fault-free train episodes alarm under 2 of 3 windows, from the same scores.
 """
 
 from __future__ import annotations
