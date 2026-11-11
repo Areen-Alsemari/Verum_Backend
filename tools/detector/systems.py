@@ -25,6 +25,7 @@ class Spec:
     e2: bool = False
     e3: bool = False
     e4: bool = False
+    pooled_r4: bool = False
 
     @property
     def label(self) -> str:
@@ -48,7 +49,7 @@ class Components:
         self.c1 = PerTag(fit, base)
         self.c2a = PcaMonitor(fit, base, {"all": list(NUMERIC_TAGS)})
         self.c2b = PcaMonitor(fit, base, GROUPS)
-        self.c3 = Residuals(fit, flow_terms=spec.e2, pairs=spec.e3)
+        self.c3 = Residuals(fit, flow_terms=spec.e2, pairs=spec.e3, pooled_r4=spec.pooled_r4)
 
     def score(self, w: Windows) -> dict[str, Scored]:
         """Scores of every component for the given windows."""

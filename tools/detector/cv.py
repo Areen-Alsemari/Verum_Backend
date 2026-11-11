@@ -96,15 +96,20 @@ def save(
     (work / f"{tag}_meta.json").write_text(json.dumps(meta))
 
 
-def run(rel: Path, work: Path, spec: Spec) -> None:
-    """Load train and validation, run grouped CV and the validation benchmark, save both."""
+def load_conditioned(rel: Path) -> tuple[Windows, Windows, dict[str, conditions.Condition]]:
+    """Train and validation windows keyed by the set conditions, with the audit hook on."""
     guard.install()
     val = load_split(rel, "validation")
     train = load_split(rel, "train")
     guard.ALLOWED_EPISODES.update(val.episodes)
     guard.ALLOWED_EPISODES.update(train.episodes)
     conds = conditions.read_conditions(rel, [*train.episodes, *val.episodes])
-    train, val = conditions.apply(train, conds), conditions.apply(val, conds)
+    return conditions.apply(train, conds), conditions.apply(val, conds), conds
+
+
+def run(rel: Path, work: Path, spec: Spec) -> None:
+    """Load train and validation, run grouped CV and the validation benchmark, save both."""
+    train, val, conds = load_conditioned(rel)
     work.mkdir(parents=True, exist_ok=True)
     names = score_names(spec)
     save(work, "oof", train, out_of_fold(train, spec), conds, names)

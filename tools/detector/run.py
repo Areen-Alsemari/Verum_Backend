@@ -43,7 +43,8 @@ def _cv(a: Namespace) -> None:
     from systems import Spec
 
     flags = set(a.spec.split(",")) - {""}
-    cv.run(a.release, a.work, Spec("E1" in flags, "E2" in flags, "E3" in flags, "E4" in flags))
+    spec = Spec("E1" in flags, "E2" in flags, "E3" in flags, "E4" in flags, "P4" in flags)
+    cv.run(a.release, a.work, spec)
 
 
 def _cveval(a: Namespace) -> None:
@@ -83,6 +84,30 @@ def _c3params(a: Namespace) -> None:
     c3_params.run(a.release, a.out)
 
 
+def _stress(a: Namespace) -> None:
+    import stress
+
+    stress.run(a.release, a.work)
+
+
+def _stresseval(a: Namespace) -> None:
+    import stress_eval
+
+    stress_eval.run(a.work, a.results, a.out)
+
+
+def _inputcheck(a: Namespace) -> None:
+    import input_check
+
+    input_check.run(a.release, a.results, a.out)
+
+
+def _pooledreport(a: Namespace) -> None:
+    import pooled_text
+
+    a.out.write_text(pooled_text.render(a.work))
+
+
 def _c3char(a: Namespace) -> None:
     import c3_char
 
@@ -102,6 +127,10 @@ STAGES = {
     "lineupfacts": _lineup,
     "c3report": _c3report,
     "c3params": _c3params,
+    "stress": _stress,
+    "stresseval": _stresseval,
+    "inputcheck": _inputcheck,
+    "pooledreport": _pooledreport,
 }
 
 

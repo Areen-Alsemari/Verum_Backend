@@ -161,14 +161,22 @@ class Fit:
     coef: Floats
     sigma: float
 
-    def z(self, r: float) -> float:
-        """Residual beyond one sigma, in sigmas; NaN counts as no evidence."""
-        return 0.0 if not np.isfinite(r) else max(0.0, abs(r) - self.sigma) / self.sigma
+    def z(self, r: float, unknown: float = 0.0) -> float:
+        """Residual beyond one sigma, in sigmas; a non-finite residual gives `unknown`."""
+        return unknown if not np.isfinite(r) else max(0.0, abs(r) - self.sigma) / self.sigma
 
 
 def _sigma(r: Floats) -> float:
     r = r[np.isfinite(r)]
     return float(median_scale(r, pooled_range(r))[1])
+
+
+def _largest(parts: Floats) -> Floats:
+    """Row maximum ignoring unknown (NaN) entries; a row with none gives NaN."""
+    out = np.full(len(parts), np.nan)
+    live = ~np.isnan(parts).all(axis=1)
+    out[live] = np.nanmax(parts[live], axis=1)
+    return out
 
 
 class Residuals:
@@ -177,8 +185,15 @@ class Residuals:
     NAMES = ["R1_mass_balance", "R2_pump_head", "R3_discharge_loss", "R4_receipt_line"]
     PAIR_NAMES = ["R5_temperature_pair", "R6_pump_pair"]
 
-    def __init__(self, train: Windows, flow_terms: bool = False, pairs: bool = False) -> None:
-        self.flow_terms, self.pairs = flow_terms, pairs
+    def __init__(
+        self,
+        train: Windows,
+        flow_terms: bool = False,
+        pairs: bool = False,
+        pooled_r4: bool = False,
+    ) -> None:
+        self.flow_terms, self.pairs, self.pooled_r4 = flow_terms, pairs, pooled_r4
+        self.unknown = 0.0  # NaN makes an unavailable residual unknown instead of no evidence
         self.fits: dict[tuple[str, str, str], Fit] = {}
         y, design = self._mass(train)
         ok = np.isfinite(y) & np.isfinite(design).all(axis=1)
@@ -226,6 +241,8 @@ class Residuals:
     def _fit_receipt(self, w: Windows) -> None:
         q, y = _mean(w, "FT-001"), _mean(w, "PT-001")
         self._store(("R4", "*", ""), q, y)
+        if self.pooled_r4:
+            return
         for r in set(w.regime):
             mask = np.asarray([x == r for x in w.regime])
             if mask.sum() >= MIN_REGIME:
@@ -239,15 +256,23 @@ class Residuals:
             fit = self.fits.get((kind, state, pump)) or self.fits[(kind, "*", pump)]
             q, y = self._pump_xy(w, kind, pump)
             r = y - predict_quadratic(fit.coef, q)
-            out = np.maximum(out, np.asarray([fit.z(float(v)) for v in r]))
+            out = np.maximum(out, np.asarray([fit.z(float(v), self.unknown) for v in r]))
         return out
 
+    def _states(self, w: Windows) -> Any:
+        """Pump state per window; with unknown evidence a missing pump tag gives 'unknown'."""
+        out = [pump_state(r) for r in w.lineup]
+        if np.isnan(self.unknown):
+            bad = [-1 in (r[PUMP_A], r[PUMP_B]) for r in w.lineup]
+            out = ["unknown" if b else o for b, o in zip(bad, out, strict=True)]
+        return np.asarray(out)
+
     def score(self, w: Windows) -> Scored:
-        """Window score: the largest residual z; contributions per residual group."""
+        """Window score: the largest available residual z; contributions per residual group."""
         y, design = self._mass(w)
-        r1 = np.asarray([self.mass.z(v) for v in y - design @ self.mass.coef])
-        states = np.asarray([pump_state(r) for r in w.lineup])
-        parts = np.zeros((len(w.ids), 4))
+        r1 = np.asarray([self.mass.z(v, self.unknown) for v in y - design @ self.mass.coef])
+        states = self._states(w)
+        parts = np.full((len(w.ids), 4), self.unknown)
         parts[:, 0] = r1
         for state in ("A", "B", "AB"):
             rows = states == state
@@ -257,19 +282,23 @@ class Residuals:
                 parts[rows, 2] = self._pump_z("R3", state, sub)
         parts[:, 3] = self._receipt_z(w)
         if not self.pairs:
-            return Scored(parts.max(axis=1), parts, list(self.NAMES))
+            return Scored(_largest(parts), parts, list(self.NAMES))
         pair, tags = self.pair.score(w, states)
         both = np.column_stack([parts, pair])
-        return Scored(both.max(axis=1), both, [*self.NAMES, *self.PAIR_NAMES], tags)
+        return Scored(_largest(both), both, [*self.NAMES, *self.PAIR_NAMES], tags)
 
     def _receipt_z(self, w: Windows) -> Floats:
-        out = np.zeros(len(w.ids))
         q, y = _mean(w, "FT-001"), _mean(w, "PT-001")
+        if self.pooled_r4:
+            fit = self.fits[("R4", "*", "")]
+            resid = y - predict_quadratic(fit.coef, q)
+            return np.asarray([fit.z(float(v), self.unknown) for v in resid])
+        out = np.zeros(len(w.ids))
         for r in set(w.regime):
             idx = np.asarray([i for i, x in enumerate(w.regime) if x == r])
             fit = self.fits.get(("R4", str(r), "")) or self.fits[("R4", "*", "")]
             resid = y[idx] - predict_quadratic(fit.coef, q[idx])
-            out[idx] = [fit.z(float(v)) for v in resid]
+            out[idx] = [fit.z(float(v), self.unknown) for v in resid]
         return out
 
 
