@@ -218,6 +218,34 @@ def dump(path: Path, obj: Any) -> None:
         path.write_text(json.dumps(obj, indent=1, default=str), encoding="utf-8")
 
 
+def make_snapshot(case_id: str, w: Window, summary: Any, reference: Any, sha: str) -> Any:
+    """The snapshot of one window as a case of the given run."""
+    from verum.agents.runner import Snapshot
+
+    return Snapshot(
+        case_id=case_id,
+        revision=0,
+        as_of_s=float(w["cutoff_s"]),
+        summary=summary,
+        reference=reference,
+        reference_snapshot_sha256=sha,
+    )
+
+
+def save_bundle(bundle: Any, window: Window, out: Path) -> None:
+    """Store the requests, reports and evidence of one run with the window that produced them."""
+    contents = {
+        "window": window,
+        "context": bundle.context,
+        "requests": bundle.requests,
+        "reports": bundle.reports,
+        "issues": bundle.issues,
+        "notes": bundle.notes,
+        "evidence": bundle.registry.rows(),
+    }
+    dump(out / "bundles" / f"{window['window_id']}.json.gz", contents)
+
+
 def run_window(
     n: int,
     w: Window,
@@ -234,39 +262,20 @@ def run_window(
     None unless a log was given.
     """
     from verum.agents.inspection_quality_documentation import report as rep
-    from verum.agents.runner import Snapshot, run_analysis, verify_bundle
+    from verum.agents.runner import run_analysis, verify_bundle
 
     wid = w["window_id"]
     row: dict[str, Any] = {"n": n, "window_id": wid, "set": w["set"], "crash": None}
-    t0 = time.time()
-    next_log = None
+    t0, next_log = time.time(), None
     try:
-        snap = Snapshot(
-            case_id=case_id or f"V{n:04d}",
-            revision=0,
-            as_of_s=float(w["cutoff_s"]),
-            summary=summaries[wid],
-            reference=reference,
-            reference_snapshot_sha256=sha,
-        )
+        snap = make_snapshot(case_id or f"V{n:04d}", w, summaries[wid], reference, sha)
         extra = {} if recent is None else {"recent": recent}
         b = run_analysis(snap, "runtime", allow_placeholders=False, **extra)
         next_log = b.assessments if recent is not None else None
         t1 = time.time()
         row.update(run_s=round(t1 - t0, 2), bundle_issues=b.issues)
         row["notes"] = [(x["role"], x["code"]) for x in b.notes]
-        dump(
-            out / "bundles" / f"{wid}.json.gz",
-            {
-                "window": w,
-                "context": b.context,
-                "requests": b.requests,
-                "reports": b.reports,
-                "issues": b.issues,
-                "notes": b.notes,
-                "evidence": b.registry.rows(),
-            },
-        )
+        save_bundle(b, w, out)
         row.update(verify_and_report(b, verify_bundle, rep.build_report, out, wid))
         row["verify_report_s"] = round(time.time() - t1, 2)
     except Exception as ex:
