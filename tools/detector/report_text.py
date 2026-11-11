@@ -52,7 +52,8 @@ def results_sections(res: dict[str, Any]) -> list[str]:
     out += r.main_table(res, ["C1s", "C2as", "C2bs", "C4s"])
     out += [
         "C3 does not use temperature and is not repeated. The sensitivity was declared in "
-        "Amendment 1 because train and validation hold different temperature set points.", "",
+        "Amendment 1 (corrected by Amendment 2) because the temperature mixture of train "
+        "fault-free windows and of validation windows differs.", "",
     ]  # fmt: skip
     return out
 
@@ -69,8 +70,10 @@ def controls_section(res: dict[str, Any]) -> list[str]:
             f"windows: {', '.join(flagged) if flagged else 'none'}.", ""]  # fmt: skip
     return out + r.contributors(res) + [
         "For C1 and C2 the temperature tags are among the largest contributors: those scores are "
-        "partly driven by the held-out set point. For C3 the contributors are physical residuals "
-        "(pump head, discharge loss, mass balance).", ""]  # fmt: skip
+        "partly driven by the different temperature mixture of validation. For C3 the "
+        "contributors are physical residuals (pump head, discharge loss, mass balance).",
+        "",
+    ]  # fmt: skip
 
 
 def posthoc_section(res: dict[str, Any], diag: dict[str, Any]) -> list[str]:
@@ -171,7 +174,8 @@ def deviation_lines() -> list[str]:
     """Deviations from the plan."""
     return [
         "## 8. Deviations from the plan", "",
-        "- Amendment 1 (temperature set points differ between train and validation) added the "
+        "- Amendment 1 (temperature mixture differs between train and validation; its claim that "
+        "40 degrees C is absent from train was wrong and is corrected in Amendment 2) added the "
         "four sensitivity variants; it was committed before any label-based metric was computed.",
         "- Section 6 was added after the results were seen, for the reason given there.",
         "- The plan said C1 runs on raw series; the raw rows come from the same window as the "

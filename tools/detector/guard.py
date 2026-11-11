@@ -1,8 +1,8 @@
 """Audit hook that keeps the experiment away from the test split.
 
 Every file opened under the release folder is classified. Train and validation role views and
-examples, the raw rows of train and validation episodes, the public reference and the manifest
-that lists hashes are allowed. Anything else raises before the file is opened.
+examples, the raw rows and the label file of train and validation episodes, the public reference
+and the manifest that lists hashes are allowed. Anything else raises before the file is opened.
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ def classify(path: str, episodes: set[str]) -> str:
         return "allowed" if parts[1] in KEPT_SPLITS else "rejected"
     if parts[0] == "observations" and len(parts) == 3:
         return "allowed" if parts[1] in episodes else "rejected"
+    if parts[:2] == ["evaluator", "source_episodes"] and len(parts) == 4:
+        return "allowed" if parts[3] == "labels.json" and parts[2] in episodes else "rejected"
     return "rejected"
 
 

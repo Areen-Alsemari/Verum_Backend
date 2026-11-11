@@ -108,3 +108,27 @@ What was found, with a label-free check of the fitted baselines against the vali
 What stays: the registered candidates C1, C2a, C2b, C3 and C4 are run exactly as registered. They are the only candidates the stop rule of section 8 applies to, and their table comes first in the results.
 
 What is added, as an exploratory sensitivity that cannot change the outcome of the stop rule: one variant of each of C1, C2a, C2b and C4, named C1s, C2as, C2bs and C4s. They are identical to the registered ones except that the level components of the four temperature tags (the `mean` column and the CUSUM component) are set to zero before scoring; slope and spread of those tags are kept. C3 does not use temperature and is not repeated. C4s fuses C1s, C2as, C2bs and C3 with the same rule. They are reported in a separate table labelled as sensitivity. No other variant will be added.
+
+## 11. Amendment 2
+
+Written on branch detector-v2 after the first experiment and the split audit, and before anything was run with the key defined here.
+
+### 11.1 Correction of Amendment 1
+
+Amendment 1 stated that 40 degrees C was held out of training. That is wrong. Train contains 40 degrees C: 203 episodes and 1,010 fault-free eligible windows. The shift between train and validation is in the mixture, not in the set of values. Train fault-free windows are 54% at 25 degrees C, while validation has none at 25 degrees C; validation windows are 55% at 40 degrees C against 12% of train. The sensitivity variants of Amendment 1 are unchanged; only the stated reason is corrected. Section 10 is left as written so that the correction stays visible.
+
+### 11.2 Change of the regime key
+
+Reason: a regime key must not contain fault effects.
+
+The key of the first experiment (sections 4 and 5) was the state of the 16 on/off tags of the window: LSHH-101, LSHH-102, LSHH-103, P-101A, P-101B and the valve contact states XV-PAI, XV-PAO, XV-PBI, XV-PBO, XV-R000, XV-R101, XV-R102, XV-R103, XV-S101, XV-S102 and XV-S103, each as the latest value in the window summary. Restriction and misrouting act on valve positions, so for those windows the key differs from every fault-free key because of the fault. The evidence is in `reports/detector_v2_regime_audit.md`: 405 of 490 train restriction windows and all nine misrouting windows carry a key that no fault-free train window has. A baseline or a 200-window guard built on that key separates those windows by construction.
+
+New key: the operator-set operating conditions of the episode, (atmosphere, temperature in degrees C, flow set point in m3/h). The stress flag is a set condition and equals temperature 45 degrees C in every train and validation episode, so it adds nothing to the key. The values are read from the label file of train and validation episodes only (strata block); no fault field is read for the key. The audit hook is widened to allow exactly that file for train and validation episodes and nothing else under the evaluator folder.
+
+All other rules are unchanged: a regime with at least 200 fault-free train windows has its own baseline, any other regime uses the pooled baseline, and no novelty score is added. The pump-state selector of C3 (R2 and R3) is not part of the key; it is read from the pump run tags of the window, as before.
+
+Counts under the new key (full table in the evidence document): 32 regimes occur; 13 have 200 or more fault-free train windows and hold 6,084 of 8,579 fault-free train windows; 2,944 of 3,980 validation windows fall in regimes without an own baseline and use the pooled baseline. All regimes at 25 degrees C are train only; validation has none there.
+
+### 11.3 Re-run
+
+C3 and C4 are re-run on validation with the new key, with the same constants, thresholds and cross-fitting as before. Every metric of the first run is reported next to the new value, including recall at 5% false alarms for each fault type, restriction and misrouting in particular. C1 and C2 are not part of the re-run requested; their per-regime baselines also change with the key, and they are re-run only as inputs to C4. Nothing is tuned and the result does not reopen the stop rule of section 8.

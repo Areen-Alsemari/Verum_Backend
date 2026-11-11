@@ -59,7 +59,7 @@ At its shipped threshold (0.0606) C0 alarms on 0.886 of fault-free windows and o
 | C2bs (temperature level removed) | 0.645 [0.558, 0.725] | 0.772 [0.720, 0.825] | 0.771 [0.715, 0.824] | 0.049 [0.041, 0.056] | 0.556 [0.461, 0.650] |
 | C4s (temperature level removed) | 0.875 [0.815, 0.923] | 0.943 [0.915, 0.967] | 0.941 [0.910, 0.967] | 0.048 [0.037, 0.060] | 0.833 [0.758, 0.900] |
 
-C3 does not use temperature and is not repeated. The sensitivity was declared in Amendment 1 because train and validation hold different temperature set points.
+C3 does not use temperature and is not repeated. The sensitivity was declared in Amendment 1 (corrected by Amendment 2) because the temperature mixture of train fault-free windows and of validation windows differs.
 
 ## 5. Pre-registered controls
 
@@ -96,7 +96,7 @@ Mean share of the total contribution on faulty windows, top 10:
 - C2bs (temperature level removed): LT-101 0.27, LT-103 0.24, LT-102 0.16, TT-101 0.05, TT-102 0.05, TT-001 0.05, TT-103 0.04, FT-001 0.04, PT-001 0.03, PT-202A 0.02
 - C4s (temperature level removed): C3 0.39, C2b 0.27, C2a 0.20, C1 0.14
 
-For C1 and C2 the temperature tags are among the largest contributors: those scores are partly driven by the held-out set point. For C3 the contributors are physical residuals (pump head, discharge loss, mass balance).
+For C1 and C2 the temperature tags are among the largest contributors: those scores are partly driven by the different temperature mixture of validation. For C3 the contributors are physical residuals (pump head, discharge loss, mass balance).
 
 ## 6. Post-hoc controls (added after seeing the results)
 
@@ -151,7 +151,7 @@ Not supported:
 
 ## 8. Deviations from the plan
 
-- Amendment 1 (temperature set points differ between train and validation) added the four sensitivity variants; it was committed before any label-based metric was computed.
+- Amendment 1 (temperature mixture differs between train and validation; its claim that 40 degrees C is absent from train was wrong and is corrected in Amendment 2) added the four sensitivity variants; it was committed before any label-based metric was computed.
 - Section 6 was added after the results were seen, for the reason given there.
 - The plan said C1 runs on raw series; the raw rows come from the same window as the summary and the CUSUM therefore uses more input than the Agent 2 request carries.
 - Ties in C4 (p-values cannot fall below 1/(n+1)) make part of its score range flat; ties are handled by average ranks.
