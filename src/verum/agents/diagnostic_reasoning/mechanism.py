@@ -1,15 +1,12 @@
 """Mechanism rule: what the window assessment of the anomaly report says about a hypothesis.
 
-Inputs: a hypothesis and the anomaly report. The rule reads only the window assessment of the
-report (a state for each of four residuals, and whether the window was complete), never its
-events. Each hypothesis belongs to a family, and each family has a fixed set of residuals that
-the single-line layout says should move when that fault is present. An expected residual that
-is exceeded supports the hypothesis. Its absence contradicts the hypothesis only for a family
-whose residual was reliable on the validation windows, and only when the whole window was
-assessed. In every other case the report neither supports nor contradicts: an unknown residual,
-a family with no expected residual, an unmapped hypothesis, and a missing or unusable window
-assessment are all unknown. Data-quality events only add a caveat, and never turn silence into a
-conflict when they name a tag the hypothesis relies on.
+Inputs: a hypothesis and the anomaly report. Only the window assessment is read (a state for
+each of four residuals and whether the window was complete), never the events. Each family of
+fault has a fixed set of residuals that the layout says should move. An exceeded expected
+residual supports the hypothesis. Its absence contradicts it only for a family that was
+reliable on validation windows, and only when the window was complete. Everything else is
+unknown: an unknown residual, a family with no expected residual, an unmapped hypothesis, or no
+usable assessment. Quality events add a caveat and never turn silence into a conflict.
 """
 
 from __future__ import annotations
