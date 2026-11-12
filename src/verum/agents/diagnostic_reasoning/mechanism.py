@@ -180,6 +180,25 @@ def quality_tags(report: dict[str, Any]) -> set[str]:
     }
 
 
+def screen_quality(
+    report: dict[str, Any], tags: set[str], verdict: str, question: str | None, questions: list[str]
+) -> tuple[str, str | None]:
+    """Add the data-quality caveat for tags the hypothesis relies on; block a conflict then."""
+    named = sorted(tags & quality_tags(report))
+    if not named:
+        return verdict, question
+    questions.append(
+        "Data-quality caveat: the anomaly report lists "
+        f"{', '.join(named)} as missing or not good, which this hypothesis relies on."
+    )
+    if verdict != CONFLICT:
+        return verdict, question
+    return UNKNOWN, (
+        "The expected residual is within normal, but a tag this hypothesis relies on is "
+        "reported missing or not good, so the absence is not held against it."
+    )
+
+
 def apply_mechanism_rule(
     report: dict[str, Any],
     hypothesis: dict[str, Any],
@@ -188,11 +207,7 @@ def apply_mechanism_rule(
     conflicts: list[str],
     questions: list[str],
 ) -> None:
-    """Add the report to support or conflict, or a question saying why it does neither.
-
-    A data-quality event on a tag the hypothesis relies on adds a caveat and keeps silence from
-    becoming a conflict.
-    """
+    """Add the report to support or conflict, or a question saying why it does neither."""
     assessment = usable_assessment(report)
     family = family_of(hypothesis)
     if assessment is None:
@@ -204,21 +219,7 @@ def apply_mechanism_rule(
     if not family.expected:
         questions.append(NO_EXPECTATION.format(family=family.name))
         return
-    verdict, question = judge(assessment, family)
-    named = sorted(tags & quality_tags(report))
-    if named:
-        questions.append(
-            "Data-quality caveat: the anomaly report lists "
-            f"{', '.join(named)} as missing or not good, which this hypothesis relies on."
-        )
-    if verdict == CONFLICT and named:
-        verdict, question = (
-            UNKNOWN,
-            (
-                "The expected residual is within normal, but a tag this hypothesis relies on is "
-                "reported missing or not good, so the absence is not held against it."
-            ),
-        )
+    verdict, question = screen_quality(report, tags, *judge(assessment, family), questions)
     if verdict == SUPPORT and report["report_id"] not in support:
         support.append(report["report_id"])
     elif verdict == CONFLICT and report["report_id"] not in conflicts:
