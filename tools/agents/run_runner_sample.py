@@ -24,6 +24,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+GUARD_PATH = Path(__file__).resolve().parents[1] / "detector"
 SEED = 20261108
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_RELEASE = REPO / "data" / "reference_release_v2" / "verum_reference_v2"
@@ -59,6 +60,22 @@ def install_audit() -> None:
                 ACCESSED.add(path)
 
     sys.addaudithook(hook)
+
+
+def install_guard() -> None:
+    """Raise on any open under the release folder that is not train, validation or reference."""
+    sys.path.insert(0, str(GUARD_PATH))
+    import guard
+
+    guard.install()
+
+
+def guard_summary() -> dict[str, Any]:
+    """The opens that the guard allowed, by folder, and the rejected ones."""
+    import guard
+
+    summary: dict[str, Any] = guard.summary()
+    return summary
 
 
 def touched_test_split() -> list[str]:
@@ -362,6 +379,7 @@ def main() -> int:
     """Draw the sample, run every window and write the summary."""
     args = parse_args()
     install_audit()
+    install_guard()
     import verum
     from verum.agents.common import file_sha256
 
@@ -390,9 +408,11 @@ def main() -> int:
         "per_snapshot_s": round(total / len(rows), 2),
         "test_split_files_touched": touched_test_split(),
         "data_files_opened": sorted(ACCESSED),
+        "guard": guard_summary(),
     }
     dump(args.out / "run_meta.json", meta)
     print("done", len(rows), "| test-split files touched:", touched_test_split(), flush=True)
+    print("guard:", guard_summary(), flush=True)
     return 1 if touched_test_split() else 0
 
 
