@@ -1,7 +1,8 @@
 """Explicit comparison rules between diagnostic candidates and upstream agent reports.
 
 Upstream evidence is evaluated outside the learned observation model. Missing or failed reports
-produce unknown checks, and correlated sensor reports never multiply candidate scores. Forecast
+produce unknown checks, and correlated sensor reports never multiply candidate scores. The anomaly
+report is compared by mechanism, through its window assessment (see the mechanism module). Forecast
 comparison constants (1% relative tolerance, 0.02 absolute floor, 0.25 trend factor, and which
 tags count as rising) are unvalidated domain heuristics rather than calibrated thresholds.
 """
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from verum.agents.common import TAG_ORDER
+from verum.agents.diagnostic_reasoning.mechanism import apply_mechanism_rule, usable_assessment
 
 UPSTREAM_FIELDS: Final[tuple[str, ...]] = (
     "forecast_report",
@@ -370,24 +372,35 @@ def _check_forecast_report(
         )
 
 
+def _cited_outcome(report_id: str, hypotheses: list[dict[str, Any]] | None) -> str:
+    """Fail if any hypothesis cites the report as conflict, pass if as support, else unknown."""
+    if not hypotheses:
+        return "unknown"
+    if any(report_id in h.get("conflict_evidence_ids", []) for h in hypotheses):
+        return "fail"
+    if any(report_id in h.get("support_evidence_ids", []) for h in hypotheses):
+        return "pass"
+    return "unknown"
+
+
+def _anomaly_outcome(
+    res: dict[str, Any], report_id: str, hypotheses: list[dict[str, Any]] | None
+) -> str:
+    """The anomaly check follows the mechanism rule; without a usable assessment it is unknown."""
+    if usable_assessment({"result": res}) is None:
+        return "unknown"
+    return _cited_outcome(report_id, hypotheses)
+
+
 def _check_single_upstream(
     field: str, res: dict[str, Any], report_id: str, hypotheses: list[dict[str, Any]] | None
 ) -> str:
     """Determine pass, fail or unknown outcome for one usable upstream report result."""
     if field == "forecast_report":
-        if not hypotheses:
-            return "unknown"
-        if any(report_id in h.get("conflict_evidence_ids", []) for h in hypotheses):
-            return "fail"
-        if any(report_id in h.get("support_evidence_ids", []) for h in hypotheses):
-            return "pass"
-        return "unknown"
+        return _cited_outcome(report_id, hypotheses)
     if field == "anomaly_report":
-        if anomaly_names_no_target(res):
-            return "unknown"
-        if res.get("coverage") in ("assessed", "partial"):
-            return "pass"
-    elif field == "topology_report":
+        return _anomaly_outcome(res, report_id, hypotheses)
+    if field == "topology_report":
         if res.get("routing_assessment") == "declared_only" or res.get("direct_connections"):
             return "pass"
     elif field == "asset_report":
@@ -437,26 +450,18 @@ def evaluate_upstream_checks(
 def _check_anomaly_and_forecast(
     inputs: dict[str, Any],
     components: list[dict[str, Any]],
-    comp_assets: set[str],
     comp_tags: set[str],
     support: list[str],
     conflicts: list[str],
     questions: list[str],
 ) -> None:
-    """Compare candidate assets and tags with anomaly and forecast reports."""
+    """Compare the anomaly window assessment by mechanism, and the forecast report by tag."""
     anom = inputs.get("anomaly_report")
     if not _is_stub_or_failed(anom) and anom is not None:
-        events = anom["result"].get("events", [])
-        named = [ev for ev in events if _event_names_target(ev)]
-        anom_assets = {a for ev in named for a in ev.get("asset_ids", [])}
-        anom_tags = {t for ev in named for t in ev.get("tag_ids", [])}
-        if (comp_assets & anom_assets) or (comp_tags & anom_tags):
-            if anom["report_id"] not in support:
-                support.append(anom["report_id"])
-        elif named and anom["result"].get("coverage") == "assessed":
-            if anom["report_id"] not in conflicts:
-                conflicts.append(anom["report_id"])
-        elif events and not named:
+        apply_mechanism_rule(
+            anom, {"components": components}, comp_tags, support, conflicts, questions
+        )
+        if anomaly_names_no_target(anom["result"]):
             questions.append(NO_TARGET_QUESTION)
     else:
         questions.append("Anomaly detection report is unavailable or inconclusive.")
@@ -528,9 +533,7 @@ def enrich_hypothesis_with_rules(
         if mech in LOW_SUPPORT_MECHANISMS and LOW_SUPPORT_MECHANISMS[mech] not in questions:
             questions.append(LOW_SUPPORT_MECHANISMS[mech])
 
-    _check_anomaly_and_forecast(
-        inputs, components, comp_assets, comp_tags, support, conflicts, questions
-    )
+    _check_anomaly_and_forecast(inputs, components, comp_tags, support, conflicts, questions)
     _check_topology_asset_inspection(inputs, comp_assets, support, conflicts, questions)
 
     return {
