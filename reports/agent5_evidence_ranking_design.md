@@ -32,3 +32,31 @@ Read-only survey made before any change on the branch `agent5-evidence-ranking`,
 - Likelihood ratios estimated on train windows reflect the Agent 2 fit on those windows. The residual states must be taken from models that did not see the window (out of fold), or the ratios for `within_normal` and `exceeded` in fault-free windows are too optimistic.
 - Existing Agent 5 tests that use the artifact order must keep passing when the assessment is absent.
 - Hypotheses on fault-free windows do not disappear: a lowered score only moves them down. Whether they stay above the decision threshold is a property of the score, not of the set.
+
+## 5. Pre-registration (written before any estimation or evaluation run)
+
+Everything below is fixed now. The estimation and the evaluation are run once with these definitions; any change after a result is seen is reported as a deviation.
+
+### 5.1 Estimation of the likelihood ratios
+
+- Data: windows of the train split with a valid label only. No validation or test window is read by the estimation. The audit hook of the detector experiments is installed and the number of rejected opens must be zero.
+- Residual states: the Agent 2 residual code applied to the window summary, with models fitted on the other folds (five folds that hold out whole units, as in the Agent 2 fit), so that a window is never scored by a model that saw it. A residual is `exceeded` when its value is above the pinned threshold of that residual, `within_normal` when it is computed and not above it, and unknown when it cannot be computed.
+- Family of a window: for a window with exactly one injected component, the family given by `family_of` in `mechanism.py` (including the pressure-transmitter families) for its mechanism and asset. Windows with several injected components are not used for the ratios. Fault-free windows have no injected component. Activity of the fault (a stopped pump) is not filtered.
+- Ratio: for a family F, an expected residual R of F and a state s, LR(R, s, F) = P(s | F, R computed) / P(s | fault-free, R computed), each probability as (count + 1) / (computed windows + 2). The ratio is bounded to 0.05 at the lowest and 20 at the highest. A state `unknown` gives 1. A family with no expected residual gives 1. A family with fewer than 10 windows in which R is computed gives 1.
+- Several expected residuals: a family with two expected residuals uses the product of the two ratios only if the two are independent enough, which is checked on train: the phi coefficient between the two exceeded indicators, in the fault-free windows and in the windows of the family. If the absolute value is above 0.5 in either, only the residual with the larger absolute log ratio for the states of the window is used.
+- The ratios are stored in a pinned file in the Agent 5 package, written by a script in `tools/agents` that is byte-identical on a second run.
+
+### 5.2 The update
+
+For a score s strictly between 0 and 1 and a combined ratio L, odds = s / (1 - s), odds' = odds * L, and s' = odds' / (1 + odds'), rounded to 6 decimals. A score of exactly 0 or 1 stays. The method identifier gets the suffix `+a2_evidence_v1` when L is not 1. With no usable window assessment, no family, an unknown expected residual or no expected residual, the hypothesis is unchanged. The list is then sorted by the new score (ties as before); identifiers and components are not touched.
+
+### 5.3 Evaluation
+
+- Data: the 181-window sample of the earlier reports (only its 169 validation windows are scored, the 12 train windows were used by the estimation) and the full validation split (every window with a valid label), each through the runner with the installed agents. For the full split the Agent 5 request of each window is built by the runner and stored, then every variant of Agent 5 is run on the stored requests. The test split is never opened.
+- Faulty windows are those with at least one injected component. A hypothesis matches when its mechanism and asset equal an injected pair (as in the earlier reports); for the family measure the five families of the earlier reports (pump, restriction, leak, sensor fault, misrouting) are used. Top-1 and top-3 accuracy are the share of faulty windows with a match in the first or in the first three hypotheses; a window with no hypothesis is a miss.
+- Reported: top-1 and top-3 for family and for mechanism and asset, overall and per family of the injected fault; hypotheses and scores on fault-free windows, with counts at or above the own threshold of each hypothesis, at or above 0.5 and at or above 0.9; the share of windows in which the first hypothesis changes; a reliability table of the score by bin against the share of hypotheses that match an injected fault; 95% percentile intervals from 1,000 bootstrap resamples of whole episodes (seed 20261108), paired for differences.
+- Controls: (a) ablation, the window assessments removed from the stored requests, must give output identical to the previous Agent 5; (b) shuffle, the window assessments permuted across the windows of the set (five seeded permutations), must give no gain.
+
+### 5.4 Stop rule
+
+The change is kept only if, on the full validation split, the top-1 accuracy for family or for mechanism and asset improves with the lower bound of the paired bootstrap difference above zero, and the number of hypotheses on fault-free windows above their threshold does not increase. The threshold is read three ways and none may increase: at or above the own decision threshold of the hypothesis (the artifact thresholds, 0.5 for the two rule candidates), at or above 0.5, and at or above 0.9. Because the first condition is met by construction when the set of hypotheses is fixed, the two fixed levels are the ones that can fail. Two accuracy measures are looked at, so a pass on either has a larger chance of passing by luck than 5%; both intervals are reported. If the rule fails, the code is removed and the negative result is reported.
