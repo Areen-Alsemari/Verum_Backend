@@ -209,7 +209,7 @@ The current role dataset mixes ordinary record-quality exercises and a small cov
 | Proposal | Identifier, source reference, nullable claimed available time and claimed evidence IDs only. No future measurement value. |
 | Output | Decision state, source-bearing summary, hypothesis report IDs, per-proposal evidence checks, conflicts, next steps and fixed human/advisory flags. |
 | Admission checks | Nullable time admissibility, provenance verification, quality acceptance, supported scope and usability, with reasons and source references. |
-| Decision states | Assessment available, more evidence required, review required or inconclusive. None means process safe or equipment certified. |
+| Decision states | Assessment available, more evidence required, review required or inconclusive. None means process safe or equipment certified. Review required comes first when an alert holds (a conflict of a reliable family, a failed record check, a persistent alarm, or a supported hypothesis unless persistence is known false); a gap in evidence blocks `assessment_available` but not an alert. |
 | Next steps | Human review, collect evidence, review records or continue observation. Advisory descriptions, not control commands. |
 | Fixed flags | `human_decision_required: true`, `automatic_action_authorized: false`, `equipment_condition_confirmed: false`. |
 
