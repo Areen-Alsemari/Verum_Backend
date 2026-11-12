@@ -217,6 +217,30 @@ def adoption(records: list[Row]) -> list[str]:
     ]
 
 
+def first_alert(f: Row) -> str:
+    """The first alert of rule E4 that holds, in the order of the agent, or none."""
+    if f["reliable_conflict"]:
+        return "reliable-family conflict"
+    if f["hard_conflict"]:
+        return "failed record check"
+    if f["alarming"] is True:
+        return "persistent alarm"
+    if f["supported"] and f["alarming"] is not False:
+        return "supported hypothesis"
+    return "none"
+
+
+def alert_rows(records: list[Row]) -> str:
+    """Windows of rule E4 by the first alert that holds, for faulty and fault-free windows."""
+    names = ["reliable-family conflict", "failed record check", "persistent alarm",
+             "supported hypothesis", "none"]  # fmt: skip
+    rows = []
+    for label, keep in (("faulty", True), ("fault-free", False)):
+        got = Counter(first_alert(r["f"]) for r in records if r["fault"] == keep)
+        rows.append([label, *[got[n] for n in names]])
+    return table(["windows", *names], rows)
+
+
 def agreement(records: list[Row]) -> str:
     """How often the simulated E4 and rule A agree with the decision the agent returned."""
     e4 = sum(RULES["E4"](r["f"]) == r["f"]["actual"] for r in records)
@@ -234,6 +258,7 @@ def render(records: list[Row]) -> str:
              f"episodes {episodes}", agreement(records)]  # fmt: skip
     parts += ["\n### Decisions", count_rows(records), "\n### Review share per fault type",
               type_rows(records), "\n### Episode level", episode_rows(records),
+              "\n### Rule E4 by the first alert that holds", alert_rows(records),
               "\n### Adoption rule", *adoption(records)]  # fmt: skip
     return "\n".join(parts) + "\n"
 
