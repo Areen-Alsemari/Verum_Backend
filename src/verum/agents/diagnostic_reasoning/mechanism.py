@@ -106,8 +106,10 @@ def family_of(hypothesis: dict[str, Any]) -> Family | None:
     if mechanism in RESTRICTIONS:
         return restriction_family(asset)
     if mechanism == "leak" and asset is not None:
-        return LEAK_OUTSIDE if asset in OUTSIDE_EDGES else (
-            LEAK_BETWEEN_METERS if asset.startswith("E") else None
+        return (
+            LEAK_OUTSIDE
+            if asset in OUTSIDE_EDGES
+            else (LEAK_BETWEEN_METERS if asset.startswith("E") else None)
         )
     if mechanism == "misroute_a":
         return MISROUTING
@@ -122,7 +124,7 @@ def usable_assessment(report: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(found, dict) or not isinstance(found.get("complete"), bool):
         return None
     rows = found.get("residuals")
-    if not isinstance(rows, list) or len(rows) != len(RESIDUAL_IDS):
+    if not isinstance(rows, list):
         return None
     ids = [row.get("residual_id") if isinstance(row, dict) else None for row in rows]
     if sorted(ids, key=str) != sorted(RESIDUAL_IDS.values()):
@@ -210,9 +212,12 @@ def apply_mechanism_rule(
             f"{', '.join(named)} as missing or not good, which this hypothesis relies on."
         )
     if verdict == CONFLICT and named:
-        verdict, question = UNKNOWN, (
-            "The expected residual is within normal, but a tag this hypothesis relies on is "
-            "reported missing or not good, so the absence is not held against it."
+        verdict, question = (
+            UNKNOWN,
+            (
+                "The expected residual is within normal, but a tag this hypothesis relies on is "
+                "reported missing or not good, so the absence is not held against it."
+            ),
         )
     if verdict == SUPPORT and report["report_id"] not in support:
         support.append(report["report_id"])

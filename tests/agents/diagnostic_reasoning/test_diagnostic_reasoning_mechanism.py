@@ -257,7 +257,7 @@ def test_a_tag_less_event_is_ignored_and_adds_only_the_old_caveat() -> None:
     assert (support, conflict) == (True, False) and NO_TARGET_QUESTION in questions
 
 
-@pytest.mark.parametrize("damage", ["absent", "missing_row", "bad_state", "bad_flag"])
+@pytest.mark.parametrize("damage", ["absent", "missing_row", "bad_id", "bad_state", "bad_flag"])
 def test_an_absent_or_unusable_window_assessment_is_unknown(damage: str) -> None:
     """Older reports and damaged assessments leave the hypothesis without support or conflict.
 
@@ -266,6 +266,8 @@ def test_an_absent_or_unusable_window_assessment_is_unknown(damage: str) -> None
     window = assessment({"R2": "exceeded"})
     if damage == "missing_row":
         window["residuals"].pop()
+    elif damage == "bad_id":
+        window["residuals"][0]["residual_id"] = "R9_other"
     elif damage == "bad_state":
         window["residuals"][1]["state"] = "healthy"
     elif damage == "bad_flag":
