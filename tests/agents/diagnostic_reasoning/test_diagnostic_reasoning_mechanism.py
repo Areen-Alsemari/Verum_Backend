@@ -329,3 +329,14 @@ def test_the_fixed_expectation_table() -> None:
     for hyp, expected, reliable in cases:
         family = family_of(hyp)
         assert family is not None and (family.expected, family.reliable) == (expected, reliable)
+
+
+def test_a_quality_event_on_the_hypothesis_tags_never_creates_support() -> None:
+    """A leak whose own tags are reported missing is still not supported by that report.
+
+    Independent: yes, because FT-001 is a primary tag of E002 and the assessment is quiet.
+    """
+    rep = report(assessment(), [event("missing_reading", ["FT-001"])])
+    support, conflict, questions = compare(hypothesis("leak", "E002"), rep)
+    assert (support, conflict) == (False, False)
+    assert any("Data-quality caveat" in q for q in questions)
