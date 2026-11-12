@@ -1,0 +1,334 @@
+{
+ "families": {
+  "discharge-header pressure transmitter fault": {
+   "combine": "single",
+   "expected": [
+    "R3"
+   ],
+   "ratios": {
+    "R3": {
+     "exceeded": {
+      "count": 7,
+      "fault_free_count": 429,
+      "ratio": 8.869250645994832
+     },
+     "family_windows": 16,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 9,
+      "fault_free_count": 8150,
+      "ratio": 0.5848634796003217
+     }
+    }
+   },
+   "windows": 16
+  },
+  "flow-meter sensor fault": {
+   "combine": "single",
+   "expected": [
+    "R1"
+   ],
+   "ratios": {
+    "R1": {
+     "exceeded": {
+      "count": 83,
+      "fault_free_count": 429,
+      "ratio": 15.521188630490958
+     },
+     "family_windows": 106,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 23,
+      "fault_free_count": 8150,
+      "ratio": 0.23394539184012866
+     }
+    }
+   },
+   "windows": 106
+  },
+  "leak between the two meters": {
+   "combine": "single",
+   "expected": [
+    "R1"
+   ],
+   "ratios": {
+    "R1": {
+     "exceeded": {
+      "count": 79,
+      "fault_free_count": 429,
+      "ratio": 13.529365392195507
+     },
+     "family_windows": 116,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 37,
+      "fault_free_count": 8150,
+      "ratio": 0.3390225593615424
+     }
+    }
+   },
+   "windows": 116
+  },
+  "level-sensor drift or stuck": {
+   "combine": "single",
+   "expected": [
+    "R1"
+   ],
+   "ratios": {
+    "R1": {
+     "exceeded": {
+      "count": 167,
+      "fault_free_count": 429,
+      "ratio": 19.83773221411862
+     },
+     "family_windows": 167,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 0,
+      "fault_free_count": 8150,
+      "ratio": 0.05
+     }
+    }
+   },
+   "windows": 167
+  },
+  "pump A discharge transmitter fault": {
+   "combine": "largest",
+   "expected": [
+    "R2",
+    "R3"
+   ],
+   "phi_family": 0.9999999999999999,
+   "phi_fault_free": 0.5387040771089837,
+   "ratios": {
+    "R2": {
+     "exceeded": {
+      "count": 13,
+      "fault_free_count": 429,
+      "ratio": 12.699154334038056
+     },
+     "family_windows": 20,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 7,
+      "fault_free_count": 8150,
+      "ratio": 0.3828197321020288
+     }
+    },
+    "R3": {
+     "exceeded": {
+      "count": 13,
+      "fault_free_count": 429,
+      "ratio": 12.699154334038056
+     },
+     "family_windows": 20,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 7,
+      "fault_free_count": 8150,
+      "ratio": 0.3828197321020288
+     }
+    }
+   },
+   "windows": 20
+  },
+  "pump B discharge transmitter fault": {
+   "combine": "largest",
+   "expected": [
+    "R2",
+    "R3"
+   ],
+   "phi_family": 1.0,
+   "phi_fault_free": 0.5387040771089837,
+   "ratios": {
+    "R2": {
+     "exceeded": {
+      "count": 6,
+      "fault_free_count": 429,
+      "ratio": 6.07350859453994
+     },
+     "family_windows": 21,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 15,
+      "fault_free_count": 8150,
+      "ratio": 0.7323507918473593
+     }
+    },
+    "R3": {
+     "exceeded": {
+      "count": 6,
+      "fault_free_count": 429,
+      "ratio": 6.07350859453994
+     },
+     "family_windows": 21,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 15,
+      "fault_free_count": 8150,
+      "ratio": 0.7323507918473593
+     }
+    }
+   },
+   "windows": 21
+  },
+  "pump head loss": {
+   "combine": "single",
+   "expected": [
+    "R2"
+   ],
+   "ratios": {
+    "R2": {
+     "exceeded": {
+      "count": 69,
+      "fault_free_count": 429,
+      "ratio": 19.674746151326566
+     },
+     "family_windows": 69,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 0,
+      "fault_free_count": 8150,
+      "ratio": 0.05
+     }
+    }
+   },
+   "windows": 69
+  },
+  "receipt-line pressure transmitter fault": {
+   "combine": "single",
+   "expected": [
+    "R4"
+   ],
+   "ratios": {
+    "R4": {
+     "exceeded": {
+      "count": 0,
+      "fault_free_count": 429,
+      "ratio": 1.0
+     },
+     "family_windows": 9,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 9,
+      "fault_free_count": 8150,
+      "ratio": 1.0
+     }
+    }
+   },
+   "windows": 9
+  },
+  "restriction at a pump inlet valve": {
+   "combine": "single",
+   "expected": [
+    "R2"
+   ],
+   "ratios": {
+    "R2": {
+     "exceeded": {
+      "count": 41,
+      "fault_free_count": 429,
+      "ratio": 16.762883720930233
+     },
+     "family_windows": 48,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 7,
+      "fault_free_count": 8150,
+      "ratio": 0.16844068212489266
+     }
+    }
+   },
+   "windows": 48
+  },
+  "restriction at a pump outlet valve": {
+   "combine": "single",
+   "expected": [
+    "R3"
+   ],
+   "ratios": {
+    "R3": {
+     "exceeded": {
+      "count": 77,
+      "fault_free_count": 429,
+      "ratio": 19.216709732988804
+     },
+     "family_windows": 79,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 2,
+      "fault_free_count": 8150,
+      "ratio": 0.05
+     }
+    }
+   },
+   "windows": 79
+  },
+  "restriction at a receipt-side valve": {
+   "combine": "single",
+   "expected": [
+    "R4"
+   ],
+   "ratios": {
+    "R4": {
+     "exceeded": {
+      "count": 122,
+      "fault_free_count": 429,
+      "ratio": 8.07422735618115
+     },
+     "family_windows": 302,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 180,
+      "fault_free_count": 8150,
+      "ratio": 0.6268043475453449
+     }
+    }
+   },
+   "windows": 302
+  },
+  "suction-header pressure transmitter fault": {
+   "combine": "single",
+   "expected": [
+    "R2"
+   ],
+   "ratios": {
+    "R2": {
+     "exceeded": {
+      "count": 6,
+      "fault_free_count": 429,
+      "ratio": 4.506151537884471
+     },
+     "family_windows": 29,
+     "fault_free_windows": 8579,
+     "within_normal": {
+      "count": 23,
+      "fault_free_count": 8150,
+      "ratio": 0.8150355586688354
+     }
+    }
+   },
+   "windows": 29
+  }
+ },
+ "format": 1,
+ "method_id": "a2_evidence_ratios_v1",
+ "provenance": {
+  "fault_free_windows": 8579,
+  "fit_script": "fit_evidence_ratios.py",
+  "parameters_sha256": "b3517147ffd0cfb9bf8214372952eb6eff70185b093b2eb0c0c8078ae9f89747",
+  "splits_used": [
+   "train"
+  ],
+  "train_file": "role_views/diagnostic_reasoning/train.jsonl.gz",
+  "train_file_sha256": "d62054ba6b8482dbabbb9e916d5cbb76d7c5eb4aeeeebeb7cbf41409fd25c8f2",
+  "windows": 9832
+ },
+ "rule": {
+  "cap": 20.0,
+  "floor": 0.05,
+  "maximum_phi": 0.5,
+  "minimum_family_windows": 10,
+  "smoothing": "add-one"
+ }
+}
