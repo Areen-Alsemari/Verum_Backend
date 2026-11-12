@@ -38,6 +38,7 @@ ACTION_FOR = {
     "pump": "ACT-INSP-03",
 }  # fmt: skip
 SENSOR_MECHANISMS = ("bias", "drift", "stuck")
+MEASURED_IN_DEFAULT_MODE = ("ACT-INSP-02", "ACT-INSP-05", "ACT-INSP-07")
 TANK_OF_LEVEL = {"LT-101": "TK-101", "LT-102": "TK-102", "LT-103": "TK-103"}
 
 
@@ -158,6 +159,23 @@ def classify(row: Row, assets: set[str]) -> str:
     return "inspectable, Agent 5 names other assets only"
 
 
+def action_table(rows: list[Row]) -> list[str]:
+    """Windows whose fault Agent 5 names first, by the action that would inspect it."""
+    assets = catalog_assets(rows)
+    tally: Counter[tuple[str, str]] = Counter()
+    for r in rows:
+        if not r["w"]["fault"] or classify(r, assets) != "inspectable, Agent 5 names it first":
+            continue
+        action = inspection_asset(r["w"]["mechanisms"][0], r["w"]["assets"][0])[1] or "none"
+        mode = "measured, low confidence" if action in MEASURED_IN_DEFAULT_MODE else "unavailable"
+        tally[(action, mode)] += 1
+    cells = [[a, m, v] for (a, m), v in sorted(tally.items())]
+    return [
+        "\n### The windows whose fault Agent 5 names first, by action and default-mode outcome",
+        table(["action", "outcome of the default inspection model", "windows"], cells),
+    ]
+
+
 def classification_table(rows: list[Row]) -> list[str]:
     """Faulty windows by whether a follow-up is meaningful."""
     assets = {
@@ -208,7 +226,8 @@ def main() -> None:
     parser.add_argument("--run", type=Path, required=True, help="runner output over the sample")
     rows = load(parser.parse_args().run)
     parts = [f"windows {len(rows)}, faulty {sum(r['w']['fault'] for r in rows)}"]
-    parts += target_tables(rows) + classification_table(rows) + timing_table(rows)
+    parts += target_tables(rows) + classification_table(rows) + action_table(rows)
+    parts += timing_table(rows)
     sys.stdout.write("\n".join(parts) + "\n")
 
 
