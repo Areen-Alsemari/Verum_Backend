@@ -156,7 +156,7 @@ def init_score(cache: str) -> None:
         module.DiagnosticReasoningAgent(),
         cache,
     )
-    STATE["update"] = module.update_scores
+    STATE["update"] = vars(module)["update_scores"]
 
 
 def run_variant(request: dict[str, Any], update: bool) -> list[dict[str, Any]]:
