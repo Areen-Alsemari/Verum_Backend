@@ -61,21 +61,6 @@ PRESSURE_FAMILIES: Final = {
 }
 MISROUTING: Final = Family("valve misrouting", (), False)
 
-ALL_FAMILIES: Final = (
-    PUMP_HEAD_LOSS,
-    PUMP_INLET_VALVE,
-    PUMP_OUTLET_VALVE,
-    RECEIPT_RESTRICTION,
-    TANK_OUTLET,
-    LEAK_BETWEEN_METERS,
-    LEAK_OUTSIDE,
-    FLOW_METER,
-    LEVEL_SENSOR,
-    LEVEL_BIAS,
-    MISROUTING,
-    *PRESSURE_FAMILIES.values(),
-)
-
 INLET_VALVES: Final = frozenset({"XV-PAI", "XV-PBI"})
 OUTLET_VALVES: Final = frozenset({"XV-PAO", "XV-PBO"})
 RECEIPT_VALVES: Final = frozenset({"XV-R000", "XV-R101", "XV-R102", "XV-R103"})

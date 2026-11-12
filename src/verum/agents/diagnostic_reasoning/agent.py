@@ -19,7 +19,6 @@ from verum.agents.common import (
     make_issue,
     report_id,
 )
-from verum.agents.diagnostic_reasoning.evidence_update import update_scores
 from verum.agents.diagnostic_reasoning.features import FEATURE_PROFILE_ID
 from verum.agents.diagnostic_reasoning.model import DiagnosticModel, format_hypotheses
 from verum.agents.diagnostic_reasoning.rules import (
@@ -132,7 +131,6 @@ class DiagnosticReasoningAgent:
         obs_ev_ids = [eid for eid in observations.get("evidence_ids", []) if eid in set(consumed)]
         raw_hypotheses = format_hypotheses(predictions)
         hypotheses = [enrich_hypothesis_with_rules(h, inputs, obs_ev_ids) for h in raw_hypotheses]
-        hypotheses = update_scores(hypotheses, inputs.get("anomaly_report"))
         upstream_checks = evaluate_upstream_checks(inputs, hypotheses)
         missing_upstreams = [c["check_id"] for c in upstream_checks if c["outcome"] == "unknown"]
         issues: list[dict[str, Any]] = []

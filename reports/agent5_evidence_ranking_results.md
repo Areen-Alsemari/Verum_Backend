@@ -7,7 +7,7 @@ Results of the evaluation pre-registered in `reports/agent5_evidence_ranking_des
 - The lower bound of the paired bootstrap difference in top-1 accuracy is below zero on the full validation split, for the family measure (-0.021) and for the mechanism and asset measure (-0.004). The point differences are -0.006 and +0.004.
 - Fault-free windows: hypotheses at or above 0.9 fall from 28 to 16, at or above 0.5 from 143 to 137, and at their own threshold from 301 to 295. That condition is met; the accuracy condition is not.
 - The shuffle control (assessments taken from other windows) gives a mean change of -0.010 in family top-1 and -0.006 in exact top-1, so no gain is found for the shuffle to remove; the update is not better than noise.
-- The code that was run is the state of commit `6537e5f` of the branch `agent5-evidence-ranking`. The removal is a later commit; check out `6537e5f` to rerun it.
+- The code that was run is the state of commit `6537e5f` of the branch `agent5-evidence-ranking`. The removal is a later commit; check out `6537e5f` to rerun it, with `python tools/agents/fit_evidence_ratios.py --out <file>`, `python tools/agents/evaluate_evidence_ranking.py collect --cache <folder>`, the same with `score --cache <folder> --out <file>`, and `python tools/agents/report_evidence_ranking.py <file>` (add `--sample <sample file>` for the 169-window subset).
 
 ## 2. What was run
 
