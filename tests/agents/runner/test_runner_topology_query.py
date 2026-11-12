@@ -106,7 +106,10 @@ def test_assets_named_by_the_caller_are_passed_on_as_given() -> None:
 
 
 def test_the_requests_of_the_other_roles_do_not_change() -> None:
-    """Agents 1, 2, 4 and 6 build the same requests as when every asset is named explicitly.
+    """Agents 1, 2 and 4 build the same requests as when every asset is named explicitly.
+
+    Agent 6 differs by design: by default it gets only the assets that Agent 5 implicates (none
+    for the placeholders), and a caller's list is passed on as given.
 
     Independent: yes, because the comparison run names all asset ids and skips nothing.
     """
@@ -116,11 +119,11 @@ def test_the_requests_of_the_other_roles_do_not_change() -> None:
         "predictive_health",
         "anomaly_detection",
         "historical_asset_intelligence",
-        "inspection_planning",
     ):
         assert default.requests[role] == explicit.requests[role], role
     assert default.requests["historical_asset_intelligence"]["input"]["query_asset_ids"] == list(
         all_ids
     )
-    assert default.requests["inspection_planning"]["input"]["target_asset_ids"] == list(all_ids)
+    assert default.requests["inspection_planning"]["input"]["target_asset_ids"] == []
+    assert explicit.requests["inspection_planning"]["input"]["target_asset_ids"] == list(all_ids)
     assert len(default.requests["topology_dependency"]["input"]["query_asset_ids"]) == 44

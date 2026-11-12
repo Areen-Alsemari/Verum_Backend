@@ -14,6 +14,7 @@ from typing import Any
 from verum.agents.common import to_plain
 from verum.agents.runner.persistence import ANOMALY_ROLE, attach_fields
 from verum.agents.runner.prepare import REFERENCE, Prepared, note
+from verum.agents.runner.targets import derive_checks, implicated_assets
 
 Reports = dict[str, dict[str, Any] | None]
 Builder = Callable[[Prepared, Reports], dict[str, Any]]
@@ -102,15 +103,42 @@ def diagnostic_reasoning(prep: Prepared, reports: Reports) -> dict[str, Any]:
     }
 
 
+def planning_targets(prep: Prepared, reports: Reports) -> list[str]:
+    """The caller's assets as given, else the catalogue assets that Agent 5 implicates."""
+    if prep.snapshot.query_asset_ids is not None:
+        return prep.query_assets
+    named = {a["asset_id"] for a in prep.assets}
+    targets = implicated_assets(reports["diagnostic_reasoning"], named)
+    if not targets:
+        note(prep, "inspection_planning", "NO_IMPLICATED_ASSETS",
+             "No hypothesis names an inspectable asset, so Agent 6 gets no target.")
+    return targets
+
+
+def planning_checks(prep: Prepared, targets: list[str]) -> list[dict[str, Any]]:
+    """Caller checks first, then checks that the observation window shows."""
+    supplied: list[dict[str, Any]] = to_plain(list(prep.snapshot.constraint_checks))
+    derived, withheld = derive_checks(prep, targets, supplied)
+    if derived:
+        note(prep, "inspection_planning", "WINDOW_CHECKS_DERIVED",
+             f"{len(derived)} precondition passes were read from the observation window.")
+    if withheld:
+        note(prep, "inspection_planning", "PRECONDITION_FAILURES_NOT_DERIVED",
+             f"{withheld} precondition failures seen in the window were left unknown.")
+    if not supplied and not derived:
+        note(prep, "inspection_planning", "NO_CONSTRAINT_CHECKS",
+             "No constraint checks were supplied or readable, so the list is empty.")
+    return supplied + derived
+
+
 def inspection_planning(prep: Prepared, reports: Reports) -> dict[str, Any]:
-    """The reference catalogue, with constraints and budget only as supplied."""
+    """Catalogue, implicated targets, window checks, and budget only as supplied."""
     snapshot = prep.snapshot
     if not prep.catalog:
         note(prep, "inspection_planning", "NO_CATALOG",
              "The reference holds no inspection catalogue.")
-    if not snapshot.constraint_checks:
-        note(prep, "inspection_planning", "NO_CONSTRAINT_CHECKS",
-             "No constraint checks were supplied, so the list is empty.")
+    targets = planning_targets(prep, reports)
+    checks = planning_checks(prep, targets)
     if snapshot.budget is None:
         note(prep, "inspection_planning", "NO_BUDGET",
              "No budget was supplied, so both limits are null.")
@@ -118,8 +146,8 @@ def inspection_planning(prep: Prepared, reports: Reports) -> dict[str, Any]:
     return {
         "diagnosis_report": reports["diagnostic_reasoning"], "catalog": prep.catalog,
         "catalog_evidence_ids": [REFERENCE], "observations": prep.observations,
-        "constraint_checks": to_plain(list(snapshot.constraint_checks)), "budget": budget,
-        "target_asset_ids": prep.query_assets, "assets": prep.assets,
+        "constraint_checks": checks, "budget": budget,
+        "target_asset_ids": targets, "assets": prep.assets,
         "workflow_requests": to_plain(list(snapshot.inspection_requests)),
     }
 
