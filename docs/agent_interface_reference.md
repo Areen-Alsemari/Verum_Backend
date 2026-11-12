@@ -181,6 +181,8 @@ If a future model consumes actual upstream predictions as learned features, that
 
 The planner returns proposals only. Missing process readings, permits, measurement capability or hardware evidence do not become passed prerequisites. Costs and durations are read from the supplied catalogue. A method's unmodelled outputs and unresolved uncertainty remain explicit limitations; the catalogue does not establish equipment acceptance.
 
+The runner passes the assets that the diagnosis implicates as `target_asset_ids`, not the whole reference, and sends a `constraint_checks` entry only for a precondition that the same observation window shows to hold; every other precondition is left without a check, so its option stays unknown.
+
 The frozen inspection request requires a numerical `agent_reported_information_gain_bits` and at least two competing hypotheses. The new plan therefore is deliberately not that dispatch request. If information gain is unresolved, the proposed option leaves it null and cannot be converted into that frozen submission payload by substituting zero or an invented alternative hypothesis. A future approval adapter must obtain a justified estimate and satisfy the original request contract, or return an explicit submission blocker. The planning agent never fabricates an approval, permit or intervention.
 
 ## Agent 7 Inspection Quality and Documentation

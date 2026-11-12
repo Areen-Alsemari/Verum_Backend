@@ -363,6 +363,8 @@ Member 3 builds the observation adapter once, using the exact summary_v1 or sequ
 
 The runner keeps the last window assessments of a run in an `AssessmentLog` that the caller passes back in (`run_analysis(..., recent=bundle.assessments)`), applies the rule that Agent 2 published (k of the last n windows above a threshold) and attaches `recent_anomaly_assessments` and `persistence` to the Agent 5 and Agent 8 requests only. The answer is null until n windows are held, and null whenever a window has no usable assessment, so an Agent 2 failure never turns into a quiet window. The runner holds no knowledge of the method behind the score. Agent 8 reads the alarm (see its decision table); Agent 5 does not. Pass every window of the run, in order, with one case identifier.
 
+The request of Agent 6 is built from the diagnosis: its targets are the catalogue assets that Agent 5's hypotheses implicate (none gives an empty list and the report `insufficient_evidence`), and the runner adds a passing `constraint_check` only where the observation window of the same request shows the precondition, which today is a closed declared receipt valve for the tank precondition of ACT-INSP-06. It never derives a failed check and never supplies an approved request; those stay with the caller. Agent 6 itself is unchanged.
+
 Connect the real agents in the report workflow order. If Agent 1 fails, Agent 2 and Agent 5 must still handle missing forecasts. If no inspection exists, Agent 7 reports that limit and Agent 8 can request more evidence. Validate at every boundary before passing reports onward. Keep automatic action flags false.
 
 ### Checks already available
