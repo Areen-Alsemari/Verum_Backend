@@ -1,6 +1,6 @@
 """Compare two runs of the sample for the change of the Agent 6 targets of the runner.
 
-Inputs: two output folders of `run_runner_sample.py` over the same sample, one made before the
+Inputs: two output folders of the runner sample script over the same sample, one made before the
 change and one after. Output: markdown tables on stdout: Agent 6 options per window and statuses,
 windows with insufficient evidence, notes of the runner, verification counts, whether the
 requests and responses of the other roles are identical, what Agent 8 returned, and what Agent 6

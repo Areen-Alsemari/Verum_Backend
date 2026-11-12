@@ -304,7 +304,11 @@ def test_multiple_target_assets_prevent_ambiguous_scoping() -> None:
 
 
 def make_runtime_request() -> dict[str, Any]:
-    """Load the repository's chained inspection-planning request fixture."""
+    """Load the chained inspection-planning request fixture, asking about every asset.
+
+    The runner now asks only about the assets that a diagnosis implicates, and the placeholder
+    diagnosis of the fixture implicates none; the tests of this module need the full target list.
+    """
     fixture = (
         Path(__file__).resolve().parents[3]
         / "tests"
@@ -314,6 +318,7 @@ def make_runtime_request() -> dict[str, Any]:
         / "inspection_planning.request.json"
     )
     data: dict[str, Any] = json.loads(fixture.read_text(encoding="utf-8"))
+    data["input"]["target_asset_ids"] = [a["asset_id"] for a in data["input"]["assets"]]
     return data
 
 
