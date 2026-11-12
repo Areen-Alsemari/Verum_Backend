@@ -368,6 +368,7 @@ def test_upstream_rules_populate_both_support_and_conflict_evidence_ids(
             "limitations": ["Rule check."],
         }
     ]
+    anom["result"]["window_assessment"] = _pump_assessment("exceeded")
     request["input"]["anomaly_report"] = anom
 
     asset_rep = copy.deepcopy(request["input"]["asset_report"])
@@ -411,6 +412,19 @@ def test_upstream_rules_populate_both_support_and_conflict_evidence_ids(
     assert anom["report_id"] in pump_hyp["support_evidence_ids"]
     assert asset_rep["report_id"] in pump_hyp["conflict_evidence_ids"]
     assert insp_rep["report_id"] in pump_hyp["conflict_evidence_ids"]
+
+
+def _pump_assessment(r2_state: str, complete: bool = True) -> dict[str, Any]:
+    """A window assessment in which only the pump head residual has the given state."""
+    ids = ["R1_mass_balance", "R2_pump_head", "R3_discharge_loss", "R4_receipt_line"]
+    rows = [
+        {"residual_id": i, "state": r2_state if i == ids[1] else "within_normal", "reason": None}
+        for i in ids
+    ]
+    return {
+        "score": 1.0, "window_threshold": 3.0, "exceeded": False, "complete": complete,
+        "persistence_rule": {"k": 2, "n": 3, "threshold": 1.5}, "residuals": rows,
+    }  # fmt: skip
 
 
 def _set_forecast_value(
@@ -629,7 +643,9 @@ def _model_event() -> dict[str, Any]:
     return _anomaly_event([], [], "reported_signal_departure")
 
 
-def _run_with_events(tmp_path: Path, events: list[dict[str, Any]]) -> dict[str, Any]:
+def _run_with_events(
+    tmp_path: Path, events: list[dict[str, Any]], assessment: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Run the agent on the chained request with a usable anomaly report holding these events."""
     tmp_path.mkdir(parents=True, exist_ok=True)
     path, sha = _write_mock_artifact(tmp_path)
@@ -637,6 +653,8 @@ def _run_with_events(tmp_path: Path, events: list[dict[str, Any]]) -> dict[str, 
     anom = copy.deepcopy(request["input"]["anomaly_report"])
     anom.update(issues=[], status="complete")
     anom["result"].update(coverage="assessed", events=events)
+    if assessment is not None:
+        anom["result"]["window_assessment"] = assessment
     request["input"]["anomaly_report"] = anom
     for row in request["evidence"]:
         if row["evidence_id"] == anom["report_id"]:
@@ -674,26 +692,27 @@ def test_event_naming_no_tag_or_asset_is_neither_support_nor_conflict(tmp_path: 
     assert check["evidence_ids"] == [anomaly_id]
 
 
-def test_event_naming_the_candidate_asset_still_supports(tmp_path: Path) -> None:
-    """An event that names the candidate's asset is support, as before, and the check passes.
+def test_event_naming_the_candidate_asset_no_longer_supports(tmp_path: Path) -> None:
+    """An event that names the candidate's asset is not support; only the assessment decides.
 
-    Independent: yes, because the event names the asset of the mock pump candidate.
+    Independent: yes, because the event names the asset of the mock pump candidate and the
+    report holds no window assessment.
     """
     response = _run_with_events(
         tmp_path, [_model_event(), _anomaly_event([], ["P-101A"], "non_good_quality")]
     )
     pump = _pump(response)
-    assert response["_anomaly_id"] in pump["support_evidence_ids"]
+    assert response["_anomaly_id"] not in pump["support_evidence_ids"]
     assert response["_anomaly_id"] not in pump["conflict_evidence_ids"]
-    assert not any(NO_TARGET_TEXT in q for q in pump["unresolved_questions"])
+    assert any("no usable window assessment" in q for q in pump["unresolved_questions"])
     check = next(
         c for c in response["result"]["upstream_checks"] if c["check_id"] == "anomaly_report"
     )
-    assert check["outcome"] == "pass"
+    assert check["outcome"] == "unknown"
 
 
-def test_event_naming_another_asset_is_still_a_conflict(tmp_path: Path) -> None:
-    """An event that names only other tags and assets stays a conflict, as before.
+def test_event_naming_another_asset_is_no_longer_a_conflict(tmp_path: Path) -> None:
+    """An event that names only other tags and assets is not a conflict either.
 
     Independent: yes, because the event names a tank tag and valve that the pump does not use.
     """
@@ -701,26 +720,28 @@ def test_event_naming_another_asset_is_still_a_conflict(tmp_path: Path) -> None:
         tmp_path, [_anomaly_event(["TT-103"], ["XV-S103"], "non_good_quality")]
     )
     pump = _pump(response)
-    assert response["_anomaly_id"] in pump["conflict_evidence_ids"]
+    assert response["_anomaly_id"] not in pump["conflict_evidence_ids"]
     assert response["_anomaly_id"] not in pump["support_evidence_ids"]
     assert not any(NO_TARGET_TEXT in q for q in pump["unresolved_questions"])
 
 
-def test_tagged_quality_event_keeps_its_behaviour_next_to_a_tag_less_event(
-    tmp_path: Path,
-) -> None:
-    """A data-quality event with tags decides support or conflict; the tag-less event is ignored.
+def test_the_window_assessment_decides_and_tagged_quality_events_do_not(tmp_path: Path) -> None:
+    """With a window assessment the pump residual decides; quality events change nothing.
 
-    Independent: yes, because the tags are taken from the pump's declared primary tags.
+    Independent: yes, because the tags are taken from the pump's declared primary tags and the
+    assessment is built by the test.
     """
     on_pump = ASSET_PRIMARY_TAGS["P-101A"][1]
     overlapping = _anomaly_event([on_pump], [], "missing_reading")
     elsewhere = _anomaly_event(["TT-103"], [], "missing_reading")
-    supported = _run_with_events(tmp_path, [_model_event(), overlapping])
-    assert supported["_anomaly_id"] in _pump(supported)["support_evidence_ids"]
-    assert supported["_anomaly_id"] not in _pump(supported)["conflict_evidence_ids"]
-    contradicted = _run_with_events(tmp_path / "other", [_model_event(), elsewhere])
-    assert contradicted["_anomaly_id"] in _pump(contradicted)["conflict_evidence_ids"]
+    loud = _run_with_events(tmp_path, [_model_event(), elsewhere], _pump_assessment("exceeded"))
+    assert loud["_anomaly_id"] in _pump(loud)["support_evidence_ids"]
+    assert loud["_anomaly_id"] not in _pump(loud)["conflict_evidence_ids"]
+    quiet = _run_with_events(tmp_path / "quiet", [elsewhere], _pump_assessment("within_normal"))
+    assert quiet["_anomaly_id"] in _pump(quiet)["conflict_evidence_ids"]
+    caveat = _run_with_events(tmp_path / "caveat", [overlapping], _pump_assessment("within_normal"))
+    assert caveat["_anomaly_id"] not in _pump(caveat)["conflict_evidence_ids"]
+    assert any("Data-quality caveat" in q for q in _pump(caveat)["unresolved_questions"])
 
 
 def test_anomaly_event_shape_does_not_change_the_hypotheses(tmp_path: Path) -> None:
