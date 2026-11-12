@@ -15,7 +15,7 @@ Agent 5 used to cite the Agent 2 report as support or conflict by tag overlap be
 | restriction at a tank-outlet valve | none | no | - |
 | leak between the two meters | R1 | no | 43 of 54 |
 | leak on E001 or E-D2 | none | no | - |
-| flow-meter sensor fault (FT-001, FT-201) | R1 | no | drift 23 of 31 on FT-001, stuck 15 of 15 on FT-201 |
+| flow-meter sensor fault (FT-001, FT-201) | R1 | no | R1 in drift 23 of 31 on FT-001 and stuck 12 of 15 on FT-201 |
 | level-sensor drift or stuck | R1 | no | 19 of 19 and 13 of 13 |
 | level-sensor bias | none | no | - |
 | valve misrouting | none | no | - |
