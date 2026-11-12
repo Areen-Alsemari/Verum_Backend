@@ -48,7 +48,11 @@ def read_state(signals: dict[str, dict[str, Any]], tag: str) -> bool | None:
     if signal.get("latest_quality") != "good":
         return None
     value = signal.get("latest_value")
-    return value in (0, 1, 0.0, 1.0) and bool(value) if isinstance(value, (int, float)) else None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    return None
 
 
 def inlet_valves(connections: list[dict[str, Any]], tank: str) -> list[str]:
