@@ -199,7 +199,7 @@ def test_a_family_with_no_expected_residual_is_unknown_whatever_the_residuals_do
     [
         hypothesis("leak", None),
         hypothesis("restriction_position_visible", None),
-        hypothesis("bias", "PT-201", "PT-201"),
+        hypothesis("bias", "PT-9999", "PT-9999"),
         hypothesis("pump", "P-101A")
         | {
             "components": [
@@ -342,3 +342,48 @@ def test_a_quality_event_on_the_hypothesis_tags_never_creates_support() -> None:
     support, conflict, questions = compare(hypothesis("leak", "E002"), rep)
     assert (support, conflict) == (False, False)
     assert any("Data-quality caveat" in q for q in questions)
+
+
+@pytest.mark.parametrize(
+    ("tag", "moved", "still"),
+    [
+        ("PT-001", "R4", "R2"),
+        ("PT-201", "R2", "R3"),
+        ("PT-202A", "R3", "R1"),
+        ("PT-202B", "R2", "R4"),
+        ("PT-203", "R3", "R2"),
+    ],
+)
+@pytest.mark.parametrize("mechanism", ["bias", "drift", "stuck"])
+def test_a_pressure_transmitter_fault_is_supported_by_a_residual_that_reads_it(
+    tag: str, moved: str, still: str, mechanism: str
+) -> None:
+    """The residual that reads the transmitter supports the fault; one that does not, does not.
+
+    Independent: yes, because the residuals that read each transmitter are listed in the layout.
+    """
+    hyp = hypothesis(mechanism, tag, tag)
+    assert compare(hyp, report(assessment({moved: "exceeded"})))[:2] == (True, False)
+    support, conflict, questions = compare(hyp, report(assessment({still: "exceeded"})))
+    assert (support, conflict) == (False, False)
+    assert any("weak evidence" in q for q in questions)
+
+
+def test_a_discharge_transmitter_fault_has_two_expected_residuals() -> None:
+    """The discharge transmitters sit in both pump residuals, and silence is not conflict.
+
+    Independent: yes, because both pump residuals read the discharge pressure of the running pump.
+    """
+    for tag in ("PT-202A", "PT-202B"):
+        family = family_of(hypothesis("bias", tag, tag))
+        assert family is not None and family.expected == ("R2", "R3") and not family.reliable
+    assert compare(hypothesis("stuck", "PT-202A", "PT-202A"), report(assessment()))[:2] == (
+        False,
+        False,
+    )
+    unknown = compare(
+        hypothesis("bias", "PT-202B", "PT-202B"), report(assessment({"R3": "unknown"}))
+    )
+    assert unknown[:2] == (False, False)
+    first = assessment({"R2": "unknown", "R3": "exceeded"})
+    assert compare(hypothesis("bias", "PT-202B", "PT-202B"), report(first))[:2] == (True, False)

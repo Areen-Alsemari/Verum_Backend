@@ -49,6 +49,16 @@ LEAK_OUTSIDE: Final = Family("leak outside the mass balance", (), False)
 FLOW_METER: Final = Family("flow-meter sensor fault", ("R1",), False)  # drift 23 of 31
 LEVEL_SENSOR: Final = Family("level-sensor drift or stuck", ("R1",), False)  # 19 of 19, 13 of 13
 LEVEL_BIAS: Final = Family("level-sensor bias", (), False)
+# Pressure transmitters sit in one residual each, except the two discharge transmitters, which
+# sit in both pump residuals. Validation figures, bias and stuck: PT-001 1 of 6, PT-201 6 of 6,
+# PT-202A 12 of 12 and 5 of 5, PT-202B 4 of 4, PT-203 9 of 9.
+PRESSURE_FAMILIES: Final = {
+    "PT-001": Family("receipt-line pressure transmitter fault", ("R4",), False),
+    "PT-201": Family("suction-header pressure transmitter fault", ("R2",), False),
+    "PT-202A": Family("pump A discharge transmitter fault", ("R2", "R3"), False),
+    "PT-202B": Family("pump B discharge transmitter fault", ("R2", "R3"), False),
+    "PT-203": Family("discharge-header pressure transmitter fault", ("R3",), False),
+}
 MISROUTING: Final = Family("valve misrouting", (), False)
 
 INLET_VALVES: Final = frozenset({"XV-PAI", "XV-PBI"})
@@ -87,7 +97,9 @@ def restriction_family(asset: str | None) -> Family | None:
 
 
 def sensor_family(mechanism: str, tag: str | None) -> Family | None:
-    """The family of a sensor fault; only flow meters and level transmitters are covered."""
+    """The family of a sensor fault: flow meters, level transmitters and pressure transmitters."""
+    if tag in PRESSURE_FAMILIES:
+        return PRESSURE_FAMILIES[tag]
     if tag in FLOW_METERS:
         return FLOW_METER
     if tag in LEVEL_SENSORS:
