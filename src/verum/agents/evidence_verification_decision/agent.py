@@ -1,9 +1,11 @@
 """Rule-based evidence verification and advisory decision agent.
 
-Decision precedence (highest first): more_evidence_required when reports or
-verified evidence are missing; review_required for conflicts; inconclusive
-when diagnostic candidates are unsupported; assessment_available otherwise.
-All decisions are advisory and require human judgment.
+Decision precedence (highest first): review_required when an alert holds (a conflict of a
+reliable family, a failed record check, a persistent alarm, or a supported hypothesis unless
+persistence is known to be false); more_evidence_required when reports or verified evidence are
+missing; review_required for other conflicts; inconclusive when diagnostic candidates are
+unsupported; assessment_available otherwise. A gap in evidence blocks the available state but
+does not hide an alert. All decisions are advisory and require human judgment.
 """
 
 from __future__ import annotations
@@ -20,6 +22,11 @@ from verum.agents.common import (
     make_issue,
 )
 from verum.agents.common.ids import report_id
+from verum.agents.evidence_verification_decision.alerts import (
+    alert_steps,
+    alert_summary,
+    detect_alerts,
+)
 from verum.agents.evidence_verification_decision.evidence import check_proposal
 
 ROLE: Final = "evidence_verification_decision"
@@ -300,14 +307,38 @@ def _available_decision() -> tuple[str, str, list[dict[str, Any]]]:
     )
 
 
+def _alert_decision(
+    diagnosis: dict[str, Any] | None,
+    conflicts: list[dict[str, Any]],
+    persistence: dict[str, Any] | None,
+    evidence_missing: bool,
+) -> tuple[str, str, list[dict[str, Any]]] | None:
+    """The review decision for the alerts that hold, or None when none holds."""
+    kinds = detect_alerts(diagnosis, conflicts, persistence)
+    if not kinds:
+        return None
+    return (
+        "review_required",
+        alert_summary(kinds, persistence, evidence_missing),
+        alert_steps(kinds, conflicts, diagnosis, evidence_missing),
+    )
+
+
 def _decision(
     diagnosis: dict[str, Any] | None,
     checks: list[dict[str, Any]],
     conflicts: list[dict[str, Any]],
     missing_reports: list[str],
+    persistence: dict[str, Any] | None = None,
 ) -> tuple[str, str, list[dict[str, Any]]]:
     """Apply explicit, conservative decision precedence."""
-    if missing_reports or not checks or any(check["usable"] is not True for check in checks):
+    evidence_missing = bool(
+        missing_reports or not checks or any(check["usable"] is not True for check in checks)
+    )
+    alert = _alert_decision(diagnosis, conflicts, persistence, evidence_missing)
+    if alert is not None:
+        return alert
+    if evidence_missing:
         return _more_evidence_decision()
 
     if conflicts:
@@ -452,6 +483,7 @@ def _process_decision(request: dict[str, Any]) -> dict[str, Any]:
         evidence_checks,
         conflicts,
         missing_reports,
+        inputs.get("persistence"),
     )
 
     result = _build_decision_result(inputs, state, summary, next_steps, evidence_checks, conflicts)
