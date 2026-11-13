@@ -10,6 +10,8 @@ Source: the standing rule that the test split stays unread.
 
 from __future__ import annotations
 
+import os
+import posixpath
 import re
 import sys
 from pathlib import Path
@@ -25,6 +27,8 @@ _installed = False
 
 def classify(relative: str) -> str:
     """Return 'allowed' or 'rejected' for a path relative to the release folder."""
+    if posixpath.normpath(relative) != relative:
+        return "rejected"  # a path with dots or doubled slashes is not one of the known files
     parts = relative.split("/")
     if parts[0] == "knowledge" or relative == INVENTORY:
         return "allowed"
@@ -45,7 +49,8 @@ def _relative(path: str) -> str | None:
 def _hook(event: str, args: tuple[Any, ...]) -> None:
     if event != "open" or not args or not isinstance(args[0], (str, bytes)):
         return
-    path = args[0].decode() if isinstance(args[0], bytes) else args[0]
+    raw = args[0].decode() if isinstance(args[0], bytes) else args[0]
+    path = os.path.abspath(raw)  # a relative path is judged where it points, not as written
     relative = _relative(path)
     if relative is None or relative == "":
         return
@@ -59,7 +64,7 @@ def _hook(event: str, args: tuple[Any, ...]) -> None:
 def confine(release: Path) -> None:
     """Confine opens under the release folder; the hook is installed once per process."""
     global _installed
-    ROOTS.add(str(release.resolve()))
+    ROOTS.update({os.path.abspath(release), str(release.resolve())})
     if not _installed:
         sys.addaudithook(_hook)
         _installed = True

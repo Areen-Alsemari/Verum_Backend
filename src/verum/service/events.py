@@ -90,10 +90,13 @@ def alert_event(record: dict[str, Any], index: int) -> dict[str, Any] | None:
     held = persistence_of(record)
     if held is None or held.get("alarming") is not True:
         return None
-    rule = held["rule"]
+    rule = held.get("rule")
+    message = "persistence rule of the anomaly detector is satisfied"
+    if isinstance(rule, dict):
+        message = f"{rule['k']} of the last {rule['n']} windows are above the threshold"
     return {
         "window_index": index, "as_of_s": record["context"]["as_of_s"],
         "source": "anomaly_detection", "rule": rule,
         "windows_exceeding": held["windows_exceeding"], "windows_held": held["windows_held"],
-        "message": f"{rule['k']} of the last {rule['n']} windows are above the threshold",
+        "message": message,
     }

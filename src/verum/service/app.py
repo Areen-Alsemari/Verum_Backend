@@ -136,7 +136,10 @@ class Handler(BaseHTTPRequestHandler):
     def _post(self) -> None:
         if urlsplit(self.path).path != "/api/runs":
             raise Refused(HTTPStatus.NOT_FOUND, "no such route")
-        run = self.server.registry.create(*self._plan(self._body()))
+        try:
+            run = self.server.registry.create(*self._plan(self._body()))
+        except sources.UnknownEpisode as error:
+            raise Refused(HTTPStatus.NOT_FOUND, str(error)) from None
         self._send_json(HTTPStatus.CREATED, {**run.info(), "links": _links(run.run_id)})
 
     # --- routes -------------------------------------------------------------------------
