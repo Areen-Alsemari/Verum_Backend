@@ -1,5 +1,7 @@
 # Follow-up round: what the runner, Agents 6 to 8 and the data allow
 
+Erratum: the count of 30 meaningful windows in this report includes 5 train windows; over the validation split alone it is 25, as in the compressed workflow results report.
+
 Read-only design document. Nothing in the agents, the runner or the contract was changed. The additions are this document and `tools/agents/simulate_followup_targets.py`, which calls Agent 6 on changed copies of stored requests and counts windows. The branch `runner-followup-design` starts from `agent8-review-precedence`. File references are to that tree.
 
 Data touched: the stored bundles of a runner run over the 181-window sample (run with `tools/agents/run_runner_sample.py --chain`), configuration and schema files, directory listings of the release and of the campaign evaluator folder, and the code. No data file was read for content. One slip is recorded in section 7.
