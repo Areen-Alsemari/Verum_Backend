@@ -81,7 +81,7 @@ def guard_summary() -> dict[str, Any]:
 def touched_test_split() -> list[str]:
     """Opened data paths that belong to the test split."""
     pattern = re.compile(r"/(test)(\.jsonl\.gz|/|$)")
-    return sorted(p for p in ACCESSED if pattern.search(p))
+    return sorted(p for p in ACCESSED if pattern.search(p.replace("\\", "/")))
 
 
 def load_split(release: Path, split: str) -> tuple[list[Any], dict[str, Any]]:
