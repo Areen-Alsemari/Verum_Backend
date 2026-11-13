@@ -231,6 +231,8 @@ The ordinary role data supplies proposal/admissibility exercises, not expert mai
 
 The runner executes an explicit pass per snapshot; it does not create an unbounded automatic inspection loop. It validates upstream context and hashes before routing. Dependency errors are represented by null or failed reports and structured issues rather than waiting indefinitely or returning a fabricated normal result. HTTP routes, report persistence, authentication and runtime scheduling are implementation work after this contract definition.
 
+Each analysed window can optionally be recorded as a trace of summaries (statuses, identifiers, digests, never message bodies or labels), for synthetic data only; it is off unless enabled through the environment and is described in `docs/runner_tracing.md`.
+
 ## Independent development and acceptance
 
 | Owner | Boundary ownership |
