@@ -24,6 +24,7 @@ from verum.agents.common import (
 )
 from verum.agents.common.stub import STUB_CODE
 from verum.agents.runner.persistence import AssessmentLog
+from verum.agents.runner.tracing import trace_of, verify_inputs, verify_outputs
 from verum.agents.runner.wiring import UPSTREAM
 
 PLACEHOLDER_CODE = "PLACEHOLDER_AGENT"
@@ -48,6 +49,8 @@ class Bundle:
     issues: list[dict[str, str]] = field(default_factory=list)
     notes: list[dict[str, str]] = field(default_factory=list)
     assessments: AssessmentLog = field(default_factory=AssessmentLog)
+    # The live trace of the window, if tracing is on; it is no part of any message or comparison.
+    trace: Any = field(default=None, repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -178,8 +181,20 @@ def verify_bundle(
 ) -> VerifiedBundle:
     """Check every message and every cross-cutting rule, and return the verified bundle.
 
-    Placeholder agents are accepted unless allow_placeholders is false.
+    Placeholder agents are accepted unless allow_placeholders is false. When the bundle carries a
+    live trace, the verification is recorded as a child of the window's trace.
     """
+    with trace_of(bundle).step(
+        "verum.verify_bundle", lambda: verify_inputs(bundle, previous is not None)
+    ) as span:
+        verified = _verify(bundle, previous, allow_placeholders)
+        span.outputs = verify_outputs(verified)
+    return verified
+
+
+def _verify(
+    bundle: Bundle, previous: VerifiedBundle | None, allow_placeholders: bool
+) -> VerifiedBundle:
     _check_ids(bundle)
     for role, request in bundle.requests.items():
         _check_request(role, request, bundle.context)

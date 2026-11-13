@@ -30,6 +30,13 @@ from verum.agents.runner.discovery import load_agent
 from verum.agents.runner.persistence import ANOMALY_ROLE, AssessmentLog, assessment_of
 from verum.agents.runner.prepare import Prepared, prepare
 from verum.agents.runner.snapshot import Snapshot
+from verum.agents.runner.tracing import (
+    NO_TRACE,
+    Tracer,
+    WindowTrace,
+    tracer_from_environment,
+    window_trace,
+)
 from verum.agents.runner.wiring import workflow_stages
 from verum.contracts.agent_interfaces import Agent
 
@@ -77,7 +84,8 @@ def _answer(
 
 
 def _run_role(
-    role: str, prep: Prepared, bundle: Bundle, agents: Mapping[str, Agent], timeout_s: float | None
+    role: str, prep: Prepared, bundle: Bundle, agents: Mapping[str, Agent], timeout_s: float | None,
+    trace: WindowTrace = NO_TRACE,
 ) -> None:
     reports: Reports = bundle.reports
     bundle.reports[role] = None
@@ -91,7 +99,9 @@ def _run_role(
         bundle.issues.append(_issue(role, "REQUEST_INVALID", str(error)))
         return
     bundle.requests[role] = request
+    span = trace.role_started(role, request)
     response, problem, placeholder = _answer(role, request, agents, timeout_s)
+    trace.role_finished(span, role, response, problem, placeholder)
     if placeholder:
         bundle.notes.append({
             "role": role, "code": PLACEHOLDER_CODE,
@@ -112,6 +122,9 @@ def run_analysis(
     allow_placeholders: bool = True,
     previous: VerifiedBundle | None = None,
     recent: AssessmentLog | None = None,
+    tracer: Tracer | None = None,
+    episode_id: str | None = None,
+    window_index: int | None = None,
 ) -> Bundle:
     """Run all roles on a snapshot and return the bundle of requests, reports and issues.
 
@@ -120,17 +133,44 @@ def run_analysis(
     role served by a placeholder gets a note; with allow_placeholders false the run is rejected.
     The log of the run's earlier window assessments, if any, is passed as recent; the bundle holds
     the log extended by this window, to be passed to the next window's run.
+
+    The tracer defaults to the one the environment enables, which is none unless LANGSMITH_TRACING
+    is true and a key is set. Tracing records summaries only and never changes a message. The
+    episode identifier and the window index are metadata of the trace; they default to the case
+    identifier and, when the cutoff is a whole number of 300 s steps, to its index.
     """
     log = recent or AssessmentLog()
     log.extended(snapshot.case_id, snapshot.as_of_s, None)  # refuse a log of another run or time
+    chosen = tracer or tracer_from_environment()
+    trace = window_trace(chosen, snapshot, mode, episode_id, window_index)
+    try:
+        bundle = _analyse(snapshot, mode, log, agents or {}, timeout_s, trace)
+        _conclude(bundle, allow_placeholders, previous)
+    except BaseException as error:
+        trace.close(None, error)
+        raise
+    trace.close(bundle, None)
+    return bundle
+
+
+def _analyse(
+    snapshot: Snapshot, mode: str, log: AssessmentLog, agents: Mapping[str, Agent],
+    timeout_s: float | None, trace: WindowTrace,
+) -> Bundle:
     prep = prepare(snapshot, mode, log)
-    bundle = Bundle(context=prep.context, registry=prep.registry, notes=prep.notes)
+    bundle = Bundle(context=prep.context, registry=prep.registry, notes=prep.notes, trace=trace)
     for stage in workflow_stages():
         for role in stage:
-            _run_role(role, prep, bundle, agents or {}, timeout_s)
+            _run_role(role, prep, bundle, agents, timeout_s, trace)
     bundle.assessments = log.extended(
         snapshot.case_id, snapshot.as_of_s, assessment_of(bundle.reports.get(ANOMALY_ROLE))
     )
+    return bundle
+
+
+def _conclude(
+    bundle: Bundle, allow_placeholders: bool, previous: VerifiedBundle | None
+) -> None:
     if not allow_placeholders:
         check_placeholders(bundle)
     if previous is not None:
@@ -138,4 +178,3 @@ def run_analysis(
             verify_bundle(bundle, previous)
         except BundleError as error:
             raise BundleError(f"not a valid next revision: {error}") from error
-    return bundle
