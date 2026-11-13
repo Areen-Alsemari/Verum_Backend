@@ -690,7 +690,9 @@ def test_lk_gateway_functions_return_schema_rows_and_no_hidden_text(tmp_path: Pa
     """Over all seven actions, the payloads of catalog, requests, results and history pass the
     allowlist and the closed schemas, hold no key outside the interface, and no string that names a
     truth dataset, a fault, a severity, a fault instance, a window or a scenario (LK-01 to LK-08,
-    LK-12).
+    LK-12). History and the non-catalog part of query also carry none of the fault-mechanism words
+    leak, restrict, bias or drift (`normal` is not scanned for: history's own closed enum value
+    `NORMAL_INTACT` legitimately contains it).
 
     Independent: yes, because the hidden words are listed by hand and the payloads are scanned.
     """
@@ -710,8 +712,9 @@ def test_lk_gateway_functions_return_schema_rows_and_no_hidden_text(tmp_path: Pa
     for n, (action, target) in enumerate(targets, 1):
         gateway.submit_request(request(n, action, target), 100.0)
     late = 1.0e6
+    history_payload, query_payload = gateway.history(late), gateway.query(late)
     payloads = [gateway.catalog(), gateway.requests(late), gateway.results(late),
-                gateway.history(late), gateway.query(late)]  # fmt: skip
+                history_payload, query_payload]  # fmt: skip
     hidden = re.compile(
         r"(?i)fault|severity|FI-|VW-|truth|hidden|ground_truth|scenario|tier|window"
     )
@@ -722,6 +725,10 @@ def test_lk_gateway_functions_return_schema_rows_and_no_hidden_text(tmp_path: Pa
                                 "history"}  # fmt: skip
         for text in strings(payload):
             assert not FORBIDDEN_TEXT.search(text) and not hidden.search(text), text
+    fault_mechanisms = re.compile(r"(?i)leak|restrict|bias|drift")
+    query_without_catalog = {k: v for k, v in query_payload.items() if k != "inspection_catalog"}
+    for text in [*strings(history_payload), *strings(query_without_catalog)]:
+        assert not fault_mechanisms.search(text), text
     performed = [
         r for r in payloads[2]["inspection_results"] if r["workflow_status"] == "performed"
     ]

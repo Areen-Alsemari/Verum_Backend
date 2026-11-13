@@ -1415,9 +1415,9 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Decision.**
   - The file `config/inspection_catalog.json` is not part of the configuration hash. The hash covers the files that fix the simulation and the observations of an episode.
   - A test lists the files that the hash leaves out.
-- **Reason.** The catalog changes no simulated or observed value, and a change of the hash changes every episode identifier, which would break the resumption of a campaign that was started before the catalog existed.
+- **Reason.** The catalog changes no value stored in an episode directory, because the inspection service reads it when a request is made, and a change of the hash changes every episode identifier, which would break the resumption of a campaign that was started before the catalog existed.
 - **Sensitivity required.** None.
-- **Notes.** An inspection result states the version of the catalog it used through the schema version of the file.
+- **Notes.** The catalog does set the outcomes, delays, rejections and history that the inspection service returns, so the configuration hash does not identify them. An inspection result does not state the catalog version: its `schema_version` is the version of the result schema (0.5.0), and `Catalog.version` is read but written to no result. The catalog file version and a digest of every value that sets an inspection outcome, delay, rejection or history record (the whole catalog file and the named constants of the outcome models, the workflow and the history generator) are written to the `provenance.json` of each newly generated episode directory, which the directory manifest lists by hash. They describe the checkout that generated the episode, not the checkout that later runs the service, and they enter no episode identifier and no other file of the directory.
 
 ## D109 - Actions that depend on the vapour track
 

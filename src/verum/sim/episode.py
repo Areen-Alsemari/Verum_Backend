@@ -25,6 +25,7 @@ from verum.faults import check as check_faults
 from verum.faults.validate import TIMING_PROFILES
 from verum.gates import assert_release_allowed
 from verum.hydraulics import HydraulicModel
+from verum.inspection.parameters import provenance_block
 from verum.lineups import load_lineup_table
 from verum.provenance import canonical_json, config_hash, episode_id, git_state, lockfile_hash
 from verum.sensors import observe_episode
@@ -231,7 +232,9 @@ def run_episode(
     validate("episode", document)
     sink.write_json("episode.json", document)
     commit, dirty = git_state()
-    sink.write_json("provenance.json", {"git_commit": commit, "git_dirty": dirty})
+    sink.write_json(
+        "provenance.json", {"git_commit": commit, "git_dirty": dirty, **provenance_block()}
+    )
     hashes = sink.finalize()
     if not outcome.rejection:
         if roofs:
