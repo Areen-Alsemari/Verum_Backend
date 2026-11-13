@@ -115,11 +115,13 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
 
 
 def test_provenance_is_a_separate_file(episodes: dict[str, EpisodeResult]) -> None:
-    """The git commit is in the provenance file only and not in the episode record. Independent:
-    yes, because the check reads the written files.
+    """The git commit is in the provenance file only and not in the episode record, and the file
+    also names the inspection catalog version. Independent: yes, because the check reads the
+    written files and the expected version is the one stated in the catalog file.
     """
     doc = json.loads((episodes["S0-A"].directory / "provenance.json").read_text())
-    assert set(doc) == {"git_commit", "git_dirty"}
+    assert set(doc) == {"git_commit", "git_dirty", "inspection_catalog_version"}
+    assert doc["inspection_catalog_version"] == "1.0.0"
     assert "git_commit" not in (episodes["S0-A"].directory / "episode.json").read_text()
 
 
@@ -579,6 +581,7 @@ def test_regeneration_gives_identical_files(
     assert json.loads((again.directory / "provenance.json").read_text()) == {
         "git_commit": commit,
         "git_dirty": dirty,
+        "inspection_catalog_version": "1.0.0",
     }
     scenario = dataclasses.replace(load_scenario("S0-A"), seed=1)
     other = run_episode("S0-A", tmp_path / "other", model, scenario)
