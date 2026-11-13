@@ -44,7 +44,7 @@ def _analyse(case: str, position: int, log: AssessmentLog) -> Any:
 
 
 def write_sample(root: Path, alarm_from: int = 3) -> Path:
-    """Write sample.json and the bundles of the planted episodes; return the folder."""
+    """Write the sample index and the bundles of the planted episodes; return the folder."""
     (root / "bundles").mkdir(parents=True)
     sections: dict[str, list[dict[str, Any]]] = {"validation": [], "train_sanity": []}
     for n, (episode, spec) in enumerate(PLANTED.items()):
