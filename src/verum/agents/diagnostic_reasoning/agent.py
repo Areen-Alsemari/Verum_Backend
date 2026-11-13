@@ -30,7 +30,7 @@ from verum.agents.diagnostic_reasoning.rules import (
 
 ROLE: Final = "diagnostic_reasoning"
 IMPL_NAME: Final = "diagnostic_reasoning_ovr_hgb"
-IMPL_VERSION: Final = "1.0.0"
+IMPL_VERSION: Final = "1.1.0"
 
 DEFAULT_LIMITATIONS: Final[tuple[str, ...]] = build_default_limitations()
 
