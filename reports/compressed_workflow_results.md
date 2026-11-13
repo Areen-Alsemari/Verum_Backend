@@ -24,47 +24,50 @@ The inspection is simulated and its checks pass by construction: the record is b
 
 ## Results per window
 
-Agents 6, 7 and 8 and the Agent 8 decision, first pass and second pass. "Left degraded" means that after the second pass Agent 7 is complete and Agent 8 is not degraded.
+Agents 3, 6, 7 and 8 and the Agent 8 decision, first pass and second pass. "Left degraded" means that after the second pass Agent 7 is complete and Agent 8 is not degraded.
 
-| Window | Position | Cutoff (s) | Action | Target | A6 first | A7 first | A8 first | Decision first | Second pass | A6 second | A7 second | A8 second | Decision second | Left degraded |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| ad926ec19daa9626d9c996a6 | 10 | 3000 | ACT-INSP-02 | XV-PBO | degraded | degraded | degraded | more evidence | run | degraded | complete | degraded | review required | no |
-| 04c2b362473b503b03349704 | 8 | 2400 | ACT-INSP-02 | XV-PBI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 5fcd8fe20b7109cf25c624fc | 8 | 2400 | ACT-INSP-02 | XV-PBI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 030cc598b1d39ee3476e7870 | 10 | 3000 | ACT-INSP-02 | XV-PBI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 3087a1b07fa6a59220074dfa | 11 | 3300 | ACT-INSP-02 | XV-PBI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| c42fc2b9dd591bda6fcdf98e | 12 | 3600 | none | none | degraded | degraded | degraded | more evidence | no second pass available | | | | | |
-| 69fde3943af70fb62328d57d | 7 | 2100 | ACT-INSP-02 | XV-PAO | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| f8477d1b84728439ed0c01cc | 7 | 2100 | ACT-INSP-03 | P-101A | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| a3803bbd59204abdde1d4e7e | 9 | 2700 | ACT-INSP-03 | P-101A | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 1df71589104db67cbfe838c8 | 10 | 3000 | ACT-INSP-03 | P-101A | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 7f7df8553297a8046d970193 | 10 | 3000 | ACT-INSP-03 | P-101A | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| ac9628bb618503f6ffe01da0 | 10 | 3000 | ACT-INSP-03 | P-101B | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| f299895ed8c0cdbc3ece1f3f | 10 | 3000 | ACT-INSP-02 | XV-R101 | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| fa373f2c275c862bd4ed4123 | 11 | 3300 | ACT-INSP-02 | XV-R101 | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 4ddcb4b8ddf878c9b869157d | 12 | 3600 | none | none | degraded | degraded | degraded | more evidence | no second pass available | | | | | |
-| c1f89eff843fafb6bb7071cc | 11 | 3300 | ACT-INSP-03 | P-101B | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 1e03d2318d3c4e191b3f6160 | 9 | 2700 | ACT-INSP-02 | XV-S103 | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 9d696df476514e470e8cbd61 | 11 | 3300 | ACT-INSP-02 | XV-S102 | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| faf4f6ce8690950cd6a57da8 | 11 | 3300 | ACT-INSP-02 | XV-S103 | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 599048f010064f5bd80d3cea | 10 | 3000 | ACT-INSP-02 | XV-PBI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 0d44b59aa46c68d75cd836f2 | 8 | 2400 | ACT-INSP-03 | P-101B | degraded | degraded | degraded | more evidence | run | insufficient | complete | degraded | more evidence | no |
-| 958b066906ceb1744ed87f0c | 11 | 3300 | ACT-INSP-02 | XV-PAI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| 2169eb6bf7ba0845c82dd763 | 7 | 2100 | ACT-INSP-02 | XV-PBI | degraded | degraded | degraded | more evidence | run | insufficient | complete | degraded | more evidence | no |
-| ba16e5d4c0e7d6e05940adbf | 10 | 3000 | ACT-INSP-02 | XV-PAI | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
-| b5b528204ba116e4bacc3b44 | 11 | 3300 | ACT-INSP-03 | P-101B | degraded | degraded | degraded | more evidence | run | degraded | complete | complete | assessment available | yes |
+| Window | Position | Cutoff (s) | Action | Target | A3 first | A6 first | A7 first | A8 first | Decision first | Second pass | A3 second | A6 second | A7 second | A8 second | Decision second | Left degraded |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ad926ec19daa9626d9c996a6 | 10 | 3000 | ACT-INSP-02 | XV-PBO | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| 04c2b362473b503b03349704 | 8 | 2400 | ACT-INSP-02 | XV-PBI | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| 5fcd8fe20b7109cf25c624fc | 8 | 2400 | ACT-INSP-02 | XV-PBI | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| 030cc598b1d39ee3476e7870 | 10 | 3000 | ACT-INSP-02 | XV-PBI | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| 3087a1b07fa6a59220074dfa | 11 | 3300 | ACT-INSP-02 | XV-PBI | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| c42fc2b9dd591bda6fcdf98e | 12 | 3600 | none | none | complete | degraded | degraded | degraded | more evidence | no second pass available | | | | | | |
+| 69fde3943af70fb62328d57d | 7 | 2100 | ACT-INSP-02 | XV-PAO | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| f8477d1b84728439ed0c01cc | 7 | 2100 | ACT-INSP-03 | P-101A | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| a3803bbd59204abdde1d4e7e | 9 | 2700 | ACT-INSP-03 | P-101A | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| 1df71589104db67cbfe838c8 | 10 | 3000 | ACT-INSP-03 | P-101A | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| 7f7df8553297a8046d970193 | 10 | 3000 | ACT-INSP-03 | P-101A | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| ac9628bb618503f6ffe01da0 | 10 | 3000 | ACT-INSP-03 | P-101B | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| f299895ed8c0cdbc3ece1f3f | 10 | 3000 | ACT-INSP-02 | XV-R101 | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| fa373f2c275c862bd4ed4123 | 11 | 3300 | ACT-INSP-02 | XV-R101 | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| 4ddcb4b8ddf878c9b869157d | 12 | 3600 | none | none | complete | degraded | degraded | degraded | more evidence | no second pass available | | | | | | |
+| c1f89eff843fafb6bb7071cc | 11 | 3300 | ACT-INSP-03 | P-101B | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| 1e03d2318d3c4e191b3f6160 | 9 | 2700 | ACT-INSP-02 | XV-S103 | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| 9d696df476514e470e8cbd61 | 11 | 3300 | ACT-INSP-02 | XV-S102 | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| faf4f6ce8690950cd6a57da8 | 11 | 3300 | ACT-INSP-02 | XV-S103 | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| 599048f010064f5bd80d3cea | 10 | 3000 | ACT-INSP-02 | XV-PBI | complete | degraded | degraded | degraded | more evidence | run | complete | degraded | complete | complete | assessment available | yes |
+| 0d44b59aa46c68d75cd836f2 | 8 | 2400 | ACT-INSP-03 | P-101B | complete | degraded | degraded | degraded | review required | run | complete | insufficient | complete | degraded | review required | no |
+| 958b066906ceb1744ed87f0c | 11 | 3300 | ACT-INSP-02 | XV-PAI | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| 2169eb6bf7ba0845c82dd763 | 7 | 2100 | ACT-INSP-02 | XV-PBI | complete | degraded | degraded | degraded | more evidence | run | complete | insufficient | complete | degraded | more evidence | no |
+| ba16e5d4c0e7d6e05940adbf | 10 | 3000 | ACT-INSP-02 | XV-PAI | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
+| b5b528204ba116e4bacc3b44 | 11 | 3300 | ACT-INSP-03 | P-101B | complete | degraded | degraded | degraded | review required | run | complete | degraded | complete | degraded | review required | no |
 
 ## Summary
 
-- First pass, all 25 windows: Agent 6 degraded (preconditions unknown), Agent 7 degraded (no inspection results), Agent 8 degraded with more evidence required.
+- Agent 3 (anomaly detection) is complete in all 25 first-pass windows and all 23 second-pass windows.
+- First pass, all 25 windows: Agent 6 degraded (preconditions unknown), Agent 7 degraded (no inspection results), Agent 8 degraded; its decision is 12 more evidence, 13 review required.
 - Second pass, 23 windows: Agent 7 is complete in all 23, with every check passed and no issue, and Agent 8 judges the proposal usable in all 23.
-- **20 of 23 leave degraded** and reach assessment available: 13 of the 15 valve-check windows and 7 of the 8 pump-vibration windows. Leaving degraded here follows from the construction of the record and shows that the workflow runs, not that any inspection helped a diagnosis.
+- **9 of 23 leave degraded** and reach assessment available: 9 of the 15 valve-check windows and 0 of the 8 pump-vibration windows. Leaving degraded here follows from the construction of the record and shows that the workflow runs, not that any inspection helped a diagnosis.
 - Agent 6 stays degraded in the windows that leave, with the issue code INSPECTION_PRECONDITIONS_UNKNOWN; the report does not say which precondition remains unknown.
-- **3 do not leave degraded**, and in each Agent 8 itself stays degraded:
-- Window ad926ec19daa9626d9c996a6 (position 10, ACT-INSP-02 on XV-PBO): Agent 6 is degraded (INSPECTION_PRECONDITIONS_UNKNOWN) and Agent 8 returns review_required with the issue EVIDENCE_DECISION_REVIEW_REQUIRED, although Agent 7 judges the record complete and Agent 8 judges the proposal usable.
-- Window 0d44b59aa46c68d75cd836f2 (position 8, ACT-INSP-03 on P-101B): Agent 6 is insufficient_evidence (NO_COMPATIBLE_INSPECTION_OPTIONS) and Agent 8 returns more_evidence_required with the issue EVIDENCE_DECISION_MORE_EVIDENCE_REQUIRED, although Agent 7 judges the record complete and Agent 8 judges the proposal usable.
-- Window 2169eb6bf7ba0845c82dd763 (position 7, ACT-INSP-02 on XV-PBI): Agent 6 is insufficient_evidence (NO_COMPATIBLE_INSPECTION_OPTIONS) and Agent 8 returns more_evidence_required with the issue EVIDENCE_DECISION_MORE_EVIDENCE_REQUIRED, although Agent 7 judges the record complete and Agent 8 judges the proposal usable.
-- The reason Agent 8 returns these decisions was read from its issue codes only; its internal ranking was not examined. In two of the three the later window gives Agent 6 no compatible option, which coincides with Agent 8 not accepting an otherwise usable proposal.
+- **14 do not leave degraded**, and in each Agent 8 itself stays degraded although Agent 7 judges the record complete and Agent 8 judges the proposal usable:
+  - 5 valve-check window(s): Agent 6 is degraded (INSPECTION_PRECONDITIONS_UNKNOWN) and Agent 8 returns review required with the issue EVIDENCE_DECISION_REVIEW_REQUIRED.
+  - 1 valve-check window(s): Agent 6 is insufficient_evidence (NO_COMPATIBLE_INSPECTION_OPTIONS) and Agent 8 returns more evidence with the issue EVIDENCE_DECISION_MORE_EVIDENCE_REQUIRED.
+  - 7 pump-vibration window(s): Agent 6 is degraded (INSPECTION_PRECONDITIONS_UNKNOWN) and Agent 8 returns review required with the issue EVIDENCE_DECISION_REVIEW_REQUIRED.
+  - 1 pump-vibration window(s): Agent 6 is insufficient_evidence (NO_COMPATIBLE_INSPECTION_OPTIONS) and Agent 8 returns review required with the issue EVIDENCE_DECISION_REVIEW_REQUIRED.
+- The reason Agent 8 returns these decisions was read from its issue codes only; its internal ranking was not examined.
+- Provenance: these numbers come from a checkout with LF line endings. An earlier run in a checkout with CRLF line endings gave different numbers: Agent 3 was degraded in every window because the detector parameter file failed its hash check there, the first-pass decision was more evidence required in all 25 windows, and 20 of 23 left degraded. That run is superseded by this one.
 
 ## Limits
 
