@@ -69,6 +69,17 @@ Agents 3, 6, 7 and 8 and the Agent 8 decision, first pass and second pass. "Left
 - The reason Agent 8 returns these decisions was read from its issue codes only; its internal ranking was not examined.
 - Provenance: these numbers come from a checkout with LF line endings. An earlier run in a checkout with CRLF line endings gave different numbers: Agent 3 was degraded in every window because the detector parameter file failed its hash check there, the first-pass decision was more evidence required in all 25 windows, and 20 of 23 left degraded. That run is superseded by this one.
 
+## Reproduce
+
+The raw output of the run behind this report is stored in `reports/compressed_workflow_lf/` (`rows.json`, `meta.json` and the 23 simulated objects). It was made in a checkout with LF line endings, at the commit that added `tools/agents/make_compressed_report.py`. To repeat it, use a checkout with LF line endings and run, with the release folder of the reference data:
+
+```
+PYTHONPATH=src python tools/agents/run_compressed_workflow.py --release <release folder> --out <output folder>
+python tools/agents/make_compressed_report.py --rows <output folder>/rows.json
+```
+
+The second command prints the table and the summary of this report; the other sections are written by hand. A second run gave the same rows as the first.
+
 ## Limits
 
 - The inspection is simulated. No real inspection exists in the recorded data, and nothing here comes from a measurement.
@@ -76,6 +87,7 @@ Agents 3, 6, 7 and 8 and the Agent 8 decision, first pass and second pass. "Left
 - The result is not evidence of detection quality, of the usefulness of any inspection, or of the state of any asset. The value is a constant, the category states no condition, and Agent 5 and Agent 7 do not read the content of a finding.
 - The rule is arbitrary. The choice of the first option, the constant value, the research-mode label, the valid and passed-QA status, the fixed calibration date and the coverage row were fixed by hand so that a well-formed record reaches Agents 7 and 8. That Agent 7 judges every record usable follows from the construction, not from any property of the data.
 - The pump action has no modelled outcome and no catalogue uncertainty. Its 8 results carry an uncertainty of 0.0 that the catalogue does not state, and the pump actions are not qualified inspection evidence.
+- **Why 14 of 23 stay degraded is known from issue codes only.** Agent 8 returns review required with EVIDENCE_DECISION_REVIEW_REQUIRED in 13 windows (5 valve-check, 8 pump-vibration) and more evidence required with EVIDENCE_DECISION_MORE_EVIDENCE_REQUIRED in 1 (valve-check). Agent 6 gives INSPECTION_PRECONDITIONS_UNKNOWN in 12 of the 14 (5 valve-check, 7 pump-vibration) and NO_COMPATIBLE_INSPECTION_OPTIONS in 2 (1 of each). The codes name the outcome and not its cause: the content of the Agent 8 decision, its ranking and the thresholds behind it were not read, and no rule or threshold was changed. All 8 pump-vibration windows stay degraded and 9 of the 15 valve-check windows leave; the pump action carries no catalogue uncertainty, which coincides with this but is not shown to cause it.
 - The coverage row claims that the observation window supports the target at the performed time, which the observations alone do not establish.
 - The sample is 25 windows chosen by the selection described above, not a random draw, and the second pass reuses Agent 5 on a window 300 s later with the earlier assessments as history.
 - Earlier runs of the audit hook on Windows classified no path, because the guard compared forward-slash paths. The guard now normalises separators, and in this run it allowed only validation role views, validation examples, the reference and the manifest.
