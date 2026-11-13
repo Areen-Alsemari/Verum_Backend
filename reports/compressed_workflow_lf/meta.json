@@ -1,0 +1,15 @@
+{
+ "windows": 169,
+ "rule": "Rule R1. The target and action are the first option of the Agent 6 report that addresses a hypothesis. The request is approved and made at the first cutoff; the inspection is treated as performed at that same cutoff. The result is valid (research mode), passed quality assurance, reports the first catalogue output of the action with the value 0.0 and the catalogue uncertainty (0.0 where the catalogue states none, as for the unqualified actions), and the category TEST_INCONCLUSIVE, so it states no condition. Identifiers come from a counter over the meaningful windows in processing order.",
+ "marker": "SIMULATED INSPECTION; time_compressed: true",
+ "test_split_files_touched": [],
+ "guard": {
+  "allowed_opens_by_folder": {
+   "examples": 756,
+   "knowledge": 2,
+   "role_views": 2,
+   "role_views_manifest.json": 1
+  },
+  "rejected": []
+ }
+}

@@ -1,0 +1,70 @@
+{
+ "option_id": "ACT-INSP-02-XV-R101",
+ "request": {
+  "schema_version": "0.5.0",
+  "dataset": "inspection_requests",
+  "request_id": "REQ-INSP-00013",
+  "t_requested_sim_s": 3300.0,
+  "action_id": "ACT-INSP-02",
+  "target_asset": "XV-R101",
+  "justification": {
+   "competing_hypotheses": [
+    "HYP-01-restriction_position_visible-XV-R101",
+    "SIMULATED INSPECTION: no further hypothesis was reported"
+   ],
+   "agent_reported_information_gain_bits": 0.0,
+   "estimated_cost_usd": 90.0
+  },
+  "human_approval": {
+   "status": "APPROVED",
+   "approver_id": "SIMULATED INSPECTION; time_compressed: true",
+   "work_permit_number": "SIMULATED INSPECTION; time_compressed: true"
+  }
+ },
+ "result": {
+  "schema_version": "0.5.0",
+  "dataset": "inspection_results",
+  "result_id": "RES-INSP-00013",
+  "request_id": "REQ-INSP-00013",
+  "action_id": "ACT-INSP-02",
+  "workflow_status": "performed",
+  "evidence_status": "valid",
+  "performed_at_t_sim_s": 3300.0,
+  "technician_id": "SIMULATED INSPECTION",
+  "tool_serial": "SIMULATED INSPECTION; time_compressed: true",
+  "calibration_valid_until": "2026-12-31",
+  "findings": {
+   "outcome_category": "TEST_INCONCLUSIVE",
+   "primary_metric": {
+    "name": "measured_differential_pressure",
+    "value": 0.0,
+    "unit": "bar",
+    "uncertainty_k2": 0.01
+   },
+   "secondary_observations": [
+    "SIMULATED INSPECTION",
+    "time_compressed: true",
+    "Rule R1. The target and action are the first option of the Agent 6 report that addresses a hypothesis. The request is approved and made at the first cutoff; the inspection is treated as performed at that same cutoff. The result is valid (research mode), passed quality assurance, reports the first catalogue output of the action with the value 0.0 and the catalogue uncertainty (0.0 where the catalogue states none, as for the unqualified actions), and the category TEST_INCONCLUSIVE, so it states no condition. Identifiers come from a counter over the meaningful windows in processing order."
+   ]
+  },
+  "validation_status": "PASSED_QA"
+ },
+ "coverage": {
+  "coverage_id": "COV-SIM-00013 SIMULATED INSPECTION; time_compressed: true",
+  "target_asset": "XV-R101",
+  "start_s": 0.0,
+  "end_s": 3600.0,
+  "evidence_ids": [
+   "source-observations",
+   "features-summary"
+  ]
+ },
+ "proposal": {
+  "proposal_id": "PROP-SIM-00013 SIMULATED INSPECTION; time_compressed: true",
+  "source_ref": "inspection_result:RES-INSP-00013",
+  "claimed_available_at_s": 3600.0,
+  "claimed_evidence_ids": [
+   "inspection-result-RES-INSP-00013"
+  ]
+ }
+}
