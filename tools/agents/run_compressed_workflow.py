@@ -194,10 +194,11 @@ def issue_codes(report: dict[str, Any] | None) -> list[str]:
 
 
 def pass_summary(bundle: Any) -> dict[str, Any]:
-    """Statuses and decision of Agents 6 to 8 in one pass."""
+    """Statuses and decision of Agents 3 and 6 to 8 in one pass."""
     reports = bundle.reports
     seven = reports.get("inspection_quality_documentation")
     return {
+        "agent3": status_of(reports.get("anomaly_detection")),
         "agent6": status_of(reports.get("inspection_planning")),
         "agent6_issues": issue_codes(reports.get("inspection_planning")),
         "agent7": status_of(seven),
