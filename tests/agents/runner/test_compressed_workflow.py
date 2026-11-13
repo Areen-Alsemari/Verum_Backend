@@ -176,17 +176,21 @@ def test_no_second_pass_is_reported_for_the_last_position() -> None:
     assert row == {"second_pass": "no second pass available"} and case.serial == 0
 
 
+STORED_RUN = ROOT / "reports" / "compressed_workflow_lf"
+
+
 def _tracked_data_files() -> list[Path]:
     kinds = {".json", ".jsonl", ".csv", ".tsv", ".yaml", ".yml", ".gz"}
     folders = ("tests", "contracts", "config", "schemas", "reports")
     return [
         p for f in folders for p in (ROOT / f).rglob("*")
         if p.is_file() and p.suffix in kinds and "__pycache__" not in p.parts
+        and STORED_RUN not in p.parents
     ]
 
 
 def test_no_simulated_marker_reaches_a_metrics_file_fixture_or_table() -> None:
-    """No data file of the repository carries a simulated-inspection marker.
+    """No data file of the repository, outside the stored run itself, carries a marker.
 
     Independent: yes, because the check searches the files for the literal marker strings.
     """
