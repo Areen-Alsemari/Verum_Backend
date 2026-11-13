@@ -92,13 +92,53 @@ A window that gains candidates gets 2 to 9 of them (2 in 15 windows, 3 in 42, 5 
 
 Persistence in the windows that gain candidates: known alarming in 92 (68 faulty, 24 fault-free), unknown in 22 (21 faulty, 1 fault-free). Of the 52 faulty windows that still have no hypothesis, 48 have a window score below the window threshold (8 of them with a residual above its own threshold) and 4 have persistence known to be false.
 
-## 5. Deviations from the pre-registration
+## 5. The 181-window sample
+
+The sample (169 validation, 12 train windows) was run with `tools/agents/run_runner_sample.py --chain` on this branch and on `integration`, under the wrapped guard (no rejected open, no test-split file). `verify_bundle` passes and a final report is built in 181 of 181 windows in both runs.
+
+| role | reports that change |
+|---|---|
+| Agent 5 diagnostic_reasoning | 25 of 181 |
+| Agent 6 inspection_planning | 17 of 181 |
+| Agent 8 evidence_verification_decision | 25 of 181 (decision state changes in 17) |
+| Agents 1, 2, 3, 4 and 7 | 0 of 181 |
+
+- The 25 windows are the windows that gain candidates: 19 faulty, 6 fault-free. No window with a previous hypothesis changes.
+- Windows in which an Agent 5 hypothesis names an asset or a tag: 38 before, 55 after.
+- Agent 6 report status:
+
+| before | after | windows |
+|---|---|---|
+| degraded | degraded | 38 |
+| insufficient_evidence | degraded | 17 |
+| insufficient_evidence | insufficient_evidence | 126 |
+
+- In the 17 windows that move, Agent 6 now has targets named by the pump and transmitter candidates (for example PT-202A, P-101A, PT-201 and PT-203 together in 12 windows) and 60 options in all, every one `unknown`: Agent 6 establishes a precondition only for a request with a single target, and these requests have one to four. Options over the sample go from 40 to 100. Of the 25 windows, 8 (all faulty) gain only family-level candidates and give Agent 6 no target.
+- Agent 8 decision state: `more_evidence_required` to `review_required` in 17 windows (12 faulty, 5 fault-free), through the supported-hypothesis alert, since the anomaly check of the diagnosis now passes. In the other 8 windows the decision was already `review_required` and only the cited reports change. Overall: `more_evidence_required` 144 to 127, `review_required` 37 to 54.
+
+## 6. Deviations from the pre-registration
 
 - The shuffle takes the anomaly result and the persistence statement of the donor window, but not its list of recent assessments: the contract refuses a request whose recent assessments are later than its cutoff. Agent 5 does not read that list.
 - The guard wrapper described in section 2 was added because the guard does not judge Windows paths. This does not change what may be opened.
 - Nothing was tuned. The trial runs before the evaluation used 7 fault-free windows of 2 episodes, to check the scripts; no rule, order or text was changed after them.
 
-## 6. Limits
+## 7. Gates
+
+Run on commit `d9db2b2`; the later commits change reports only.
+
+| gate | result |
+|---|---|
+| fast tests (`pytest -m fast`) | 2352 passed, 2 skipped, 17 failed, 297 deselected |
+| the 17 failures, re-run alone | 7 pass (runner timeout tests that failed while the evaluation loaded every core); 10 also fail on `integration` and are unrelated: 8 campaign tests need 20 GB free disk and 15 GB was free, the service guard test fails on the Windows path issue of section 2, one service test fails with a `KeyError` |
+| Agent 5 tests (`tests/agents/diagnostic_reasoning`, 11 new) | all passed |
+| ruff (`src tests tools`) | all checks passed |
+| strict mypy (352 files) | no issues |
+| interface check (`tools/check_agent_interfaces.py`) | 8 interfaces, 16 examples, passed |
+| isolation checks (`tests/leakage`) | 44 passed |
+| `local/checks` | not run: the folder does not exist in this checkout |
+| bare full `pytest` | not run |
+
+## 8. Limits
 
 - All data are synthetic validation windows from one simulated terminal. Nothing here says how the candidates behave on field data.
 - Family-level hypotheses do not localise. The valve, leak, flow-meter and level families name no asset, so Agent 6 gets no target from them. Only the pump and pressure-transmitter candidates name an asset, because the Agent 2 event names that pump or that tag.
