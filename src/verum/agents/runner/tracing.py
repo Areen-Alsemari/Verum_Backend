@@ -17,6 +17,8 @@ import importlib
 import json
 import logging
 import os
+import re
+import subprocess
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -34,6 +36,7 @@ RUN_NAME = "verum.run_analysis"
 VERIFY_NAME = "verum.verify_bundle"
 DECISION_ROLE = "evidence_verification_decision"
 BASE_TAGS = ("synthetic", "verum")
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 log = logging.getLogger(__name__)
 
@@ -272,19 +275,15 @@ def _contract_version() -> str:
 
 @cache
 def _git_commit() -> str:
-    from verum.provenance import git_state
-
-    return git_state()[0]
-
-
-@cache
-def _inspection_digest() -> str | None:
-    """The inspection parameters digest when this checkout provides one, otherwise None."""
+    """The commit of the checkout, or "unknown"; asked of git once, and only when tracing is on."""
     try:
-        module = importlib.import_module("verum.inspection.parameters")
-        return str(module.parameters_digest())
-    except Exception:  # absent on a checkout without the digest, or not computable
-        return None
+        done = subprocess.run(
+            ["git", "-C", str(contract_directory()), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+    return done.stdout.strip() or "unknown"
 
 
 def window_index_of(as_of_s: float) -> int | None:
@@ -294,7 +293,8 @@ def window_index_of(as_of_s: float) -> int | None:
 
 
 def window_metadata(
-    snapshot: Snapshot, mode: str, episode_id: str | None, window_index: int | None
+    snapshot: Snapshot, mode: str, episode_id: str | None, window_index: int | None,
+    parameters_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Metadata of a window's trace; the git commit and digest are read once per process."""
     data: dict[str, Any] = {
@@ -304,21 +304,20 @@ def window_metadata(
         "as_of_s": snapshot.as_of_s, "revision": snapshot.revision, "execution_mode": mode,
         "contract_version": _contract_version(), "git_commit": _git_commit(),
     }
-    digest = _inspection_digest()
-    if digest is not None:
-        data["inspection_parameters_sha256"] = digest
+    if parameters_sha256 is not None and SHA256.fullmatch(parameters_sha256):
+        data["inspection_parameters_sha256"] = parameters_sha256  # a malformed value is dropped
     return data
 
 
 def window_trace(
     tracer: Tracer, snapshot: Snapshot, mode: str, episode_id: str | None = None,
-    window_index: int | None = None,
+    window_index: int | None = None, parameters_sha256: str | None = None,
 ) -> WindowTrace:
     """Open the parent span of a window; with tracing off this returns the inert trace."""
     if not tracer.enabled:
         return NO_TRACE
     try:
-        metadata = window_metadata(snapshot, mode, episode_id, window_index)
+        metadata = window_metadata(snapshot, mode, episode_id, window_index, parameters_sha256)
         tags = (*BASE_TAGS, f"contract:{metadata['contract_version']}")
         inputs = {"case_id": snapshot.case_id, "revision": snapshot.revision,
                   "as_of_s": snapshot.as_of_s, "execution_mode": mode}

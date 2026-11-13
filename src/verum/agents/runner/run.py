@@ -125,6 +125,7 @@ def run_analysis(
     tracer: Tracer | None = None,
     episode_id: str | None = None,
     window_index: int | None = None,
+    inspection_parameters_sha256: str | None = None,
 ) -> Bundle:
     """Run all roles on a snapshot and return the bundle of requests, reports and issues.
 
@@ -137,12 +138,16 @@ def run_analysis(
     The tracer defaults to the one the environment enables, which is none unless LANGSMITH_TRACING
     is true and a key is set. Tracing records summaries only and never changes a message. The
     episode identifier and the window index are metadata of the trace; they default to the case
-    identifier and, when the cutoff is a whole number of 300 s steps, to its index.
+    identifier and, when the cutoff is a whole number of 300 s steps, to its index. The digest of
+    the inspection parameters, which the caller reads from the episode's provenance file, is added
+    to the metadata when it is a SHA-256 hex string; the runner does not compute it.
     """
     log = recent or AssessmentLog()
     log.extended(snapshot.case_id, snapshot.as_of_s, None)  # refuse a log of another run or time
     chosen = tracer or tracer_from_environment()
-    trace = window_trace(chosen, snapshot, mode, episode_id, window_index)
+    trace = window_trace(
+        chosen, snapshot, mode, episode_id, window_index, inspection_parameters_sha256
+    )
     try:
         bundle = _analyse(snapshot, mode, log, agents or {}, timeout_s, trace)
         _conclude(bundle, allow_placeholders, previous)

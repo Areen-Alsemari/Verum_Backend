@@ -253,6 +253,22 @@ def test_the_tags_and_metadata_name_the_window_the_contract_and_the_commit() -> 
     assert "episode_id" in sink.spans[0]["metadata"]
 
 
+def test_the_inspection_parameters_digest_is_added_only_when_given_and_well_formed() -> None:
+    """A SHA-256 hex digest passed by the caller reaches the metadata; anything else is dropped.
+
+    Independent: yes, because the values are chosen by hand and nothing is raised for a bad one.
+    """
+    good = "ab" * 32
+    sink = Recorder()
+    traced(sink, inspection_parameters_sha256=good)
+    assert all(s["metadata"]["inspection_parameters_sha256"] == good for s in sink.spans)
+    for value in (None, "not a digest", good.upper(), good[:-1]):
+        other = Recorder()
+        traced(other, inspection_parameters_sha256=value)
+        assert other.spans and all("inspection_parameters_sha256" not in s["metadata"]
+                                   for s in other.spans)  # fmt: skip
+
+
 def test_the_window_index_is_derived_only_from_a_whole_number_of_steps() -> None:
     """A cutoff on the step grid gives its index; any other cutoff gives none, not a guess.
 
