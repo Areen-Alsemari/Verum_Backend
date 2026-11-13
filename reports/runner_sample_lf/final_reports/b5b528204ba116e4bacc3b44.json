@@ -1,0 +1,173 @@
+{
+ "report_version": "1.0.0",
+ "report_id": "maintenance-AN-E0097-r0",
+ "context": {
+  "case_id": "E0097",
+  "analysis_id": "AN-E0097-r0",
+  "revision": 0,
+  "as_of_s": 3300.0,
+  "as_of_utc": null,
+  "data_release": "verum_reference_v2",
+  "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+  "scope_id": "verum_supported_reference_v2",
+  "execution_mode": "runtime"
+ },
+ "report_type": "maintenance_assessment",
+ "title": "Maintenance assessment",
+ "review_status": "human_review_required",
+ "assessment_state": "review_required",
+ "source_reports": [
+  {
+   "report_id": "anomaly_detection-AN-E0097-r0-221a4607",
+   "agent": "anomaly_detection",
+   "content_sha256": "fa0151f6cad245f4ec6c1dfd0e729a30383c6f1da33e42543008b5408c22ff18"
+  },
+  {
+   "report_id": "diagnostic_reasoning-AN-E0097-r0-883dbccd",
+   "agent": "diagnostic_reasoning",
+   "content_sha256": "73bf02d68f2e499de651faff5fc9f515ed51df4d3b5fb649f360d879d29152d8"
+  },
+  {
+   "report_id": "evidence_verification_decision-AN-E0097-r0-320049f1",
+   "agent": "evidence_verification_decision",
+   "content_sha256": "09ee827a75c78428ee383c9d75ddcb12e7e374098c89e7a1934fb0cf95ba57b5"
+  },
+  {
+   "report_id": "historical_asset_intelligence-AN-E0097-r0-34b93dc8",
+   "agent": "historical_asset_intelligence",
+   "content_sha256": "d731be83d67a27751ce3a0647af0789867f5f2f1772a17f8d7460c15daac98c1"
+  },
+  {
+   "report_id": "inspection_planning-AN-E0097-r0-ddf866d1",
+   "agent": "inspection_planning",
+   "content_sha256": "0b7d6ca90b6de6ac7cc23a3018e9389c3de88ac3cd63733c4e06ff5dfabdd9c5"
+  },
+  {
+   "report_id": "inspection_quality_documentation-AN-E0097-r0-472dbfea",
+   "agent": "inspection_quality_documentation",
+   "content_sha256": "98256c1f9e5b11bbdc5c3c3c4a5b581d1ee8c1af6e32329cf3bf86d76350c3d7"
+  },
+  {
+   "report_id": "predictive_health-AN-E0097-r0-0545e742",
+   "agent": "predictive_health",
+   "content_sha256": "5a4a0a7ae850962bfde899d80bd346a48bde68bf742764dc2b218c52b6ef7245"
+  },
+  {
+   "report_id": "topology_dependency-AN-E0097-r0-2e2b68c1",
+   "agent": "topology_dependency",
+   "content_sha256": "51deaad549181760ff3950dd47206fa14cde0848c2ed6ff0f12728fdf5adbe23"
+  }
+ ],
+ "findings": [
+  {
+   "finding_id": "assessment-evidence_verification_decision-AN-E0097-r0-320049f1",
+   "kind": "assessment",
+   "statement": "Review required: the measured flows and pressures show a departure that a proposed candidate would produce. Equipment condition is not confirmed. Required evidence or verification also remains unavailable.",
+   "measurement": null,
+   "source_report_id": "evidence_verification_decision-AN-E0097-r0-320049f1",
+   "evidence_ids": [
+    "diagnostic_reasoning-AN-E0097-r0-883dbccd",
+    "inspection_planning-AN-E0097-r0-ddf866d1",
+    "inspection_quality_documentation-AN-E0097-r0-472dbfea"
+   ]
+  },
+  {
+   "finding_id": "hypothesis-HYP-01-pump-P-101B",
+   "kind": "hypothesis",
+   "statement": "Unconfirmed hypothesis: pump (asset=P-101B, tag=None); score: decision_score=0.999831, method=ovr_hist_gradient_boosting_v1, calibration=None",
+   "measurement": null,
+   "source_report_id": "diagnostic_reasoning-AN-E0097-r0-883dbccd",
+   "evidence_ids": [
+    "features-summary",
+    "anomaly_detection-AN-E0097-r0-221a4607",
+    "topology_dependency-AN-E0097-r0-2e2b68c1",
+    "historical_asset_intelligence-AN-E0097-r0-34b93dc8"
+   ]
+  }
+ ],
+ "inspection_options": [
+  {
+   "action_id": "ACT-INSP-03",
+   "target_asset": "P-101B",
+   "feasibility": "unknown",
+   "cost_usd": 140.0,
+   "duration_min": 60.0,
+   "source_report_id": "inspection_planning-AN-E0097-r0-ddf866d1",
+   "evidence_ids": []
+  }
+ ],
+ "next_steps": [
+  {
+   "description": "Review the window-level departure and the proposed candidates before any operational decision.",
+   "source_report_id": "evidence_verification_decision-AN-E0097-r0-320049f1",
+   "evidence_ids": [
+    "diagnostic_reasoning-AN-E0097-r0-883dbccd"
+   ]
+  },
+  {
+   "description": "Obtain and verify missing or unresolved evidence before making an assessment.",
+   "source_report_id": "evidence_verification_decision-AN-E0097-r0-320049f1",
+   "evidence_ids": []
+  }
+ ],
+ "missing_information": [
+  "Forecast values on matching tags do not show a directional departure confirming or contradicting the candidate."
+ ],
+ "limitations": [
+  "Forecast reports are not used as model features.",
+  "Window score 754.11 (the largest computed residual, in fault-free scale units) against the window threshold 3.03: exceeded.",
+  "Residuals computed: R1, R2, R3, R4.",
+  "Method topology_residual_v1: four residuals from the declared single-line layout (mass balance with tank storage, pump head, discharge loss, receipt line), fitted on fault-free windows of the train split of one simulated terminal. It scores one 300 s summary window and keeps no state.",
+  "Out of fold on train (grouped cross-validation) the score has average precision 0.586 (0.533 to 0.638) and matched-stage AUROC 0.783 (0.749 to 0.819); on a separate validation split 0.730 (0.649 to 0.797) and 0.852 (0.801 to 0.896). A score with no skill has average precision about 0.13.",
+  "At a threshold set for a 5% false-alarm rate in each set, recall is 0.528 (0.473 to 0.586) out of fold and 0.663 (0.573 to 0.745) on validation. By fault type, out of fold and on validation: pump 1.000 and 1.000; drift 0.904 (0.827 to 0.965) and 0.540 (0.267 to 0.826); stuck 0.747 (0.567 to 0.908) and 1.000; multi-component 0.718 (0.588 to 0.838) and 0.886 (0.694 to 1.000).",
+  "Weak: restriction 0.367 (0.281 to 0.460) and 0.564 (0.407 to 0.710); leak 0.363 (0.215 to 0.541) and 0.614 (0.368 to 0.881); bias 0.204 (0.061 to 0.383) and 0.493 (0.256 to 0.760); misrouting 0.222 (0.167 to 0.333) and 0.067 (0.000 to 0.167) (few windows). Out of fold, fewer than half of the faults of these four types are flagged.",
+  "The window threshold 3.03 is the 95th percentile of out-of-fold fault-free train scores, so the false-alarm rate is 0.05 by construction on train. On validation it is 0.080 with recall 0.740: the threshold needs to be checked on the data the agent sees.",
+  "With 1, 2 or 3 of the 12 inputs missing at random, out-of-fold average precision falls to 0.456, 0.338 and 0.246 and the share of windows that can still be scored is 0.966, 0.853 and 0.691. With noise on the ten numeric inputs at 1x, 2x and 3x the fault-free residual scale, it falls to 0.431, 0.367 and 0.336 and the false-alarm rate at the fixed threshold rises to 0.518, 0.723 and 0.830.",
+  "Persistence rule: 2 of the last 3 windows with a score above 1.74, applied by the caller to the assessments of earlier windows of the same run and unknown until 3 windows are held. The threshold is the smallest value at which at most 5% of fault-free train episodes alarm, from pooled out-of-fold scores.",
+  "The share of fault-free episodes that alarm is 0.048 out of fold and 0.076 on validation; across the three rules and both model versions the validation share is 0.063 to 0.076, against the 5% target.",
+  "Simulated data from one synthetic terminal; no field data. The score is a decision score, not a probability, and the residuals use the window mean and slope as given, including samples flagged suspect or bad.",
+  "No asset, location or fault type is identified; events name only the tags a residual reads. The mass imbalance cannot separate a leak from a flow-meter or level-sensor fault (it exceeds in 0.69 to 1.00 of such windows out of fold).",
+  "This response makes no episode-level claim: it carries the score of one window and the persistence rule, and applying the rule needs the scores of earlier windows, which a request does not carry.",
+  "The tag-to-location mapping follows tag names; the declared reference gives no instrument locations and the pairing of pressure transmitters with pumps and headers is unverified. Fitted tank areas match the declared geometry within 0.3%.",
+  "Fitted on the train split only; thresholds come from out-of-fold train scores; the validation split was used for reporting only and the test split was not used.",
+  "No detected event does not establish healthy equipment.",
+  "Hypotheses are candidate explanations from simulated readings, not field-qualified causes.",
+  "Empty hypotheses mean inconclusive evidence, never verified healthy equipment.",
+  "Predicting no fault achieves 0.8225 exact-set accuracy on the test split (above the model 0.8140), so micro-F1 (0.3196 vs 0.0000 baseline) is the primary headline metric.",
+  "Scores are uncalibrated decision scores, never probabilities: leak scores >= 0.90 were true leaks in 0 of 8 eligible windows and 2 of 69 across all records.",
+  "Low-support mechanisms (leak, restriction_obstruction, bias, stuck, misroute_a) carry high false-discovery risk; misroute_a is not evaluable on held-out test data.",
+  "Localisation is limited to 38 declared assets seen in training; 11 of 49 declared assets never appear in positive training examples.",
+  "Approximately 27% of masked/ineligible test windows still trigger candidate hypotheses.",
+  "Forecast check compares forecast direction and value with candidate hypotheses on matching tags using unvalidated heuristic tolerances and returns unknown when no hypothesis is present or forecast deltas are neutral.",
+  "Roof failure, vapour damage and mechanical fault cascades are outside the supported scope.",
+  "Advisory assessment only; human decision is required.",
+  "Evidence identity does not establish physical truth.",
+  "No equipment condition or automatic action is confirmed.",
+  "Declared facts do not establish measured operating conditions.",
+  "Supplied history records are simulated.",
+  "Some inspection preconditions remain unknown because the supplied evidence does not establish their target scope.",
+  "Options are advisory only. Human approval and operational precondition verification remain mandatory.",
+  "Inspection quality cannot be established without results.",
+  "Inspection quality does not confirm physical equipment condition.",
+  "Ridge forecasts use models fitted on simulated training data.",
+  "Persistence assumes the next window mean equals the current window mean.",
+  "FT-201 was switched to persistence after reviewing the test results.",
+  "The forecast does not establish equipment health or remaining useful life.",
+  "Declared connectivity does not establish actual flow or valve position.",
+  "Observations are not used; asset IDs also match their declared ports.",
+  "Advisory assessment only; human review is required and equipment condition is not confirmed."
+ ],
+ "narrative": {
+  "provider": "template",
+  "model": null,
+  "prompt_id": null,
+  "text": "Review required: the measured flows and pressures show a departure that a proposed candidate would produce. Equipment condition is not confirmed. Required evidence or verification also remains unavailable.",
+  "source_report_ids": [
+   "evidence_verification_decision-AN-E0097-r0-320049f1"
+  ]
+ },
+ "advisory_only": true,
+ "human_decision_required": true,
+ "automatic_action_authorized": false,
+ "equipment_condition_confirmed": false
+}

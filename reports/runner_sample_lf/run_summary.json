@@ -1,0 +1,14 @@
+{
+ "windows": 181,
+ "test_split_files_touched": [],
+ "guard": {
+  "allowed_opens_by_folder": {
+   "examples": 2416,
+   "knowledge": 2,
+   "role_views": 4,
+   "role_views_manifest.json": 2
+  },
+  "rejected": []
+ },
+ "data_files_opened_count": 2420
+}
