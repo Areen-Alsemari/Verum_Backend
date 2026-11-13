@@ -12,6 +12,7 @@ See D27 to D33.
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import math
 import re
@@ -25,6 +26,7 @@ import pytest
 from sim_helpers import esd_timeline
 from verum.api import Gateway, GatewayViolation, check_allowlist
 from verum.contracts import ContractError, load_schema, validator
+from verum.provenance import canonical_json
 from verum.sensors import load_sensor_config
 from verum.sim.episode import EpisodeResult
 
@@ -37,6 +39,72 @@ TIMELINE = esd_timeline()
 CAPPED_CLOSURES = {"S0u-D", "S0u-E"}
 EVENT_TAGS = {t for t, s in CFG.tags.items() if s.kind == "event"}
 CONTINUOUS = [t for t, spec in CFG.tags.items() if spec.kind == "continuous"]
+# The exact agent-visible catalog of config/inspection_catalog.json version 1.0.0 (D100), pinned
+# so that a change of a name, a cost, a unit or an uncertainty is caught here and not only by the
+# digest test of the inspection parameters.
+EXPECTED_CATALOG = [
+    {"action_id": "ACT-INSP-01", "cost_usd": 280.0, "duration_min": 90.0,
+     "name": "Floating Roof Rim Seal and Deck Survey",
+     "outputs": [{"modelled": False, "name": "maximum_rim_seal_gap", "uncertainty_k2": None,
+                  "unit": "mm"}],
+     "preconditions": ["Tank level above 1.8 m", "Authorised permit issued by the approval"],
+     "target_kind": "tank", "targets": "Tanks TK-101 to TK-103"},
+    {"action_id": "ACT-INSP-02", "cost_usd": 90.0, "duration_min": 45.0,
+     "name": "Isolation Valve Mechanical Travel and Pressure Drop Verification",
+     "outputs": [
+         {"modelled": True, "name": "measured_differential_pressure", "uncertainty_k2": 0.01,
+          "unit": "bar"},
+         {"modelled": True, "name": "stem_travel", "uncertainty_k2": 2.0, "unit": "percent"},
+     ],
+     "preconditions": ["Pipeline flowing or pressurised at the target valve",
+                        "Cold work permit issued by the approval"],
+     "target_kind": "isolation_valve", "targets": "Isolation valves XV-*"},
+    {"action_id": "ACT-INSP-03", "cost_usd": 140.0, "duration_min": 60.0,
+     "name": "Pump Vibration Spectral Analysis",
+     "outputs": [
+         {"modelled": False, "name": "overall_velocity_rms", "uncertainty_k2": None,
+          "unit": "mm/s"},
+         {"modelled": False, "name": "spectral_peak_ratios", "uncertainty_k2": None, "unit": "1"},
+     ],
+     "preconditions": ["Pump running under load for at least 20 min"],
+     "target_kind": "pump", "targets": "Pumps P-101A and P-101B"},
+    {"action_id": "ACT-INSP-04", "cost_usd": 350.0, "duration_min": 120.0,
+     "name": "Ultrasonic Pipeline Acoustic Leak Survey",
+     "outputs": [
+         {"modelled": False, "name": "leak_detected", "uncertainty_k2": None, "unit": "1"},
+         {"modelled": False, "name": "leak_station_along_edge", "uncertainty_k2": None,
+          "unit": "m"},
+         {"modelled": False, "name": "acoustic_level", "uncertainty_k2": None, "unit": "dB"},
+         {"modelled": False, "name": "wall_thickness", "uncertainty_k2": None, "unit": "mm"},
+     ],
+     "preconditions": ["Gauge pressure above 3 bar at the target edge",
+                        "Ground access issued by the approval"],
+     "target_kind": "pipe", "targets": "Pipe edges of the topology"},
+    {"action_id": "ACT-INSP-05", "cost_usd": 110.0, "duration_min": 45.0,
+     "name": "Manual Dip-Tape Sounding and Water Bottom Check",
+     "outputs": [
+         {"modelled": True, "name": "manual_innage_level", "uncertainty_k2": 1.5, "unit": "mm"},
+         {"modelled": False, "name": "water_bottom_cut", "uncertainty_k2": None, "unit": "mm"},
+     ],
+     "preconditions": ["Gauging access issued by the approval"],
+     "target_kind": "tank", "targets": "Tanks TK-101 to TK-103"},
+    {"action_id": "ACT-INSP-06", "cost_usd": 160.0, "duration_min": 60.0,
+     "name": "Vent and Deck Fitting Inspection",
+     "outputs": [
+         {"modelled": False, "name": "seating_integrity", "uncertainty_k2": None, "unit": "1"},
+         {"modelled": False, "name": "cracking_pressure", "uncertainty_k2": None, "unit": "bar"},
+     ],
+     "preconditions": ["Tank out of receipt mode"],
+     "target_kind": "tank", "targets": "Tanks TK-101 to TK-103"},
+    {"action_id": "ACT-INSP-07", "cost_usd": 120.0, "duration_min": 45.0,
+     "name": "Field Pressure Transmitter Loop Calibration",
+     "outputs": [{"modelled": True, "name": "calibration_error", "uncertainty_k2": 0.025,
+                  "unit": "percent of span"}],
+     "preconditions": ["Manifold isolation permitted by the approval"],
+     "target_kind": "pressure_transmitter",
+     "targets": "Pressure transmitters PT-001, PT-201, PT-202A, PT-202B and PT-203"},
+]  # fmt: skip
+EXPECTED_CATALOG_SHA256 = "96abdccff038f2e891c665f07f1a59a743a5d1384f01536b9fa60297c2b854b0"
 
 
 def _load(directory: Path, name: str) -> list[dict[str, Any]]:
@@ -365,15 +433,15 @@ def test_the_gateway_refuses_a_row_outside_the_closed_schema(
 def test_lk12_the_episode_id_is_opaque_and_the_catalog_is_the_seven_actions(
     episodes: dict[str, EpisodeResult],
 ) -> None:
-    """The episode identifier is opaque, and the inspection catalog holds the seven actions of the
-    instrumentation document (D100). Independent: yes, because the expected pattern and the action
-    identifiers are the stated rules.
+    """The episode identifier is opaque, and the inspection catalog equals the pinned content of
+    the seven actions of the instrumentation document (D100), not only their seven identifiers.
+    Independent: yes, because the expected pattern and the pinned catalog are the stated rules.
     """
     payload = Gateway(episodes["S0-A"].directory).query(10.0)
     assert re.fullmatch(r"EP-[0-9A-F]{12}", payload["episode_id"])
-    assert [c["action_id"] for c in payload["inspection_catalog"]] == [
-        f"ACT-INSP-0{i}" for i in range(1, 8)
-    ]
+    assert payload["inspection_catalog"] == EXPECTED_CATALOG
+    digest = hashlib.sha256(canonical_json(payload["inspection_catalog"]).encode("utf-8"))
+    assert digest.hexdigest() == EXPECTED_CATALOG_SHA256
     kinds = {a["kind"] for a in payload["assets"]}
     assert kinds == {"tank", "pump", "isolation_valve", "pipe", "pressure_transmitter"}
     assert len(payload["assets"]) == 3 + 2 + 11 + 28 + 5
