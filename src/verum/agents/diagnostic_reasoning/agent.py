@@ -19,6 +19,7 @@ from verum.agents.common import (
     make_issue,
     report_id,
 )
+from verum.agents.diagnostic_reasoning.candidates import CANDIDATE_RANKING, residual_candidates
 from verum.agents.diagnostic_reasoning.features import FEATURE_PROFILE_ID
 from verum.agents.diagnostic_reasoning.model import DiagnosticModel, format_hypotheses
 from verum.agents.diagnostic_reasoning.rules import (
@@ -131,6 +132,10 @@ class DiagnosticReasoningAgent:
         obs_ev_ids = [eid for eid in observations.get("evidence_ids", []) if eid in set(consumed)]
         raw_hypotheses = format_hypotheses(predictions)
         hypotheses = [enrich_hypothesis_with_rules(h, inputs, obs_ev_ids) for h in raw_hypotheses]
+        ranking = "decision_score_descending" if hypotheses else None
+        if not hypotheses:
+            hypotheses = residual_candidates(inputs, obs_ev_ids)
+            ranking = CANDIDATE_RANKING if hypotheses else None
         upstream_checks = evaluate_upstream_checks(inputs, hypotheses)
         missing_upstreams = [c["check_id"] for c in upstream_checks if c["outcome"] == "unknown"]
         issues: list[dict[str, Any]] = []
@@ -156,7 +161,7 @@ class DiagnosticReasoningAgent:
             "assessment": "candidates_available" if hypotheses else "inconclusive",
             "upstream_checks": upstream_checks,
             "field_diagnosis_qualified": False,
-            "ranking_basis": "decision_score_descending" if hypotheses else None,
+            "ranking_basis": ranking,
         }
         return status, result, issues
 
