@@ -1,13 +1,11 @@
 """Optional tracing of the runner to LangSmith, as summaries of synthetic analyses only.
 
 Inputs: the snapshot and bundle of a run, and the environment. Outputs: one parent trace per
-analysed window with one child per agent call and one for the bundle verification. A trace holds
-identifiers, statuses, decisions, fixed flags, counts and digests; it never holds a request or
-report body, a label, a fault name or a truth file.
-Assumptions: tracing is off unless LANGSMITH_TRACING is "true" and LANGSMITH_API_KEY is set. Off
-means a pass-through: nothing is imported, read or sent, and no summary is built. Any failure of
-the tracing side is swallowed, because an analysis must never depend on an observability service.
-The langsmith package is optional and is imported only by the sink that needs it.
+analysed window with a child per agent call and one for the verification; they hold identifiers,
+statuses, decisions, fixed flags, counts and digests, never a message body, label or fault name.
+Assumptions: off unless LANGSMITH_TRACING is "true" and LANGSMITH_API_KEY is set; off means a
+pass-through that imports, reads, builds and sends nothing. Every failure of the tracing side is
+swallowed. The langsmith package is optional and is imported only by the sink that needs it.
 Source: reports/langsmith_tracing_design.md.
 """
 

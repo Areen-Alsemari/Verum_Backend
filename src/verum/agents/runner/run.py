@@ -134,13 +134,7 @@ def run_analysis(
     role served by a placeholder gets a note; with allow_placeholders false the run is rejected.
     The log of the run's earlier window assessments, if any, is passed as recent; the bundle holds
     the log extended by this window, to be passed to the next window's run.
-
-    The tracer defaults to the one the environment enables, which is none unless LANGSMITH_TRACING
-    is true and a key is set. Tracing records summaries only and never changes a message. The
-    episode identifier and the window index are metadata of the trace; they default to the case
-    identifier and, when the cutoff is a whole number of 300 s steps, to its index. The digest of
-    the inspection parameters, which the caller reads from the episode's provenance file, is added
-    to the metadata when it is a SHA-256 hex string; the runner does not compute it.
+    Tracing is off unless the environment enables it and records summaries only.
     """
     log = recent or AssessmentLog()
     log.extended(snapshot.case_id, snapshot.as_of_s, None)  # refuse a log of another run or time

@@ -1,15 +1,12 @@
 """Check that tracing changes no message of the runner on the 181-window sample.
 
-Inputs: the stored bundles of an earlier run of the sample (the folder written by
-run_runner_sample.py) and the train and validation role views of the release, opened through the
-audit hook and the guard of the detector experiments. Output: a JSON summary on stdout and, with
---out, in a file: for each of two passes, with tracing off through the environment and with a
-recording sink, how many windows give requests, reports, issues and notes that are byte-identical
-to the stored ones; for the traced pass, the spans recorded and any window label found in them.
-Assumptions: the sample is rebuilt with the fixed seed of the sample script, so the windows and
-their order are the stored ones. Labels are read only to look for them in the spans and are never
-given to the runner. The test split is refused at load time.
-Source: reports/langsmith_tracing_design.md, section 5.
+Inputs: the stored bundles of an earlier run of the sample and the train and validation role
+views, opened through the audit hook and the guard of the detector experiments. Output: JSON on
+stdout and with --out: for a pass with tracing off and one with a recording sink, the windows whose
+requests, reports, issues and notes equal the stored ones, the spans recorded and any window label
+found in them. Assumptions: the sample is rebuilt with its fixed seed, so windows and order are
+the stored ones; labels are read only to look for them in the spans; the test split is refused.
+Source: the tracing design report, section 5.
 """
 
 from __future__ import annotations
