@@ -8,3 +8,4 @@ config/topology_contract.json text eol=lf
 config/dataset_release_policy.json text eol=lf
 config/patches/*.json text eol=lf
 src/verum/agents/anomaly_detection/artifacts/topology_residual_v1.json text eol=lf
+src/verum/agents/predictive_health/ridge_models.json text eol=lf
