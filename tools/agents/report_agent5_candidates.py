@@ -1,9 +1,9 @@
 """Report the Agent 5 candidate evaluation: the validation split and the 181-window sample.
 
-Subcommand split reads the score files of the previous and the new Agent 5 written by
-evaluate_agent5_candidates.py and prints the measures, the controls and the pre-registered stop
-rule; every interval resamples whole episodes, never single windows. Subcommand sample compares
-the stored bundles of two runs of run_runner_sample.py. Neither opens the release folder.
+Subcommand split reads the score files of the previous and the new Agent 5 written by the
+evaluation script and prints the measures, the controls and the pre-registered stop rule; every
+interval resamples whole episodes, never single windows. Subcommand sample compares the stored
+bundles of two runs of the 181-window sample script. Neither opens the release folder.
 See reports/agent5_candidates_results.md for the commands.
 """
 
