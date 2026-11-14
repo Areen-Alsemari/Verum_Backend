@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:agents:v1:anomaly_detection",
+  "title": "Anomaly Detection interface v1",
+  "$defs": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "observations": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/observations"
+        },
+        "forecast_report": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:predictive_health#/$defs/response"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "observations",
+        "forecast_report"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/anomaly_event"
+          }
+        },
+        "coverage": {
+          "enum": [
+            "assessed",
+            "partial",
+            "unknown"
+          ]
+        },
+        "no_event_means_healthy": {
+          "const": false
+        },
+        "window_assessment": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/window_assessment"
+        }
+      },
+      "required": [
+        "events",
+        "coverage",
+        "no_event_means_healthy"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "request"
+        },
+        "agent": {
+          "const": "anomaly_detection"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/evidence"
+          }
+        },
+        "input": {
+          "$ref": "#/$defs/input"
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "context",
+        "evidence",
+        "input"
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface_version": {
+          "const": "1.0.0"
+        },
+        "message_type": {
+          "const": "response"
+        },
+        "agent": {
+          "const": "anomaly_detection"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "report_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/context"
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "artifact_sha256": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "feature_profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "artifact_sha256",
+            "feature_profile_id"
+          ]
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "degraded",
+            "insufficient_evidence",
+            "error"
+          ]
+        },
+        "consumed_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/issue"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "advisory_only": {
+          "const": true
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/result"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "interface_version",
+        "message_type",
+        "agent",
+        "request_id",
+        "report_id",
+        "context",
+        "implementation",
+        "status",
+        "consumed_evidence_ids",
+        "issues",
+        "limitations",
+        "advisory_only",
+        "result"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "degraded"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "$ref": "#/$defs/result"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "insufficient_evidence",
+                  "error"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "null"
+              },
+              "issues": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ]
+}

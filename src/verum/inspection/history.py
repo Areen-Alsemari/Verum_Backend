@@ -19,6 +19,10 @@ from verum.rng import RandomStreams
 
 SCHEMA_VERSION = "0.7.0"
 DAY_S = 86400.0
+# Counts of prior records per asset as (low, high) of an integer draw, high excluded.
+PRIOR_INSPECTIONS = (0, 4)
+PRIOR_CALIBRATIONS = (1, 3)
+PRIOR_WORK_ORDERS = (0, 3)
 ACTIONS_BY_KIND = {
     "tank": ("ACT-INSP-01", "ACT-INSP-05", "ACT-INSP-06"),
     "pump": ("ACT-INSP-03",),
@@ -53,14 +57,14 @@ def prior_history(seed: int, catalog: Catalog, assets: Assets) -> list[dict[str,
     for item in assets.listing():
         asset, kind = item["asset_id"], item["kind"]
         rng = streams.stream(f"history/{asset}")
-        for _ in range(int(rng.integers(0, 4))):
+        for _ in range(int(rng.integers(*PRIOR_INSPECTIONS))):
             t = -float(rng.uniform(1.0, horizon))
             action = ACTIONS_BY_KIND[kind][int(rng.integers(len(ACTIONS_BY_KIND[kind])))]
             outcome = "NORMAL_INTACT" if rng.random() < p_normal else "MINOR_DEGRADATION"
             records.append(_record(asset, "inspection", t, TEXT[outcome], action_id=action,
                                    outcome_category=outcome))  # fmt: skip
         if kind == "pressure_transmitter":
-            for _ in range(int(rng.integers(1, 3))):
+            for _ in range(int(rng.integers(*PRIOR_CALIBRATIONS))):
                 t = -float(rng.uniform(1.0, horizon))
                 ok = bool(rng.random() < p_within)
                 text = (
@@ -69,7 +73,7 @@ def prior_history(seed: int, catalog: Catalog, assets: Assets) -> list[dict[str,
                     else ("Calibration completed; as-found outside tolerance and adjusted.")
                 )
                 records.append(_record(asset, "calibration", t, text, within_tolerance=ok))
-        for _ in range(int(rng.integers(0, 3))):
+        for _ in range(int(rng.integers(*PRIOR_WORK_ORDERS))):
             t = -float(rng.uniform(1.0, horizon))
             work = WORK_TYPES[int(rng.integers(len(WORK_TYPES)))]
             records.append(_record(asset, "work_order", t, f"Work order closed: {work}.",

@@ -1,0 +1,1529 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:agents:v1:common",
+  "title": "Verum agent common definitions v1",
+  "$defs": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "analysis_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "as_of_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "as_of_utc": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_release": {
+          "const": "verum_reference_v2"
+        },
+        "reference_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "scope_id": {
+          "const": "verum_supported_reference_v2"
+        },
+        "execution_mode": {
+          "enum": [
+            "runtime",
+            "contract_fixture"
+          ]
+        }
+      },
+      "required": [
+        "case_id",
+        "analysis_id",
+        "revision",
+        "as_of_s",
+        "as_of_utc",
+        "data_release",
+        "reference_snapshot_sha256",
+        "scope_id",
+        "execution_mode"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "observation_window",
+            "declared_reference",
+            "inspection_result",
+            "history",
+            "agent_report",
+            "inspection_request",
+            "observation_representation"
+          ]
+        },
+        "source_ref": {
+          "type": "string",
+          "pattern": "^(observations:|features:|reference:|inspection_request:|inspection_result:|history:|report:).+"
+        },
+        "available_at_s": {
+          "type": "number"
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "root_evidence_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provenance": {
+          "enum": [
+            "simulated_observation",
+            "declared_design",
+            "simulated_inspection",
+            "synthetic_history",
+            "derived_agent_output",
+            "simulated_workflow",
+            "derived_observation"
+          ]
+        }
+      },
+      "required": [
+        "evidence_id",
+        "kind",
+        "source_ref",
+        "available_at_s",
+        "content_sha256",
+        "root_evidence_ids",
+        "provenance"
+      ]
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "evidence_ids"
+      ]
+    },
+    "signal_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tag_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rows_received": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_samples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bad_quality_samples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_quality": {
+          "anyOf": [
+            {
+              "enum": [
+                "good",
+                "suspect",
+                "bad"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_availability": {
+          "anyOf": [
+            {
+              "enum": [
+                "measured",
+                "missing_sample"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_received_age_s": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_received_age_is_lower_bound": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_measured_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_measured_quality": {
+          "anyOf": [
+            {
+              "enum": [
+                "good",
+                "suspect",
+                "bad"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_measured_age_s": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_measured_age_is_lower_bound": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "measured_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "standard_deviation": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "slope_per_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "tag_id",
+        "unit",
+        "rows_received",
+        "missing_samples",
+        "bad_quality_samples",
+        "latest_value",
+        "latest_quality",
+        "latest_availability",
+        "latest_received_age_s",
+        "latest_received_age_is_lower_bound",
+        "previous_measured_value",
+        "previous_measured_quality",
+        "previous_measured_age_s",
+        "previous_measured_age_is_lower_bound",
+        "measured_count",
+        "minimum",
+        "maximum",
+        "mean",
+        "standard_deviation",
+        "slope_per_s"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clock_basis": {
+          "const": "relative_to_current_cutoff"
+        },
+        "current_time_s": {
+          "const": 0.0
+        },
+        "lookback_s": {
+          "const": 300.0
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/signal_summary"
+          }
+        }
+      },
+      "required": [
+        "clock_basis",
+        "current_time_s",
+        "lookback_s",
+        "signals"
+      ]
+    },
+    "sequence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lookback_s": {
+          "const": 300.0
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "tag_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "available_offset_s": {
+                      "type": "number",
+                      "exclusiveMinimum": -300,
+                      "maximum": 0
+                    },
+                    "measured_offset_s": {
+                      "type": "number",
+                      "maximum": 0
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "quality_flag": {
+                      "enum": [
+                        "good",
+                        "suspect",
+                        "bad"
+                      ]
+                    },
+                    "availability_status": {
+                      "enum": [
+                        "measured",
+                        "missing_sample"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "available_offset_s",
+                    "measured_offset_s",
+                    "value",
+                    "quality_flag",
+                    "availability_status"
+                  ],
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {
+                          "availability_status": {
+                            "const": "measured"
+                          }
+                        }
+                      },
+                      "then": {
+                        "properties": {
+                          "value": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "if": {
+                        "properties": {
+                          "availability_status": {
+                            "const": "missing_sample"
+                          }
+                        }
+                      },
+                      "then": {
+                        "properties": {
+                          "value": {
+                            "type": "null"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "tag_id",
+              "unit",
+              "samples"
+            ]
+          }
+        }
+      },
+      "required": [
+        "lookback_s",
+        "channels"
+      ]
+    },
+    "observations": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "representation": {
+              "const": "summary_v1"
+            },
+            "summary": {
+              "$ref": "urn:verum:agents:v1:common#/$defs/summary"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "representation",
+            "summary",
+            "evidence_ids"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "representation": {
+              "const": "sequence_v1"
+            },
+            "sequence": {
+              "$ref": "urn:verum:agents:v1:common#/$defs/sequence"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "representation",
+            "sequence",
+            "evidence_ids"
+          ]
+        }
+      ]
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "tank",
+            "pump",
+            "isolation_valve",
+            "pipe",
+            "pressure_transmitter"
+          ]
+        }
+      },
+      "required": [
+        "asset_id",
+        "kind"
+      ]
+    },
+    "connection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "edge_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_node": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to_node": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "edge_id",
+        "from_node",
+        "to_node"
+      ]
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fact_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "asset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameter_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "provisional",
+                "selected",
+                "unresolved",
+                "validated"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "fact_id",
+        "asset_id",
+        "field_path",
+        "value",
+        "unit",
+        "source_locator",
+        "parameter_status",
+        "evidence_ids"
+      ]
+    },
+    "catalog_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "modelled": {
+          "type": "boolean"
+        },
+        "uncertainty_k2": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "unit",
+        "modelled",
+        "uncertainty_k2"
+      ]
+    },
+    "catalog_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "enum": [
+            "ACT-INSP-01",
+            "ACT-INSP-02",
+            "ACT-INSP-03",
+            "ACT-INSP-04",
+            "ACT-INSP-05",
+            "ACT-INSP-06",
+            "ACT-INSP-07"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "target_kind": {
+          "type": "string"
+        },
+        "targets": {
+          "type": "string"
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_min": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/catalog_output"
+          }
+        }
+      },
+      "required": [
+        "action_id",
+        "name",
+        "target_kind",
+        "targets",
+        "preconditions",
+        "cost_usd",
+        "duration_min",
+        "outputs"
+      ]
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "kind": {
+          "enum": [
+            "decision_score",
+            "calibrated_probability"
+          ]
+        },
+        "method_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "calibration_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "kind",
+        "method_id",
+        "calibration_id"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "calibrated_probability"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "calibration_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mechanism": {
+          "enum": [
+            "leak",
+            "restriction_position_visible",
+            "restriction_obstruction",
+            "pump",
+            "bias",
+            "drift",
+            "stuck",
+            "misroute_a"
+          ]
+        },
+        "asset_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tag_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mechanism",
+        "asset_id",
+        "tag_id"
+      ]
+    },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hypothesis_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "urn:verum:agents:v1:common#/$defs/component"
+          }
+        },
+        "score": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/score"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "support_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "conflict_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "unresolved_questions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "hypothesis_id",
+        "components",
+        "score",
+        "support_evidence_ids",
+        "conflict_evidence_ids",
+        "unresolved_questions"
+      ]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "check_id",
+        "description",
+        "outcome",
+        "evidence_ids"
+      ]
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": "string",
+          "pattern": "^(observations:|features:|reference:|inspection_request:|inspection_result:|history:|report:).+"
+        },
+        "claimed_available_at_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "claimed_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "proposal_id",
+        "source_ref",
+        "claimed_available_at_s",
+        "claimed_evidence_ids"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "coverage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_asset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "coverage_id",
+        "target_asset",
+        "start_s",
+        "end_s",
+        "evidence_ids"
+      ]
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_duration_min": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "max_cost_usd",
+        "max_duration_min"
+      ]
+    },
+    "forecast": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tag_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quantity": {
+          "const": "reported_mean"
+        },
+        "horizon_s": {
+          "const": 300.0
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "interval": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "lower": {
+                  "type": "number"
+                },
+                "upper": {
+                  "type": "number"
+                },
+                "coverage_probability": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                },
+                "calibration_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "lower",
+                "upper",
+                "coverage_probability",
+                "calibration_id"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "tag_id",
+        "unit",
+        "quantity",
+        "horizon_s",
+        "value",
+        "interval",
+        "evidence_ids",
+        "limitations"
+      ]
+    },
+    "anomaly_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "category": {
+          "enum": [
+            "missing_reading",
+            "non_good_quality",
+            "reported_signal_departure",
+            "supported_physical_reference"
+          ]
+        },
+        "score": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/score"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "event_id",
+        "tag_ids",
+        "asset_ids",
+        "category",
+        "score",
+        "method_id",
+        "evidence_ids",
+        "limitations"
+      ]
+    },
+    "inspection_result": {
+      "allOf": [
+        {
+          "$ref": "urn:verum:inspection_result:0.5.0"
+        },
+        {
+          "properties": {
+            "workflow_status": {
+              "const": "performed"
+            }
+          },
+          "required": [
+            "workflow_status"
+          ]
+        }
+      ]
+    },
+    "residual_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "residual_id": {
+          "enum": [
+            "R1_mass_balance",
+            "R2_pump_head",
+            "R3_discharge_loss",
+            "R4_receipt_line"
+          ]
+        },
+        "state": {
+          "enum": [
+            "exceeded",
+            "within_normal",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "residual_id",
+        "state",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "persistence_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "threshold": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "k",
+        "n",
+        "threshold"
+      ]
+    },
+    "window_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0
+        },
+        "window_threshold": {
+          "type": "number"
+        },
+        "exceeded": {
+          "type": "boolean"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "persistence_rule": {
+          "$ref": "urn:verum:agents:v1:common#/$defs/persistence_rule"
+        },
+        "residuals": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R1_mass_balance"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R2_pump_head"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R3_discharge_loss"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:verum:agents:v1:common#/$defs/residual_state"
+                },
+                {
+                  "properties": {
+                    "residual_id": {
+                      "const": "R4_receipt_line"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "score",
+        "window_threshold",
+        "exceeded",
+        "complete",
+        "persistence_rule",
+        "residuals"
+      ]
+    },
+    "anomaly_assessment_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "as_of_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "window_assessment": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/window_assessment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "as_of_s",
+        "window_assessment"
+      ]
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "anyOf": [
+            {
+              "$ref": "urn:verum:agents:v1:common#/$defs/persistence_rule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "windows_held": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "windows_exceeding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "windows_unknown": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alarming": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "rule",
+        "windows_held",
+        "windows_exceeding",
+        "windows_unknown",
+        "alarming"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "alarming": {
+                "const": false
+              }
+            },
+            "required": [
+              "alarming"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "type": "object"
+              },
+              "windows_unknown": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "alarming": {
+                "const": true
+              }
+            },
+            "required": [
+              "alarming"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

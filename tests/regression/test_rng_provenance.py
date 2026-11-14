@@ -221,6 +221,9 @@ def test_the_inspection_catalog_does_not_enter_the_hash_and_the_other_files_do(
     assert config_hash(tmp_path / "config") == base
     assert NOT_HASHED == ("inspection_catalog.json",)
     assert base == STORED_HASH_BEFORE_THE_CATALOG
+
+
+def test_canonical_json_is_order_independent() -> None:
     """The canonical JSON form does not depend on key order. Independent: yes, because the two
     inputs differ only in order.
     """

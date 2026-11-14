@@ -26,6 +26,7 @@ from _truth_audit import audit, rewrite
 from sim_helpers import esd_timeline
 from verum.contracts import validate
 from verum.hydraulics import HydraulicModel
+from verum.inspection.parameters import parameters_digest
 from verum.lineups import load_lineup_table
 from verum.provenance import config_hash, episode_id, git_state
 from verum.sim.config import load_sim_config
@@ -115,11 +116,17 @@ def test_episode_record_is_valid_and_complete(episodes: dict[str, EpisodeResult]
 
 
 def test_provenance_is_a_separate_file(episodes: dict[str, EpisodeResult]) -> None:
-    """The git commit is in the provenance file only and not in the episode record. Independent:
-    yes, because the check reads the written files.
+    """The git commit is in the provenance file only and not in the episode record, and the file
+    also names the inspection catalog version and the digest of the inspection parameters.
+    Independent: yes, because the check reads the written files and the expected version is the
+    one stated in the catalog file.
     """
     doc = json.loads((episodes["S0-A"].directory / "provenance.json").read_text())
-    assert set(doc) == {"git_commit", "git_dirty"}
+    assert set(doc) == {
+        "git_commit", "git_dirty", "inspection_catalog_version", "inspection_parameters_sha256",
+    }  # fmt: skip
+    assert doc["inspection_catalog_version"] == "1.0.0"
+    assert len(doc["inspection_parameters_sha256"]) == 64
     assert "git_commit" not in (episodes["S0-A"].directory / "episode.json").read_text()
 
 
@@ -576,10 +583,10 @@ def test_regeneration_gives_identical_files(
         k: v for k, v in episodes["S0-A"].file_hashes.items() if k != "provenance.json"
     }
     commit, dirty = git_state()
-    assert json.loads((again.directory / "provenance.json").read_text()) == {
-        "git_commit": commit,
-        "git_dirty": dirty,
-    }
+    doc = json.loads((again.directory / "provenance.json").read_text())
+    assert doc["git_commit"] == commit and doc["git_dirty"] == dirty
+    assert doc["inspection_catalog_version"] == "1.0.0"
+    assert doc["inspection_parameters_sha256"] == parameters_digest()
     scenario = dataclasses.replace(load_scenario("S0-A"), seed=1)
     other = run_episode("S0-A", tmp_path / "other", model, scenario)
     assert (

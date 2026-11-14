@@ -1,98 +1,155 @@
-# VERUM backend
+# Verum
 
-VERUM is a synthetic simulator of a gasoline receipt, storage and distribution terminal. It produces physically consistent hidden state, a separate set of instrument observations derived from that state, and simulated inspection results, so that diagnostic reasoning over several assets can be studied without field data.
+Verum is a set of eight advisory agents that read sensor data from a simulated Saudi gasoline terminal, rank the likely causes of an abnormal situation and suggest which inspection to do first. The eight roles are anomaly detection, predictive health, topology dependency, historical asset intelligence, diagnostic reasoning, inspection planning, inspection quality documentation, and evidence verification and decision. All data is synthetic: it comes from a simulator whose parameters are design selections and not measurements of a real terminal. The system is advisory only and never controls equipment. A runner chains the agents over one analysis window at a time, and a small local HTTP service plays those windows to a frontend.
 
-This repository is the backend of a larger system. A frontend will live in a separate repository and will consume the JSON schemas published here.
+## Requirements and installation
 
-## What the repository contains
+You need Python 3.11 or newer (the pinned dependencies in `requirements.txt` cover 3.11 and later), a terminal, and git.
 
-- **Inputs and contracts**
-  - The audited input package, vendored unmodified under `vendor/verum_audited/` with SHA-256 hashes in `vendor/MANIFEST.sha256`.
-  - The six interface schemas in `schemas/` and the machine-readable contracts in `config/`, both copied unchanged from the audited package.
-  - A parameter model in which an unresolved value cannot be read (`verum.params`), and loaders and validators for the contracts and schemas (`verum.contracts`).
-- **Plant model**
-  - A graph view of the topology with lineup-dependent connectivity and route geometry (`verum.graph`).
-  - Tank calibration, roof state and the response-headroom screen (`verum.tanks`), the sixteen operating lineups with their transition rules (`verum.lineups`), and inventory ledgers driven by prescribed flows (`verum.ledger`).
-  - Steady-state network hydraulics with friction, pump, boundaries, fitting profiles and the phase and NPSH gate (`verum.hydraulics`; see `docs/steady_hydraulics.md`).
-  - The independent protection state machine, as pure logic (`verum.protection`).
-- **Episodes**
-  - The path-dynamics engine, the operations controller and the hidden truth store (`verum.sim`, `verum.ops`, `verum.truth`; see `docs/path_dynamics_engine.md`), with named random streams and configuration provenance (`verum.rng`, `verum.provenance`).
-  - A scenario names a healthy variability profile: `off`, `v1`, or `v2` with demand regimes and a moving receipt set-point (see `docs/dataset_card.md`).
-- **Observations**
-  - The sensor chain from truth to observations (`verum.sensors`; see `docs/observation_chain.md`) and the read-only gateway (`verum.api`).
-- **Inspection**
-  - The catalog of seven inspection actions, the request and approval workflow with an approval emulator, the outcome models, a synthetic history and the gateway functions that serve them (`verum.inspection`, `verum.api`; see `docs/inspection_model.md`). The outcome models are simulation selections and not field performance.
-- **Faults**
-  - Single faults can be injected into an episode through `verum.faults`: a pipe leak, a valve restriction, a pump head degradation, sensor faults and valve misrouting (see `docs/fault_models.md`).
-  - A restriction is `position_visible` or `obstruction`, and a fault on an asset that is not active in the lineup is labelled latent.
-  - An audit asks what an agent could see of each fault from the observed tags and the design model, over windows of 60, 300 and 900 s, with calibrated and scaled thresholds and severity classes (`verum.evaluation.agent_audit`, `config/severity_classes.json`; see `docs/fault_models.md`).
-- **Transient engine**
-  - A standalone first-order method of characteristics on the 28 edges (`verum.transient`; see `docs/transient_engine.md`), with its own verification ladder.
-  - The episode engine does not call it, and it changes no dataset tier.
-- **Release gate**
-  - A fail-closed gate (`verum.gates`). The release policy in `config/dataset_release_policy.json` keeps `production_generation_enabled` false, and the gate refuses the `production_candidate` tier while it is false.
-- **Tests and decisions**
-  - Tests for all of the above, and a record of design decisions in `docs/design_decisions.md`.
+1. Clone the repository and enter it.
 
-Paired-fault episodes and a resumable campaign generator are implemented. Agents are not implemented. Evaluator probability scores and an evaluator-only inventory of unaudited campaign faults are available; the complete scoring and relabelling protocol remains in progress.
+```bash
+git clone https://github.com/Areen-Alsemari/Verum_Backend.git
+cd Verum_Backend
+```
 
-## Data provenance
+2. Check out the branch you were given, then create and activate a virtual environment.
 
-All physical values are synthetic simulation or design selections. They do not describe an as-built terminal, and none is a measurement. Parameters that are not selected are represented as unresolved and raise an error when read.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-## Layout
+On Windows use `py -3 -m venv .venv` and `.venv\Scripts\activate`.
+
+3. Install the runtime dependencies.
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Make the `verum` package importable. The project is not installed as a package, so every command below expects the source folder on the Python path.
+
+```bash
+export PYTHONPATH=src
+```
+
+On Windows PowerShell the equivalent is `$env:PYTHONPATH = "src"`. Set it again in every new terminal.
+
+To also run the tests and checks, install the development tools with `pip install -r requirements-dev.txt`. The pins in both files come from `uv.lock`, which is the source of truth, so an update of a dependency starts there.
+
+## Data
+
+No data is committed. The generated data takes several gigabytes, so the `data/` folder is ignored by git and you must generate it yourself. The generator is deterministic from a seed, but the result is only reproducible on the same code, the same dependency versions and, as the data guide notes, up to platform-dependent numerical details.
+
+Two commands refuse to start in a state you may not expect. The full generator raises if the git working tree has uncommitted changes, so commit or discard your edits first. The release builder refuses to write into a folder that already exists.
+
+### Quick start: a 60-episode pilot
+
+This is the smallest supported generation: the 60-slot pilot campaign of the campaign generator, turned into a release with the same code as the full dataset. Run the commands in this order from the repository root, with the virtual environment active and `PYTHONPATH=src` set.
+
+```bash
+python tools/campaign.py pilot --root data/quickstart/campaign
+python tools/campaign.py summary --root data/quickstart/campaign
+python tools/dataset_release.py build --source data/quickstart/campaign --output data/quickstart/release
+python tools/dataset_release.py materialize-all data/quickstart/release
+python tools/dataset_release.py verify data/quickstart/release
+python tools/dataset_release.py verify-roles data/quickstart/release
+```
+
+On a Mac with 10 cores, the pilot took 515 s (about 9 minutes) with the default worker count, and the other four commands took about 35 s together. The output uses about 110 MB, of which the campaign folder is about 70 MB and the release about 40 MB. The pilot prints the byte counts and `60 records` when it ends. The pilot is resumable, so after an interruption run the same command again.
+
+When it worked, `summary` prints `status {'completed': 58, 'gap': 2}` and a split of 31 train, 17 validation and 10 test episodes. Two slots are recorded gaps: a simulation gate rejected their attempts, and a gap is a normal outcome and not an error. The folder `data/quickstart/campaign` holds `agent_visible/` (observations and labels an agent may see), `evaluator/` (truth and the manifest, never given to an agent), and `work/` and progress files. The folder `data/quickstart/release` holds `observations/`, `examples/`, `knowledge/`, `role_views/`, `evaluator/` (the source manifest and the truth copies, never given to an agent) and `release_manifest.json`. `verify` prints `"integrity_passed": true`, 58 episodes and 696 examples (372 train, 204 validation, 120 test), and `verify-roles` prints 24 role files, 3,785 examples and `"integrity_passed": true`.
+
+You can start the service on this release for live runs with `python -m verum.service --port 0 --release data/quickstart/release`. Started that way it printed its address and answered `/api/health` with live mode on and replay mode off. I did not run the 181-window sample script on this release.
+
+What this data can and cannot show: it is a small campaign of 58 episodes that uses a different configuration from the full one (a block of 60 slots, seed 20261102), so it checks that the generator, the release builder and the integrity checks work on your machine and gives the code something to read. Its counts, splits and any metric computed from it must not be compared with the numbers in `reports/`, which come from the 3,000-episode release. Several mechanisms have only a few episodes each, so no per-mechanism result on it means anything.
+
+### Full generation: the dataset the reports describe
+
+This produces the 3,000-episode reference release, split into 1,660 train, 756 validation and 584 test episodes, together with the roof reference runs and the role views of the eight agents. The recipe is committed in `config/extensions/reference_recipe_v2.json`: campaign seed 20261101, 3,004 slots, 3,600 s per episode.
+
+```bash
+python tools/generate_dataset.py --root data/reference_release_v2 --workers 3
+```
+
+The release ends up in `data/reference_release_v2/verum_reference_v2`, which is the folder the runner and the service look for by default. Next to it the command leaves the campaign (`campaign/`), the roof reference runs (`roof_reference_v1/`) and a compact `verum_reference_v2_training.zip` with its checksum file.
+
+The campaign stage needs at least 20 GB of free disk space for its own check. In the copy of the author, the campaign folder is about 3.7 GB and the finished release about 2.1 GB. The run time depends on the machine and the worker count, and it is not written down anywhere in the repository, so no figure is given here. It is the slow part of the whole system, so keep the machine plugged in and awake for the whole run. On a Mac, start the command from the system Terminal with `caffeinate -i` in front of it. If it is interrupted, run the same command with the same `--root` again: the campaign stage continues from the slots already stored. If it stops after the campaign stage, do not delete the campaign. Follow `docs/data_generation.md`, which explains how to reuse a finished campaign with `--campaign` and `--roof-reference`.
+
+A fresh run reports its own outcomes. Failed slots are recorded as gaps, so the seed does not by itself guarantee 3,000 completed episodes, and the counts below are the ones the reports describe.
+
+### Check that generation worked
+
+```bash
+python tools/dataset_release.py verify data/reference_release_v2/verum_reference_v2
+python tools/dataset_release.py verify-roles data/reference_release_v2/verum_reference_v2
+```
+
+On the release of the author, `verify` ran in about 15 s and printed `"integrity_passed": true`, 3,000 episodes, 36,000 examples, and 19,920 train, 9,072 validation and 7,008 test examples (12 windows per episode, which corresponds to 1,660, 756 and 584 episodes). `verify-roles` printed 24 role files, 180,339 examples and `"integrity_passed": true`. The episode counts per split are also stored in `release_manifest.json` under `splits`. If your numbers differ, the check can still pass, because it verifies that the files match their stored hashes and splits and not that the cohort has a given size. Compare the counts with the numbers above before you compare any result with the reports.
+
+### Point the system at the data
+
+The runner and the service read the release folder you pass with `--release`. The default is `data/reference_release_v2/verum_reference_v2` under the repository, so a full generation with the command above needs no extra setting. For any other folder, pass it explicitly as shown in the next section.
+
+## Run the system
+
+The system is the local run service. It plays windows of the synthetic terminal, either replayed from stored bundles or run live through the real agents on a validation episode. The service is written with the Python standard library only. It never reads the test split.
+
+First store the replay sample once. This runs the full runner over a fixed, seeded sample of 181 windows of the train and validation splits and writes the bundles to `local/replay_sample`.
+
+```bash
+python tools/agents/run_runner_sample.py --out local/replay_sample
+```
+
+Then start the service.
+
+```bash
+python -m verum.service --port 8765 --replay-dir local/replay_sample --release data/reference_release_v2/verum_reference_v2
+```
+
+The service binds to 127.0.0.1 and allows the browser origin `http://localhost:5173`. `--port 0` picks a free port. Without `--replay-dir` replay is off, and without `--release` live runs are off. When it works, the first line printed is `verum service listening on http://127.0.0.1:<port>`, and `GET /api/health` returns `{"status": "ok", "service": "verum run service", "modes": {"replay": true, "live": true}}`. The routes, the events and a real example of each are in `docs/service_api.md`.
+
+To see the options without starting anything, run `python -m verum.service --help`.
+
+## Additional instructions
+
+### Tests and checks
+
+```bash
+ruff check .
+python tools/check_agent_interfaces.py
+python tools/agents/check_stubs.py
+python tools/agents/build_chained_fixtures.py --check
+mypy
+pytest -m fast
+```
+
+`pytest -m slow` also runs the long engine runs and needs the generated campaign. Two tests, `test_two_simultaneous_runs_share_no_state` and `test_each_failure_kind_has_its_own_issue_code[wrong_revision]`, are timing-sensitive: under heavy machine load they can fail, and they should be re-run alone before you look for a cause. The tests of reduced models check the code against itself and are not independent validation of the physics.
+
+### Tracing
+
+Tracing of the runner to LangSmith is optional and off by default. The system needs no account or key to run. To switch it on, install the extra package with `pip install "langsmith>=0.14.17"`, then set `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` in your shell. The key stays in your environment and never in the repository. Only summaries and digests are sent, and it must not be switched on for real plant data. `docs/runner_tracing.md` lists what is recorded and what is not.
+
+### Repository layout
 
 | Path | Contents |
 | --- | --- |
-| `vendor/` | Audited input package, read-only, with hash manifest |
-| `config/` | Machine-readable contracts used by the loaders |
-| `schemas/` | JSON Schemas that define the interface contract |
-| `src/verum/` | Package: `params`, `contracts`, `gates`, `graph`, `tanks`, `lineups`, `ledger`, `protection`, `hydraulics`, `sim`, `ops`, `truth`, `sensors`, `rng`, `provenance`, `api`, `transient`, `faults`, `inspection` |
-| `tests/` | `analytic`, `schema`, `leakage`, `regression` |
-| `docs/` | Design records |
-| `tools/` | Scripts that compute the studies and tables the documents quote (decision D57) |
+| `src/verum/` | The package: simulator, sensors, inspection model, campaign generator, training and release code, the eight agents and the runner (`agents/`), and the service (`service/`) |
+| `tools/` | Command line scripts: campaign and dataset generation, release checks, agent evaluation and the runner sample |
+| `config/`, `schemas/`, `contracts/` | Machine-readable contracts and JSON Schemas that define the interfaces |
+| `vendor/` | The audited input package manifest, read-only |
+| `tests/` | The test suite |
+| `docs/` | Design records, the data contract, the generation guide and the service API |
+| `reports/` | Reports of studies and evaluations |
+| `data/`, `local/` | Generated data and local outputs, ignored by git |
 
-## Setup and tests
+Start with `docs/project_scope.md` for the scope, `docs/data_generation.md` for the data, `docs/agent_interfaces.md` for the agents and `docs/service_api.md` for the service.
 
-Python 3.11 or later and [uv](https://docs.astral.sh/uv/) are required.
+### Limitations
 
-```bash
-uv sync --group dev
-```
+All data is synthetic. The parameters are design selections, and no value is a measurement of a real terminal, so a good result on this data does not show performance on a real plant. The data is not qualified for physical diagnostic training, and the release policy keeps production generation disabled. Several inspection outcomes and roof, damage and emission mechanisms are outside the supported scope, as `docs/project_scope.md` explains. The agents give advice and rank causes. They do not act on the plant, and a person decides what to do. The reports in `reports/` state what was and was not validated for each agent, and they should be read before any number is quoted.
 
-```bash
-uv run pytest
-```
+### Windows and line endings
 
-Repository conventions are described in `CONTRIBUTING.md`.
-
-
-## Mechanical and vapour extension
-
-The historical research-only mechanical extension adds persistent rim-seal and fitting defects, a reduced roof hang-up state and a travel-triggered secondary seal-tear cascade. Inspection results use these states through the existing approval workflow. The extension preserves its healthy parent's split and hydraulic observations; it does not model mechanical forces feeding back into hydraulics.
-
-Generate a new directory with `python tools/vapour_campaign.py --base data/campaign --output data/mechanical_extension_v1 --n 180 --legacy-sim-research`, then validate it with `python tools/validate_vapour_campaign.py --base data/campaign --root data/mechanical_extension_v1 --report local/mechanical_extension_validation.json`. The output remains restricted_benchmark. Its 30-day constant-condition vapour component estimates include explicit SIM proxies and are not complete facility emissions or observations (D121).
-
-New extension runs use prospective seeded tank assignment and retain cascade trials without a child. Previously stored extensions keep their original identities and limitations; they are not repaired by a generator change. The separately tested one-sided roof support model changes the engine's liquid displacement and head during withdrawal, but is not used by the archived mechanical extension and supplies no structural rupture law.
-
-## Training qualification
-
-The stored datasets are not qualified for physical diagnostic training. Run `python tools/training_readiness.py --root data/campaign --report local/training_audit/campaign_readiness.json` to inspect the blockers; an unqualified dataset returns exit status 2. Software verification, valid schemas and a completed generation count do not establish physical validity. See `docs/training_qualification.md` for the supported scope and unresolved inputs.
-
-Source-matched normal vapour components are available in `verum.vapour.routine`. New native roof cases use explicit `roof_constraints` with the observation-window profile and record actual coupled signals and canonical truth. Unsupported roof, fitting, vibration and acoustic measurement models produce missing/inconclusive findings by default. Historical SIM damage proxies and travel-triggered cascades require explicit research opt-in; they cannot qualify training data. See `docs/roof_vapour_basis.md`.
-
-Complete-input normal windows and separately calculated liquid-heel landing events are available through `python tools/vapour_estimate.py --input local/reviewed_vapour_inputs.json --output local/vapour_estimate.json`. Missing classifications, properties or trajectory coverage stop the estimate. The methods retain unresolved uncertainty and do not create VOC telemetry or damaged-roof predictions. See `docs/vapour_estimates.md`.
-
-Export the configuration-specific engineering request and empty supplier-response template with `python tools/hardware_handoff.py --request local/hardware_request.json --template local/hardware_response.json`. `docs/hardware_resolution.md` lists exact drawings, curves, tests and owners needed for each gap, the pressure-capsule specification caveat, and the alternative of adopting a coherent documented reference installation. Document intake never adopts physical values or opens the training gate automatically.
-
-The default inspection catalog now marks unsupported outputs unmodelled with unknown uncertainty, matching the selected service's missing/inconclusive results. An explicitly selected historical research service retains its original capability view. Advertising a research output does not qualify its physical response or acceptance criteria.
-
-## Reference datasets
-
-The eight-role data contract is documented in [agent data contract](docs/agent_data_contract.md). `tools/dataset_release.py` exports causal observation features, separate masked targets and source-matched reference records as `verum_reference_v2`. `tools/roof_reference.py` generates paired coupled roof-boundary references with process-covered manual inspections and inherited parent splits. These commands implement no agents and do not open physical training or production gates. Unknown material-failure, damaged-emission, calibration and acceptance inputs remain unresolved.
-
-## Supported scope and team data generation
-
-The current project boundary is defined in [project scope](docs/project_scope.md). Unsupported structural failures, damaged-material emissions, mechanical cascades and remaining useful life are outside this version. All eight logical roles remain supported within the documented reference tasks.
-
-Use [the team generation guide](docs/data_generation.md) to reproduce the data from the committed recipe or reuse existing simulations. `tools/generate_dataset.py` creates the scoped dataset, 24 role/split files and a compact `verum_reference_v2_training.zip` archive. Generated data stays under the existing Git ignore rule; raw telemetry and evaluator truth are excluded from the training archive.
+The files whose bytes are checked by a hash, in tests or in the detector artifact, are pinned to LF in `.gitattributes`. On Windows, files checked out before that pin was added can still carry CRLF line endings, which makes the hash checks fail and degrades the first agents of a run. After you pull a version that contains `.gitattributes`, refresh the pinned files once: save or discard your own edits to them, then run `git checkout HEAD -- config schemas vendor/MANIFEST.sha256 uv.lock src/verum/agents/anomaly_detection/artifacts src/verum/agents/predictive_health/ridge_models.json`. Do not change `core.autocrlf` for this.

@@ -1415,9 +1415,9 @@ The derived classes stay provisional (status provisional, evidence SIM); nothing
 - **Decision.**
   - The file `config/inspection_catalog.json` is not part of the configuration hash. The hash covers the files that fix the simulation and the observations of an episode.
   - A test lists the files that the hash leaves out.
-- **Reason.** The catalog changes no simulated or observed value, and a change of the hash changes every episode identifier, which would break the resumption of a campaign that was started before the catalog existed.
+- **Reason.** The catalog changes no value stored in an episode directory, because the inspection service reads it when a request is made, and a change of the hash changes every episode identifier, which would break the resumption of a campaign that was started before the catalog existed.
 - **Sensitivity required.** None.
-- **Notes.** An inspection result states the version of the catalog it used through the schema version of the file.
+- **Notes.** The catalog does set the outcomes, delays, rejections and history that the inspection service returns, so the configuration hash does not identify them. An inspection result does not state the catalog version: its `schema_version` is the version of the result schema (0.5.0), and `Catalog.version` is read but written to no result. The catalog file version and a digest of every value that sets an inspection outcome, delay, rejection or history record (the whole catalog file and the named constants of the outcome models, the workflow and the history generator) are written to the `provenance.json` of each newly generated episode directory, which the directory manifest lists by hash. They describe the checkout that generated the episode, not the checkout that later runs the service, and they enter no episode identifier and no other file of the directory.
 
 ## D109 - Actions that depend on the vapour track
 
@@ -1599,3 +1599,20 @@ These are choices that the audited documents do not state. They are implemented,
 - **Reproducibility.** Freeze the existing campaign seed, slot count, block composition and horizon in a generation recipe. Track the generation, materialization, verification and packaging commands. Ambient sibling folders cannot change a release, and parent-related records retain original splits.
 - **Distribution.** Package the 24 role/split files and public reference/contract metadata without raw telemetry or evaluator truth. Bind every payload with SHA-256, check archive CRCs and keep generated data outside Git. Retain full local exports for auditing and sequence-model work.
 - **Qualification.** Scope selection and passing software checks do not enable production generation or establish field performance. No new physical parameter, unsupported observation or invented failure label is introduced.
+
+## D133 - Versioned advisory agent interfaces and causal report composition
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D130, D132
+- **Decision.** Define closed, role-specific request/response messages outside the frozen simulator schemas. Bind context, data/reference identity, source availability, report content and original evidence roots. All eight roles have independently testable interfaces; implementations can use observation models, declared graph/reference retrieval or explicit evidence rules.
+- **Learning boundary.** Keep numerical forecasting, anomaly and diagnostic model inputs on their supported causal observation representation. Compare upstream reports explicitly outside the learned diagnostic features. A later learned stacking design requires its own feature version and realistic held-out upstream predictions; it is not silently enabled by connecting messages.
+- **Unknowns.** Missing reports, unavailable measurements, uncalibrated scores and unselected information gain remain explicit. Inspection plans are advisory proposals, not dispatch requests; the existing required numerical information-gain field is not populated with an invented zero. Existing human approval and physical/production gates remain unchanged.
+- **Evidence.** Derived agents retain their source roots, so agreement from the same readings is not independent confirmation. Metadata-only evidence proposals allow future or unavailable records to be rejected without exposing their values. Context identifiers and absolute clocks remain outside learned observation features.
+- **Acceptance.** Local schema and semantic checks establish message compatibility, not physical validity, model accuracy or completed agent/service implementations. No existing data, label, physical parameter, frozen schema or configuration is changed.
+
+## D134 - Structured maintenance assessment documentation
+
+- **Version:** 1.0 (2026-11-06)  **Status:** DESIGN  **Refines:** D133
+- **Ownership.** Agent 7 checks inspection quality during analysis and separately assembles the maintenance assessment report after Agent 8 verifies the available evidence. This documentation operation consumes current validated reports and does not change the eight run-message contracts or create another agent.
+- **Output.** Define a separate closed JSON report contract with shared analysis context, source response hashes, typed findings, inspection proposals, human-review next steps and explicit gaps. The frontend renders the JSON and exports PDF. Proposed work is not completed work; automatic actions and equipment-condition confirmation remain false.
+- **Implementation.** Use deterministic report templates as the baseline. Optional pretrained Cohere wording is limited to a narrative field and cannot alter factual fields or decisions. Its absence, quota limit or invalid output falls back to the template. No report model is trained from the supplied observations or small inspection subset.
+- **Validation.** Schema and fixture tests establish output shape, not factual accuracy. The future assembler must validate source pairs, analysis identity, source hashes, evidence links and exact copied values before returning a report. The guide specifies model comparisons for the three numerical agents and behavioural tests for the reference and evidence agents. No agents or training programs are implemented by these contracts.

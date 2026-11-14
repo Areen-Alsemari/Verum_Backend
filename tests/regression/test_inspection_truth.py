@@ -347,10 +347,11 @@ STORED = {  # digests of two episodes of the second pilot, taken before the file
 }  # fmt: skip
 
 
+# The episode document stores the hash of the lock file, so its digest below follows that file.
 MANIFEST_TEXT = {  # truth manifest of the same episodes, without the line of the provenance file
     35: """\
 dc69f686bb3b9add761ae7dd3d07b0a32845d576c2f67ee3b5e010aa8b1d4d92  boundary_state.jsonl.gz
-0c04df65455d46b3aa1661f89404418472c452531cf7529fdb09af9dca3a82e2  episode.json
+339c8da78d30583e444d09a4ebc69cf16f23b201a97ceccaa8c394a093d638b5  episode.json
 8dc9e6f6afed04d733d24a731759bd0cd7e48590dde36b672f32219925bf0a70  events.jsonl.gz
 4ecc4519c97df517f5b886295f0b322673f11a62c7c028c6abf16239bfe4a75a  fault_truth.jsonl.gz
 ed9f8b47d943b55887b2ab0e6f50cf47d97183b7e6de0643987b4d64836750f1  hydraulic_state.jsonl.gz
@@ -362,7 +363,7 @@ ac73670af3abed54ac6fb4695131f4099be9fbe39d6076c5d0264a6bbdae9d83  validity_windo
 """,
     54: """\
 3851a05671c473e367ab5e44d0084a85a1fad8fb185fad5a68c183eb6ccc72e0  boundary_state.jsonl.gz
-96ef4e26064e46ecd9bc36388d3d40b3a8dc6b020c50d0934a46ac3b70babae6  episode.json
+76735100699ddb3cab5d8efb8c01f0978838fd07eea574267cc315e6f0c45cce  episode.json
 7b523653c6a1dd316153d83249057a81340e9a786cf3f287fe714ed87265386a  events.jsonl.gz
 ac73670af3abed54ac6fb4695131f4099be9fbe39d6076c5d0264a6bbdae9d83  fault_truth.jsonl.gz
 529a5d6dd3329df45dc664d9ab79684b25f5122fb5c29cdba85bbcdcf2bb316a  hydraulic_state.jsonl.gz

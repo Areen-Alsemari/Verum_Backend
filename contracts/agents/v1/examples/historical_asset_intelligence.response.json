@@ -1,0 +1,56 @@
+{
+  "interface_version": "1.0.0",
+  "message_type": "response",
+  "agent": "historical_asset_intelligence",
+  "request_id": "contract-request-historical_asset_intelligence",
+  "report_id": "contract-report-historical_asset_intelligence",
+  "context": {
+    "case_id": "contract-example",
+    "analysis_id": "contract-example-snapshot",
+    "revision": 0,
+    "as_of_s": 300.0,
+    "as_of_utc": null,
+    "data_release": "verum_reference_v2",
+    "reference_snapshot_sha256": "06a342dfb9839b9eca042dc95fded016d91d11fdbeb5b7f58d31357b39e20403",
+    "scope_id": "verum_supported_reference_v2",
+    "execution_mode": "contract_fixture"
+  },
+  "implementation": {
+    "name": "contract-example",
+    "version": "1.0.0",
+    "artifact_sha256": null,
+    "feature_profile_id": null
+  },
+  "status": "degraded",
+  "consumed_evidence_ids": [
+    "source-observations",
+    "source-reference",
+    "features-summary"
+  ],
+  "issues": [
+    {
+      "code": "CONTRACT_EXAMPLE",
+      "message": "Interface example only; no agent or model is implemented.",
+      "evidence_ids": []
+    }
+  ],
+  "limitations": [
+    "No equipment condition is established by this contract example."
+  ],
+  "advisory_only": true,
+  "result": {
+    "asset_records": [
+      {
+        "asset_id": "TK-101",
+        "kind": "tank"
+      }
+    ],
+    "facts": [],
+    "history": [],
+    "history_status": "no_verified_past_maintenance_supplied",
+    "missing_asset_ids": [],
+    "evidence_ids": [
+      "source-reference"
+    ]
+  }
+}

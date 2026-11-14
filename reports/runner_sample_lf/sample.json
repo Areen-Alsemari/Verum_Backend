@@ -1,0 +1,2756 @@
+{
+ "seed": 20261108,
+ "validation": [
+  {
+   "window_id": "e52a6ecf9bc407f77c154743",
+   "set": "sample",
+   "episode_id": "EP-017E75669BA2",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "ad926ec19daa9626d9c996a6",
+   "set": "sample",
+   "episode_id": "EP-01F931B162A9",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-PBO"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "8020e0a7540ffd272a39b53a",
+   "set": "sample",
+   "episode_id": "EP-0307940FC763",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "LT-101"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "5c9e7f547ec58b5e467f4b70",
+   "set": "sample",
+   "episode_id": "EP-0307940FC763",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "LT-101"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "6c74703cf8482b8266972d26",
+   "set": "sample",
+   "episode_id": "EP-03CEB208B2B5",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "55580c27bf61c918dc319811",
+   "set": "sample",
+   "episode_id": "EP-06D97ED55F4F",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "FT-001"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "cc3661419c1cbd714ab3a849",
+   "set": "sample",
+   "episode_id": "EP-093D27116536",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "987186064b58405d4353521c",
+   "set": "sample",
+   "episode_id": "EP-096781EED540",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "04c2b362473b503b03349704",
+   "set": "sample",
+   "episode_id": "EP-099E6BB5B00A",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "2bc15405ad74269528c903f3",
+   "set": "sample",
+   "episode_id": "EP-0F4E7562DD09",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "E-PA3"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "740d1e03081eeb4b248ad70e",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "2396c5c3306ec03c90af9c44",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "9b4df174546fb71e2d91e745",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "3b76d08c8af9e39916702593",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "a985e2659b50a29f0b7e887c",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "f33b29b08b40b19e27a8d07c",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 6,
+   "cutoff_s": 1800.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "064d67a1bf2fe8bc763c6f3c",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "5ff19d5bf772297e39ca6759",
+   "set": "sample",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "4f5ffade56d21245d60feac9",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "d996b081c075a2f559364d4b",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "9683fa5b64023c456bf7f637",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "2b4347c3103a9b7eed7e0305",
+   "set": "track",
+   "episode_id": "EP-1409BAA692BE",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "78895a899aba21a431fd1148",
+   "set": "sample",
+   "episode_id": "EP-1D889CB2912E",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "E-PB2",
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "PIPE_LEAK",
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "leak",
+    "restriction_position_visible"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "5fcd8fe20b7109cf25c624fc",
+   "set": "sample",
+   "episode_id": "EP-1DE1FBAE1E06",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "030cc598b1d39ee3476e7870",
+   "set": "sample",
+   "episode_id": "EP-1DE1FBAE1E06",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "3087a1b07fa6a59220074dfa",
+   "set": "sample",
+   "episode_id": "EP-1DE1FBAE1E06",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "921aa52f10de57b7e11f2973",
+   "set": "sample",
+   "episode_id": "EP-291F57733B65",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "b4fc3fd28935453fffd0d095",
+   "set": "sample",
+   "episode_id": "EP-29987353D342",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "fa9fc28bbaeec3ab79e77d75",
+   "set": "sample",
+   "episode_id": "EP-2A7FAF1632B5",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "10dcf4682a86c5a5ba6f6f8f",
+   "set": "sample",
+   "episode_id": "EP-2B9EC60112FE",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "FT-001",
+    "LT-101"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "84a0728fe4e8b2ba95fd3d49",
+   "set": "sample",
+   "episode_id": "EP-3114EFDE36B4",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-S101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "c42fc2b9dd591bda6fcdf98e",
+   "set": "sample",
+   "episode_id": "EP-32A3A7258C47",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "XV-R101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_obstruction"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "a783e90c31e50acfdf456f01",
+   "set": "sample",
+   "episode_id": "EP-36324A9C6463",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "c073aa699c1f68b1191be38f",
+   "set": "sample",
+   "episode_id": "EP-36324A9C6463",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "807a7e66095d8fca85250fc5",
+   "set": "sample",
+   "episode_id": "EP-37B3CE990281",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "69fde3943af70fb62328d57d",
+   "set": "sample",
+   "episode_id": "EP-39D12440A505",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": true,
+   "assets": [
+    "XV-PAO"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "8aabe3cd81bc3b4d9ec55284",
+   "set": "sample",
+   "episode_id": "EP-3C3225BA37CF",
+   "position": 6,
+   "cutoff_s": 1800.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "06b30eb589677547a8dca2a5",
+   "set": "sample",
+   "episode_id": "EP-3E0EC2CE16F5",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "58d54c62ab524200845e85b5",
+   "set": "sample",
+   "episode_id": "EP-3E0EC2CE16F5",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "PT-201"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "be8202825abbd70c3464fbb1",
+   "set": "sample",
+   "episode_id": "EP-3F00F0EAA7A6",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "042d7ce88e93fc4e7e9af4c0",
+   "set": "sample",
+   "episode_id": "EP-49BCAFA00E7D",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "FT-001"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "f8477d1b84728439ed0c01cc",
+   "set": "sample",
+   "episode_id": "EP-4F6063766113",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": true,
+   "assets": [
+    "P-101A"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "a3803bbd59204abdde1d4e7e",
+   "set": "sample",
+   "episode_id": "EP-4F6063766113",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "P-101A"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "1df71589104db67cbfe838c8",
+   "set": "sample",
+   "episode_id": "EP-4F6063766113",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "P-101A"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "cc60049f176dba5905bca8b0",
+   "set": "sample",
+   "episode_id": "EP-5011A7425F88",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "17cecd386555467e24142563",
+   "set": "sample",
+   "episode_id": "EP-516A997E5764",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "13cea990e636833480261a77",
+   "set": "sample",
+   "episode_id": "EP-5615C8118236",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "da36426299e6cbd8c3f62373",
+   "set": "sample",
+   "episode_id": "EP-58BEF231495F",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "PT-001"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "4437575147b605f50ac052d4",
+   "set": "sample",
+   "episode_id": "EP-58BEF231495F",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "PT-001"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "7f7df8553297a8046d970193",
+   "set": "sample",
+   "episode_id": "EP-591060332EA2",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "P-101A"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "ab309c75ff01ee37bdfbe454",
+   "set": "sample",
+   "episode_id": "EP-5C1A274FD887",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "5d6fab027695b57908b745e4",
+   "set": "sample",
+   "episode_id": "EP-5C9A2B1F710C",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "LT-103"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "886316109b27c875e1fecd76",
+   "set": "sample",
+   "episode_id": "EP-5D0A859A83AA",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "LT-101"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "f1bf5217eedfc99e9e53a7e8",
+   "set": "sample",
+   "episode_id": "EP-5D25EE3F24EB",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "LT-103"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "27f3155b5017a288c5f647b1",
+   "set": "sample",
+   "episode_id": "EP-5D3DB937AFE3",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "FT-201"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "f6d5bc9c604209ad2d909055",
+   "set": "sample",
+   "episode_id": "EP-662D181B4F12",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "E002",
+    "LT-103"
+   ],
+   "fault_types": [
+    "PIPE_LEAK",
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift",
+    "leak"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "ac9628bb618503f6ffe01da0",
+   "set": "sample",
+   "episode_id": "EP-67D35C92C531",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "b7a7642c647273abd82444a0",
+   "set": "sample",
+   "episode_id": "EP-6B12654179AF",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "E-D1",
+    "FT-201"
+   ],
+   "fault_types": [
+    "PIPE_LEAK",
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "leak",
+    "stuck"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "ab06ff20e85c936c76ffe2c2",
+   "set": "sample",
+   "episode_id": "EP-76B55EDFE668",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "77349f041373e58b03de3baf",
+   "set": "sample",
+   "episode_id": "EP-78186DCB7D38",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-R101",
+    "XV-S101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_obstruction",
+    "restriction_position_visible"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "130d86e41400b27ad00d57c1",
+   "set": "sample",
+   "episode_id": "EP-798E5BB61C1E",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "ded86f23d0d7406f6c8795f0",
+   "set": "sample",
+   "episode_id": "EP-7B7B31D49B27",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "670321e9e913e5c2f385b51b",
+   "set": "sample",
+   "episode_id": "EP-8035C2B92311",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "244bf2783a618e65015df76a",
+   "set": "sample",
+   "episode_id": "EP-81A1F86EB56B",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "E-S103a"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "044c7e5994a33f52d7ac6179",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "faef8834cf846edc8d1d6e27",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "505f2ee0bb466894675c03ff",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "907727a0d704fc50c45dab99",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "91ea8a2f93c6296bce126b93",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "601b210a2befccacaf28b553",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 6,
+   "cutoff_s": 1800.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "908db6a3a89da2741995e71e",
+   "set": "sample",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "e1d81f6e6c726bd97e30ccd6",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "303a22ff9b11653969eb152a",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "0acf80aad4498a42515189c9",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "659b2ffb8873696a367c6a00",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "01a5df1a158c907060b578e5",
+   "set": "track",
+   "episode_id": "EP-81C608D7A4C8",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "6c29c58f0f4ccb97217546c7",
+   "set": "sample",
+   "episode_id": "EP-822D8AFA6C0B",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "1fcfc796021509ab3c8b996c",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "7608b6d1fabcf8a04a048092",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "fa4d46d352595df9562b5759",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "051e699d3f19588be16381fb",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "11f17e0856aa763a73a878d9",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "E-PB2"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "73c28ea4607cd27e85f45d77",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "E-PB2"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "2b5ffb8550126c9c3fed706d",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "E-PB2"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "7ada54385b7b675cae49ffac",
+   "set": "track",
+   "episode_id": "EP-83C470077267",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "E-PB2"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "e9e44ba6ead99fbce9e2f16c",
+   "set": "sample",
+   "episode_id": "EP-83EF2A29DF07",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "FT-201"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "b4ebf53f923aef809113bfe3",
+   "set": "track",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "5fbe0656a7e3e77f7a96d749",
+   "set": "track",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "34ef00367872b9fb03276205",
+   "set": "track",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "791c6710a399d0d2bfc47248",
+   "set": "track",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "1803186884f3dbc6a0f8c484",
+   "set": "sample",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "f299895ed8c0cdbc3ece1f3f",
+   "set": "sample",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-R101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "fa373f2c275c862bd4ed4123",
+   "set": "track",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-R101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "4ddcb4b8ddf878c9b869157d",
+   "set": "track",
+   "episode_id": "EP-8687E1F77D4B",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "XV-R101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "8822bbfe06ad31679fdd02e2",
+   "set": "sample",
+   "episode_id": "EP-877BF141CA51",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "LT-101",
+    "XV-S101"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT",
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "drift",
+    "restriction_position_visible"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "a95937d2c3124ec44b284efc",
+   "set": "sample",
+   "episode_id": "EP-877BF141CA51",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "LT-101",
+    "XV-S101"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT",
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "drift",
+    "restriction_position_visible"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "c1f89eff843fafb6bb7071cc",
+   "set": "sample",
+   "episode_id": "EP-8E1BA7E85E5A",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "c1b4b82258426f874fac7786",
+   "set": "sample",
+   "episode_id": "EP-9094C82C1845",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "9d15e6c35926e1eccc42766b",
+   "set": "sample",
+   "episode_id": "EP-90CA35390D72",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "34c67ed2b1e01f7277e40158",
+   "set": "sample",
+   "episode_id": "EP-94A9F43B3DCC",
+   "position": 6,
+   "cutoff_s": 1800.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "35e7c9bcce8fe391909d3c8f",
+   "set": "sample",
+   "episode_id": "EP-94B44DC6BE6D",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "E-PB3"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "66ee58f0f94b028685b17b7b",
+   "set": "sample",
+   "episode_id": "EP-961BD889EA40",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "PT-203"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "1e03d2318d3c4e191b3f6160",
+   "set": "sample",
+   "episode_id": "EP-9D64BC0479C0",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "XV-S103"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "a69fc9101f36e72d52a4718f",
+   "set": "sample",
+   "episode_id": "EP-9DED82A3B873",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "PT-202B"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "0752abb5bd7cf92f7e674a19",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "c406a4681593bf0021bfdd80",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "1049690dddf40e05cdacb911",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "5a599c08f4fa37cf27585e1a",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "a94bbc5daa031fb40a394a4b",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "a2270df74e72b815e25ac12d",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "LT-103"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "83e9a32bdbb8009308118970",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "LT-103"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "90223d9118046f412a36902d",
+   "set": "sample",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "LT-103"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "95e657fd89af61fe7a45d8b8",
+   "set": "track",
+   "episode_id": "EP-A4F324E10A09",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "LT-103"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "37e0fa6db580e5216c07c6ee",
+   "set": "sample",
+   "episode_id": "EP-AD1FB505E06C",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "9d696df476514e470e8cbd61",
+   "set": "sample",
+   "episode_id": "EP-AD2A5A61B34A",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-S102"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "895298a3cb68336e6115b650",
+   "set": "sample",
+   "episode_id": "EP-B540414EBBFC",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "e589282e6f3e1c6af6757e1e",
+   "set": "sample",
+   "episode_id": "EP-B7AEAB1D9D93",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "47ea36dec306aa0470b962e3",
+   "set": "sample",
+   "episode_id": "EP-B80ECD88CB5F",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-R101",
+    "XV-S101"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 2
+  },
+  {
+   "window_id": "faf4f6ce8690950cd6a57da8",
+   "set": "sample",
+   "episode_id": "EP-B8508577F315",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-S103"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "5ef2187474d83c9a3a68ebe7",
+   "set": "sample",
+   "episode_id": "EP-BAD8FDE0FBF3",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "d0bc77f20bf98489fe09cb88",
+   "set": "sample",
+   "episode_id": "EP-BAD8FDE0FBF3",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "3f11eca2aac3dc05a5371e16",
+   "set": "sample",
+   "episode_id": "EP-BAD8FDE0FBF3",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "2353eb297e459c71489f2c53",
+   "set": "sample",
+   "episode_id": "EP-BB271BD817BA",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "599048f010064f5bd80d3cea",
+   "set": "sample",
+   "episode_id": "EP-BC6C96937A11",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "4f8505f17b2bd1f1774e9b4c",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "95b1b18626e0631e16cc6825",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "a99d563ed659ecedd8f353e0",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "ed49712247ea499658219978",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "0d44b59aa46c68d75cd836f2",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "8388620eb2e058928f185f56",
+   "set": "sample",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "e764f641d43cc4483c0421c2",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "038b75bbc79cbe3cfb9658f0",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "dd5b2dce5b24aa14ac2551f1",
+   "set": "track",
+   "episode_id": "EP-C5FDEAC37247",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "01d238aa98ab340c5e879c16",
+   "set": "sample",
+   "episode_id": "EP-C8C128B17497",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "9c807d2c16f34fdf83a6e035",
+   "set": "sample",
+   "episode_id": "EP-CE616A270CDB",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "E003"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "00b695f76a773858abfc6aef",
+   "set": "sample",
+   "episode_id": "EP-D2287A5A6C4A",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "E-PB0"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "b852a69c813fdf754678c0bf",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "f06b4e8084d513caded1d897",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "dde589bede70021b315735ef",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "9556219c3d149d5af9631331",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "6054cc5d3fc13831a8399492",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "d5473f1c280199248f9b24f8",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "504e6269928108b5ed57828f",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "114f1b64d033713585054209",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "889331cf6c5af45d5d6b90b1",
+   "set": "track",
+   "episode_id": "EP-D2A01EC49068",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "LT-102"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "bias"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "958b066906ceb1744ed87f0c",
+   "set": "sample",
+   "episode_id": "EP-D3C1AD0C6FA6",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-PAI"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "164897ebeb2608dc964d2510",
+   "set": "sample",
+   "episode_id": "EP-D7703B6A6296",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "150bb05904feb8395efd3ebe",
+   "set": "sample",
+   "episode_id": "EP-D82D598E6F98",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "2169eb6bf7ba0845c82dd763",
+   "set": "sample",
+   "episode_id": "EP-D9420D4A9F4C",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "b4c2b587915760364d77457d",
+   "set": "sample",
+   "episode_id": "EP-D9420D4A9F4C",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "9f34941bc3505a921c918721",
+   "set": "sample",
+   "episode_id": "EP-DB333ED214A4",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "2beeea20d593799e69f13540",
+   "set": "sample",
+   "episode_id": "EP-E81B08159BE2",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "E-S102a"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "cd150f12c6ec01009ad8129c",
+   "set": "sample",
+   "episode_id": "EP-EA6A7480B893",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "d037ea5ad5d14ac8afd6d877",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "ef1ce2cf8daec77e0fc18a44",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "670efa900f51a1c1a80ade46",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "caf159dd30e34a3207b5ce81",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 4,
+   "cutoff_s": 1200.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "48833eb2ae3775396fa51d4f",
+   "set": "sample",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 8,
+   "cutoff_s": 2400.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "445f016ba1ebdd5e83e2207e",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "e3888ffa023ad6bcb464ef0a",
+   "set": "sample",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "ca0ff4de4a2db9c1ca6e66ec",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "f18b2e96bfa73504af62ce53",
+   "set": "track",
+   "episode_id": "EP-F25CEC26C1E4",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "2b1ae3b643984396487a3449",
+   "set": "sample",
+   "episode_id": "EP-F51C6272AB3B",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "ba16e5d4c0e7d6e05940adbf",
+   "set": "sample",
+   "episode_id": "EP-FA00EC88C158",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-PAI"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "a05c4bdfa36d7e3b945e796f",
+   "set": "sample",
+   "episode_id": "EP-FB7F65B10A09",
+   "position": 6,
+   "cutoff_s": 1800.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "65134ab21b6f81a1dca3a8fa",
+   "set": "sample",
+   "episode_id": "EP-FB7F65B10A09",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "b5b528204ba116e4bacc3b44",
+   "set": "sample",
+   "episode_id": "EP-FC1C03154537",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "P-101B"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "c28fe5e8fb79b95534c407db",
+   "set": "sample",
+   "episode_id": "EP-FEB5B81EF40D",
+   "position": 11,
+   "cutoff_s": 3300.0,
+   "fault": true,
+   "assets": [
+    "E-S101a"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "c4cdd15dcccfa7093e93f0e0",
+   "set": "sample",
+   "episode_id": "EP-FF33ED8BA390",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "E-PA2"
+   ],
+   "fault_types": [
+    "PIPE_LEAK"
+   ],
+   "mechanisms": [
+    "leak"
+   ],
+   "n_components": 1
+  }
+ ],
+ "train_sanity": [
+  {
+   "window_id": "092d1a5e7161daac61693109",
+   "set": "train",
+   "episode_id": "EP-F6D9418AC638",
+   "position": 10,
+   "cutoff_s": 3000.0,
+   "fault": true,
+   "assets": [
+    "XV-S102"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_position_visible"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "6b4a005d5f2dc4fa994e5867",
+   "set": "train",
+   "episode_id": "EP-6BE9008271CC",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "P-101A"
+   ],
+   "fault_types": [
+    "PUMP_HEAD_DEGRADATION"
+   ],
+   "mechanisms": [
+    "pump"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "80b1b0ce82304112bfe0612b",
+   "set": "train",
+   "episode_id": "EP-9A9ABED25B63",
+   "position": 12,
+   "cutoff_s": 3600.0,
+   "fault": true,
+   "assets": [
+    "XV-R103"
+   ],
+   "fault_types": [
+    "VALVE_RESTRICTION"
+   ],
+   "mechanisms": [
+    "restriction_obstruction"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "c643f892643c5873463827ff",
+   "set": "train",
+   "episode_id": "EP-6E239A033F82",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "FT-001"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "drift"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "52e1d13abcd24efdde1b5f0b",
+   "set": "train",
+   "episode_id": "EP-D240680F9B27",
+   "position": 7,
+   "cutoff_s": 2100.0,
+   "fault": true,
+   "assets": [
+    "PT-202A"
+   ],
+   "fault_types": [
+    "SENSOR_DRIFT"
+   ],
+   "mechanisms": [
+    "stuck"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "5ef2f047475bfd544775a6a5",
+   "set": "train",
+   "episode_id": "EP-65407BDAB156",
+   "position": 9,
+   "cutoff_s": 2700.0,
+   "fault": true,
+   "assets": [
+    "XV-PBI"
+   ],
+   "fault_types": [
+    "VALVE_MISROUTING"
+   ],
+   "mechanisms": [
+    "misroute_a"
+   ],
+   "n_components": 1
+  },
+  {
+   "window_id": "292b4cede8ab800688a5bd6c",
+   "set": "train",
+   "episode_id": "EP-7854E3451022",
+   "position": 5,
+   "cutoff_s": 1500.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "5f9519cd79a2f41cbb70e6b7",
+   "set": "train",
+   "episode_id": "EP-97126832FE88",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "9cd6fd167e02e3366df3883a",
+   "set": "train",
+   "episode_id": "EP-53FC0052EC75",
+   "position": 3,
+   "cutoff_s": 900.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "27574b2b3d15a620de3f71b6",
+   "set": "train",
+   "episode_id": "EP-3C7BB01806BE",
+   "position": 1,
+   "cutoff_s": 300.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "a8c89c0d53a28416ead886fd",
+   "set": "train",
+   "episode_id": "EP-E31454768125",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  },
+  {
+   "window_id": "ab3259d238d7d8a76aeb797f",
+   "set": "train",
+   "episode_id": "EP-72735E1569F2",
+   "position": 2,
+   "cutoff_s": 600.0,
+   "fault": false,
+   "assets": [],
+   "fault_types": [],
+   "mechanisms": [],
+   "n_components": 0
+  }
+ ]
+}

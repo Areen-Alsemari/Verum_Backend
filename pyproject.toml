@@ -15,7 +15,13 @@ dependencies = [
     "rfc3339-validator>=0.1.4",
     "numpy>=2",
     "scipy>=1.11",
+    "scikit-learn>=1.9.1",
+    "joblib>=1.6.0",
 ]
+
+[project.optional-dependencies]
+# Optional tracing of the runner; the runner works without it and sends nothing unless enabled.
+tracing = ["langsmith>=0.14.17"]
 
 [dependency-groups]
 dev = [

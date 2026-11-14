@@ -21,6 +21,9 @@ from verum.inspection.truth import Truth
 from verum.rng import RandomStreams
 from verum.sensors import load_sensor_config
 
+# Calibration of the tool stays valid for this many days plus a uniform draw up to the span.
+CALIBRATION_VALID_DAYS = (30, 335)
+
 NON_SAFETY_REASON = "NON_SAFETY_REASON"
 
 
@@ -65,7 +68,9 @@ def plan(
     elif reason is None:
         reason = preconditions.check(catalog, assets, truth, action_id, target, t_decision)
     start = date.fromisoformat(load_sensor_config().episode_start_utc[:10])
-    valid_until = start + timedelta(days=30 + int(u[7] * 335))
+    valid_until = start + timedelta(
+        days=CALIBRATION_VALID_DAYS[0] + int(u[7] * CALIBRATION_VALID_DAYS[1])
+    )
     return Timeline(
         request_id, action_id, target, t_requested_s, t_decision, reason,
         f"OPS-{10 + int(u[3] * 90):02d}", f"WP-{10000 + int(u[4] * 90000):05d}", t_start,

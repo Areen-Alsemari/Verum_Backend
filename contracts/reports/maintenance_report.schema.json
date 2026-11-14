@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:verum:reports:maintenance:v1",
+  "title": "Verum maintenance assessment report",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "report_version": {
+      "const": "1.0.0"
+    },
+    "report_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "context": {
+      "$ref": "urn:verum:agents:v1:common#/$defs/context"
+    },
+    "report_type": {
+      "const": "maintenance_assessment"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_status": {
+      "const": "human_review_required"
+    },
+    "assessment_state": {
+      "enum": [
+        "assessment_available",
+        "more_evidence_required",
+        "review_required",
+        "inconclusive"
+      ]
+    },
+    "source_reports": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agent": {
+            "enum": [
+              "predictive_health",
+              "anomaly_detection",
+              "topology_dependency",
+              "historical_asset_intelligence",
+              "diagnostic_reasoning",
+              "inspection_planning",
+              "inspection_quality_documentation",
+              "evidence_verification_decision"
+            ]
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "report_id",
+          "agent",
+          "content_sha256"
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "observation",
+              "hypothesis",
+              "inspection_check",
+              "assessment"
+            ]
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_report_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "finding_id",
+          "kind",
+          "statement",
+          "measurement",
+          "source_report_id",
+          "evidence_ids"
+        ]
+      }
+    },
+    "inspection_options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_asset": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feasibility": {
+            "enum": [
+              "eligible_for_human_review",
+              "blocked",
+              "unknown"
+            ]
+          },
+          "cost_usd": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "duration_min": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "source_report_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "action_id",
+          "target_asset",
+          "feasibility",
+          "cost_usd",
+          "duration_min",
+          "source_report_id",
+          "evidence_ids"
+        ]
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_report_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "description",
+          "source_report_id",
+          "evidence_ids"
+        ]
+      }
+    },
+    "missing_information": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "narrative": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "template",
+            "cohere"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_report_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "prompt_id",
+        "text",
+        "source_report_ids"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "template"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "model": {
+                "type": "null"
+              },
+              "prompt_id": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "prompt_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "advisory_only": {
+      "const": true
+    },
+    "human_decision_required": {
+      "const": true
+    },
+    "automatic_action_authorized": {
+      "const": false
+    },
+    "equipment_condition_confirmed": {
+      "const": false
+    }
+  },
+  "required": [
+    "report_version",
+    "report_id",
+    "context",
+    "report_type",
+    "title",
+    "review_status",
+    "assessment_state",
+    "source_reports",
+    "findings",
+    "inspection_options",
+    "next_steps",
+    "missing_information",
+    "limitations",
+    "narrative",
+    "advisory_only",
+    "human_decision_required",
+    "automatic_action_authorized",
+    "equipment_condition_confirmed"
+  ]
+}
