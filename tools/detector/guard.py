@@ -21,6 +21,7 @@ REJECTED: list[str] = []
 
 def classify(path: str, episodes: set[str]) -> str:
     """Return 'outside', 'allowed' or 'rejected' for one path."""
+    path = path.replace("\\", "/")
     if RELEASE not in path:
         return "outside"
     rel = path.split(RELEASE, 1)[1]
@@ -41,7 +42,7 @@ def classify(path: str, episodes: set[str]) -> str:
 def _hook(event: str, args: tuple[Any, ...]) -> None:
     if event != "open" or not args or not isinstance(args[0], (str, bytes)):
         return
-    path = args[0].decode() if isinstance(args[0], bytes) else args[0]
+    path = (args[0].decode() if isinstance(args[0], bytes) else args[0]).replace("\\", "/")
     verdict = classify(path, ALLOWED_EPISODES)
     if verdict == "allowed":
         kind = path.split(RELEASE, 1)[1].split("/")[0]
