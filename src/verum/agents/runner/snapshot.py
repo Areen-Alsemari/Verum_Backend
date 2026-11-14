@@ -30,6 +30,7 @@ class Snapshot:
     constraint_checks: tuple[dict[str, Any], ...] = ()
     budget: dict[str, Any] | None = None
     evidence_proposals: tuple[dict[str, Any], ...] = ()
+    as_of_utc: str | None = None
 
 
 def next_revision(
@@ -40,11 +41,13 @@ def next_revision(
     inspection_results: tuple[dict[str, Any], ...],
     inspection_requests: tuple[dict[str, Any], ...] = (),
     process_coverage: tuple[dict[str, Any], ...] = (),
+    as_of_utc: str | None = None,
 ) -> Snapshot:
     """Start the next revision because new inspection results are available.
 
     The observation summary must be the one prepared for the later cutoff; the earlier summary is
-    never carried over. Results, requests and coverage accumulate across revisions.
+    never carried over, and neither is the earlier wall-clock cutoff, which is given again or left
+    unset. Results, requests and coverage accumulate across revisions.
     """
     if not inspection_results:
         raise ValueError("a new revision starts with a new inspection result")
@@ -56,6 +59,7 @@ def next_revision(
         previous,
         revision=previous.revision + 1,
         as_of_s=as_of_s,
+        as_of_utc=as_of_utc,
         summary=summary,
         source_sha256=None,
         inspection_results=(*previous.inspection_results, *inspection_results),

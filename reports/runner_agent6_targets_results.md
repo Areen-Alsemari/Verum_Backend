@@ -1,5 +1,7 @@
 # Runner: Agent 6 gets only the assets that Agent 5 implicates
 
+Erratum: the count of 30 meaningful windows in this report includes 5 train windows; over the validation split alone it is 25, as in the compressed workflow results report.
+
 This report is started before any run. Section 1 is the pre-registration and is not changed after the evaluation; results are added below it in later sections, and any departure from section 1 is listed there as a deviation.
 
 ## 1. Pre-registration

@@ -69,6 +69,7 @@ def prepare(snapshot: Snapshot, mode: str, log: AssessmentLog | None = None) -> 
     context = make_context(
         case_id=snapshot.case_id, revision=snapshot.revision, as_of_s=cutoff,
         execution_mode=mode, reference_snapshot_sha256=snapshot.reference_snapshot_sha256,
+        as_of_utc=snapshot.as_of_utc,
     )
     registry = EvidenceRegistry(context)
     window_hash = snapshot.source_sha256 or stable_hash(snapshot.summary)

@@ -39,10 +39,17 @@ def classify(relative: str) -> str:
     return "rejected"
 
 
+def _posix(path: str) -> str:
+    return path.replace("\\", "/")
+
+
 def _relative(path: str) -> str | None:
+    """The path below a confined root with forward slashes, whichever separator it was given in."""
+    judged = _posix(path)
     for root in ROOTS:
-        if path == root or path.startswith(root + "/"):
-            return path[len(root) :].lstrip("/")
+        base = _posix(root).rstrip("/")
+        if judged == base or judged.startswith(base + "/"):
+            return judged[len(base) :].lstrip("/")
     return None
 
 
